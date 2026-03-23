@@ -1,0 +1,156 @@
+/*
+ * layout.css
+ * Import this in main.jsx / index.jsx (ya App.jsx ke upar):
+ *   import "./layout.css";
+ *
+ * Saare pages ke liye consistent padding + sidebar/topbar offset.
+ * Har page mein .page-root class lagao.
+ */
+
+/* ─── CSS Variables ─────────────────────────────────────── */
+:root {
+  --sidebar-w:   64px;
+  --topbar-h:    56px;
+  --bottom-nav:  60px;   /* mobile bottom nav */
+
+  /* Content padding scale */
+  --pad-xl:  40px;   /* ≥1280px */
+  --pad-lg:  32px;   /* ≥1024px */
+  --pad-md:  24px;   /* ≥768px  */
+  --pad-sm:  16px;   /* ≥480px  */
+  --pad-xs:  12px;   /* <480px  */
+
+  /* Max content width */
+  --content-max: 1200px;
+}
+
+/* ─── Base page wrapper ─────────────────────────────────── */
+/*
+  Every page component ke root div mein:
+  className="page-root"
+*/
+.page-root {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+
+  /* Desktop: account for sidebar (64px) + topbar (56px) */
+  padding-top:    var(--topbar-h);
+  padding-left:   var(--sidebar-w);
+  padding-right:  0;
+  padding-bottom: var(--pad-xl);
+}
+
+/* ─── Inner content container ───────────────────────────── */
+/*
+  Page ke andar ek div:
+  className="page-content"
+*/
+.page-content {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--pad-xl) var(--pad-xl) var(--pad-xl);
+}
+
+/* ─── Responsive overrides ──────────────────────────────── */
+
+/* Large desktop (1280px+) — generous padding */
+@media (min-width: 1280px) {
+  .page-content {
+    padding: var(--pad-xl) var(--pad-xl);
+  }
+}
+
+/* Medium desktop (1024–1279px) */
+@media (max-width: 1279px) {
+  .page-content {
+    padding: var(--pad-lg) var(--pad-lg);
+  }
+}
+
+/* Small desktop / tablet landscape (768–1023px) */
+@media (max-width: 1023px) {
+  .page-content {
+    padding: var(--pad-md) var(--pad-md);
+  }
+}
+
+/* Mobile (< 768px) — sidebar hidden, bottom nav shows */
+@media (max-width: 767px) {
+  .page-root {
+    padding-left:   0;              /* sidebar hidden */
+    padding-bottom: var(--bottom-nav);
+  }
+  .page-content {
+    padding: var(--pad-sm) var(--pad-sm);
+  }
+}
+
+/* Small mobile (< 480px) */
+@media (max-width: 479px) {
+  .page-content {
+    padding: var(--pad-xs) var(--pad-xs);
+  }
+}
+
+/* ─── LiveTracking page — fixed fullscreen layout ───────── */
+/*
+  LiveTracking page ko fixed layout chahiye (map fills screen).
+  Use className="page-root lt-fixed" on that page.
+*/
+.page-root.lt-fixed {
+  position: fixed;
+  top:    var(--topbar-h);
+  left:   var(--sidebar-w);
+  right:  0;
+  bottom: 0;
+  min-height: unset;
+  padding: 0;
+  overflow: hidden;
+}
+@media (max-width: 767px) {
+  .page-root.lt-fixed {
+    left:   0;
+    bottom: var(--bottom-nav);
+  }
+}
+
+/* ─── Booking card full width ───────────────────────────── */
+/*
+  My Bookings grid: 2 cols on desktop, 1 col on tablet/mobile.
+  Cards stretch full available width.
+*/
+.booking-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .booking-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* ─── Utility: Section header spacing ───────────────────── */
+.page-section-header {
+  margin-bottom: 28px;
+}
+
+/* ─── Utility: Stats grid ───────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+@media (max-width: 1023px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 479px) {
+  .stats-grid { gap: 8px; }
+}
