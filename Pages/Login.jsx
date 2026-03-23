@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ADMIN_EMAILS = ["vashupanchal.cs@gmail.com"];
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 
 const RoleCard = ({ icon: Icon, title, desc, color, selected, onClick }) => (
   <button type="button" onClick={onClick} style={{
@@ -49,7 +50,7 @@ const Login = () => {
   useEffect(() => {
     if (role !== "driver") return;
     setAmbLoading(true);
-    fetch("http://127.0.0.1:8000/api/ambulances/")
+    fetch(`${API_BASE}/api/ambulances/`)
       .then(r => r.json())
       .then(data => { setAmbulances(data); setAmbLoading(false); })
       .catch(() => setAmbLoading(false));
@@ -62,7 +63,8 @@ const Login = () => {
     if (role === "driver" && phone.length !== 10) { alert("10-digit phone number daalo"); return; }
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/send-otp/", {
+      await fetch(`${API_BASE}/`, { method: "GET" }).catch(() => {});
+      const res = await fetch(`${API_BASE}/api/send-otp/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
       });
@@ -78,7 +80,7 @@ const Login = () => {
     if (!emailOtp.trim() || emailOtp.length !== 6) { alert("6-digit OTP daalo"); return; }
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/verify-otp/", {
+      const res = await fetch(`${API_BASE}/api/verify-otp/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ otp: emailOtp.trim(), email: email.trim() }),
       });
@@ -100,7 +102,7 @@ const Login = () => {
     localStorage.setItem("ambulance_id", String(selectedAmb.id));
     localStorage.setItem("ambulance_number", selectedAmb.ambulance_number);
     try {
-      await fetch(`http://127.0.0.1:8000/api/ambulances/${selectedAmb.id}/`, {
+      await fetch(`${API_BASE}/api/ambulances/${selectedAmb.id}/`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ driver: name, driver_contact: phone, driver_email: email }),
       });
