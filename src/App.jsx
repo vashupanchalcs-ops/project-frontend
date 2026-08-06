@@ -16,27 +16,27 @@ import BookingDetails        from "./Pages/BookingDetails";
 import CaseDetails           from "./Pages/CaseDetails";
 import DriverView            from "./Pages/DriverView";
 import DriverDashboard       from "./Pages/DriverDashboard";
-import DriverHome            from "./pages/DriverHome";
-import DriverGuidance        from "./pages/DriverGuidance";
+import DriverHome            from "./Pages/DriverHome";
+import DriverGuidance        from "./Pages/DriverGuidance";
 import DriverChangeRequests  from "./Pages/DriverChangeRequests";
 import LiveMap               from "./Pages/LiveMap";
 import MapView               from "./Pages/Mapview";
 import UserLiveTracking      from "./Components/UserLiveTracking";
-import DriverBatteryTracker  from "./components/DriverBatteryTracker";
+import DriverBatteryTracker  from "./Components/DriverBatteryTracker";
 import MyBookings            from "./Pages/MyBookings";
 import LiveTracking          from "./Pages/LiveTracking"; 
-import HospitalResponses     from "./pages/HospitalResponses";
-import AdminChatControl      from "./pages/AdminChatControl";
+import HospitalResponses     from "./Pages/HospitalResponses";
+import AdminChatControl      from "./Pages/AdminChatControl";
 import UserChatbot           from "./Pages/UserChatbot";
 import DriverRequestChat     from "./Pages/DriverRequestChat";
 import HospitalPortal        from "./Pages/HospitalPortal";
 import AdminHospitalDetails  from "./Pages/AdminHospitalDetails";
-import InfoPage              from "./pages/InfoPage";
-import CallIntakeConsole     from "./pages/CallIntakeConsole";
-import DriverVoiceReports    from "./pages/DriverVoiceReports";
-import HospitalCaseReportView from "./pages/HospitalCaseReportView";
-import DriverInsuranceForm   from "./pages/DriverInsuranceForm";
-import HospitalInsuranceView from "./pages/HospitalInsuranceView";
+import InfoPage              from "./Pages/InfoPage";
+import CallIntakeConsole     from "./Pages/CallIntakeConsole";
+import DriverVoiceReports    from "./Pages/DriverVoiceReports";
+import HospitalCaseReportView from "./Pages/HospitalCaseReportView";
+import DriverInsuranceForm   from "./Pages/DriverInsuranceForm";
+import HospitalInsuranceView from "./Pages/HospitalInsuranceView";
 
 
 const AdminRoute = ({ element }) => {
