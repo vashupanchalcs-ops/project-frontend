@@ -1,332 +1,514 @@
-// AdminRouteManager.jsx — Route Manager (Leaflet + TomTom Traffic)
-import { useState, useEffect, useRef } from "react";
-import useLeaflet, { DARK_TILE, DELHI, STATUS_COLOR, makePinIcon } from "../hooks/useLeaflet";
+/**
+ * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
+ *
+ * FIX: resolveCoords mein geocodeInIndia call karta hai jo LOCAL_HINTS se
+ * Shiv Vihar ka correct coord (28.7419, 77.3158) return karega.
+ * Pehle wrong coord (Ghaziabad) aa raha tha kyunki LOCAL_HINTS galat tha.
+ *
+ * Baaki sab same — sirf route display polish kiya gaya hai.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import useLeaflet, {
+  DELHI,
+  isIndiaCoord,
+  geocodeInIndia,
+  makePinIcon,
+  normalizePlace,
+  fetchRoadRoute,
+  fetchNearestRoadPoint,
+  LIGHT_TILE,
+  SATELLITE_TILE,
+} from "../hooks/useLeaflet";
 
-const BASE       = "http://127.0.0.1:8000";
-const TOMTOM_KEY = "d23829a0-735d-4693-b2f0-adefdba8b43f";
+const BASE = "http://127.0.0.1:8000";
 
-export default function AdminRouteManager({ preSelectedDriver }) {
+const statusColor = {
+  available: "#00c853",
+  en_route:  "#f7c948",
+  busy:      "#ff4d5a",
+  offline:   "#8b8b8b",
+};
+
+const uniqueTextList = (values) => {
+  const out = [], seen = new Set();
+  for (const raw of values) {
+    const v = String(raw || "").trim();
+    if (!v) continue;
+    const key = normalizePlace(v);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out;
+};
+
+const haversineKm = (a, b) => {
+  const R    = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x    =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+    Math.cos((b.lat * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+};
+
+// Path distance from [[lat,lng],...] — used for accurate route stats
+const pathKm = (path = []) => {
+  if (!Array.isArray(path) || path.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i];
+    if (!Array.isArray(a) || !Array.isArray(b)) continue;
+    total += haversineKm(
+      { lat: Number(a[0]), lng: Number(a[1]) },
+      { lat: Number(b[0]), lng: Number(b[1]) }
+    );
+  }
+  return total;
+};
+
+const toRoadStats = (leg1Path, leg2Path, ambCoord, pickup, destination) => {
+  // Use actual path distances if available, otherwise haversine estimate
+  const legA = leg1Path?.length > 1 ? pathKm(leg1Path) : haversineKm(ambCoord, pickup) * 1.22;
+  const legB = leg2Path?.length > 1 ? pathKm(leg2Path) : (destination ? haversineKm(pickup, destination) * 1.22 : 0);
+  const total = legA + legB;
+  return {
+    distKm: total.toFixed(1),
+    mins:   Math.max(1, Math.round((total / 28) * 60)),
+  };
+};
+
+export default function AdminRouteManager({
+  preSelectedDriver,
+  preSelectedBookingId   = null,
+  preSelectedAmbulanceId = null,
+}) {
   const leafletReady = useLeaflet();
+  const mapRef       = useRef(null);
+  const mapElRef     = useRef(null);
+  const tileLayerRef = useRef(null);
+  const layerRef     = useRef({
+    amb: null, pickup: null, hospital: null,
+    route1: null, route1Glow: null,
+    route2: null, route2Glow: null,
+    connector: null,
+  });
 
-  const [ambs,     setAmbs]     = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [selAmb,   setSelAmb]   = useState(null);
-  const [selBook,  setSelBook]  = useState(null);
-  const [routes,   setRoutes]   = useState([]);
-  const [loading,  setLoading]  = useState(false);
-  const [pushing,  setPushing]  = useState(false);
-  const [toast,    setToast]    = useState(null);
-  const [traffic,  setTraffic]  = useState(null);
+  const [ambs,       setAmbs]       = useState([]);
+  const [hospitals,  setHospitals]  = useState([]);
+  const [bookings,   setBookings]   = useState([]);
+  const [selAmb,     setSelAmb]     = useState(null);
+  const [selBook,    setSelBook]    = useState(null);
+  const [pickupCoord, setPickupCoord] = useState(null);
+  const [destCoord,  setDestCoord]  = useState(null);
+  const [routeLeg1,  setRouteLeg1]  = useState([]);
+  const [routeLeg2,  setRouteLeg2]  = useState([]);
+  const [routeStats, setRouteStats] = useState(null);
+  const [loading,    setLoading]    = useState(false);
+  const [pushing,    setPushing]    = useState(false);
+  const [toast,      setToast]      = useState(null);
+  const [is3D,       setIs3D]       = useState(false);
 
-  const mapDivRef       = useRef(null);
-  const mapObj          = useRef(null);
-  const routingRef      = useRef(null);
-  const ambMarkerRef    = useRef(null);
-  const destMarkerRef   = useRef(null);
-  const pickupMarkerRef = useRef(null);
-  const trafficLayer    = useRef(null);
-
+  // ── Load data ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch(`${BASE}/api/ambulances/`).then(r => r.json()).then(d => setAmbs(d.filter(a => a.status !== "offline"))).catch(() => {});
-    fetch(`${BASE}/api/bookings/`).then(r => r.json()).then(d => setBookings(d.filter(b => ["pending","confirmed"].includes(b.status)))).catch(() => {});
+    const load = async () => {
+      try {
+        const [aRes, bRes, hRes] = await Promise.all([
+          fetch(`${BASE}/api/ambulances/`),
+          fetch(`${BASE}/api/bookings/`),
+          fetch(`${BASE}/api/hospitals/`),
+        ]);
+        const [aRows, bRows, hRows] = await Promise.all([aRes.json(), bRes.json(), hRes.json()]);
+        setAmbs(Array.isArray(aRows) ? aRows : []);
+        setHospitals(Array.isArray(hRows) ? hRows : []);
+        setBookings(
+          (Array.isArray(bRows) ? bRows : []).filter(
+            (b) => b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed
+          )
+        );
+      } catch {}
+    };
+    load();
   }, []);
 
   useEffect(() => { if (preSelectedDriver) setSelAmb(preSelectedDriver); }, [preSelectedDriver]);
 
   useEffect(() => {
-    if (!leafletReady || !mapDivRef.current || mapObj.current) return;
+    if (!preSelectedAmbulanceId || !ambs.length) return;
+    const row = ambs.find((a) => Number(a.id) === Number(preSelectedAmbulanceId));
+    if (row) setSelAmb(row);
+  }, [preSelectedAmbulanceId, ambs]);
+
+  const selectedAmbId = selAmb?.id || selAmb?.ambulance_id;
+  const assignableBookings = useMemo(
+    () => bookings.filter((b) => Number(b.ambulance_id) === Number(selectedAmbId)),
+    [bookings, selectedAmbId]
+  );
+
+  useEffect(() => {
+    if (!selBook) return;
+    if (!assignableBookings.some((b) => b.id === selBook.id)) setSelBook(null);
+  }, [assignableBookings, selBook]);
+
+  useEffect(() => {
+    if (!preSelectedBookingId || !assignableBookings.length) return;
+    const row = assignableBookings.find((b) => Number(b.id) === Number(preSelectedBookingId));
+    if (row) setSelBook(row);
+  }, [preSelectedBookingId, assignableBookings]);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  // ── Init map ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!leafletReady || !mapElRef.current || mapRef.current || !window.L) return;
     const L = window.L;
-    mapObj.current = L.map(mapDivRef.current, { center: [DELHI.lat, DELHI.lng], zoom: 12, zoomControl: false });
-    L.tileLayer(DARK_TILE, { maxZoom: 19, opacity: 1 }).addTo(mapObj.current);
-    if (TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY") {
-      trafficLayer.current = L.tileLayer(
-        `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${TOMTOM_KEY}`,
-        { maxZoom: 19, opacity: 0.7, zIndex: 2 }
-      ).addTo(mapObj.current);
-    }
-    L.control.zoom({ position: "bottomright" }).addTo(mapObj.current);
-    return () => { clearRouting(); if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; } };
+    mapRef.current = L.map(mapElRef.current, {
+      center: [DELHI.lat, DELHI.lng], zoom: 12,
+      minZoom: 9, maxZoom: 19, zoomControl: false,
+    });
+    tileLayerRef.current = L.tileLayer(is3D ? SATELLITE_TILE : LIGHT_TILE, {
+      maxZoom: 19, attribution: "© Google Maps",
+    }).addTo(mapRef.current);
+    L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
+
+    const onResize = () => mapRef.current?.invalidateSize();
+    window.addEventListener("resize", onResize);
+    const ro = new ResizeObserver(() => mapRef.current?.invalidateSize());
+    ro.observe(mapElRef.current);
+    const t1 = setTimeout(() => mapRef.current?.invalidateSize(), 80);
+    const t2 = setTimeout(() => mapRef.current?.invalidateSize(), 320);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      ro.disconnect();
+      clearTimeout(t1); clearTimeout(t2);
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+    };
   }, [leafletReady]);
 
   useEffect(() => {
-    if (!mapObj.current) return;
-    const t1 = setTimeout(() => mapObj.current?.invalidateSize(), 100);
-    const t2 = setTimeout(() => mapObj.current?.invalidateSize(), 500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [leafletReady]);
+    if (tileLayerRef.current)
+      tileLayerRef.current.setUrl(is3D ? SATELLITE_TILE : LIGHT_TILE);
+  }, [is3D]);
 
-  const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
-
-  const clearRouting = () => {
-    if (routingRef.current) { try { routingRef.current.getPlan().setWaypoints([]); mapObj.current?.removeControl(routingRef.current); } catch {} routingRef.current = null; }
-    if (ambMarkerRef.current)    { try { ambMarkerRef.current.remove(); }    catch {} ambMarkerRef.current = null; }
-    if (destMarkerRef.current)   { try { destMarkerRef.current.remove(); }   catch {} destMarkerRef.current = null; }
-    if (pickupMarkerRef.current) { try { pickupMarkerRef.current.remove(); } catch {} pickupMarkerRef.current = null; }
+  // ── Clear layers ────────────────────────────────────────────────────────────
+  const clearDrawnLayers = () => {
+    if (!mapRef.current) return;
+    Object.values(layerRef.current).forEach((layer) => {
+      if (!layer) return;
+      try { mapRef.current.removeLayer(layer); } catch {}
+    });
+    layerRef.current = {
+      amb: null, pickup: null, hospital: null,
+      route1: null, route1Glow: null,
+      route2: null, route2Glow: null,
+      connector: null,
+    };
   };
 
-  const geocode = async (address) => {
-    if (TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY") {
-      const res  = await fetch(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(address + ", Delhi, India")}.json?key=${TOMTOM_KEY}&limit=1`);
-      const data = await res.json();
-      if (data.results?.length) { const p = data.results[0].position; return { lat: p.lat, lng: p.lon }; }
+  // ── Draw layers whenever route data changes ─────────────────────────────────
+  useEffect(() => {
+    if (!leafletReady || !window.L || !mapRef.current) return;
+    mapRef.current.invalidateSize();
+    clearDrawnLayers();
+    const L        = window.L;
+    const ambCoord =
+      selAmb && Number.isFinite(Number(selAmb.latitude)) && Number.isFinite(Number(selAmb.longitude))
+        ? { lat: Number(selAmb.latitude), lng: Number(selAmb.longitude) }
+        : DELHI;
+
+    // Markers
+    layerRef.current.amb = L.marker([ambCoord.lat, ambCoord.lng], {
+      icon: makePinIcon("#111111", "🚑"),
+    }).addTo(mapRef.current)
+      .bindPopup(`<div style="font-weight:700">🚑 ${selAmb?.ambulance_number || "Ambulance"}</div>`);
+
+    if (pickupCoord) {
+      layerRef.current.pickup = L.marker([pickupCoord.lat, pickupCoord.lng], {
+        icon: makePinIcon("#f7c948", "📍"),
+      }).addTo(mapRef.current)
+        .bindPopup(`<div style="font-weight:700">📍 Pickup</div>
+          <div style="font-size:11px;color:#666">${selBook?.pickup_location || ""}</div>`);
     }
-    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ", Delhi, India")}&format=json&limit=1`, { headers: { "Accept-Language": "en" } });
-    const data = await res.json();
-    if (!data.length) throw new Error(`"${address}" ka location nahi mila`);
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  };
 
-  const getTrafficRoute = async (ambLat, ambLng, pickupCoord, destCoord) => {
-    if (TOMTOM_KEY === "YOUR_TOMTOM_API_KEY") return null;
-    try {
-      const res  = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${ambLat},${ambLng}:${pickupCoord.lat},${pickupCoord.lng}:${destCoord.lat},${destCoord.lng}/json?key=${TOMTOM_KEY}&traffic=true&travelMode=car&routeType=fastest`);
-      const data = await res.json();
-      if (data.routes?.length) {
-        const r = data.routes[0].summary;
-        return { km: (r.lengthInMeters / 1000).toFixed(1), mins: Math.round(r.travelTimeInSeconds / 60), delay: Math.round((r.trafficDelayInSeconds || 0) / 60), hasTraffic: (r.trafficDelayInSeconds || 0) > 0 };
+    if (destCoord) {
+      layerRef.current.hospital = L.marker([destCoord.lat, destCoord.lng], {
+        icon: makePinIcon("#00d4aa", "🏥"),
+      }).addTo(mapRef.current)
+        .bindPopup(`<div style="font-weight:700">🏥 ${selBook?.assigned_hospital_name || "Hospital"}</div>`);
+    }
+
+    const bounds = L.latLngBounds();
+    const allRoutePoints = [[ambCoord.lat, ambCoord.lng]];
+    if (pickupCoord) allRoutePoints.push([pickupCoord.lat, pickupCoord.lng]);
+    if (destCoord)   allRoutePoints.push([destCoord.lat,   destCoord.lng]);
+    if (Array.isArray(routeLeg1) && routeLeg1.length) allRoutePoints.push(...routeLeg1);
+    if (Array.isArray(routeLeg2) && routeLeg2.length) allRoutePoints.push(...routeLeg2);
+
+    allRoutePoints.forEach((pt) => {
+      if (Array.isArray(pt) && Number.isFinite(Number(pt[0])) && Number.isFinite(Number(pt[1])))
+        bounds.extend([Number(pt[0]), Number(pt[1])]);
+    });
+
+    // Route 1: Ambulance → Pickup (Indigo)
+    if (routeLeg1.length > 1) {
+      layerRef.current.route1Glow = L.polyline(routeLeg1, {
+        color: "#4f46e5", weight: 12, opacity: 0.16,
+      }).addTo(mapRef.current);
+      layerRef.current.route1 = L.polyline(routeLeg1, {
+        color: "#6366f1", weight: 6, opacity: 0.96,
+      }).addTo(mapRef.current);
+      bounds.extend(layerRef.current.route1.getBounds());
+      layerRef.current.route1.bringToFront();
+    }
+
+    // Route 2: Pickup → Hospital (Cyan)
+    if (routeLeg2.length > 1) {
+      layerRef.current.route2Glow = L.polyline(routeLeg2, {
+        color: "#06b6d4", weight: 12, opacity: 0.16,
+      }).addTo(mapRef.current);
+      layerRef.current.route2 = L.polyline(routeLeg2, {
+        color: "#06b6d4", weight: 6, opacity: 0.96,
+      }).addTo(mapRef.current);
+      bounds.extend(layerRef.current.route2.getBounds());
+      layerRef.current.route2.bringToFront();
+
+      // Connector dashed line if route doesn't exactly reach hospital
+      if (destCoord) {
+        const last   = routeLeg2[routeLeg2.length - 1];
+        if (Array.isArray(last) && Number.isFinite(Number(last[0])) && Number.isFinite(Number(last[1]))) {
+          const roadEnd = { lat: Number(last[0]), lng: Number(last[1]) };
+          const gapKm   = haversineKm(roadEnd, destCoord);
+          if (gapKm > 0.03) {
+            layerRef.current.connector = L.polyline(
+              [[roadEnd.lat, roadEnd.lng], [destCoord.lat, destCoord.lng]],
+              { color: "#06b6d4", weight: 4, opacity: 0.95, dashArray: "8 8" }
+            ).addTo(mapRef.current);
+            bounds.extend(layerRef.current.connector.getBounds());
+            layerRef.current.connector.bringToFront();
+          }
+        }
       }
-    } catch {}
-    return null;
-  };
+    }
 
-  const findRoute = async () => {
-    if (!selAmb)  return showToast("Ambulance select karo", "error");
-    if (!selBook) return showToast("Booking select karo", "error");
-    if (!selBook.pickup_location?.trim()) return showToast("Pickup location nahi hai", "error");
-    if (!leafletReady || !mapObj.current) return showToast("Map load nahi hua", "error");
-    setLoading(true); setRoutes([]); setTraffic(null); clearRouting();
-    try {
-      const L = window.L;
-      const hasGPS = selAmb.latitude && parseFloat(selAmb.latitude) !== 0;
-      const ambLat = hasGPS ? parseFloat(selAmb.latitude) : DELHI.lat;
-      const ambLng = hasGPS ? parseFloat(selAmb.longitude) : DELHI.lng;
-      if (!hasGPS) showToast("⚠ GPS nahi mila, Delhi center fallback", "warn");
-      const pickupCoord  = await geocode(selBook.pickup_location);
-      const destAddr     = selBook.destination?.trim() || "AIIMS Delhi";
-      const destCoord    = await geocode(destAddr);
-      const trafficInfo  = await getTrafficRoute(ambLat, ambLng, pickupCoord, destCoord);
-      if (trafficInfo) setTraffic(trafficInfo);
-      ambMarkerRef.current    = L.marker([ambLat, ambLng], { icon: makePinIcon("#E50914", "🚑") }).addTo(mapObj.current).bindPopup(`<div style="background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px;font-weight:700">🚑 ${selAmb.ambulance_number}</div>`, { className: "sr-dark-popup" });
-      pickupMarkerRef.current = L.marker([pickupCoord.lat, pickupCoord.lng], { icon: makePinIcon("#f7c948", "📍") }).addTo(mapObj.current).bindPopup(`<div style="background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px">📍 <b>Pickup:</b> ${selBook.pickup_location}</div>`, { className: "sr-dark-popup" });
-      destMarkerRef.current   = L.marker([destCoord.lat, destCoord.lng], { icon: makePinIcon("#00d4aa", "🏥") }).addTo(mapObj.current).bindPopup(`<div style="background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px">🏥 <b>Destination:</b> ${destAddr}</div>`, { className: "sr-dark-popup" });
-      const routing = L.Routing.control({
-        waypoints: [L.latLng(ambLat, ambLng), L.latLng(pickupCoord.lat, pickupCoord.lng), L.latLng(destCoord.lat, destCoord.lng)],
-        router: L.Routing.osrmv1({ serviceUrl: "https://router.project-osrm.org/route/v1", profile: "driving" }),
-        lineOptions: { styles: [{ color: trafficInfo?.hasTraffic ? "#ff6d00" : "#00c853", weight: 5, opacity: 0.9 }, { color: "#fff", weight: 2, opacity: 0.2 }], extendToWaypoints: true, missingRouteTolerance: 0 },
-        show: false, addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: true, showAlternatives: false, createMarker: () => null,
-      }).addTo(mapObj.current);
-      routingRef.current = routing;
-      routing.on("routesfound", (e) => {
-        const s    = e.routes[0].summary;
-        const km   = trafficInfo?.km || (s.totalDistance / 1000).toFixed(1);
-        const mins = trafficInfo?.mins || Math.round(s.totalTime / 60);
-        setRoutes([{ i: 0, dist: `${km} km`, time: `${mins} min`, delay: trafficInfo?.delay || 0, hasTraffic: trafficInfo?.hasTraffic || false, pickupAddr: selBook.pickup_location, destAddr }]);
-        setLoading(false);
-        showToast(`Route mila! ${km} km · ~${mins} min${trafficInfo?.delay ? ` (+${trafficInfo.delay} min traffic)` : ""}`);
+    if (bounds.isValid()) {
+      const mobile = window.innerWidth < 768;
+      const fit    = () => {
+        mapRef.current?.invalidateSize();
+        mapRef.current?.fitBounds(bounds, { padding: mobile ? [20, 20] : [52, 52], animate: false });
+      };
+      fit();
+      setTimeout(fit, 90);
+    } else {
+      mapRef.current.setView([ambCoord.lat, ambCoord.lng], 12);
+    }
+  }, [leafletReady, selAmb, pickupCoord, destCoord, routeLeg1, routeLeg2]);
+
+  // ── Resolve coordinates ─────────────────────────────────────────────────────
+  const resolveCoords = async (booking) => {
+    const pickupQuery = [booking.pickup_landmark, booking.pickup_city, booking.pickup_district]
+      .filter(Boolean).join(", ");
+    const pickupText  = pickupQuery || booking.pickup_location || "";
+    const destName    = booking.assigned_hospital_name || booking.destination || "";
+    const normalizedDest = normalizePlace(destName);
+
+    const matchedHospital =
+      hospitals.find((h) => Number(h.id) === Number(booking.assigned_hospital_id)) ||
+      hospitals.find((h) => normalizePlace(h.name) === normalizedDest) ||
+      hospitals.find((h) => normalizedDest && normalizePlace(h.name).includes(normalizedDest)) ||
+      null;
+
+    const dbLat        = Number(matchedHospital?.latitude);
+    const dbLng        = Number(matchedHospital?.longitude);
+    const hospitalFromDb = isIndiaCoord(dbLat, dbLng) ? { lat: dbLat, lng: dbLng } : null;
+
+    // Pickup: try multiple text combos through geocodeInIndia (uses LOCAL_HINTS first)
+    const pickupCandidates = uniqueTextList([
+      pickupText,
+      booking.pickup_location,
+      booking.pickup_landmark,
+      booking.pickup_city,
+      booking.pickup_district,
+      [booking.pickup_city, booking.pickup_district].filter(Boolean).join(", "),
+      [booking.pickup_landmark, booking.pickup_city].filter(Boolean).join(", "),
+      selAmb?.location || "",
+    ]);
+
+    const bookingPickupLat = Number(booking.pickup_latitude);
+    const bookingPickupLng = Number(booking.pickup_longitude);
+    const pickupFromBooking = isIndiaCoord(bookingPickupLat, bookingPickupLng)
+      ? { lat: bookingPickupLat, lng: bookingPickupLng }
+      : null;
+
+    let pickupFromText = null;
+    for (const candidate of pickupCandidates) {
+      // eslint-disable-next-line no-await-in-loop
+      pickupFromText = await geocodeInIndia(candidate, {
+        landmark: booking.pickup_landmark || "",
+        area:     booking.pickup_location || "",
+        city:     booking.pickup_city     || "",
+        district: booking.pickup_district || "",
+        state:    "",
       });
-      routing.on("routingerror", () => { setLoading(false); showToast("Route nahi mila. Address check karein.", "error"); });
-    } catch (err) { setLoading(false); showToast(err.message || "Route error", "error"); }
+      if (pickupFromText) break;
+    }
+
+    let pickup = null;
+    if (pickupFromText && pickupFromBooking) {
+      const driftKm = haversineKm(pickupFromText, pickupFromBooking);
+      pickup = driftKm > 0.6 ? pickupFromText : pickupFromBooking;
+    } else {
+      pickup = pickupFromText || pickupFromBooking || null;
+    }
+
+    if (booking.assigned_hospital_id && !hospitalFromDb) {
+      throw new Error("Hospital latitude/longitude missing in backend. Update hospital coordinates.");
+    }
+
+    const destination = hospitalFromDb;
+    return { pickup, destination };
   };
 
-  const pushRoute = async (r) => {
-    if (!selAmb || !selBook) return;
+  // ── Find Route ──────────────────────────────────────────────────────────────
+  const findRoute = async () => {
+    if (!selAmb)  return showToast("Select an ambulance first", "error");
+    if (!selBook) return showToast("Select a booking first",    "error");
+    setLoading(true);
+    setRouteStats(null);
+    setRouteLeg1([]);
+    setRouteLeg2([]);
+    try {
+      const ambCoord =
+        Number.isFinite(Number(selAmb.latitude)) && Number.isFinite(Number(selAmb.longitude))
+          ? { lat: Number(selAmb.latitude), lng: Number(selAmb.longitude) }
+          : DELHI;
+
+      const { pickup, destination } = await resolveCoords(selBook);
+      if (!pickup)      throw new Error("Pickup location not found");
+      if (!destination) throw new Error("Hospital location not found");
+
+      setPickupCoord(pickup);
+
+      const pickupRoadPoint      = (await fetchNearestRoadPoint(pickup))      || pickup;
+      const destinationRoadPoint = (await fetchNearestRoadPoint(destination)) || destination;
+      const leg1 = await fetchRoadRoute([ambCoord,          pickupRoadPoint],      { allowStraightFallback: true });
+      const leg2 = await fetchRoadRoute([pickupRoadPoint,   destinationRoadPoint], { allowStraightFallback: true });
+      const safeLeg1 = leg1.length > 1 ? leg1 : [[ambCoord.lat, ambCoord.lng], [pickup.lat, pickup.lng]];
+      const safeLeg2 = leg2.length > 1 ? leg2 : [[pickup.lat, pickup.lng], [destination.lat, destination.lng]];
+
+      setDestCoord(destination);
+      setRouteLeg1(safeLeg1);
+      setRouteLeg2(safeLeg2);
+
+      // Use actual path distances for stats
+      const stats = toRoadStats(safeLeg1, safeLeg2, ambCoord, pickup, destination);
+      setRouteStats(stats);
+      showToast(`Route found: ${stats.distKm} km · ~${stats.mins} min`);
+    } catch (e) {
+      showToast(e.message || "Route error", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Push Route to Driver ────────────────────────────────────────────────────
+  const pushRoute = async () => {
+    if (!selAmb || !selBook || !routeStats) return;
     setPushing(true);
     try {
-      const res  = await fetch(`${BASE}/api/admin/suggest-route/`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ambulance_id: selAmb.id || selAmb.ambulance_id, pickup_location: selBook.pickup_location, destination: selBook.destination || "Nearest Hospital", distance_km: r.dist, duration: r.time, polyline: "" }),
+      const res = await fetch(`${BASE}/api/admin/suggest-route/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ambulance_id:   selAmb.id || selAmb.ambulance_id,
+          booking_id:     selBook.id,
+          pickup_location: selBook.pickup_location,
+          destination:    selBook.assigned_hospital_name || selBook.destination || "Hospital",
+          distance_km:    `${routeStats.distKm} km`,
+          duration:       `${routeStats.mins} min`,
+          polyline:       "",
+          pickup_lat:     pickupCoord?.lat ?? null,
+          pickup_lng:     pickupCoord?.lng ?? null,
+          dest_lat:       destCoord?.lat   ?? null,
+          dest_lng:       destCoord?.lng   ?? null,
+        }),
       });
       const data = await res.json();
-      if (data.id) showToast(`✅ Route driver ko bhej diya! (${r.dist}, ${r.time})`);
-      else showToast("Route push error", "error");
-    } catch { showToast("Server error", "error"); }
-    setPushing(false);
+      if (data.id) showToast("Route sent to driver ✓");
+      else showToast(data.error || "Failed to send route", "error");
+    } catch {
+      showToast("Server error while sending route", "error");
+    } finally {
+      setPushing(false);
+    }
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
-        /* Leaflet overrides */
-        .sr-dark-popup .leaflet-popup-content-wrapper { background:rgba(20,20,20,0.97)!important; border:1px solid rgba(255,255,255,0.08)!important; border-radius:10px!important; padding:0!important; box-shadow:0 8px 32px rgba(0,0,0,0.8)!important; }
-        .sr-dark-popup .leaflet-popup-content { margin:0!important; }
-        .sr-dark-popup .leaflet-popup-tip { background:rgba(20,20,20,0.97)!important; }
-        .sr-dark-popup .leaflet-popup-close-button { color:rgba(255,255,255,0.35)!important; }
-        .leaflet-control-zoom a { background:rgba(20,20,20,0.92)!important; color:#fff!important; border-color:rgba(255,255,255,0.08)!important; }
-        .leaflet-control-zoom a:hover { background:rgba(35,35,35,0.95)!important; }
-        .leaflet-routing-container { display:none!important; }
-
-        /* ── Root layout ── */
-        .arm-root {
-          display: flex; width: 100%; height: 100%;
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          color: #fff; overflow: hidden;
-          background: #0a0a0a;
-        }
-
-        /* ── Left panel — Netflix tight sidebar style ── */
-        .arm-panel {
-          width: 290px; min-width: 290px; max-width: 290px;
-          background: #111;
-          border-right: 1px solid rgba(255,255,255,0.06);
-          display: flex; flex-direction: column;
-          overflow: hidden; flex-shrink: 0;
-        }
-        .arm-panel-header {
-          padding: 12px 14px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          flex-shrink: 0;
-        }
-        .arm-panel-title { font-weight: 700; font-size: 14px; color: #fff; }
-        .arm-panel-sub   { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
-
-        .arm-panel-inner {
-          flex: 1; overflow-y: auto; padding: 10px;
-          display: flex; flex-direction: column; gap: 8px;
-          scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent;
-        }
-        .arm-panel-inner::-webkit-scrollbar { width: 3px; }
-        .arm-panel-inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-
-        /* ── Section box ── */
-        .arm-box {
-          background: #1a1a1a;
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 10px; padding: 10px;
-        }
-        .arm-box-label {
-          font-weight: 700; font-size: 9px; color: rgba(255,255,255,0.3);
-          letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
-        }
-        .arm-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent; }
-        .arm-list::-webkit-scrollbar { width: 2px; }
-        .arm-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); }
-
-        /* ── Item card ── */
-        .arm-item {
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 8px; padding: 8px 10px; cursor: pointer;
-          transition: background 0.15s, border-color 0.15s;
-        }
-        .arm-item:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12); }
-        .arm-item.sel   { background: rgba(229,9,20,0.07); border-color: rgba(229,9,20,0.28); }
-        .arm-item-top   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
-        .arm-item-name  { font-size: 12px; font-weight: 700; color: #fff; }
-        .arm-badge {
-          font-size: 8px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
-          text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
-        }
-        .arm-item-sub { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .arm-gps-ok  { font-size: 9px; color: #00c853; margin-top: 2px; }
-        .arm-gps-no  { font-size: 9px; color: #ff4d5a; margin-top: 2px; }
-        .arm-empty   { color: rgba(255,255,255,0.2); font-size: 11px; text-align: center; padding: 12px 0; }
-
-        /* ── Find Route button ── */
-        .arm-find-btn {
-          width: 100%; padding: 11px 0;
-          background: #E50914; border: none; border-radius: 8px;
-          color: #fff; font-weight: 700; font-size: 12px;
-          cursor: pointer; transition: background 0.15s;
-          font-family: inherit;
-        }
-        .arm-find-btn:hover:not(:disabled) { background: #f40612; }
-        .arm-find-btn:disabled { background: #2a2a2a; color: rgba(255,255,255,0.3); cursor: not-allowed; }
-
-        /* ── Traffic info card ── */
-        .arm-traffic {
-          border-radius: 8px; padding: 10px 12px;
-        }
-        .arm-traffic.ok   { background: rgba(0,200,83,0.08);  border: 1px solid rgba(0,200,83,0.2); }
-        .arm-traffic.bad  { background: rgba(255,109,0,0.08); border: 1px solid rgba(255,109,0,0.2); }
-        .arm-traffic-title { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
-        .arm-traffic-info  { font-size: 10px; color: rgba(255,255,255,0.45); }
-
-        /* ── Route result card ── */
-        .arm-route-card {
-          background: rgba(0,200,83,0.05);
-          border: 1px solid rgba(0,200,83,0.2);
-          border-radius: 10px; padding: 12px;
-        }
-        .arm-route-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .arm-route-title  { font-size: 12px; font-weight: 700; color: #00c853; }
-        .arm-route-engine { font-size: 9px; color: rgba(255,255,255,0.25); }
-        .arm-route-stats  { display: flex; gap: 12px; margin-bottom: 10px; }
-        .arm-route-stat   { font-size: 11px; color: rgba(255,255,255,0.5); }
-        .arm-push-btn {
-          width: 100%; padding: 9px 0;
-          background: #ff6d00; border: none; border-radius: 7px;
-          color: #fff; font-weight: 700; font-size: 11px;
-          cursor: pointer; transition: background 0.15s; font-family: inherit;
-        }
-        .arm-push-btn:hover:not(:disabled) { background: #ff8c00; }
-        .arm-push-btn:disabled { background: #2a2a2a; color: rgba(255,255,255,0.3); cursor: not-allowed; }
-
-        /* ── Map area ── */
-        .arm-map { flex: 1; min-width: 0; position: relative; }
-        .arm-map-empty {
-          position: absolute; inset: 0;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-          pointer-events: none; z-index: 1;
-        }
-
-        /* ── Toast ── */
-        .arm-toast {
-          position: fixed; top: 68px; right: 16px; z-index: 9999;
-          padding: 11px 18px; border-radius: 8px;
-          font-weight: 600; font-size: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 300px;
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        }
-        .arm-toast.success { background: #00c853; color: #000; }
-        .arm-toast.error   { background: #e53935; color: #fff; }
-        .arm-toast.warn    { background: #ff9800; color: #000; }
-
-        /* ── Mobile ── */
-        @media (max-width: 767px) {
-          .arm-root   { flex-direction: column; overflow-y: auto; }
-          .arm-panel  { width: 100% !important; min-width: unset !important; max-width: 100% !important; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); max-height: 400px; flex-shrink: 0; }
-          .arm-map    { flex: none; height: 320px; min-height: 280px; width: 100%; }
-          .arm-map > div { position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; }
+        .arm-root { display:flex; width:100%; min-height:calc(100vh - 140px); background:#f4f4ef; font-family:'Segoe UI',sans-serif; }
+        .arm-panel { width:290px; min-width:290px; background:#fff; border-right:1px solid rgba(17,17,17,0.12); display:flex; flex-direction:column; }
+        .arm-panel-header { padding:12px 14px; border-bottom:1px solid rgba(17,17,17,0.08); }
+        .arm-panel-inner { flex:1; overflow:auto; padding:10px 10px 16px; display:flex; flex-direction:column; gap:8px; }
+        .arm-box { background:#f9f9f5; border:1px solid rgba(17,17,17,0.12); border-radius:10px; padding:10px; }
+        .arm-box-label { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(17,17,17,0.56); margin-bottom:8px; }
+        .arm-list { max-height:190px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
+        .arm-item { background:#fff; border:1px solid rgba(17,17,17,0.14); border-radius:8px; padding:8px 10px; cursor:pointer; transition:background 0.12s; }
+        .arm-item:hover { background:#f5f5ef; }
+        .arm-item.sel { background:#eef2b2; border-color:#d6e800; }
+        .arm-find-btn,.arm-push-btn { width:100%; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; }
+        .arm-find-btn { background:#d6e800; color:#111; padding:10px 0; margin-bottom:8px; font-size:13px; }
+        .arm-find-btn:disabled,.arm-push-btn:disabled { background:#d7d7cd; color:rgba(17,17,17,0.45); cursor:not-allowed; }
+        .arm-route-card { background:#f7f8e8; border:1px solid rgba(214,232,0,0.72); border-radius:10px; padding:10px; margin-top:4px; position:sticky; bottom:8px; z-index:5; box-shadow:0 10px 24px rgba(17,17,17,0.16); }
+        .arm-push-btn { background:#111; color:#fff; padding:10px 0; margin-top:6px; font-size:13px; border:1px solid rgba(255,255,255,0.1); }
+        .arm-map { flex:1; min-width:0; position:relative; }
+        .arm-map-el { width:100%; height:100%; min-height:540px; position:relative; z-index:1; }
+        .arm-toast { position:fixed; top:68px; right:16px; z-index:9999; padding:11px 16px; border-radius:8px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,0.22); }
+        .arm-toast.success { background:#d6e800; color:#111; }
+        .arm-toast.error { background:#373737; color:#fff; }
+        .arm-3d-btn { position:absolute; top:10px; right:10px; z-index:5000; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.22); border-radius:9px; padding:7px 12px; font-weight:700; font-size:12px; cursor:pointer; }
+        @media (max-width:767px) {
+          .arm-root { flex-direction:column; }
+          .arm-panel { width:100%; min-width:100%; max-height:calc(100vh - 220px); border-right:none; border-bottom:1px solid rgba(17,17,17,0.12); }
+          .arm-panel-inner { padding-bottom:96px; }
+          .arm-route-card { bottom:8px; padding:8px; margin-top:8px; }
+          .arm-find-btn { padding:9px 0; }
+          .arm-push-btn { padding:9px 0; font-size:12px; }
+          .arm-map { height:380px; min-height:300px; }
         }
       `}</style>
 
       <div className="arm-root">
-        {/* Toast */}
-        {toast && (
-          <div className={`arm-toast ${toast.type}`}>{toast.msg}</div>
-        )}
+        {toast && <div className={`arm-toast ${toast.type}`}>{toast.msg}</div>}
 
-        {/* ── Left Panel ── */}
         <div className="arm-panel">
           <div className="arm-panel-header">
-            <div className="arm-panel-title">🛣 Route Manager</div>
-            <div className="arm-panel-sub">
-              {TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY" ? "TomTom Traffic · OSRM Routing" : "OSRM Routing"}
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Route Manager</div>
+            <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>Leaflet routing (stable mode)</div>
           </div>
 
           <div className="arm-panel-inner">
-
             {/* Ambulance selector */}
             <div className="arm-box">
-              <div className="arm-box-label">🚑 Select Ambulance</div>
+              <div className="arm-box-label">Select Ambulance</div>
               <div className="arm-list">
-                {ambs.length === 0 && <p className="arm-empty">No active ambulance</p>}
-                {ambs.map(a => {
-                  const color = STATUS_COLOR[a.status] || "#555";
-                  const isSel = selAmb?.id === a.id || selAmb?.ambulance_id === a.id;
+                {ambs.map((a) => {
+                  const selected = Number(selAmb?.id || selAmb?.ambulance_id) === Number(a.id);
+                  const color    = statusColor[a.status] || statusColor.offline;
                   return (
-                    <div key={a.id} className={`arm-item ${isSel ? "sel" : ""}`} onClick={() => setSelAmb(a)}>
-                      <div className="arm-item-top">
-                        <span className="arm-item-name">{a.ambulance_number}</span>
-                        <span className="arm-badge" style={{ background: color + "20", color, border: `1px solid ${color}40` }}>
-                          {a.status?.replace("_"," ")}
-                        </span>
+                    <div key={a.id} className={`arm-item ${selected ? "sel" : ""}`} onClick={() => setSelAmb(a)}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <b>{a.ambulance_number}</b>
+                        <span style={{ fontSize: 11, fontWeight: 700, color }}>{String(a.status || "").replace("_", " ")}</span>
                       </div>
-                      <div className="arm-item-sub">👤 {a.driver} · {a.location || "—"}</div>
-                      <div className={a.latitude ? "arm-gps-ok" : "arm-gps-no"}>
-                        {a.latitude ? "🛰 GPS mila ✓" : "⚠ GPS nahi (Delhi fallback)"}
-                      </div>
+                      <div style={{ fontSize: 11 }}>{a.driver}</div>
+                      <div style={{ fontSize: 11, color: "rgba(17,17,17,0.7)" }}>{a.location || "-"}</div>
                     </div>
                   );
                 })}
@@ -335,80 +517,48 @@ export default function AdminRouteManager({ preSelectedDriver }) {
 
             {/* Booking selector */}
             <div className="arm-box">
-              <div className="arm-box-label">📋 Select Booking</div>
+              <div className="arm-box-label">Select Booking</div>
               <div className="arm-list">
-                {bookings.length === 0 && <p className="arm-empty">No active booking</p>}
-                {bookings.map(b => {
-                  const isSel = selBook?.id === b.id;
-                  const bc    = b.status === "pending" ? "#f7c948" : "#00d4aa";
-                  return (
-                    <div key={b.id} className={`arm-item ${isSel ? "sel" : ""}`} onClick={() => setSelBook(b)}>
-                      <div className="arm-item-top">
-                        <span className="arm-item-name">#{b.id}</span>
-                        <span className="arm-badge" style={{ background: bc + "18", color: bc, border: `1px solid ${bc}35` }}>
-                          {b.status}
-                        </span>
-                      </div>
-                      <div className="arm-item-sub">👤 {b.booked_by}</div>
-                      <div className="arm-item-sub">📍 {b.pickup_location}</div>
-                      <div className="arm-item-sub">🏥 {b.destination || "Nearest Hospital"}</div>
+                {!selectedAmbId && (
+                  <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>Select ambulance first</div>
+                )}
+                {selectedAmbId && assignableBookings.map((b) => (
+                  <div key={b.id} className={`arm-item ${selBook?.id === b.id ? "sel" : ""}`} onClick={() => setSelBook(b)}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                      <b>#{b.id}</b>
+                      <span style={{ fontSize: 11, color: "#00c853", fontWeight: 700 }}>{b.status}</span>
                     </div>
-                  );
-                })}
+                    <div style={{ fontSize: 11 }}>{b.booked_by}</div>
+                    <div style={{ fontSize: 11, color: "rgba(17,17,17,0.7)" }}>{b.pickup_location}</div>
+                    <div style={{ fontSize: 11, color: "rgba(17,17,17,0.7)" }}>{b.assigned_hospital_name || b.destination || "-"}</div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Find route button */}
             <button className="arm-find-btn" onClick={findRoute} disabled={loading}>
-              {loading ? "⏳ Dhundh raha hoon..." : "🗺 Route Dhundho"}
+              {loading ? "Finding route…" : "Find Route"}
             </button>
 
-            {/* Traffic info */}
-            {traffic && (
-              <div className={`arm-traffic ${traffic.hasTraffic ? "bad" : "ok"}`}>
-                <div className="arm-traffic-title" style={{ color: traffic.hasTraffic ? "#ff6d00" : "#00c853" }}>
-                  {traffic.hasTraffic ? "🚦 Traffic Alert!" : "✅ Road Clear"}
+            {routeStats && (
+              <div className="arm-route-card">
+                <div style={{ fontWeight: 800, marginBottom: 5 }}>Best Route</div>
+                <div style={{ fontSize: 12, color: "rgba(17,17,17,0.75)" }}>
+                  {routeStats.distKm} km · ~{routeStats.mins} min
                 </div>
-                <div className="arm-traffic-info">
-                  📏 {traffic.km} km &nbsp;·&nbsp; ⏱ {traffic.mins} min
-                  {traffic.delay > 0 && <span style={{ color: "#ff6d00" }}> (+{traffic.delay} min delay)</span>}
-                </div>
-              </div>
-            )}
-
-            {/* Route result */}
-            {routes.map((r, i) => (
-              <div key={i} className="arm-route-card">
-                <div className="arm-route-header">
-                  <span className="arm-route-title">🏆 Best Route</span>
-                  <span className="arm-route-engine">
-                    {TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY" ? "TomTom" : "OSRM"}
-                  </span>
-                </div>
-                <div className="arm-route-stats">
-                  <span className="arm-route-stat">📏 {r.dist}</span>
-                  <span className="arm-route-stat">⏱ {r.time}</span>
-                  {r.hasTraffic && <span style={{ fontSize: 11, color: "#ff6d00" }}>🚦 Traffic</span>}
-                </div>
-                <button className="arm-push-btn" onClick={() => pushRoute(r)} disabled={pushing}>
-                  {pushing ? "Bhej raha hoon..." : "📤 Driver Ko Bhejo"}
+                <button className="arm-push-btn" onClick={pushRoute} disabled={pushing}>
+                  {pushing ? "Sending…" : "Send To Driver"}
                 </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* ── Map ── */}
         <div className="arm-map">
-          <div ref={mapDivRef} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          {routes.length === 0 && !loading && !selAmb && !selBook && (
-            <div className="arm-map-empty">
-              <div style={{ fontSize: 44, marginBottom: 10, opacity: 0.15 }}>🗺</div>
-              <div style={{ color: "rgba(255,255,255,0.15)", fontSize: 12, textAlign: "center" }}>
-                Ambulance + Booking select karo<br />Phir Route Dhundho
-              </div>
-            </div>
-          )}
+          <button className="arm-3d-btn" onClick={() => setIs3D((v) => !v)}>
+            {is3D ? "Disable 3D View" : "Enable 3D View"}
+          </button>
+          <div ref={mapElRef} className="arm-map-el" />
         </div>
       </div>
     </>

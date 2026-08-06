@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Ambulance(models.Model):
     STATUS_CHOICES = [
         ("available", "Available"),
@@ -10,6 +9,8 @@ class Ambulance(models.Model):
     ]
 
     ambulance_number  = models.CharField(max_length=50)
+    ambulance_contract_id = models.CharField(max_length=80, blank=True, default="")
+    registration_number = models.CharField(max_length=80, blank=True, default="")
     driver            = models.CharField(max_length=100)
     driver_contact    = models.CharField(max_length=20, blank=True)
     driver_email      = models.EmailField(blank=True, null=True)
@@ -23,10 +24,14 @@ class Ambulance(models.Model):
     eta_to_hospital   = models.CharField(max_length=50, blank=True)
     latitude          = models.FloatField(null=True, blank=True)
     longitude         = models.FloatField(null=True, blank=True)
+    
+    # ✅ BATTERY FIELD ADDED
+    battery_percentage = models.IntegerField(default=100)
+    
     last_updated      = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.ambulance_number
+        return f"{self.ambulance_number} ({self.battery_percentage}%)"
 
 
 class DriverLocation(models.Model):
@@ -53,13 +58,13 @@ class SuggestedRoute(models.Model):
     ]
 
     ambulance       = models.ForeignKey(Ambulance, on_delete=models.CASCADE, related_name="suggested_routes")
+    booking_id      = models.IntegerField(null=True, blank=True, db_index=True)
     pickup_location = models.CharField(max_length=300)
     destination     = models.CharField(max_length=300, blank=True)
     polyline        = models.TextField(blank=True)
     distance_km     = models.CharField(max_length=50, blank=True)
     duration        = models.CharField(max_length=50, blank=True)
     status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    # Coordinates for driver map (set by admin when suggesting route)
     pickup_lat      = models.FloatField(null=True, blank=True)
     pickup_lng      = models.FloatField(null=True, blank=True)
     dest_lat        = models.FloatField(null=True, blank=True)

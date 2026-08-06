@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Homepage              from "./Pages/Homepage";
 import Reports               from "./Pages/Reports";
+import Analytics             from "./Pages/Analytics";
 import Requests              from "./Pages/Request";
 import Leftsidebar           from "./Components/Leftsidebar";
 import Topnavbar             from "./Components/Topnavbar";
@@ -11,16 +13,32 @@ import Hospitals             from "./Pages/Hospitals";
 import Login                 from "./Pages/Login";
 import Signup                from "./Pages/Signup";
 import BookingDetails        from "./Pages/BookingDetails";
+import CaseDetails           from "./Pages/CaseDetails";
 import DriverView            from "./Pages/DriverView";
 import DriverDashboard       from "./Pages/DriverDashboard";
+import DriverHome            from "./pages/DriverHome";
+import DriverGuidance        from "./pages/DriverGuidance";
 import DriverChangeRequests  from "./Pages/DriverChangeRequests";
 import LiveMap               from "./Pages/LiveMap";
-import Directions            from "./Pages/Directions";   // ← Directions (live tracking)
+import MapView               from "./Pages/Mapview";
 import UserLiveTracking      from "./Components/UserLiveTracking";
+import DriverBatteryTracker  from "./components/DriverBatteryTracker";
 import MyBookings            from "./Pages/MyBookings";
-import SettingsPage          from "./Pages/Settings";
+import LiveTracking          from "./Pages/LiveTracking"; 
+import HospitalResponses     from "./pages/HospitalResponses";
+import AdminChatControl      from "./pages/AdminChatControl";
+import UserChatbot           from "./Pages/UserChatbot";
+import DriverRequestChat     from "./Pages/DriverRequestChat";
+import HospitalPortal        from "./Pages/HospitalPortal";
+import AdminHospitalDetails  from "./Pages/AdminHospitalDetails";
+import InfoPage              from "./pages/InfoPage";
+import CallIntakeConsole     from "./pages/CallIntakeConsole";
+import DriverVoiceReports    from "./pages/DriverVoiceReports";
+import HospitalCaseReportView from "./pages/HospitalCaseReportView";
+import DriverInsuranceForm   from "./pages/DriverInsuranceForm";
+import HospitalInsuranceView from "./pages/HospitalInsuranceView";
 
-// ── Route guards ──────────────────────────────────────────────────────────
+
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
   return role === "admin" ? element : <Navigate to="/Ambulances" replace />;
@@ -31,92 +49,174 @@ const ProtectedRoute = ({ element }) => {
   return user ? element : <Navigate to="/Login" replace />;
 };
 
+const HospitalRoute = ({ element }) => {
+  const user = localStorage.getItem("user");
+  const role = localStorage.getItem("role");
+  return user && role === "hospital" ? element : <Navigate to="/" replace />;
+};
+
+const ConfirmedTrackingRoute = ({ element }) => {
+  const raw = localStorage.getItem("active_confirmed_booking");
+  if (!raw) return <Navigate to="/MyBookings" replace />;
+  try {
+    const booking = JSON.parse(raw);
+    if (booking?.status === "confirmed") return element;
+  } catch {
+    return <Navigate to="/MyBookings" replace />;
+  }
+  return <Navigate to="/MyBookings" replace />;
+};
+
 const DriverAwareRoute = ({ driverElement, defaultElement }) => {
   const role = localStorage.getItem("role");
-  if (role === "driver") return <ProtectedRoute element={driverElement} />;
-  return <ProtectedRoute element={defaultElement} />;
+  const user = localStorage.getItem("user");
+  if (role === "driver" && user) return driverElement;
+  if (role === "hospital" && user) return <Navigate to="/hospital/home" replace />;
+  return defaultElement;
 };
 
 const App = () => {
-  const { pathname } = useLocation();
-  const routeShellRef = useRef(null);
-  const p    = pathname.toLowerCase();
+  const location = useLocation();
+  const { pathname } = location;
+  const p = pathname.toLowerCase();
   const role = localStorage.getItem("role");
-
-  const isAuth       = p === "/login" || p === "/signup";
-  const isMapView    = p === "/directions";
-  const isUser       = role !== "admin" && role !== "driver" && !!localStorage.getItem("user");
+  const email = (localStorage.getItem("user") || "").trim().toLowerCase();
 
   useEffect(() => {
-    if (!routeShellRef.current) return;
+    if (email === "vashupanchal.cs@gmail.com" && localStorage.getItem("role") !== "admin") {
+      localStorage.setItem("role", "admin");
+    }
+  }, [email]);
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const animatedSelector = [
+      ".ad-cell", ".ad-contact-card", ".ad-contact-col",
+      ".amb2-card", ".amb2-stat", ".amb2-ins",
+      ".h2-card", ".h2-stat", ".h2-mini",
+      ".rep-sum-card", ".rep-chart-card", ".rep-table-card",
+      ".req-card", ".req-table-wrap",
+      ".dd-card", ".dd-booking-card", ".dd-amb-card", ".dn-card",
+      ".dl-card", ".mb-card", ".profile-card", ".setting-card"
+    ].join(",");
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return undefined;
+
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        routeShellRef.current,
-        { autoAlpha: 0, y: 26, filter: "blur(10px)", scale: 0.995 },
-        { autoAlpha: 1, y: 0, filter: "blur(0px)", scale: 1, duration: 0.82, ease: "power3.out" }
-      );
-      gsap.fromTo(
-        "[data-k72='reveal']",
-        { autoAlpha: 0, y: 24 },
-        { autoAlpha: 1, y: 0, duration: 0.74, stagger: 0.07, delay: 0.08, ease: "power3.out" }
-      );
-    }, routeShellRef);
+      const targets = gsap.utils.toArray(animatedSelector);
+      targets.forEach((card, index) => {
+        gsap.fromTo(
+          card,
+          {
+            y: 36,
+            opacity: 0.65
+          },
+          {
+            y: 0,
+            opacity: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 92%",
+              end: "top 56%",
+              scrub: 0.9,
+              invalidateOnRefresh: true
+            },
+            delay: Math.min(index * 0.012, 0.18)
+          }
+        );
+      });
+    });
+
     return () => ctx.revert();
   }, [pathname]);
+  
+  const isAuth = p === "/login" || p === "/signup";
+  const isMapView = p === "/directions";
 
-  useEffect(() => {
-    const onMove = (e) => {
-      document.documentElement.style.setProperty("--sr-mx", `${e.clientX}px`);
-      document.documentElement.style.setProperty("--sr-my", `${e.clientY}px`);
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+  // Background polling for confirmed booking (user only)
+  const isUser = role !== "admin" && role !== "driver" && role !== "hospital" && !!localStorage.getItem("user");
+  const isDriver = role === "driver" && !!localStorage.getItem("user");
+  const driverAmbulanceId = Number(localStorage.getItem("ambulance_id") || "0");
 
   return (
     <>
       {!isAuth && !isMapView && <Leftsidebar />}
       {!isAuth && !isMapView && <Topnavbar />}
+
+      {/* Silent background poller — no UI */}
       {!isAuth && !isMapView && isUser && <UserLiveTracking />}
-      <div ref={routeShellRef}>
+      {!isAuth && !isMapView && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
+
       <Routes>
         {/* Public */}
-        <Route path="/Login"  element={<Login />} />
+        <Route path="/Login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Homepage — driver sees DriverDashboard */}
+        {/* Homepage */}
         <Route path="/" element={
           <DriverAwareRoute
-            driverElement={<DriverDashboard />}
+            driverElement={<DriverHome />}
             defaultElement={<Homepage />}
           />
-        } />
+        }
+        />
 
         {/* Driver */}
-        <Route path="/DriverDashboard" element={<ProtectedRoute element={<DriverDashboard />} />} />
-        <Route path="/driver/:id"      element={<ProtectedRoute element={<DriverView />} />} />
-        <Route path="/DriverView"      element={<ProtectedRoute element={<DriverView />} />} />
+        <Route path="/driver-dashboard" element={<ProtectedRoute element={<DriverDashboard />} />} />
+        <Route path="/driver/:id" element={<ProtectedRoute element={<DriverView />} />} />
+        <Route path="/DriverView" element={<ProtectedRoute element={<DriverView />} />} />
+        <Route path="/DriverChatbot" element={<Navigate to="/DriverRequestChat" replace />} />
+        <Route path="/DriverRequestChat" element={<ProtectedRoute element={<DriverRequestChat />} />} />
+        <Route path="/driver/voice-reports" element={<ProtectedRoute element={<DriverVoiceReports />} />} />
+        <Route path="/driver/insurance-form" element={<ProtectedRoute element={<DriverInsuranceForm />} />} />
+        <Route path="/driver/guidance" element={<ProtectedRoute element={<DriverGuidance />} />} />
+
+        {/* Hospital */}
+        <Route path="/hospital/home" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/queue" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/responses" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/reports" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/reports/:bookingId/view" element={<HospitalRoute element={<HospitalCaseReportView />} />} />
+        <Route path="/hospital/reports/:bookingId/insurance" element={<HospitalRoute element={<HospitalInsuranceView />} />} />
+        <Route path="/hospital/live-track" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/tracking" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/resources" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/staff" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/cases" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />
-        <Route path="/Hospitals"  element={<ProtectedRoute element={<Hospitals />} />} />
+        <Route path="/Hospitals" element={<ProtectedRoute element={<Hospitals />} />} />
         <Route path="/MyBookings" element={<ProtectedRoute element={<MyBookings />} />} />
-        <Route path="/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
-
-        {/* /directions — Live tracking map (user clicks "Live Track" in MyBookings) */}
-        <Route path="/directions" element={<ProtectedRoute element={<Directions />} />} />
+        <Route path="/cases/:bookingId" element={<ProtectedRoute element={<CaseDetails />} />} />
+        <Route path="/UserChatbot" element={<ProtectedRoute element={<UserChatbot />} />} />
+        <Route path="/info/:section" element={<ProtectedRoute element={<InfoPage />} />} />
+        <Route
+          path="/LiveTracking"
+          element={<ProtectedRoute element={<ConfirmedTrackingRoute element={<LiveTracking />} />} />}
+        />
+        <Route path="/directions" element={<ProtectedRoute element={<MapView />} />} />
 
         {/* Admin only */}
-        <Route path="/Reports"              element={<AdminRoute element={<Reports />} />} />
-        <Route path="/Requests"             element={<AdminRoute element={<Requests />} />} />
-        <Route path="/bookings"             element={<AdminRoute element={<BookingDetails />} />} />
-        <Route path="/LiveMap"              element={<AdminRoute element={<LiveMap />} />} />
+        <Route path="/Reports" element={<AdminRoute element={<Reports />} />} />
+        <Route path="/Analytics" element={<AdminRoute element={<Analytics />} />} />
+        <Route path="/Requests" element={<AdminRoute element={<Requests />} />} />
+        <Route path="/bookings" element={<AdminRoute element={<BookingDetails />} />} />
+        <Route path="/LiveMap" element={<AdminRoute element={<LiveMap />} />} />
         <Route path="/DriverChangeRequests" element={<AdminRoute element={<DriverChangeRequests />} />} />
+        <Route path="/HospitalResponses" element={<AdminRoute element={<HospitalResponses />} />} />
+        <Route path="/AdminChatControl" element={<AdminRoute element={<AdminChatControl />} />} />
+        <Route path="/HospitalPartnerDetails" element={<AdminRoute element={<AdminHospitalDetails />} />} />
+        <Route path="/CallIntakeConsole" element={<AdminRoute element={<CallIntakeConsole />} />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      </div>
     </>
   );
 };

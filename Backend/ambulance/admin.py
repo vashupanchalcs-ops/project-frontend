@@ -4,9 +4,30 @@ from .models import Ambulance, DriverLocation, SuggestedRoute
 
 @admin.register(Ambulance)
 class AmbulanceAdmin(admin.ModelAdmin):
-    list_display  = ["ambulance_number", "driver", "driver_email", "status", "location"]
-    search_fields = ["ambulance_number", "driver", "driver_email"]
+    list_display  = ["id", "ambulance_contract_id", "ambulance_number", "registration_number", "driver", "driver_email", "status", "location"]
+    search_fields = ["ambulance_contract_id", "ambulance_number", "registration_number", "driver", "driver_email"]
     list_filter   = ["status"]
+    fields = [
+        "ambulance_contract_id",
+        "ambulance_number",
+        "registration_number",
+        "driver",
+        "driver_contact",
+        "driver_email",
+        "model",
+        "speed",
+        "status",
+        "location",
+        "nearest_hospital",
+        "hospital_distance",
+        "eta_to_patient",
+        "eta_to_hospital",
+        "latitude",
+        "longitude",
+        "battery_percentage",
+        "last_updated",
+    ]
+    readonly_fields = ["last_updated"]
 
 
 @admin.register(DriverLocation)

@@ -1,224 +1,289 @@
-// RealTimeMap.jsx — Live driver tracking (Leaflet)
-import { useState, useEffect, useRef } from "react";
-import useLeaflet, { DARK_TILE, DELHI, STATUS_COLOR, makeIcon, makePinIcon } from "../hooks/useLeaflet";
+import { useEffect, useMemo, useState } from "react";
+import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
+import {
+  DELHI,
+  ensureGoogleMaps,
+  hasConfiguredGoogleMapsKey,
+} from "../utils/googleMaps";
 
-const BASE    = "http://127.0.0.1:8000";
+const BASE = "http://127.0.0.1:8000";
 const REFRESH = 5000;
 
+const statusColors = {
+  available: "#00c853",
+  en_route: "#f7c948",
+  busy: "#ff4d5a",
+  offline: "#888888",
+};
+
+const markerIcon = (color) => ({
+  path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+  scale: 9,
+  fillColor: color,
+  fillOpacity: 0.95,
+  strokeColor: "#ffffff",
+  strokeWeight: 2,
+});
+
 export default function RealTimeMap({ onSelectDriver }) {
-  const leafletReady = useLeaflet();
-  const [drivers,    setDrivers]    = useState([]);
-  const [selected,   setSelected]   = useState(null);
+  const [drivers, setDrivers] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
-
-  const mapDivRef  = useRef(null);
-  const mapObj     = useRef(null);
-  const markersRef = useRef({});
-  const popupRef   = useRef(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [mapsReady, setMapsReady] = useState(Boolean(window.google?.maps));
+  const [mapsAvailable, setMapsAvailable] = useState(hasConfiguredGoogleMapsKey());
 
   useEffect(() => {
-    if (!leafletReady || !mapDivRef.current || mapObj.current) return;
-    const L = window.L;
-    mapObj.current = L.map(mapDivRef.current, {
-      center: [DELHI.lat, DELHI.lng], zoom: 12, zoomControl: false,
-    });
-    L.tileLayer(DARK_TILE, { maxZoom: 19 }).addTo(mapObj.current);
-    L.control.zoom({ position: "bottomright" }).addTo(mapObj.current);
-    popupRef.current = L.popup({ className: "sr-dark-popup" });
+    const handleUp   = () => setIsOnline(true);
+    const handleDown = () => setIsOnline(false);
+    window.addEventListener("online", handleUp);
+    window.addEventListener("offline", handleDown);
     return () => {
-      Object.values(markersRef.current).forEach(m => { try { m.remove(); } catch {} });
-      markersRef.current = {};
-      if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; }
+      window.removeEventListener("online", handleUp);
+      window.removeEventListener("offline", handleDown);
     };
-  }, [leafletReady]);
+  }, []);
 
   useEffect(() => {
-    fetchLocations();
-    const t = setInterval(fetchLocations, REFRESH);
-    return () => clearInterval(t);
-  }, [leafletReady]);
-
-  const fetchLocations = async () => {
-    try {
-      const res  = await fetch(`${BASE}/api/admin/live-locations/`);
-      const data = await res.json();
-      setDrivers(data);
-      setLastUpdate(new Date().toLocaleTimeString());
-      if (leafletReady && mapObj.current) updateMarkers(data);
-    } catch {}
-  };
-
-  const updateMarkers = (data) => {
-    if (!mapObj.current || !window.L) return;
-    const L   = window.L;
-    const seen = new Set();
-    data.forEach(d => {
-      seen.add(d.ambulance_id);
-      const color = STATUS_COLOR[d.status] || STATUS_COLOR.offline;
-      const icon  = makePinIcon(color, "🚑");
-      if (!icon) return;
-      if (markersRef.current[d.ambulance_id]) {
-        markersRef.current[d.ambulance_id].setLatLng([d.latitude, d.longitude]);
-        markersRef.current[d.ambulance_id].setIcon(icon);
-      } else {
-        const m = L.marker([d.latitude, d.longitude], { icon }).addTo(mapObj.current);
-        m.on("click", () => {
-          setSelected(d);
-          popupRef.current.setLatLng([d.latitude, d.longitude]).setContent(buildPopup(d)).openOn(mapObj.current);
-        });
-        markersRef.current[d.ambulance_id] = m;
+    let mounted = true;
+    const fetchLocations = async () => {
+      try {
+        const res = await fetch(`${BASE}/api/admin/live-locations/`);
+        const data = await res.json();
+        if (!mounted) return;
+        setDrivers(Array.isArray(data) ? data : []);
+        setLastUpdate(new Date().toLocaleTimeString());
+      } catch {
+        if (mounted) setDrivers([]);
       }
-    });
-    Object.keys(markersRef.current).forEach(id => {
-      if (!seen.has(parseInt(id))) { markersRef.current[id].remove(); delete markersRef.current[id]; }
-    });
-  };
+    };
+    fetchLocations();
+    const timer = setInterval(fetchLocations, REFRESH);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, []);
 
-  const buildPopup = (d) => `
-    <div style="background:#1a1a1a;color:#fff;padding:12px 14px;border-radius:10px;min-width:200px;font-family:'Segoe UI',sans-serif">
-      <div style="font-size:15px;font-weight:800;margin-bottom:8px">🚑 ${d.ambulance_number}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:3px">👤 ${d.driver}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px">📧 ${d.driver_email}</div>
-      <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;
-        background:${(STATUS_COLOR[d.status]||"#555")}22;color:${STATUS_COLOR[d.status]||"#555"};
-        border:1px solid ${STATUS_COLOR[d.status]||"#555"}">
-        ${d.status.replace("_"," ").toUpperCase()}
-      </span>
-      <div style="font-size:11px;color:#555;margin-top:8px">⚡ ${d.speed} km/h</div>
-    </div>`;
-
-  const focusDriver = (d) => {
-    if (!mapObj.current) return;
-    mapObj.current.flyTo([d.latitude, d.longitude], 16, { duration: 1 });
-    setSelected(d);
-    if (popupRef.current) popupRef.current.setLatLng([d.latitude, d.longitude]).setContent(buildPopup(d)).openOn(mapObj.current);
-    setTimeout(() => onSelectDriver?.(d), 100);
-  };
-
-  // Fix map render — invalidateSize after map init
   useEffect(() => {
-    if (!mapObj.current) return;
-    const t1 = setTimeout(() => mapObj.current?.invalidateSize(), 100);
-    const t2 = setTimeout(() => mapObj.current?.invalidateSize(), 500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [leafletReady]);
+    let active = true;
+    const initMaps = async () => {
+      if (!hasConfiguredGoogleMapsKey()) {
+        if (!active) return;
+        setMapsAvailable(false);
+        setMapsReady(false);
+        return;
+      }
+      const ok = await ensureGoogleMaps(10000);
+      if (!active) return;
+      setMapsAvailable(true);
+      setMapsReady(ok);
+    };
+    initMaps();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const activeCount  = drivers.filter(d => d.status !== "offline").length;
-  const enRouteCount = drivers.filter(d => d.status === "en_route").length;
+  const activeCount = useMemo(
+    () => drivers.filter((d) => d.status !== "offline").length,
+    [drivers]
+  );
+  const enRouteCount = useMemo(
+    () => drivers.filter((d) => d.status === "en_route").length,
+    [drivers]
+  );
+  const lowBatteryDrivers = useMemo(
+    () =>
+      drivers.filter((d) => {
+        const battery = Number(d?.battery ?? d?.battery_percentage);
+        return Number.isFinite(battery) && battery <= 15;
+      }),
+    [drivers]
+  );
+
+  const handleSelect = (driver) => {
+    setSelected(driver);
+    onSelectDriver?.(driver);
+  };
 
   return (
     <>
       <style>{`
-        .sr-dark-popup .leaflet-popup-content-wrapper {
-          background: rgba(20,20,20,0.97) !important; border: 1px solid rgba(255,255,255,0.1) !important;
-          border-radius: 10px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.8) !important;
+        .rtm-root { display:flex; width:100%; height:100%; font-family:'Segoe UI',sans-serif; background:#f5f5ef; }
+        .rtm-sidebar { width:280px; min-width:280px; background:#fff; border-right:1px solid rgba(17,17,17,0.12); display:flex; flex-direction:column; }
+        .rtm-sidebar-header { padding:12px 14px; border-bottom:1px solid rgba(17,17,17,0.08); display:flex; justify-content:space-between; align-items:center; }
+        .rtm-stats { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid rgba(17,17,17,0.08); }
+        .rtm-stat { flex:1; text-align:center; border:1px solid rgba(214,232,0,0.85); background:#f9f9ee; border-radius:10px; padding:8px 4px; }
+        .rtm-low-batt-alert {
+          margin: 8px 10px 0;
+          border: 1px solid rgba(229, 9, 20, 0.35);
+          background: rgba(229, 9, 20, 0.08);
+          color: #a80f1a;
+          border-radius: 10px;
+          padding: 8px 10px;
+          font-size: 11px;
+          font-weight: 700;
         }
-        .sr-dark-popup .leaflet-popup-tip { background: rgba(20,20,20,0.97) !important; }
-        .sr-dark-popup .leaflet-popup-close-button { color: rgba(255,255,255,0.4) !important; }
-        .leaflet-control-zoom a { background: rgba(20,20,20,0.92) !important; color: #fff !important; border-color: rgba(255,255,255,0.1) !important; }
-        .leaflet-control-zoom a:hover { background: rgba(40,40,40,0.95) !important; }
-        .leaflet-routing-container { display: none !important; }
-
-        /* ── RealTimeMap Layout ── */
-        .rtm-root { display: flex; width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; }
-
-        .rtm-sidebar {
-          width: 280px; min-width: 280px;
-          background: #111; border-right: 1px solid #1c1c1c;
-          display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+        .rtm-list { flex:1; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:8px; }
+        .rtm-item { background:#fff; border:1px solid rgba(17,17,17,0.16); border-radius:10px; padding:10px; cursor:pointer; }
+        .rtm-item.sel { background:#eef2b2; border-color:#d6e800; }
+        .rtm-item.critical { border-color: rgba(229, 9, 20, 0.45); background: rgba(229, 9, 20, 0.05); }
+        .rtm-battery-badge {
+          font-size: 10px;
+          font-weight: 800;
+          border-radius: 20px;
+          border: 1px solid;
+          padding: 2px 8px;
+          line-height: 1.2;
         }
-        .rtm-sidebar-header {
-          padding: 12px 14px; border-bottom: 1px solid #1c1c1c;
-          display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+        .rtm-battery-badge.ok {
+          color: #0b7a35;
+          border-color: rgba(11, 122, 53, 0.35);
+          background: rgba(0, 200, 83, 0.12);
         }
-        .rtm-stats {
-          display: flex; padding: 10px 12px; gap: 8px;
-          border-bottom: 1px solid #1c1c1c; flex-shrink: 0;
+        .rtm-battery-badge.critical {
+          color: #b31321;
+          border-color: rgba(179, 19, 33, 0.35);
+          background: rgba(229, 9, 20, 0.14);
         }
-        .rtm-stat {
-          flex: 1; border-radius: 8px; padding: 8px 4px; text-align: center;
-        }
-        .rtm-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .rtm-map-wrap { flex: 1; min-width: 0; position: relative; min-height: 0; }
-
-        /* ── Mobile: stack vertically ── */
+        .rtm-map-wrap { flex:1; min-width:0; position:relative; }
+        .rtm-map { width:100%; height:100%; }
         @media (max-width: 767px) {
-          .rtm-root { flex-direction: column; overflow-y: auto; }
-          .rtm-sidebar {
-            width: 100% !important;
-            min-width: unset !important;
-            max-width: 100% !important;
-            border-right: none;
-            border-bottom: 1px solid #1c1c1c;
-            max-height: 300px;
-            flex-shrink: 0;
-          }
-          .rtm-map-wrap {
-            flex: none;
-            height: 350px;
-            min-height: 300px;
-            width: 100%;
-          }
-          .rtm-map-wrap > div {
-            position: absolute !important;
-            top: 0 !important; left: 0 !important;
-            right: 0 !important; bottom: 0 !important;
-          }
+          .rtm-root { flex-direction:column; }
+          .rtm-sidebar { width:100%; min-width:100%; max-height:300px; border-right:none; border-bottom:1px solid rgba(17,17,17,0.12); }
+          .rtm-map-wrap { height:380px; min-height:300px; }
         }
       `}</style>
-
       <div className="rtm-root">
-        {/* Sidebar */}
         <div className="rtm-sidebar">
           <div className="rtm-sidebar-header">
-            <span style={{ fontWeight:700, fontSize:14, color:"#fff" }}>🗺 Live Tracking</span>
-            <span style={{ fontSize:11, color:"#444" }}>↻ {lastUpdate||"—"}</span>
+            <span style={{ fontWeight: 800, fontSize: 14 }}>Live Tracking</span>
+            <span style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>↻ {lastUpdate || "—"}</span>
           </div>
           <div className="rtm-stats">
-            {[["Active",activeCount,"#00c853"],["En Route",enRouteCount,"#ff6d00"],["Total",drivers.length,"#4fc3f7"]].map(([l,v,c]) => (
-              <div key={l} className="rtm-stat" style={{ background:c+"11", border:`1px solid ${c}33` }}>
-                <div style={{ fontSize:20, fontWeight:700, color:"#fff" }}>{v}</div>
-                <div style={{ fontSize:10, color:"#666", marginTop:2 }}>{l}</div>
-              </div>
-            ))}
+            <div className="rtm-stat">
+              <div style={{ fontWeight: 900, fontSize: 20 }}>{activeCount}</div>
+              <div style={{ fontSize: 10 }}>Active</div>
+            </div>
+            <div className="rtm-stat">
+              <div style={{ fontWeight: 900, fontSize: 20 }}>{enRouteCount}</div>
+              <div style={{ fontSize: 10 }}>En Route</div>
+            </div>
+            <div className="rtm-stat">
+              <div style={{ fontWeight: 900, fontSize: 20 }}>{drivers.length}</div>
+              <div style={{ fontSize: 10 }}>Total</div>
+            </div>
           </div>
+          {lowBatteryDrivers.length > 0 && (
+            <div className="rtm-low-batt-alert">
+              ⚠ Low battery alert: {lowBatteryDrivers.length} ambulance
+              {lowBatteryDrivers.length > 1 ? "s" : ""} below 15%.
+            </div>
+          )}
           <div className="rtm-list">
             {drivers.length === 0 && (
-              <div style={{ color:"#444", fontSize:13, textAlign:"center", padding:"30px 10px", lineHeight:2 }}>
-                Koi driver GPS nahi bhej raha<br/>
-                <span style={{ fontSize:11, color:"#333" }}>Driver app se tracking start karo</span>
+              <div style={{ textAlign: "center", color: "rgba(17,17,17,0.62)", fontSize: 12, padding: "24px 6px" }}>
+                No live GPS found.
               </div>
             )}
-            {drivers.map(d => (
-              <div key={d.ambulance_id}
-                style={{ background: selected?.ambulance_id===d.ambulance_id?"#1e1e1e":"#161616", border:`1px solid ${selected?.ambulance_id===d.ambulance_id?"#444":"#1c1c1c"}`, borderRadius:8, padding:"10px 12px", cursor:"pointer" }}
-                onClick={() => focusDriver(d)}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                  <span style={{ fontWeight:700, fontSize:13, color:"#fff" }}>{d.ambulance_number}</span>
-                  <span style={{ background:(STATUS_COLOR[d.status]||"#555")+"22", color:STATUS_COLOR[d.status]||"#555", border:`1px solid ${STATUS_COLOR[d.status]||"#555"}44`, borderRadius:10, padding:"2px 8px", fontSize:10, fontWeight:600, textTransform:"capitalize" }}>
-                    {d.status.replace("_"," ")}
-                  </span>
-                </div>
-                <div style={{ fontSize:11, color:"#555", marginBottom:2 }}>👤 {d.driver}</div>
-                <div style={{ fontSize:11, color:"#555" }}>⚡ {d.speed} km/h</div>
-                {d.active_route && (
-                  <div style={{ fontSize:11, color:"#ff6d00", marginTop:4, background:"#ff6d0011", padding:"3px 6px", borderRadius:4 }}>
-                    🗺 {d.active_route.pickup_location?.slice(0,28)}...
+            {drivers.map((d) => {
+              const isSel = selected?.ambulance_id === d.ambulance_id;
+              const color = statusColors[d.status] || statusColors.offline;
+              const battery = Number(d?.battery ?? d?.battery_percentage);
+              const hasBattery = Number.isFinite(battery);
+              const isBatteryCritical = hasBattery && battery <= 15;
+              return (
+                <div
+                  key={d.ambulance_id}
+                  className={`rtm-item ${isSel ? "sel" : ""} ${isBatteryCritical ? "critical" : ""}`}
+                  onClick={() => handleSelect(d)}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                    <b>{d.ambulance_number}</b>
+                    <span style={{ color, fontSize: 11, fontWeight: 700 }}>{String(d.status || "").replace("_", " ")}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <div style={{ fontSize: 11 }}>{d.driver}</div>
+                  <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)", display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+                    <span>Speed: {d.speed || 0} km/h</span>
+                    {hasBattery && (
+                      <span className={`rtm-battery-badge ${isBatteryCritical ? "critical" : "ok"}`}>
+                        🔋 {battery}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-
-        {/* Map */}
         <div className="rtm-map-wrap">
-          <div ref={mapDivRef} style={{ position:"absolute", top:0, left:0, right:0, bottom:0 }} />
-          {drivers.length === 0 && (
-            <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", pointerEvents:"none", zIndex:1 }}>
-              <div style={{ fontSize:48, marginBottom:12 }}>📡</div>
-              <div style={{ color:"#333", fontSize:14 }}>Driver Inactive</div>
+          {!isOnline ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center", background: "#e8e8e3", padding: 20 }}>
+              <div style={{ fontSize: 50, marginBottom: 16 }}>📶</div>
+              <h3 style={{ margin: "0 0 8px", color: "#b31321", fontSize: 20 }}>You are Offline</h3>
+              <p style={{ margin: 0, color: "rgba(17,17,17,0.7)", maxWidth: 300, lineHeight: 1.5 }}>
+                Live map tracking requires an active internet connection. Please check your network.
+              </p>
             </div>
+          ) : !mapsAvailable ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center", background: "#e8e8e3", padding: 20 }}>
+              <div style={{ fontSize: 46, marginBottom: 14 }}>🗺️</div>
+              <h3 style={{ margin: "0 0 8px", color: "#111", fontSize: 20 }}>Google Maps key missing</h3>
+              <p style={{ margin: 0, color: "rgba(17,17,17,0.7)", maxWidth: 340, lineHeight: 1.5 }}>
+                Set <b>VITE_GOOGLE_MAPS_API_KEY</b> in your frontend env file to enable live map rendering.
+              </p>
+            </div>
+          ) : !mapsReady ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center", background: "#e8e8e3", padding: 20 }}>
+              <div style={{ fontSize: 46, marginBottom: 14 }}>⌛</div>
+              <h3 style={{ margin: "0 0 8px", color: "#111", fontSize: 20 }}>Loading live map</h3>
+              <p style={{ margin: 0, color: "rgba(17,17,17,0.7)", maxWidth: 340, lineHeight: 1.5 }}>
+                Map services are still initializing.
+              </p>
+            </div>
+          ) : (
+            <GoogleMap
+              mapContainerClassName="rtm-map"
+              center={selected ? { lat: Number(selected.latitude), lng: Number(selected.longitude) } : DELHI}
+              zoom={selected ? 14 : 11}
+              options={{
+                fullscreenControl: false,
+                streetViewControl: false,
+                mapTypeControl: false,
+                gestureHandling: "greedy",
+              }}
+            >
+              {drivers.map((d) => (
+                <Marker
+                  key={d.ambulance_id}
+                  position={{ lat: Number(d.latitude), lng: Number(d.longitude) }}
+                  icon={markerIcon(statusColors[d.status] || statusColors.offline)}
+                  title={`${d.ambulance_number} - ${d.driver}`}
+                  onClick={() => handleSelect(d)}
+                />
+              ))}
+              {selected && (
+                <InfoWindow
+                  position={{ lat: Number(selected.latitude), lng: Number(selected.longitude) }}
+                  onCloseClick={() => setSelected(null)}
+                >
+                  <div style={{ minWidth: 180 }}>
+                    <div style={{ fontWeight: 800 }}>{selected.ambulance_number}</div>
+                    <div style={{ fontSize: 12 }}>{selected.driver}</div>
+                    <div style={{ fontSize: 12, color: "rgba(17,17,17,0.72)" }}>{selected.driver_email}</div>
+                    <div style={{ fontSize: 12, marginTop: 6 }}>
+                      Status: <b>{String(selected.status || "").replace("_", " ")}</b>
+                    </div>
+                    {Number.isFinite(Number(selected?.battery ?? selected?.battery_percentage)) && (
+                      <div style={{ fontSize: 12, marginTop: 4 }}>
+                        Battery: <b>{Number(selected?.battery ?? selected?.battery_percentage)}%</b>
+                      </div>
+                    )}
+                  </div>
+                </InfoWindow>
+              )}
+            </GoogleMap>
           )}
         </div>
       </div>

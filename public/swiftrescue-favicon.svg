@@ -1,0 +1,26 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0C0F1A"/>
+      <stop offset="1" stop-color="#171B2C"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="20" y1="20" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E2F400"/>
+      <stop offset="1" stop-color="#BFD300"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="128" height="128" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2.4"/>
+    </filter>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#bg)"/>
+  <rect x="10" y="10" width="108" height="108" rx="28" stroke="url(#accent)" stroke-width="2"/>
+
+  <path d="M41 39H67L56 58H84L44 92L54 68H32L41 39Z" fill="url(#accent)"/>
+
+  <g filter="url(#glow)">
+    <path d="M24 100H40L47 90L56 106L66 80L74 100H104" stroke="#E2F400" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M24 100H40L47 90L56 106L66 80L74 100H104" stroke="#F3FF79" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+

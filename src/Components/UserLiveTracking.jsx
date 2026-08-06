@@ -21,7 +21,8 @@ export default function UserLiveTracking() {
         const data = await res.json();
         const confirmed = data.find(b =>
           (b.booked_by_email === email || b.user_email === email || b.booked_by === name) &&
-          b.status === "confirmed"
+          b.status === "confirmed" &&
+          b.sent_to_driver
         );
         if (confirmed) {
           localStorage.setItem("active_confirmed_booking", JSON.stringify(confirmed));

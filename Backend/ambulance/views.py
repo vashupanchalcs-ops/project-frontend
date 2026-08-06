@@ -3,12 +3,42 @@ from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.core.cache import cache
 from django.utils import timezone
+from django.conf import settings
 from ambulance.models import Ambulance, DriverLocation, SuggestedRoute
+from ambulance.serializers import AmbulanceSerializer
 import json
 import random
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _default_ambulance_registration(amb_id):
+    return f"AMB-REG-{int(amb_id):04d}"
+
+
+def _default_ambulance_contract_id(amb_id):
+    return f"AMB-ID-{int(amb_id):04d}"
+
+
+def _has_active_dispatch_booking(ambulance_id):
+    from bookings.models import Booking
+
+    return Booking.objects.filter(
+        ambulance_id=ambulance_id,
+        status="confirmed",
+        sent_to_driver=True,
+        driver_task_completed=False,
+    ).exists()
+
+
+def _parse_json_body(request):
+    try:
+        raw = (request.body or b"").decode("utf-8").strip()
+        if not raw:
+            return {}
+        return json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
 
 
 def home(request):
@@ -18,8 +48,15 @@ def home(request):
 @csrf_exempt
 def send_otp(request):
     if request.method == "POST":
-        data  = json.loads(request.body)
+        data = _parse_json_body(request)
+        if data is None:
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON body"},
+                status=400,
+            )
         email = data.get("email")
+        if not email:
+            return JsonResponse({"status": "error", "message": "Email required"}, status=400)
         otp   = str(random.randint(100000, 999999))
         cache.set(f"otp_{email}", otp, timeout=300)
 
@@ -28,26 +65,53 @@ def send_otp(request):
         print(f"[OTP] Code  : {otp}", flush=True)
         print(f"{'='*40}\n", flush=True)
 
-        try:
-            send_mail(
-                "SwiftRescue OTP",
-                f"Your OTP is {otp}",
-                "vashupanchal.cs@gmail.com",
-                [email],
-                fail_silently=False,
+        email_configured = bool(settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD)
+        if email_configured:
+            try:
+                send_mail(
+                    "SwiftRescue OTP",
+                    f"Your OTP is {otp}",
+                    settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
+                    [email],
+                    fail_silently=False,
+                )
+                print(f"[OTP] Email sent to {email}", flush=True)
+            except Exception as e:
+                print(f"[OTP] Email failed: {e}", flush=True)
+                if not settings.DEBUG:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "message": f"OTP email send failed: {str(e)}",
+                        },
+                        status=500,
+                    )
+        elif not settings.DEBUG:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "OTP email config missing on backend. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD.",
+                },
+                status=500,
             )
-            print(f"[OTP] Email sent to {email}", flush=True)
-        except Exception as e:
-            print(f"[OTP] Email failed: {e}", flush=True)
 
-        return JsonResponse({"status": "otp_sent"})
+        response = {"status": "otp_sent"}
+        if settings.DEBUG and not email_configured:
+            response["dev_otp"] = otp
+            response["message"] = "Email config missing; use dev_otp for local testing."
+        return JsonResponse(response)
     return JsonResponse({"status": "error"})
 
 
 @csrf_exempt
 def verify_otp(request):
     if request.method == "POST":
-        data      = json.loads(request.body)
+        data = _parse_json_body(request)
+        if data is None:
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON body"},
+                status=400,
+            )
         user_otp  = data.get("otp")
         email     = data.get("email")
         saved_otp = cache.get(f"otp_{email}")
@@ -64,7 +128,12 @@ def send_phone_otp(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "POST only"}, status=405)
 
-    data  = json.loads(request.body)
+    data = _parse_json_body(request)
+    if data is None:
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON body"},
+            status=400,
+        )
     phone = data.get("phone", "").strip().replace(" ", "").replace("+91", "").replace("+", "")
 
     if not phone or len(phone) != 10:
@@ -86,7 +155,12 @@ def verify_phone_otp(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "POST only"}, status=405)
 
-    data      = json.loads(request.body)
+    data = _parse_json_body(request)
+    if data is None:
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON body"},
+            status=400,
+        )
     phone     = data.get("phone", "").strip().replace(" ", "").replace("+91", "")
     user_otp  = data.get("otp", "").strip()
     saved_otp = cache.get(f"phone_otp_{phone}")
@@ -103,25 +177,117 @@ def logout_view(request):
     return JsonResponse({"status": "logout"})
 
 
+@csrf_exempt
+def validate_contract_access(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+
+    data = _parse_json_body(request)
+    if data is None:
+        return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+    role = str(data.get("role", "")).strip().lower()
+    email = str(data.get("email", "")).strip().lower()
+    contract_id_raw = str(data.get("contract_id", "")).strip()
+    hospital_id_raw = str(data.get("hospital_id", "")).strip()
+    registration_number = str(data.get("registration_number", "")).strip()
+
+    if role not in {"driver", "hospital"}:
+        return JsonResponse({"error": "role must be driver or hospital"}, status=400)
+    if not email:
+        return JsonResponse({"error": "email is required"}, status=400)
+    if not registration_number:
+        return JsonResponse({"error": "Registration number is required"}, status=400)
+
+    normalized_reg = registration_number.replace(" ", "").lower()
+
+    if role == "driver":
+        if not contract_id_raw:
+            return JsonResponse({"error": "Ambulance ID is required"}, status=400)
+        normalized_contract = contract_id_raw.replace(" ", "").lower()
+        amb = Ambulance.objects.filter(ambulance_contract_id__iexact=contract_id_raw).first()
+        if not amb and contract_id_raw.isdigit():
+            amb = Ambulance.objects.filter(id=int(contract_id_raw)).first()
+        if amb and not str(amb.ambulance_contract_id or "").strip():
+            amb.ambulance_contract_id = _default_ambulance_contract_id(amb.id)
+            amb.save(update_fields=["ambulance_contract_id"])
+        if not amb:
+            return JsonResponse({"valid": False, "error": "Ambulance ID not found"}, status=404)
+
+        amb_email = str(amb.driver_email or "").strip().lower()
+        amb_reg = str(amb.registration_number or "").replace(" ", "").lower()
+        amb_contract_id = str(amb.ambulance_contract_id or "").replace(" ", "").lower()
+        if amb_contract_id and amb_contract_id != normalized_contract:
+            return JsonResponse({"valid": False, "error": "Ambulance ID does not match contract"}, status=403)
+        if amb_email != email:
+            return JsonResponse({"valid": False, "error": "Driver email does not match contract"}, status=403)
+        if not amb_reg or amb_reg != normalized_reg:
+            return JsonResponse({"valid": False, "error": "Registration number does not match contract"}, status=403)
+
+        return JsonResponse(
+            {
+                "valid": True,
+                "role": "driver",
+                "contract_id": amb.ambulance_contract_id or f"AMB-ID-{int(amb.id):04d}",
+                "registration_number": amb.registration_number,
+                "ambulance_id": amb.id,
+                "ambulance_contract_id": amb.ambulance_contract_id,
+                "ambulance_number": amb.ambulance_number,
+                "driver_name": amb.driver,
+            }
+        )
+
+    from hospitals.models import Hospital
+
+    effective_hospital_id = hospital_id_raw or contract_id_raw
+    if not effective_hospital_id:
+        return JsonResponse({"error": "Valid hospital ID is required"}, status=400)
+    normalized_hospital_id = effective_hospital_id.replace(" ", "").lower()
+
+    hosp = Hospital.objects.filter(hospital_contract_id__iexact=effective_hospital_id, is_active=True).first()
+    if not hosp and effective_hospital_id.isdigit():
+        hosp = Hospital.objects.filter(id=int(effective_hospital_id), is_active=True).first()
+    if hosp and not str(hosp.hospital_contract_id or "").strip():
+        hosp.hospital_contract_id = f"HOSP-ID-{int(hosp.id):04d}"
+        hosp.save(update_fields=["hospital_contract_id"])
+    if not hosp:
+        return JsonResponse({"valid": False, "error": "Hospital ID not found"}, status=404)
+
+    hosp_email = str(hosp.email or "").strip().lower()
+    hosp_reg = str(hosp.registration_number or "").replace(" ", "").lower()
+    hosp_contract_id = str(hosp.hospital_contract_id or "").replace(" ", "").lower()
+    if hosp_contract_id and hosp_contract_id != normalized_hospital_id:
+        return JsonResponse({"valid": False, "error": "Hospital ID does not match contract"}, status=403)
+    if hosp_email != email:
+        return JsonResponse({"valid": False, "error": "Hospital email does not match contract"}, status=403)
+    if not hosp_reg or hosp_reg != normalized_reg:
+        return JsonResponse({"valid": False, "error": "Registration number does not match contract"}, status=403)
+
+    return JsonResponse(
+        {
+            "valid": True,
+            "role": "hospital",
+            "contract_id": hosp.hospital_contract_id or f"HOSP-ID-{int(hosp.id):04d}",
+            "registration_number": hosp.registration_number,
+            "hospital_id": hosp.id,
+            "hospital_contract_id": hosp.hospital_contract_id,
+            "hospital_name": hosp.name,
+        }
+    )
+
+
 def ambulance_to_dict(a):
-    return {
-        "id":                a.id,
-        "ambulance_number":  a.ambulance_number,
-        "driver":            a.driver,
-        "driver_contact":    a.driver_contact,
-        "driver_email":      a.driver_email or "",
-        "model":             a.model,
-        "speed":             a.speed,
-        "status":            a.status,
-        "location":          a.location,
-        "nearest_hospital":  a.nearest_hospital,
-        "hospital_distance": a.hospital_distance,
-        "eta_to_patient":    a.eta_to_patient,
-        "eta_to_hospital":   a.eta_to_hospital,
-        "latitude":          a.latitude,
-        "longitude":         a.longitude,
-        "last_updated":      a.last_updated.strftime("%d %b %Y, %I:%M %p"),
-    }
+    effective_status = a.status
+    if effective_status == "en_route" and not _has_active_dispatch_booking(a.id):
+        effective_status = "available"
+    data = AmbulanceSerializer(a).data
+    data["driver_email"] = data.get("driver_email") or ""
+    data["ambulance_contract_id"] = data.get("ambulance_contract_id") or ""
+    data["registration_number"] = data.get("registration_number") or ""
+    data["status"] = effective_status
+    if a.last_updated:
+        data["last_updated"] = a.last_updated.strftime("%d %b %Y, %I:%M %p")
+    return data
 
 
 @csrf_exempt
@@ -131,9 +297,13 @@ def ambulance_list(request):
         return JsonResponse([ambulance_to_dict(a) for a in ambulances], safe=False)
 
     if request.method == "POST":
-        data = json.loads(request.body)
+        data = _parse_json_body(request)
+        if data is None:
+            return JsonResponse({"error": "Invalid JSON body"}, status=400)
         a = Ambulance.objects.create(
+            ambulance_contract_id = data.get("ambulance_contract_id", ""),
             ambulance_number  = data.get("ambulance_number", ""),
+            registration_number = data.get("registration_number", ""),
             driver            = data.get("driver", ""),
             driver_contact    = data.get("driver_contact", ""),
             driver_email      = data.get("driver_email", ""),
@@ -147,7 +317,13 @@ def ambulance_list(request):
             eta_to_hospital   = data.get("eta_to_hospital", ""),
             latitude          = data.get("latitude"),
             longitude         = data.get("longitude"),
+            battery_percentage = data.get("battery_percentage", 100),
         )
+        if not str(a.registration_number or "").strip():
+            a.registration_number = _default_ambulance_registration(a.id)
+        if not str(a.ambulance_contract_id or "").strip():
+            a.ambulance_contract_id = _default_ambulance_contract_id(a.id)
+        a.save(update_fields=["registration_number", "ambulance_contract_id"])
         return JsonResponse(ambulance_to_dict(a), status=201)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
@@ -173,8 +349,12 @@ def ambulance_detail(request, id):
         return JsonResponse(ambulance_to_dict(a))
 
     if request.method == "PUT":
-        data = json.loads(request.body)
+        data = _parse_json_body(request)
+        if data is None:
+            return JsonResponse({"error": "Invalid JSON body"}, status=400)
         a.ambulance_number  = data.get("ambulance_number",  a.ambulance_number)
+        a.ambulance_contract_id = data.get("ambulance_contract_id", a.ambulance_contract_id)
+        a.registration_number = data.get("registration_number", a.registration_number)
         a.driver            = data.get("driver",            a.driver)
         a.driver_contact    = data.get("driver_contact",    a.driver_contact)
         a.driver_email      = data.get("driver_email",      a.driver_email)
@@ -188,12 +368,17 @@ def ambulance_detail(request, id):
         a.eta_to_hospital   = data.get("eta_to_hospital",   a.eta_to_hospital)
         a.latitude          = data.get("latitude",          a.latitude)
         a.longitude         = data.get("longitude",         a.longitude)
+        a.battery_percentage = data.get("battery_percentage", a.battery_percentage)
         a.save()
         return JsonResponse(ambulance_to_dict(a))
 
     if request.method == "PATCH":
-        data = json.loads(request.body)
+        data = _parse_json_body(request)
+        if data is None:
+            return JsonResponse({"error": "Invalid JSON body"}, status=400)
         if "driver"         in data: a.driver         = data["driver"]
+        if "ambulance_contract_id" in data: a.ambulance_contract_id = data["ambulance_contract_id"]
+        if "registration_number" in data: a.registration_number = data["registration_number"]
         if "driver_contact" in data: a.driver_contact = data["driver_contact"]
         if "driver_email"   in data: a.driver_email   = data["driver_email"]
 
@@ -212,6 +397,7 @@ def ambulance_detail(request, id):
         if "hospital_distance" in data: a.hospital_distance = data["hospital_distance"]
         if "eta_to_patient"    in data: a.eta_to_patient    = data["eta_to_patient"]
         if "eta_to_hospital"   in data: a.eta_to_hospital   = data["eta_to_hospital"]
+        if "battery_percentage" in data: a.battery_percentage = data["battery_percentage"]
 
         a.save()
         return JsonResponse(ambulance_to_dict(a))
@@ -461,7 +647,20 @@ def get_driver_location_by_ambulance(request):
                     })
             except Ambulance.DoesNotExist:
                 pass
-            return JsonResponse({"error": "No location found for this ambulance"}, status=404)
+            return JsonResponse({
+                "ambulance_id":     int(ambulance_id),
+                "latitude":         None,
+                "longitude":        None,
+                "speed":            0,
+                "driver_email":     "",
+                "driver_name":      "",
+                "driver_contact":   "",
+                "ambulance_number": "",
+                "timestamp":        None,
+                "source":           "none",
+                "available":        False,
+                "message":          "No location found for this ambulance",
+            })
 
         # Ambulance se driver name fetch karo
         try:
@@ -485,6 +684,7 @@ def get_driver_location_by_ambulance(request):
             "ambulance_number": ambulance_number,
             "timestamp":        dl.timestamp.isoformat(),
             "source":           "driver_location_table",
+            "available":        True,
         })
 
     except Exception as e:

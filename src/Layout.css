@@ -10,7 +10,7 @@
 /* ─── CSS Variables ─────────────────────────────────────── */
 :root {
   --sidebar-w:   64px;
-  --topbar-h:    56px;
+  --topbar-h:    64px;
   --bottom-nav:  60px;   /* mobile bottom nav */
 
   /* Content padding scale */
@@ -21,7 +21,7 @@
   --pad-xs:  12px;   /* <480px  */
 
   /* Max content width */
-  --content-max: 1200px;
+  --content-max: 1520px;
 }
 
 /* ─── Base page wrapper ─────────────────────────────────── */
@@ -31,12 +31,12 @@
 */
 .page-root {
   min-height: 100vh;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--sr-bg, #ffffff);
+  color: var(--sr-page-text, #111111);
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   box-sizing: border-box;
 
-  /* Desktop: account for sidebar (64px) + topbar (56px) */
+  /* Desktop: account for sidebar (64px) + topbar (64px) */
   padding-top:    var(--topbar-h);
   padding-left:   var(--sidebar-w);
   padding-right:  0;

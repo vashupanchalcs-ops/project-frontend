@@ -105,8 +105,8 @@ export default function AnalyticsCharts() {
 
       <div className="ac-root">
         <div className="ac-bar">
-          <button className={`ac-tab ${activeTab==="trends"?"on":""}`} onClick={()=>setActiveTab("trends")}>📈 Booking Trends</button>
-          <button className={`ac-tab ${activeTab==="fleet"?"on":""}`}  onClick={()=>setActiveTab("fleet")}>🚑 Fleet Status</button>
+          <button className={`ac-tab ${activeTab==="trends"?"on":""}`} onClick={()=>setActiveTab("trends")}>Booking Trends</button>
+          <button className={`ac-tab ${activeTab==="fleet"?"on":""}`}  onClick={()=>setActiveTab("fleet")}>Fleet Status</button>
           <div className="ac-pills">
             <span className="ac-pill" style={{background:"rgba(0,135,90,0.09)",color:"#00875a",border:"1px solid rgba(0,135,90,0.18)"}}>
               <span className="ac-pill-dot" style={{background:"#00875a"}}/>

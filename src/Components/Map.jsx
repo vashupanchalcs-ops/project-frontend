@@ -1,95 +1,165 @@
-// Components/Map.jsx — Fixed map: correct zoom, white tile, proper centering
-import { useState, useEffect, useRef } from "react";
-import useLeaflet, { LIGHT_TILE, DELHI, STATUS_COLOR, makePinIcon } from "../hooks/useLeaflet";
+import { GoogleMap } from "@react-google-maps/api";
+import { useState, useEffect } from "react";
+import { ensureGoogleMaps, hasConfiguredGoogleMapsKey } from "../utils/googleMaps";
+
+const containerStyle = { width: "100%", height: "100%" };
+const center = { lat: 28.6139, lng: 77.2090 };
+
+const markerIcons = {
+  available: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+  en_route:  "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+  busy:      "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+  offline:   "http://maps.google.com/mapfiles/ms/icons/grey-dot.png",
+};
 
 const delhiLocations = [
-  { lat:28.6139, lng:77.2090 },{ lat:28.6328, lng:77.2197 },
-  { lat:28.5921, lng:77.2290 },{ lat:28.6469, lng:77.1025 },
-  { lat:28.5355, lng:77.3910 },{ lat:28.7041, lng:77.1025 },
-  { lat:28.6280, lng:77.3649 },
+  { lat: 28.6139, lng: 77.2090 },
+  { lat: 28.6328, lng: 77.2197 },
+  { lat: 28.5921, lng: 77.2290 },
+  { lat: 28.6469, lng: 77.1025 },
+  { lat: 28.5355, lng: 77.3910 },
+  { lat: 28.7041, lng: 77.1025 },
+  { lat: 28.6280, lng: 77.3649 },
 ];
 
-export default function Maps() {
-  const leafletReady = useLeaflet();
-  const mapDivRef    = useRef(null);
-  const mapObj       = useRef(null);
-  const markersRef   = useRef([]);
+const Maps = () => {
   const [ambulances, setAmbulances] = useState([]);
   const [bookings,   setBookings]   = useState([]);
+  const [selected,   setSelected]   = useState(null);
+  const [mapRef,     setMapRef]     = useState(null);
+  const [infoWin,    setInfoWin]    = useState(null);
+  const [mapsReady,  setMapsReady]  = useState(Boolean(window.google?.maps));
+  const [mapsAvailable, setMapsAvailable] = useState(hasConfiguredGoogleMapsKey());
+  const markersRef = {};
 
   useEffect(() => {
     const fetchAll = () => {
-      fetch("http://127.0.0.1:8000/api/ambulances/").then(r=>r.json()).then(setAmbulances).catch(()=>{});
-      fetch("http://127.0.0.1:8000/api/bookings/").then(r=>r.json()).then(setBookings).catch(()=>{});
+      fetch("http://127.0.0.1:8000/api/ambulances/")
+        .then(r => r.json()).then(setAmbulances).catch(console.log);
+      fetch("http://127.0.0.1:8000/api/bookings/")
+        .then(r => r.json()).then(setBookings).catch(console.log);
     };
     fetchAll();
-    const t = setInterval(fetchAll,10000);
-    return ()=>clearInterval(t);
-  },[]);
+    const interval = setInterval(fetchAll, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Init map with correct zoom (12 = city level, not world level)
   useEffect(() => {
-    if (!leafletReady || !mapDivRef.current || mapObj.current) return;
-    const L = window.L;
-    mapObj.current = L.map(mapDivRef.current, {
-      center: [DELHI.lat, DELHI.lng],
-      zoom: 12,           // ← FIXED: was zooming to world level
-      minZoom: 10,
-      maxZoom: 18,
-      zoomControl: false,
-    });
-    L.tileLayer(LIGHT_TILE, {
-      maxZoom: 18,
-      attribution: "© OpenStreetMap",
-    }).addTo(mapObj.current);
-    L.control.zoom({ position:"bottomright" }).addTo(mapObj.current);
+    let active = true;
+    const initMaps = async () => {
+      if (!hasConfiguredGoogleMapsKey()) {
+        if (!active) return;
+        setMapsAvailable(false);
+        setMapsReady(false);
+        return;
+      }
+      const ok = await ensureGoogleMaps(10000);
+      if (!active) return;
+      setMapsAvailable(true);
+      setMapsReady(ok);
+    };
+    initMaps();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-    // Invalidate size after mount to fix grey tiles
-    setTimeout(()=> mapObj.current?.invalidateSize(), 100);
-    setTimeout(()=> mapObj.current?.invalidateSize(), 500);
+  const bookedIds = new Set(
+    bookings
+      .filter(b => b.status === "confirmed" || b.status === "pending")
+      .map(b => b.ambulance_id)
+  );
 
-    return () => { if (mapObj.current) { mapObj.current.remove(); mapObj.current=null; } };
-  },[leafletReady]);
+  const onMapLoad = (map) => {
+    setMapRef(map);
+    const iw = new window.google.maps.InfoWindow();
+    setInfoWin(iw);
 
-  // Update markers
-  useEffect(() => {
-    if (!leafletReady || !mapObj.current || !window.L) return;
-    const L = window.L;
-    markersRef.current.forEach(m=>m.remove());
-    markersRef.current=[];
-
-    const bookedIds = new Set(
-      bookings.filter(b=>["confirmed","pending"].includes(b.status)).map(b=>b.ambulance_id)
-    );
-
-    ambulances.forEach((a,i) => {
-      const lat = parseFloat(a.latitude)  || delhiLocations[i%delhiLocations.length].lat;
-      const lng = parseFloat(a.longitude) || delhiLocations[i%delhiLocations.length].lng;
+    // Place markers
+    ambulances.forEach((a, i) => {
+      const pos = {
+        lat: parseFloat(a.latitude)  || delhiLocations[i % delhiLocations.length].lat,
+        lng: parseFloat(a.longitude) || delhiLocations[i % delhiLocations.length].lng,
+      };
       const isBooked = bookedIds.has(a.id);
-      const color    = isBooked ? "#E50914" : (STATUS_COLOR[a.status]||STATUS_COLOR.offline);
-      const icon     = makePinIcon(color,"🚑");
-      if (!icon) return;
+      const icon = isBooked
+        ? "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+        : markerIcons[a.status] || markerIcons.offline;
 
-      const marker = L.marker([lat,lng],{icon}).addTo(mapObj.current);
-      marker.bindPopup(`
-        <div style="padding:12px 14px;font-family:'DM Sans',sans-serif;min-width:180px">
-          <div style="font-size:14px;font-weight:800;color:#0a0a0a;margin-bottom:6px">🚑 ${a.ambulance_number}</div>
-          <div style="font-size:11px;color:#6e6e73;margin-bottom:2px">Driver: ${a.driver}</div>
-          <div style="font-size:11px;color:#6e6e73;margin-bottom:8px">Location: ${a.location||"—"}</div>
-          <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;
-            background:${isBooked?"rgba(229,9,20,0.09)":"rgba(0,135,90,0.09)"};
-            color:${isBooked?"#E50914":"#00875a"};
-            border:1px solid ${isBooked?"rgba(229,9,20,0.22)":"rgba(0,135,90,0.22)"};
-            text-transform:uppercase;letter-spacing:.5px">
-            ${isBooked?"Booked":a.status}
-          </span>
-        </div>
-      `,{className:"sr-dark-popup"});
-      markersRef.current.push(marker);
+      const pinElement = document.createElement("img");
+      pinElement.src = icon;
+      pinElement.style.width = "32px";
+      pinElement.style.height = "32px";
+
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({ 
+        position: pos, 
+        map, 
+        content: pinElement, 
+        title: a.ambulance_number 
+      });
+      marker.addListener("click", () => {
+        iw.setContent(`
+          <div style="background:#1a1a1a;color:#fff;padding:10px 14px;border-radius:10px;min-width:180px;font-family:sans-serif">
+            <div style="font-size:14px;font-weight:800;margin-bottom:6px">🚑 ${a.ambulance_number}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:2px">Driver: ${a.driver}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:2px">Contact: ${a.driver_contact}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px">Location: ${a.location}</div>
+            <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;background:${isBooked?"rgba(229,9,20,0.2)":"rgba(0,212,170,0.15)"};color:${isBooked?"#ff4d5a":"#00d4aa"};border:1px solid ${isBooked?"#ff4d5a":"#00d4aa"}">
+              ${isBooked ? "🔴 Booked" : a.status}
+            </span>
+          </div>
+        `);
+        iw.open(map, marker);
+      });
     });
-  },[leafletReady,ambulances,bookings]);
+  };
+
+  if (!mapsAvailable) {
+    return (
+      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f5f5ef", color: "#111", padding: 20, textAlign: "center" }}>
+        <div>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>🗺️</div>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Google Maps key missing</div>
+          <div style={{ fontSize: 13, color: "rgba(17,17,17,0.68)" }}>Set <b>VITE_GOOGLE_MAPS_API_KEY</b> to enable this map.</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mapsReady) {
+    return (
+      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f5f5ef", color: "#111", padding: 20, textAlign: "center" }}>
+        <div>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>⌛</div>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Loading map</div>
+          <div style={{ fontSize: 13, color: "rgba(17,17,17,0.68)" }}>Map services are still initializing.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div ref={mapDivRef} style={{width:"100%",height:"100%",minHeight:"240px"}}/>
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={center}
+      zoom={12}
+      onLoad={onMapLoad}
+      options={{
+        styles: [
+          { elementType: "geometry",           stylers: [{ color: "#1a1a2e" }] },
+          { elementType: "labels.text.fill",   stylers: [{ color: "#8ec3b9" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+          { featureType: "road", elementType: "geometry",        stylers: [{ color: "#304a7d" }] },
+          { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#255763" }] },
+          { featureType: "water", elementType: "geometry",       stylers: [{ color: "#0e1626" }] },
+          { featureType: "poi",   stylers: [{ visibility: "off" }] },
+        ],
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapId: "DEMO_MAP_ID",
+      }}
+    />
   );
-}
+};
+
+export default Maps;

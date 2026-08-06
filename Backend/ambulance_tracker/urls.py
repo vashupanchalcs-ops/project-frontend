@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
 from ambulance import views
-from ambulance.route_views import get_route, get_route_by_booking
+from ambulance.route_views import (
+    get_route,
+    get_route_by_booking,
+    geocode_location,
+    suggest_locations,
+)
 from ambulance.tracking_views import (
     driver_ping,
     all_live_locations,
@@ -9,6 +14,7 @@ from ambulance.tracking_views import (
     respond_route,
     driver_active_route,
     get_traffic_route,
+    update_battery,
 )
 
 urlpatterns = [
@@ -21,6 +27,7 @@ urlpatterns = [
     path("api/send-phone-otp/",   views.send_phone_otp),
     path("api/verify-phone-otp/", views.verify_phone_otp),
     path("api/logout/",           views.logout_view),
+    path("api/auth/contract-validate/", views.validate_contract_access),
 
     # ── AMBULANCE — static paths BEFORE <int:id> ────
     path("api/ambulances/",                       views.ambulance_list),
@@ -34,6 +41,8 @@ urlpatterns = [
 
     # ── REAL-TIME GPS TRACKING ───────────────────────
     path("api/driver/ping/",                         driver_ping),
+    path("api/update-battery/",                      update_battery),
+    path("api/driver/location/",                     views.get_driver_location_by_ambulance),
     path("api/driver/active-route/",                 driver_active_route),
     path("api/driver/route/<int:route_id>/respond/", respond_route),
 
@@ -48,4 +57,6 @@ urlpatterns = [
     # ── GOOGLE ROUTE CALCULATION ─────────────────────
     path("api/route/",                          get_route),
     path("api/route/booking/<int:booking_id>/", get_route_by_booking),
+    path("api/geocode/",                        geocode_location),
+    path("api/geocode/suggest/",                suggest_locations),
 ]

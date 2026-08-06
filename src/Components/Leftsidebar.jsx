@@ -1,255 +1,309 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import {
-  LayoutDashboard, Truck, Building2, BarChart2, ClipboardList,
-  MapPin, Navigation, RefreshCw, BookOpen, Map, Settings, LogOut,
+  ChevronsRight, Truck, Building2, BarChart2,
+  ClipboardList, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
+  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, Mic, FileText,
 } from 'lucide-react';
 
-const adminNav = [
-  { to:"/",                    icon:LayoutDashboard, label:"Dashboard"       },
-  { to:"/Ambulances",          icon:Truck,           label:"Ambulances"      },
-  { to:"/Hospitals",           icon:Building2,       label:"Hospitals"       },
-  { to:"/Reports",             icon:BarChart2,       label:"Reports"         },
-  { to:"/Requests",            icon:ClipboardList,   label:"Bookings"        },
-  { to:"/DriverChangeRequests",icon:RefreshCw,       label:"Driver Reques...",dot:true },
-  { to:"/LiveMap",             icon:MapPin,          label:"Live Map",       dot:true  },
-  { to:"/DriverView",          icon:Navigation,      label:"Driver View"     },
-];
-const userNav = [
-  { to:"/",           icon:LayoutDashboard, label:"Home"        },
-  { to:"/Ambulances", icon:Truck,           label:"Ambulances"  },
-  { to:"/Hospitals",  icon:Building2,       label:"Hospitals"   },
-  { to:"/MyBookings", icon:BookOpen,        label:"My Bookings" },
-  { to:"/directions", icon:Map,             label:"Map"         },
-];
-const driverNav = [
-  { to:"/DriverDashboard", icon:LayoutDashboard, label:"Dashboard", dot:true },
-  { to:"/Ambulances",      icon:Truck,           label:"Ambulances"          },
-  { to:"/Hospitals",       icon:Building2,       label:"Hospitals"           },
-  { to:"/directions",      icon:Map,             label:"Map"                 },
+const adminNavItems = [
+  { to: "/",                     icon: Grid3X3,       label: "Home"             },
+  { to: "/Ambulances",           icon: Siren,         label: "Ambulances"       },
+  { to: "/Hospitals",            icon: Building2,     label: "Hospitals"        },
+  { to: "/HospitalResponses",    icon: ShieldCheck,   label: "Hospital Response" },
+  { to: "/HospitalPartnerDetails", icon: BookOpen,    label: "Hospital Details" },
+  { to: "/Analytics",            icon: Activity,      label: "Analytics"        },
+  { to: "/Requests",             icon: ClipboardList, label: "Requests"         },
+  { to: "/CallIntakeConsole",    icon: PhoneCall,     label: "Call Intake"      },
+  { to: "/DriverChangeRequests", icon: RefreshCw,     label: "Driver Requests", dot: true },
+  { to: "/AdminChatControl",     icon: Bot,           label: "AI Chat Control", dot: true },
+  { to: "/LiveMap",              icon: Compass,       label: "Live Map",        dot: true },
 ];
 
-export default function Leftsidebar() {
+const hospitalNavItems = [
+  { to: "/hospital/home",      icon: Building2,     label: "Hospital Home" },
+  { to: "/hospital/responses", icon: ShieldCheck,   label: "Hospital Response", dot: true },
+  { to: "/hospital/reports",   icon: BookOpen,      label: "Case Reports", dot: true },
+  { to: "/hospital/live-track", icon: MapPinned,    label: "Live Map", dot: true },
+  { to: "/hospital/resources", icon: BriefcaseBusiness, label: "Resources & Beds" },
+  { to: "/hospital/staff",     icon: Users,           label: "Doctors & Staff" },
+  { to: "/hospital/cases",     icon: FileText,        label: "Cases" },
+];
+
+const userNavItems = [
+  { to: "/",            icon: House,     label: "Home"        },
+  { to: "/Ambulances",  icon: PlayCircle,label: "Ambulances"  },
+  { to: "/Hospitals",   icon: Send,      label: "Hospitals"   },
+  { to: "/MyBookings",  icon: Search,    label: "My Bookings" },
+  { to: "/UserChatbot", icon: Plus,      label: "AI Assistant" },
+  { to: "/LiveTracking",icon: Compass,   label: "Live Track"  },
+];
+
+const driverNavItems = [
+  { to: "/",                                   icon: Navigation,    label: "Home"           },
+  { to: "/driver-dashboard?tab=bookings",     icon: ClipboardList, label: "My Bookings",   dot: true, tab: "bookings" },
+  { to: "/driver/insurance-form",              icon: ShieldCheck,   label: "Insurance Form", dot: true },
+  { to: "/driver/voice-reports",               icon: Mic,           label: "Voice Reports", dot: true },
+  { to: "/driver/guidance",                    icon: BookOpen,      label: "Guidance", dot: true },
+  { to: "/driver-dashboard?tab=change-request", icon: Repeat,      label: "Change Request", tab: "change-request" },
+  { to: "/DriverRequestChat",                   icon: MessageSquareWarning, label: "Request Chat", dot: true },
+  { to: "/Hospitals",                          icon: Building2,     label: "Hospitals"      },
+  { to: "/driver-dashboard?tab=map",          icon: Route,         label: "Live Track",    tab: "map" },
+];
+
+const Leftsidebar = () => {
   const location = useLocation();
-  const navigate  = useNavigate();
-  const role = localStorage.getItem("role");
-  const user = localStorage.getItem("name") || "User";
-  const email = localStorage.getItem("user") || "";
-  const pic  = localStorage.getItem(`sr-profile-pic-${email}`);
+  const role     = localStorage.getItem("role");
+  const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
 
-  const nav = role==="admin" ? adminNav : role==="driver" ? driverNav : userNav;
+  const navItems =
+    role === "admin"  ? adminNavItems  :
+    role === "hospital" ? hospitalNavItems :
+    role === "driver" ? driverNavItems :
+    userNavItems;
 
-  const pending = (() => {
-    try { return JSON.parse(localStorage.getItem("all_change_requests")||"[]").filter(r=>r.status==="pending").length; }
-    catch { return 0; }
+  const pendingCount = (() => {
+    try {
+      const all = JSON.parse(localStorage.getItem("all_change_requests") || "[]");
+      return all.filter(r => r.status === "pending").length;
+    } catch { return 0; }
   })();
 
-  const logout = () => { ["user","name","role"].forEach(k=>localStorage.removeItem(k)); window.location.reload(); };
+  // Driver dashboard ke internal tabs remove kar diye gaye hain,
+  // isliye mobile par bhi common sidebar bottom nav show hoga.
+  const hideBottomNav = false;
 
   return (
     <>
       <style>{`
-        /* ── SIDEBAR ── */
-        .lsb {
-          position: fixed; top:0; left:0; bottom:0;
-          width: var(--sb-w);
-          background: color-mix(in srgb, var(--sr-sidebar-bg) 88%, transparent);
-          border-right: 1px solid var(--sr-sidebar-border);
-          display: flex; flex-direction: column;
-          z-index: 200;
-          font-family: var(--font-body);
-          box-shadow: var(--shadow);
-          backdrop-filter: blur(10px);
-          /* NO overflow: hidden on root — children scroll */
+        .lsb-root {
+          position: fixed !important;
+          top: 0 !important; left: 0 !important;
+          height: 100vh !important;
+          width: 64px !important;
+          background: var(--sr-sidebar-bg, #0a0a0a);
+          border-right: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
+          display: flex !important;
+          flex-direction: column;
+          align-items: center;
+          z-index: 9999 !important;
+          padding: 0 0 16px;
         }
-
-        /* Logo */
         .lsb-logo {
-          padding: 24px 20px 18px;
-          border-bottom: 1px solid var(--sr-sidebar-border);
-          flex-shrink: 0;
+          height: 64px; width: 100%;
+          display: flex; align-items: center; justify-content: center;
+          border-bottom: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
+          color: var(--sr-accent, #d6e800); cursor: pointer; transition: color 0.2s;
+          text-decoration: none; flex-shrink: 0;
         }
-        .lsb-logo-text { font-size:22px; font-weight:700; color:var(--sr-text); letter-spacing:-.8px; line-height:1; font-family:var(--font-display); }
-        .lsb-logo-text span { background:var(--sr-brand-grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
-        .lsb-logo-role { font-size:9px; font-weight:700; color:var(--sr-text-muted); text-transform:uppercase; letter-spacing:1.8px; margin-top:3px; }
-
-        /* User */
-        .lsb-user {
-          padding: 12px 14px 10px;
-          border-bottom: 1px solid var(--sr-sidebar-border);
-          flex-shrink: 0;
-        }
-        .lsb-user-row { display:flex; align-items:center; gap:10px; }
-        .lsb-avatar {
-          width:36px; height:36px; border-radius:12px;
-          background:var(--sr-brand-grad); flex-shrink:0;
-          display:flex; align-items:center; justify-content:center;
-          font-size:14px; font-weight:800; color:#fff; overflow:hidden;
-          border:1px solid var(--red-border);
-        }
-        .lsb-avatar img { width:100%;height:100%;object-fit:cover; }
-        .lsb-uname { font-size:13px; font-weight:700; color:var(--sr-text); line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .lsb-urole { font-size:10px; color:var(--sr-text-sub); margin-top:1px; text-transform:capitalize; }
-
-        /* Nav label */
-        .lsb-nav-lbl {
-          padding: 14px 18px 6px;
-          font-size:9px; font-weight:800; color:var(--sr-text-muted);
-          text-transform:uppercase; letter-spacing:1.8px;
-          flex-shrink: 0;
-        }
-
-        /* Nav scroll container — ONLY this scrolls, no scrollbar shown */
+        .lsb-logo:hover { color: var(--sr-accent-hover, #eefb7b); }
         .lsb-nav {
-          flex: 1;
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; gap: 4px;
+          padding: 12px 0; width: 100%;
           overflow-y: auto;
-          overflow-x: hidden;
-          padding: 8px 12px 10px;
-          display: flex; flex-direction: column; gap: 2px;
-          scrollbar-width: none;                 /* Firefox */
-          -ms-overflow-style: none;              /* IE */
-          overscroll-behavior: contain;
+          scrollbar-width: none;
         }
-        .lsb-nav::-webkit-scrollbar { display: none; } /* Chrome */
-
-        /* Nav item */
+        .lsb-nav::-webkit-scrollbar { display: none; }
         .lsb-item {
-          display: flex; align-items: center; gap:10px;
-          padding: 10px 11px; border-radius: 12px;
-          color: var(--sr-sidebar-text); font-size:13px; font-weight:600;
-          text-decoration: none; cursor:pointer;
-          transition: background .14s, color .14s, transform .14s, border-color .14s;
-          position: relative; white-space: nowrap;
-          flex-shrink: 0;
-          border: 1px solid transparent;
+          position: relative; width: 44px; height: 44px;
+          border-radius: 14px; display: flex; align-items: center;
+          justify-content: center; color: var(--sr-sidebar-text, rgba(255,255,255,0.3));
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.01);
+          transition: all 0.2s; cursor: pointer; text-decoration: none; flex-shrink: 0;
         }
-        .lsb-item:hover { background:var(--sr-hover); color:var(--sr-text); transform:translateX(2px); }
-        .lsb-item.act   { background:var(--sr-sidebar-active-bg); color:var(--sr-accent); font-weight:700; border-color:var(--red-border); box-shadow: inset 0 0 0 1px var(--sr-accent-muted); }
-        .lsb-item-ic {
-          width:32px; height:32px; border-radius:9px;
-          background:var(--sr-hover);
-          display:flex; align-items:center; justify-content:center;
-          flex-shrink:0; transition:background .14s;
+        .lsb-item:hover {
+          background: var(--sr-sidebar-hover-bg, rgba(214,232,0,0.2));
+          color: var(--sr-sidebar-hover-c, #111);
+          border-color: var(--sr-sidebar-hover-border, rgba(214,232,0,0.62));
+          box-shadow: 0 8px 18px rgba(214,232,0,0.24);
+          transform: translateY(-1px);
         }
-        .lsb-item.act .lsb-item-ic { background:var(--sr-accent-muted); }
-        .lsb-item-lbl { flex:1; overflow:hidden; text-overflow:ellipsis; }
-        @keyframes lsb-blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.4)}}
-        .lsb-dot { width:7px;height:7px;border-radius:50%;background:var(--sr-accent);flex-shrink:0;animation:lsb-blink 1.8s infinite; }
-        .lsb-badge { min-width:18px;height:18px;background:var(--sr-accent);color:#fff;font-size:9px;font-weight:800;border-radius:100px;padding:0 5px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
-        .lsb-div { height:1px; background:var(--sr-border); margin:8px 10px; flex-shrink:0; }
+        .lsb-item.active {
+          background: var(--sr-sidebar-active-bg, #d6e800);
+          color: var(--sr-sidebar-active-c, #111);
+          border: 1px solid var(--sr-sidebar-hover-border, rgba(17,17,17,0.45));
+          box-shadow: 0 8px 16px rgba(214,232,0,0.26);
+        }
+        .lsb-tooltip {
+          position: absolute; left: 54px;
+          background: #1a1a1a; color: #fff;
+          font-size: 11px; font-weight: 600;
+          padding: 5px 10px; border-radius: 6px;
+          white-space: nowrap; opacity: 0; pointer-events: none;
+          transition: opacity 0.15s; border: 1px solid rgba(255,255,255,0.1);
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; z-index: 99999;
+        }
+        .lsb-item:hover .lsb-tooltip { opacity: 1; }
+        .lsb-dot {
+          position: absolute; top: 6px; right: 6px;
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #00c853; box-shadow: 0 0 6px #00c853;
+          animation: lsb-pulse 1.5s infinite;
+        }
+        .lsb-dot-red {
+          position: absolute;
+          background: #d6e800; box-shadow: 0 0 6px #d6e800;
+          animation: lsb-pulse 1.5s infinite;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 8px; font-weight: 800; color: #111;
+          min-width: 14px; height: 14px;
+          padding: 0 3px; border-radius: 7px;
+          top: 2px; right: 2px;
+        }
+        @keyframes lsb-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.5; transform: scale(1.3); }
+        }
+        .lsb-divider {
+          width: 28px; height: 1px;
+          background: rgba(255,255,255,0.07);
+          margin: 4px 0; flex-shrink: 0;
+        }
 
-        /* Bottom */
+        /* Mobile Bottom Nav */
         .lsb-bottom {
-          padding: 8px 10px 14px;
-          border-top: 1px solid var(--sr-sidebar-border);
+          display: none;
+          position: fixed; bottom: 0; left: 0; right: 0;
+          height: 62px; background: var(--sr-sidebar-bg, #0a0a0a);
+          border-top: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
+          z-index: 9999;
+          align-items: stretch;
+          gap: 6px;
+          padding: 4px 6px;
+          transition: height 0.2s ease;
+        }
+        .lsb-bottom.expanded {
+          height: 110px;
+        }
+        .lsb-bottom-inner {
+          flex: 1;
+          display: grid;
+          grid-auto-flow: column;
+          grid-template-rows: 1fr;
+          gap: 6px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: thin;
+        }
+        .lsb-bottom.expanded .lsb-bottom-inner {
+          grid-template-rows: 1fr 1fr;
+        }
+        .lsb-bottom-toggle {
+          width: 30px;
+          border: 1px solid rgba(214,232,0,0.62);
+          border-radius: 10px;
+          background: rgba(214,232,0,0.95);
+          color: #111;
+          font-size: 16px;
+          font-weight: 800;
+          cursor: pointer;
+          align-self: stretch;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           flex-shrink: 0;
-          display: flex; flex-direction: column; gap:1px;
         }
-        .lsb-btn {
-          display:flex; align-items:center; gap:9px;
-          padding:9px 10px; border-radius:11px;
-          font-size:12px; font-weight:600; color:var(--sr-text-sub);
-          background:none; border:none; cursor:pointer; font-family:inherit;
-          width:100%; text-align:left; transition:all .14s;
+        .lsb-bottom-item {
+          display: flex; flex-direction: column; align-items: center;
+          justify-content: center; gap: 2px; min-width: 72px; height: 100%;
+          color: var(--sr-bottom-item-color, rgba(17,17,17,0.62)); text-decoration: none;
+          transition: color 0.2s; position: relative;
+          border-top: 2px solid transparent;
+          border-radius: 10px;
         }
-        .lsb-btn:hover { background:var(--sr-hover); color:var(--sr-text); }
-        .lsb-btn.red:hover { background:var(--sr-accent-muted); color:var(--sr-accent); }
-        .lsb-btn-ic { width:28px;height:28px;border-radius:8px;background:var(--sr-hover);display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+        .lsb-bottom-item.active {
+          color: #111;
+          border-top-color: rgba(20,20,20,0.75);
+          background: rgba(214,232,0,0.95);
+          border-radius: 10px 10px 0 0;
+        }
+        .lsb-bottom-item:hover  {
+          color: var(--sr-sidebar-hover-c, #111);
+          background: var(--sr-sidebar-hover-bg, rgba(214,232,0,0.2));
+          border-radius: 10px 10px 0 0;
+        }
+        .lsb-bottom-label {
+          font-size: 8px; font-weight: 600;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          white-space: nowrap;
+          max-width: 68px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .lsb-bottom-dot {
+          position: absolute; top: 6px; right: calc(50% - 14px);
+          width: 5px; height: 5px; border-radius: 50%;
+          background: #00c853; box-shadow: 0 0 5px #00c853;
+          animation: lsb-pulse 1.5s infinite;
+        }
 
-        /* ── MOBILE BOTTOM NAV ── */
-        .lsb-mob {
-          display:none;
-          position:fixed; bottom:0; left:0; right:0; height:66px;
-          background:var(--sr-glass); border-top:1px solid var(--sr-nav-border);
-          backdrop-filter:blur(14px); z-index:999;
-          align-items:stretch; box-shadow:var(--shadow);
-        }
-        .lsb-mob-item {
-          flex:1; display:flex; flex-direction:column; align-items:center;
-          justify-content:center; gap:3px; cursor:pointer; padding:6px 4px;
-          position:relative; text-decoration:none; transition:all .14s;
-          border-top:2px solid transparent;
-        }
-        .lsb-mob-item.act { border-top-color:var(--sr-accent); background:var(--sr-accent-muted); }
-        .lsb-mob-icon { color:var(--sr-text-muted); transition:color .14s; font-size:0; }
-        .lsb-mob-item.act .lsb-mob-icon { color:var(--sr-accent); }
-        .lsb-mob-lbl { font-size:9px; font-weight:600; color:var(--sr-text-muted); font-family:var(--font-body); }
-        .lsb-mob-item.act .lsb-mob-lbl { color:var(--sr-accent); font-weight:700; }
-        .lsb-mob-dot { position:absolute;top:8px;right:calc(50% - 13px);width:6px;height:6px;border-radius:50%;background:var(--sr-accent);animation:lsb-blink 1.8s infinite; }
-        .lsb-mob-badge { position:absolute;top:6px;right:calc(50% - 16px);background:var(--sr-accent);color:#fff;font-size:8px;font-weight:800;border-radius:100px;padding:1px 5px;min-width:14px;text-align:center; }
-
-        @media(max-width:767px) {
-          .lsb        { display:none!important; }
-          .lsb-mob    { display:flex!important; }
+        @media (max-width: 767px) {
+          .lsb-root   { display: none !important; }
+          .lsb-bottom { display: flex !important; }
+          .lsb-bottom.hidden { display: none !important; }
         }
       `}</style>
 
-      {/* ── DESKTOP SIDEBAR ── */}
-      <div className="lsb">
-        <div className="lsb-logo">
-          <div className="lsb-logo-text">Swift<span>Rescue</span></div>
-          <div className="lsb-logo-role">{role==="admin"?"Admin Console":role==="driver"?"Driver Portal":"Emergency Services"}</div>
-        </div>
-
-        <div className="lsb-user">
-          <div className="lsb-user-row">
-            <div className="lsb-avatar">
-              {pic ? <img src={pic} alt=""/> : <span>{user[0]?.toUpperCase()}</span>}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div className="lsb-uname">{user}</div>
-              <div className="lsb-urole">{role||"User"}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="lsb-nav-lbl">Navigation</div>
-
+      {/* Desktop Sidebar */}
+      <div className={`lsb-root role-${role || "user"}`}>
+        <Link to="/" className="lsb-logo"><ChevronsRight size={28} /></Link>
         <div className="lsb-nav">
-          {nav.map((item, idx) => {
-            const Icon = item.icon;
-            const act  = location.pathname === item.to;
-            const isPending = item.to==="/DriverChangeRequests" && pending>0;
-            const div  = role==="admin" && idx===5;
+          {navItems.map((item, index) => {
+            const Icon         = item.icon;
+            const isDriverTabItem = role === "driver" && item.tab;
+            const currentTab = new URLSearchParams(location.search).get("tab");
+            const isActive = isDriverTabItem
+              ? location.pathname.toLowerCase() === "/driver-dashboard" && currentTab === item.tab
+              : location.pathname === item.to;
+            const isPendingReq = item.to === "/DriverChangeRequests" && pendingCount > 0;
             return (
-              <div key={item.to} style={{display:"contents"}}>
-                {div && <div className="lsb-div"/>}
-                <Link to={item.to} className={`lsb-item ${act?"act":""}`}>
-                  <div className="lsb-item-ic"><Icon size={16} strokeWidth={act?2.5:2}/></div>
-                  <span className="lsb-item-lbl">{item.label}</span>
-                  {item.dot && !isPending && <span className="lsb-dot"/>}
-                  {isPending && <span className="lsb-badge">{pending}</span>}
+              <div key={item.to} style={{ display: "contents" }}>
+                {role === "admin" && index === 6 && <div className="lsb-divider" />}
+                <Link to={item.to} className={`lsb-item ${isActive ? "active" : ""}`}>
+                  <Icon size={20} />
+                  {item.dot && !isPendingReq && <div className="lsb-dot" />}
+                  {isPendingReq && <div className="lsb-dot-red">{pendingCount}</div>}
+                  <span className="lsb-tooltip">{item.label}{isPendingReq ? ` (${pendingCount})` : ""}</span>
                 </Link>
               </div>
             );
           })}
         </div>
-
-        <div className="lsb-bottom">
-          <button className="lsb-btn" onClick={()=>navigate("/settings")}>
-            <div className="lsb-btn-ic"><Settings size={13}/></div>Settings
-          </button>
-          <button className="lsb-btn red" onClick={logout}>
-            <div className="lsb-btn-ic"><LogOut size={13}/></div>Log out
-          </button>
-        </div>
       </div>
 
-      {/* ── MOBILE BOTTOM NAV ── */}
-      <div className="lsb-mob">
-        {nav.slice(0,5).map(item=>{
-          const Icon=item.icon;
-          const act=location.pathname===item.to;
-          const isPending=item.to==="/DriverChangeRequests"&&pending>0;
-          return(
-            <Link key={item.to} to={item.to} className={`lsb-mob-item ${act?"act":""}`}>
-              {item.dot&&!isPending&&<span className="lsb-mob-dot"/>}
-              {isPending&&<span className="lsb-mob-badge">{pending}</span>}
-              <span className="lsb-mob-icon"><Icon size={20} strokeWidth={act?2.5:2}/></span>
-              <span className="lsb-mob-lbl">{item.label}</span>
-            </Link>
-          );
-        })}
+      {/* Mobile Bottom Nav — Driver role pe hamesha hide (unka apna nav hai) */}
+      <div className={`lsb-bottom ${hideBottomNav ? "hidden" : ""} ${mobileNavExpanded ? "expanded" : ""}`}>
+        <div className="lsb-bottom-inner">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isDriverTabItem = role === "driver" && item.tab;
+            const currentTab = new URLSearchParams(location.search).get("tab");
+            const isActive = isDriverTabItem
+              ? location.pathname.toLowerCase() === "/driver-dashboard" && currentTab === item.tab
+              : location.pathname === item.to;
+            return (
+              <Link key={item.to} to={item.to} className={`lsb-bottom-item ${isActive ? "active" : ""}`}>
+                <Icon size={18} />
+                <span className="lsb-bottom-label">{item.label}</span>
+                {item.dot && <div className="lsb-bottom-dot" />}
+              </Link>
+            );
+          })}
+        </div>
+        {navItems.length > 5 && (
+          <button
+            className="lsb-bottom-toggle"
+            onClick={() => setMobileNavExpanded((v) => !v)}
+            title={mobileNavExpanded ? "Collapse Menu" : "Expand Menu"}
+          >
+            {mobileNavExpanded ? "−" : "≡"}
+          </button>
+        )}
       </div>
     </>
   );
-}
+};
+
+export default Leftsidebar;

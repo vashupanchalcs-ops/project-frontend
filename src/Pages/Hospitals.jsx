@@ -1,343 +1,764 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { BedSingle, CheckCircle2, HeartPulse } from "lucide-react";
 
-const HOSP_IMG = "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&q=80";
-const RED_MAIN = "#e3282d";
+gsap.registerPlugin(ScrollTrigger);
+
+const statusConfig = {
+  active: { label: "ACTIVE", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
+  full: { label: "FULL", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
+  critical: { label: "CRITICAL", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
+  closed: { label: "CLOSED", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
+};
+
+const statsConfig = [
+  { label: "Total Hospitals", key: "total", accent: "#d6e800", filled: true },
+  { label: "Active", key: "active", accent: "#d6e800" },
+  { label: "Critical", key: "critical", accent: "#d6e800" },
+  { label: "Full", key: "full", accent: "#d6e800" },
+];
+
+const images = [
+  "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80",
+  "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1200&q=80",
+  "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=1200&q=80",
+];
+
+const getImage = (idx) => images[idx % images.length];
 
 export default function Hospitals() {
   const [hospitals, setHospitals] = useState([]);
-  const [favorites, setFavorites] = useState({});
+  const [assignBooking, setAssignBooking] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const rootRef = useRef(null);
+  const isAdmin = localStorage.getItem("role") === "admin";
+  const assignBookingId = isAdmin ? location.state?.assignBookingId : null;
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/hospitals/")
-      .then(r=>r.json()).then(setHospitals).catch(()=>{});
-  },[]);
+      .then((r) => r.json())
+      .then(setHospitals)
+      .catch(() => {});
+  }, []);
 
-  const counts = {
-    total:    hospitals.length,
-    active:   hospitals.filter(h=>h.status==="active").length,
-    critical: hospitals.filter(h=>h.status==="critical").length,
-    full:     hospitals.filter(h=>h.status==="full").length,
+  useEffect(() => {
+    if (!assignBookingId) {
+      setAssignBooking(null);
+      return;
+    }
+    fetch(`http://127.0.0.1:8000/api/bookings/${assignBookingId}/`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setAssignBooking(data || null))
+      .catch(() => setAssignBooking(null));
+  }, [assignBookingId]);
+
+  useEffect(() => {
+    if (!rootRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.utils.toArray(".h2-scroll").forEach((el) => {
+        gsap.fromTo(
+          el,
+          { y: 24, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 88%",
+              end: "top 60%",
+              scrub: 0.8,
+            },
+          }
+        );
+      });
+
+      gsap.utils.toArray(".h2-top img").forEach((img) => {
+        gsap.to(img, {
+          yPercent: -10,
+          ease: "none",
+          scrollTrigger: {
+            trigger: img,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 0.7,
+          },
+        });
+      });
+    }, rootRef);
+    return () => ctx.revert();
+  }, [hospitals.length]);
+
+  const getCount = (key) => {
+    if (key === "total") return hospitals.length;
+    return hospitals.filter((h) => h.status === key).length;
   };
 
-  const ST = {
-    active:   {c:"#00875a", bg:"rgba(0,135,90,0.09)",  b:"rgba(0,135,90,0.22)",  label:"Active"  },
-    critical: {c:"#E50914", bg:"rgba(229,9,20,0.09)",  b:"rgba(229,9,20,0.22)",  label:"Critical"},
-    full:     {c:"#b36800", bg:"rgba(179,104,0,0.09)", b:"rgba(179,104,0,0.22)", label:"Full"    },
-    closed:   {c:"#a1a1a6", bg:"rgba(0,0,0,0.05)",     b:"rgba(0,0,0,0.12)",     label:"Closed"  },
+  const handleDirections = (h) => {
+    if (assignBookingId) return;
+    const lat = parseFloat(h.latitude);
+    const lng = parseFloat(h.longitude);
+    // Only pass coordinates if they are valid Indian coordinates; otherwise pass null
+    // so the Directions page falls back to geocoding the address text (fixes wrong-city bug)
+    const validCoords =
+      Number.isFinite(lat) && Number.isFinite(lng) &&
+      lat >= 6 && lat <= 38 && lng >= 68 && lng <= 98;
+    navigate("/directions", {
+      state: {
+        hospital: {
+          name: h.name,
+          address: h.address,
+          latitude:  validCoords ? lat : null,
+          longitude: validCoords ? lng : null,
+        },
+      },
+    });
   };
+
+  const assignHospitalToBooking = async (hospital) => {
+    if (!assignBookingId) return;
+    if (!(hospital?.is_active && hospital?.status !== "closed" && Number(hospital?.available_beds || 0) > 0)) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/bookings/${assignBookingId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assign_hospital_id: hospital.id,
+          send_hospital_alert: true,
+        }),
+      });
+      if (!res.ok) throw new Error("Assign failed");
+      navigate("/Requests", {
+        state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
+      });
+    } catch {
+      navigate("/Requests", {
+        state: { flashMsg: "Hospital assign failed. Try again." },
+      });
+    }
+  };
+
+  const miniToneStyle = (tone) => {
+    if (tone === "tone-green") {
+      return { background: "#dcfce7", border: "1px solid #16a34a", color: "#166534" };
+    }
+    if (tone === "tone-red") {
+      return { background: "#fecaca", border: "1px solid #b91c1c", color: "#991b1b" };
+    }
+    return { background: "#fff59d", border: "1px solid #c7b900", color: "#111111" };
+  };
+
+  const parsePickupPoint = () => {
+    const lat = Number(assignBooking?.pickup_latitude);
+    const lng = Number(assignBooking?.pickup_longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= 6 && lat <= 38 && lng >= 68 && lng <= 98) {
+      return { lat, lng };
+    }
+    return null;
+  };
+
+  const pickupPoint = parsePickupPoint();
+
+  const haversineKm = (a, b) => {
+    const R = 6371;
+    const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+    const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+    const x =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((a.lat * Math.PI) / 180) *
+        Math.cos((b.lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  };
+
+  const getDistanceToPickup = (hospital) => {
+    if (!pickupPoint) return null;
+    const hLat = Number(hospital?.latitude);
+    const hLng = Number(hospital?.longitude);
+    if (!Number.isFinite(hLat) || !Number.isFinite(hLng)) return null;
+    if (!(hLat >= 6 && hLat <= 38 && hLng >= 68 && hLng <= 98)) return null;
+    // Multiply straight-line Haversine by 1.56 to estimate real-world road routing distance
+    return haversineKm(pickupPoint, { lat: hLat, lng: hLng }) * 1.56;
+  };
+
+  const sortedHospitals = [...hospitals];
+  if (assignBookingId && pickupPoint) {
+    sortedHospitals.sort((a, b) => (getDistanceToPickup(a) ?? Infinity) - (getDistanceToPickup(b) ?? Infinity));
+  }
 
   return (
     <>
       <style>{`
-        .hp-root {
-          min-height:100vh;
+        .h2-root {
+          min-height: 100vh;
+          padding-top: 64px;
+          padding-left: 64px;
           background:
-            radial-gradient(circle at 12% 10%, var(--sr-bg-grad-a), transparent 34%),
-            radial-gradient(circle at 88% 8%, var(--sr-bg-grad-b), transparent 38%),
-            var(--sr-bg);
-          padding-top:60px;
-          padding-left:200px;
-          font-family:'DM Sans',sans-serif;
+            radial-gradient(920px 430px at 88% 8%, rgba(214,232,0,0.2), transparent 72%),
+            radial-gradient(840px 380px at 10% -4%, rgba(235,248,94,0.16), transparent 70%),
+            var(--sr-bg, #f7f7f2);
+          color: var(--sr-page-text, #111111);
+          position: relative;
+          overflow: hidden;
         }
-        .hp-inner { max-width:1280px; margin:0 auto; padding:28px 32px 64px; }
-
-        /* PAGE HEADER */
-        .hp-tag  { display:inline-flex;align-items:center;gap:6px;background:#E50914;color:#fff;border-radius:6px;padding:4px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px; }
-        .hp-title{ font-size:28px;font-weight:800;color:var(--sr-text);letter-spacing:-.5px;margin:0 0 4px; }
-        .hp-sub  { font-size:13px;color:var(--sr-text-sub);margin:0 0 28px; }
-
-        /* STATS */
-        .hp-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
-        .hp-stat  {
-          background:color-mix(in srgb, var(--sr-surface) 92%, transparent); border:1px solid var(--sr-border); border-radius:16px;
-          padding:18px 20px; position:relative; overflow:hidden;
-          box-shadow:var(--shadow);
-          transition:transform .18s, box-shadow .18s;
+        .h2-root::before,
+        .h2-root::after {
+          content: "";
+          position: absolute;
+          width: 520px;
+          height: 520px;
+          border-radius: 50%;
+          filter: blur(30px);
+          pointer-events: none;
+          z-index: 0;
+          animation: h2-float 11s ease-in-out infinite;
         }
-        .hp-stat:hover { transform:translateY(-2px); box-shadow:var(--shadow2); }
-        .hp-stat-bar   { position:absolute;top:0;left:0;right:0;height:3px;background:#E50914;border-radius:16px 16px 0 0; }
-        .hp-stat-lbl   { font-size:10px;font-weight:700;color:var(--sr-text-muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px; }
-        .hp-stat-val   { font-size:32px;font-weight:800;color:var(--sr-text);letter-spacing:-1px;line-height:1; }
-
-        /* GRID */
-        .hp-section-title { font-size:18px;font-weight:800;color:var(--sr-text);margin-bottom:16px;letter-spacing:-.3px; }
-        .hp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
-
-        /* HOSPITAL CARD */
-        .hp-card {
-          background:#f3ece8;
-          border:1px solid rgba(255,255,255,0.22);
-          border-radius:22px;
-          overflow:hidden;
-          cursor:pointer;
-          box-shadow:0 10px 28px rgba(0,0,0,0.28);
-          transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
-          position:relative;
-          backdrop-filter:blur(6px);
+        .h2-root::before {
+          top: -190px;
+          right: -120px;
+          background: radial-gradient(circle, rgba(214, 232, 0, 0.18) 0%, rgba(214, 232, 0, 0) 70%);
         }
-        .hp-card:hover {
-          transform:translateY(-2px);
-          box-shadow:0 16px 34px rgba(0,0,0,0.34);
-          border-color:rgba(255,255,255,0.32);
+        .h2-root::after {
+          left: -170px;
+          bottom: -220px;
+          background: radial-gradient(circle, rgba(235, 248, 94, 0.16) 0%, rgba(235, 248, 94, 0) 70%);
+          animation-delay: -5.5s;
+        }
+        @keyframes h2-float {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          50% { transform: translate3d(0, -16px, 0) scale(1.06); }
+        }
+        .h2-wrap {
+          width: 100%;
+          padding: clamp(16px, 2.2vw, 30px);
+          position: relative;
+          z-index: 1;
         }
 
-        .hp-card-img {
-          position:relative;
-          height:178px;
-          overflow:hidden;
-          background:var(--sr-surface-2);
-          border-bottom:1px solid rgba(0,0,0,0.08);
+        .h2-kicker {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 100px;
+          border: 1px solid rgba(214,232,0,0.68);
+          color: #111111;
+          background: rgba(214,232,0,0.8);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+          margin-bottom: 12px;
         }
-        .hp-card-img img {
-          position:absolute;
-          inset:0;
-          width:100%;
-          height:100%;
-          object-fit:cover;
-          display:block;
-          filter:brightness(.94) saturate(1.02) contrast(1.01);
-          transition:transform .24s ease,filter .24s ease;
-          z-index:2;
+        .h2-head h1 {
+          margin: 0;
+          font-size: clamp(32px, 4vw, 54px);
+          letter-spacing: -1px;
+          color: #111111;
+          line-height: 0.98;
         }
-        .hp-card:hover .hp-card-img img { transform:scale(1.04);filter:brightness(1) saturate(1.04) contrast(1.02); }
-
-        .hp-card-unit {
-          position:absolute;
-          top:38px;
-          left:8px;
-          display:flex;
-          align-items:center;
-          gap:4px;
-          background:rgba(38,24,36,0.88);
-          border:1px solid rgba(255,255,255,0.18);
-          border-radius:999px;
-          padding:4px 12px;
-          font-size:11px;
-          font-weight:800;
-          color:#f3ebe7;
-          z-index:4;
+        .h2-head p {
+          margin: 10px 0 0;
+          color: rgba(17,17,17,0.76);
+          font-size: 16px;
         }
-        .hp-card-unit-dot { width:6px;height:6px;border-radius:50%;background:${RED_MAIN}; }
-
-        .hp-card-status-badge {
-          position:absolute;
-          top:38px;
-          right:8px;
-          font-size:11px;
-          font-weight:800;
-          border-radius:999px;
-          padding:4px 12px;
-          text-transform:uppercase;
-          letter-spacing:.4px;
-          display:flex;
-          align-items:center;
-          gap:4px;
-          background:rgba(38,24,36,0.9)!important;
-          border:1px solid rgba(255,255,255,0.18)!important;
-          color:#fff!important;
-          z-index:4;
-        }
-        .hp-card-speed{
-          position:absolute;
-          top:8px;
-          left:8px;
-          display:flex;
-          align-items:center;
-          gap:4px;
-          background:rgba(179,38,30,0.86);
-          border:1px solid rgba(255,255,255,0.3);
-          border-radius:999px;
-          padding:3px 9px;
-          font-size:9px;
-          font-weight:800;
-          color:#fff;
-          z-index:5;
-        }
-        .hp-card-spd-dot{width:5px;height:5px;border-radius:50%;background:#E50914;}
-        .hp-card-heart{
-          position:absolute;
-          top:8px;
-          right:8px;
-          width:22px;
-          height:22px;
-          border-radius:999px;
-          background:#d43128;
-          color:#fff;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-size:10px;
-          cursor:pointer;
-          transition:transform .15s;
-          z-index:6;
-          border:1px solid rgba(0,0,0,0.08);
-        }
-        .hp-card-heart:hover{transform:scale(1.15);}
-
-        .hp-card-body { padding:10px 12px 12px;background:#f8f2ef; }
-        .hp-card-genres { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:5px; }
-        .hp-card-genre  { font-size:12px;font-weight:800;color:#9f3e2f;background:#f2dfd8;border:1px solid rgba(159,62,47,0.22);border-radius:999px;padding:3px 10px; }
-        .hp-card-name   { font-size:20px;font-weight:900;color:#2c1b24;margin-bottom:4px;letter-spacing:-.2px;line-height:1.15; }
-        .hp-card-addr   { font-size:13px;color:#5c4852;line-height:1.35;margin-bottom:10px;display:flex;align-items:center;gap:4px; }
-        .hp-card-divider{ height:1px;background:rgba(208,108,98,0.32);margin:8px 0 10px; }
-        .hp-card-meta   { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px; }
-        .hp-card-chip   {
-          font-size:11px;
-          font-weight:800;
-          color:#fff;
-          background:#2f1e2f;
-          border:1px solid rgba(255,255,255,0.24);
-          border-radius:999px;
-          padding:4px 10px;
-          text-transform:uppercase;
-          letter-spacing:.4px;
-          box-shadow:0 4px 10px rgba(0,0,0,0.2);
-        }
-        .hp-card-chip.tone-beds{
-          background:linear-gradient(135deg,#0e9f6e,#0c7a56) !important;
-          border-color:rgba(140,255,208,0.45) !important;
-          color:#ecfff6 !important;
-        }
-        .hp-card-chip.tone-available{
-          background:linear-gradient(135deg,#f43f5e,#c81e3a) !important;
-          border-color:rgba(255,166,183,0.45) !important;
-          color:#fff2f5 !important;
-        }
-        .hp-card-chip.tone-icu{
-          background:linear-gradient(135deg,#f5c842,#d89f12) !important;
-          border-color:rgba(255,234,162,0.5) !important;
-          color:#3d2b00 !important;
+        .h2-assign-banner {
+          margin-top: 14px;
+          border: 1px solid rgba(214,232,0,0.9);
+          background: rgba(214,232,0,0.2);
+          color: #111;
+          border-radius: 12px;
+          padding: 10px 12px;
+          font-size: 13px;
+          font-weight: 700;
         }
 
-        /* Directions btn */
-        .hp-card-dirs {
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          gap:7px;
-          background:linear-gradient(135deg,#ffd84f,#f2b705) !important;
-          color:#3a2500 !important;
-          border:none;
-          border-radius:999px;
-          padding:10px 16px;
-          font-size:13px;
-          font-weight:800;
-          font-family:inherit;
-          cursor:pointer;
-          transition:all .15s;
-          width:100%;
-          box-shadow:0 10px 20px rgba(214,162,17,0.35);
+        .h2-stats {
+          margin-top: 22px;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
         }
-        .hp-card-dirs:hover { filter:brightness(1.05); transform:translateY(-1px); }
-        /* RESPONSIVE */
-        @media(max-width:767px){
-          .hp-root{padding-left:0;padding-bottom:72px;}
-          .hp-inner{padding:16px 14px 80px;}
-          .hp-stats{grid-template-columns:repeat(2,1fr);gap:10px;}
-          .hp-grid{grid-template-columns:1fr;}
-          .hp-card-name{font-size:18px;}
-          .hp-card-addr{font-size:12px;}
-          .hp-card-dirs{font-size:14px;}
+        .h2-stat {
+          border: 1px solid rgba(214,232,0,0.46);
+          border-radius: 16px;
+          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(246,246,236,0.98));
+          padding: 14px 16px;
+          position: relative;
+          transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+        }
+        .h2-stat::before {
+          content: none;
+        }
+        .h2-stat:hover {
+          background-color: #d6e800 !important;
+          background-image: none !important;
+          border-color: #111111;
+          box-shadow: 0 14px 30px rgba(214,232,0,0.32), 0 0 0 1px #111111 inset;
+          transform: translateY(-2px);
+        }
+        .h2-stat .lbl {
+          font-size: 11px;
+          font-weight: 700;
+          color: rgba(17,17,17,0.62);
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+        }
+        .h2-stat .val {
+          margin-top: 8px;
+          font-size: clamp(30px, 3vw, 44px);
+          line-height: 1;
+          font-weight: 900;
+          color: #111111;
+        }
+        .h2-stat.filled {
+          background: #d6e800;
+          border-color: #111111;
+          box-shadow: 0 14px 30px rgba(214,232,0,0.32), 0 0 0 1px #111111 inset;
+        }
+        .h2-stat.filled .lbl,
+        .h2-stat.filled .val {
+          color: #111111;
+        }
+
+        .h2-sec {
+          margin-top: 30px;
+          font-size: 26px;
+          font-weight: 900;
+          letter-spacing: -0.4px;
+          color: #111111;
+        }
+
+        .h2-grid {
+          margin-top: 14px;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+        .h2-root.admin-cut .h2-sec {
+          margin-top: 24px;
+          font-size: 22px;
+          letter-spacing: -0.2px;
+        }
+        .h2-root.admin-cut .h2-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .h2-root.admin-cut .h2-card {
+          display: grid;
+          grid-template-columns: 240px minmax(0, 1fr);
+          min-height: 220px;
+          border-radius: 20px;
+          box-shadow: 0 12px 26px rgba(17,17,17,0.1);
+        }
+        .h2-root.admin-cut .h2-top {
+          height: 100%;
+          min-height: 220px;
+          border-right: 1px solid rgba(17,17,17,0.08);
+        }
+        .h2-root.admin-cut .h2-top::after {
+          background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.34) 100%);
+        }
+        .h2-root.admin-cut .h2-status {
+          top: 10px;
+          right: 10px;
+          bottom: auto;
+          font-size: 10px;
+          padding: 4px 10px;
+          background: rgba(255,255,255,0.9) !important;
+        }
+        .h2-root.admin-cut .h2-body {
+          padding: 14px;
+          display: grid;
+          align-content: start;
+          gap: 8px;
+        }
+        .h2-root.admin-cut .h2-meta { gap: 6px; }
+        .h2-root.admin-cut .h2-pill {
+          background: rgba(214,232,0,0.24);
+          border-color: rgba(17,17,17,0.14);
+        }
+        .h2-root.admin-cut .h2-name {
+          margin-top: 2px;
+          font-size: clamp(20px, 2.2vw, 28px);
+        }
+        .h2-root.admin-cut .h2-address {
+          font-size: 13px;
+          white-space: normal;
+          line-height: 1.45;
+        }
+        .h2-root.admin-cut .h2-desc {
+          margin-top: 1px;
+          min-height: 0;
+          font-size: 12px;
+        }
+        .h2-root.admin-cut .h2-stats-mini {
+          margin-top: 0;
+          grid-template-columns: repeat(3, minmax(95px, 1fr));
+          max-width: 430px;
+        }
+        .h2-root.admin-cut .h2-actions { margin-top: 2px; }
+
+        .h2-card {
+          border: 1px solid rgba(20,20,20,0.16);
+          border-radius: 16px;
+          overflow: hidden;
+          background: linear-gradient(170deg, rgba(255,255,255,0.98), rgba(246,246,236,0.98));
+          box-shadow: 0 16px 34px rgba(0,0,0,0.18);
+          transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+        }
+        .h2-card:hover {
+          background: linear-gradient(165deg, rgba(214,232,0,0.18), rgba(255,255,255,0.96));
+          border-color: #111111;
+          box-shadow: 0 18px 34px rgba(214,232,0,0.26), 0 0 0 1px #111111 inset;
+          transform: translateY(-4px);
+        }
+        .h2-card:hover .h2-mini,
+        .h2-card:hover .h2-btn {
+          border-color: rgba(214,232,0,0.86);
+        }
+        .h2-top {
+          position: relative;
+          height: 132px;
+          overflow: hidden;
+          background: #09070f;
+        }
+        .h2-top::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.08) 100%);
+        }
+        .h2-top img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          filter: contrast(1.03) saturate(1.03);
+          image-rendering: auto;
+        }
+        .h2-status {
+          position: absolute;
+          right: 10px;
+          bottom: 10px;
+          z-index: 2;
+          border-radius: 100px;
+          border: 1px solid;
+          padding: 3px 9px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+        }
+
+        .h2-body {
+          padding: 12px;
+        }
+        .h2-meta {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .h2-pill {
+          padding: 3px 9px;
+          border-radius: 100px;
+          border: 1px solid rgba(20,20,20,0.14);
+          background: rgba(214,232,0,0.2);
+          color: rgba(17,17,17,0.9);
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .h2-name {
+          margin-top: 8px;
+          font-size: clamp(18px, 1.9vw, 24px);
+          line-height: 1.15;
+          font-weight: 900;
+          letter-spacing: -0.4px;
+          color: #111111;
+        }
+        .h2-address {
+          margin-top: 5px;
+          color: rgba(17,17,17,0.84);
+          font-size: clamp(12px, 1.2vw, 14px);
+          line-height: 1.35;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .h2-desc {
+          margin-top: 7px;
+          color: rgba(17,17,17,0.72);
+          font-size: 12px;
+          line-height: 1.45;
+          min-height: 34px;
+        }
+
+        .h2-stats-mini {
+          margin-top: 9px;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0,1fr));
+          gap: 6px;
+        }
+        .h2-mini {
+          border: 1px solid #b7c600;
+          border-radius: 10px;
+          background: #eef2b2;
+          padding: 7px 6px;
+          text-align: center;
+        }
+        .h2-mini.tone-green {
+          background: #d9f7eb !important;
+          border: 1px solid #43c18b !important;
+        }
+        .h2-mini.tone-yellow {
+          background: #fff8bf !important;
+          border: 1px solid #d8c84f !important;
+        }
+        .h2-mini.tone-red {
+          background: #ffd9e0 !important;
+          border: 1px solid #ef6b88 !important;
+        }
+        .h2-mini .v {
+          font-size: 15px;
+          font-weight: 900;
+          line-height: 1;
+          color: #111111;
+          font-family: "Orbitron", "Rajdhani", "Segoe UI", sans-serif;
+          letter-spacing: 0.6px;
+        }
+        .h2-mini .l {
+          margin-top: 3px;
+          font-size: 9px;
+          font-weight: 800;
+          color: rgba(17,17,17,0.78);
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          font-family: "Orbitron", "Rajdhani", "Segoe UI", sans-serif;
+        }
+        .h2-mini .i {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 14px;
+          height: 14px;
+        }
+        .h2-mini.tone-green .v,
+        .h2-mini.tone-green .l { color: #125c41; }
+        .h2-mini.tone-yellow .v,
+        .h2-mini.tone-yellow .l { color: #111111; }
+        .h2-mini.tone-red .v,
+        .h2-mini.tone-red .l { color: #8a1f35; }
+
+        .h2-actions {
+          margin-top: 9px;
+          display: grid;
+          grid-template-columns: 1fr 40px;
+          gap: 6px;
+        }
+        .h2-btn {
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.06);
+          color: #fff;
+          font-size: 12px;
+          font-weight: 800;
+          font-family: inherit;
+          cursor: pointer;
+          height: 34px;
+        }
+        .h2-btn.main {
+          background: linear-gradient(90deg, #ff1f5a, #ff4f40);
+          border-color: transparent;
+          box-shadow: 0 12px 28px rgba(255, 31, 90, 0.32);
+        }
+        .h2-btn.assign {
+          background: #d6e800;
+          color: #111;
+          border: 1px solid #111;
+          box-shadow: none;
+        }
+        .h2-btn.assign:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+        .h2-mini:hover {
+          border-color: rgba(214,232,0,0.95);
+          box-shadow: 0 0 0 1px rgba(214,232,0,0.3) inset;
+        }
+        .h2-btn:hover {
+          border-color: rgba(214,232,0,0.95);
+          box-shadow: 0 0 0 1px rgba(214,232,0,0.3) inset;
+        }
+
+        @media (max-width: 1100px) {
+          .h2-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .h2-grid {
+            grid-template-columns: 1fr;
+          }
+          .h2-root.admin-cut .h2-card {
+            grid-template-columns: 1fr;
+          }
+          .h2-root.admin-cut .h2-top {
+            min-height: 150px;
+            border-right: 0;
+            border-bottom: 1px solid rgba(17,17,17,0.08);
+          }
+        }
+        @media (max-width: 767px) {
+          .h2-root {
+            padding-left: 0;
+            padding-bottom: 74px;
+          }
+          .h2-wrap {
+            padding: 14px 12px 84px;
+          }
+          .h2-stats-mini {
+            grid-template-columns: 1fr 1fr 1fr;
+          }
         }
       `}</style>
 
-      <div className="hp-root">
-        <div className="hp-inner">
-
-          <div className="hp-tag">🏥 Network</div>
-          <h1 className="hp-title">Hospital Network</h1>
-          <p className="hp-sub">Real-time bed availability and emergency capacity</p>
-
-          {/* STATS */}
-          <div className="hp-stats">
-            {[
-              {lbl:"Total Hospitals", val:String(counts.total).padStart(2,"0")   },
-              {lbl:"Active",          val:String(counts.active).padStart(2,"0")  },
-              {lbl:"Critical",        val:String(counts.critical).padStart(2,"0")},
-              {lbl:"Full",            val:String(counts.full).padStart(2,"0")    },
-            ].map((s,i)=>(
-              <div key={i} className="hp-stat">
-                <div className="hp-stat-bar"/>
-                <div className="hp-stat-lbl">{s.lbl}</div>
-                <div className="hp-stat-val">{s.val}</div>
+      <div className={`h2-root ${isAdmin ? "admin-cut" : ""}`} ref={rootRef}>
+        <div className="h2-wrap">
+          <div className="h2-head">
+            <div className="h2-kicker">Hospital Network</div>
+            <h1>Hospitals</h1>
+            <p>Real-time bed availability and emergency capacity.</p>
+            {assignBookingId && (
+              <div className="h2-assign-banner">
+                Assign a hospital to #{assignBookingId} to send an immediate notification to the facility
               </div>
+            )}
+          </div>
+
+          <div className="h2-stats">
+            {statsConfig.map((s) => (
+              <motion.div className={`h2-stat h2-anim ${s.filled ? "filled" : ""}`} key={s.key} style={{ "--bar": s.accent }} whileHover={{ y: -3 }}>
+                <div className="lbl">{s.label}</div>
+                <div className="val">{String(getCount(s.key)).padStart(2, "0")}</div>
+              </motion.div>
             ))}
           </div>
 
-          <div className="hp-section-title">Hospital Directory</div>
+          <div className="h2-sec">Hospital Overview</div>
 
-          <div className="hp-grid">
-            {hospitals.map((h,i)=>{
-              const norm = h.status?.toLowerCase().replace(/[\s-]+/g,"_");
-              const sc   = ST[norm] || ST.closed;
-              const ctaLabel = norm === "active" ? "Check Availability" : "Check Availability";
-              return(
-                <div key={i} className="hp-card">
-                  <div className="hp-card-img">
-                    <img src={HOSP_IMG} alt=""/>
-                    <div className="hp-card-speed">
-                      <span className="hp-card-spd-dot"/>
-                      {h.available_beds ?? 0} beds
-                    </div>
-                    <div
-                      className="hp-card-heart"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFavorites((p) => ({ ...p, [h.id]: !p[h.id] }));
-                      }}
-                    >
-                      {favorites[h.id] ? "♥" : "♡"}
-                    </div>
-                    <div className="hp-card-unit">
-                      <span className="hp-card-unit-dot"/>
-                      Unit #{String(i+1).padStart(2,"0")}
-                    </div>
-                    <span className="hp-card-status-badge" style={{color:sc.c,background:sc.bg,borderColor:sc.b}}>
-                      <span style={{width:5,height:5,borderRadius:"50%",background:sc.c,display:"inline-block"}}/>
-                      {sc.label}
-                    </span>
+          <div className="h2-grid">
+            {sortedHospitals.map((h, i) => {
+              const statusKey = (h.status || "closed").toLowerCase().replace(/\s+/g, "_");
+              const sc = statusConfig[statusKey] || statusConfig.closed;
+              const totalBeds = h.total_beds ?? 0;
+              const availableBeds = h.available_beds ?? 0;
+              const icuBeds = h.icu_beds ?? 0;
+              const safeTotalBeds = Math.max(0, Number(totalBeds) || 0);
+              const safeAvailableBeds = Math.max(0, Number(availableBeds) || 0);
+              const safeIcuBeds = Math.max(0, Number(icuBeds) || 0);
+              const availableRatio = safeTotalBeds > 0 ? safeAvailableBeds / safeTotalBeds : 0;
+              const totalTone =
+                availableRatio <= 0
+                  ? "tone-red"
+                  : availableRatio <= 0.35
+                    ? "tone-yellow"
+                    : "tone-green";
+              const availableTone =
+                safeAvailableBeds === 0
+                  ? "tone-red"
+                  : safeAvailableBeds <= 5
+                    ? "tone-yellow"
+                    : "tone-green";
+              const icuTone =
+                safeIcuBeds === 0
+                  ? "tone-red"
+                  : safeIcuBeds <= 2
+                    ? "tone-yellow"
+                    : "tone-green";
+              const canAssign = h.is_active && h.status !== "closed" && Number(availableBeds) > 0;
+              const pickupDistanceKm = getDistanceToPickup(h);
+
+              return (
+                <motion.article className="h2-card h2-anim" key={h.id || i} whileHover={{ y: -4 }}>
+                  <div className="h2-top">
+                    <img src={getImage(i)} alt={h.name || "Hospital"} />
+                    <div className="h2-status" style={{ color: sc.color, borderColor: sc.border, background: sc.bg }}>{sc.label}</div>
                   </div>
 
-                    <div className="hp-card-body">
-                      <div className="hp-card-genres">
-                      {h.specialization
-                        ? h.specialization.split(",").slice(0,2).map((s,j)=><span key={j} className="hp-card-genre">{s.trim()}</span>)
-                        : <span className="hp-card-genre">General</span>
-                      }
-                      {h.hospital_type && <span className="hp-card-genre">{h.hospital_type}</span>}
+                  <div className="h2-body">
+                    <div className="h2-meta">
+                      <span className="h2-pill">{h.hospital_type || "General"}</span>
+                      <span className="h2-pill">Unit #{String(i + 1).padStart(2, "0")}</span>
                     </div>
-                    <div className="hp-card-name">{h.name}</div>
-                    <div className="hp-card-addr">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#E50914" style={{flexShrink:0}}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                      {h.address}
-                    </div>
-
-                    <div className="hp-card-divider" />
-                    <div className="hp-card-meta">
-                      <span className="hp-card-chip tone-beds">Beds {h.total_beds ?? "—"}</span>
-                      <span className="hp-card-chip tone-available">Available {h.available_beds ?? "—"}</span>
-                      <span className="hp-card-chip tone-icu">ICU {h.icu_beds ?? "—"}</span>
+                    <div className="h2-name">{h.name || "Unnamed Hospital"}</div>
+                    <div className="h2-address">{h.address || "No address"}</div>
+                    {assignBookingId && (
+                      <div className="h2-address" style={{ fontWeight: 700, color: "#111" }}>
+                        Distance to pickup: {pickupDistanceKm !== null ? `${pickupDistanceKm.toFixed(1)} km` : "Location unavailable"}
+                      </div>
+                    )}
+                    <div className="h2-desc">
+                      Round-the-clock emergency care with live bed visibility and rapid ambulance intake.
                     </div>
 
-                    <button className="hp-card-dirs" onClick={()=>navigate("/directions",{state:{hospital:{name:h.name,address:h.address,latitude:h.latitude,longitude:h.longitude}}})}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                      {ctaLabel}
-                    </button>
+                    <div className="h2-stats-mini">
+                      <div className={`h2-mini ${totalTone}`} style={miniToneStyle(totalTone)}>
+                        <div className="v">{safeTotalBeds}</div>
+                        <div className="l">
+                          <span className="i"><BedSingle size={12} strokeWidth={2.4} /></span>
+                          Total Beds
+                        </div>
+                      </div>
+                      <div className={`h2-mini ${availableTone}`} style={miniToneStyle(availableTone)}>
+                        <div className="v">{safeAvailableBeds}</div>
+                        <div className="l">
+                          <span className="i"><CheckCircle2 size={12} strokeWidth={2.4} /></span>
+                          Available
+                        </div>
+                      </div>
+                      <div className={`h2-mini ${icuTone}`} style={miniToneStyle(icuTone)}>
+                        <div className="v">{safeIcuBeds}</div>
+                        <div className="l">
+                          <span className="i"><HeartPulse size={12} strokeWidth={2.4} /></span>
+                          ICU
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h2-actions">
+                      {assignBookingId ? (
+                        <button
+                          className="h2-btn assign"
+                          disabled={!canAssign}
+                          onClick={() => assignHospitalToBooking(h)}
+                        >
+                          {canAssign ? `Assign To #${assignBookingId}` : "Not Available"}
+                        </button>
+                      ) : (
+                        <button
+                          className="h2-btn main"
+                          onClick={() => {
+                            if (isAdmin) {
+                              navigate("/HospitalPartnerDetails", { state: { hospitalId: h.id } });
+                              return;
+                            }
+                            handleDirections(h);
+                          }}
+                        >
+                          {isAdmin ? "More Details" : "See More"}
+                        </button>
+                      )}
+                      <button className="h2-btn" onClick={() => navigator.clipboard?.writeText(h.address || "")}>📋</button>
+                    </div>
                   </div>
-                </div>
+                </motion.article>
               );
             })}
           </div>
-
-          {hospitals.length===0&&(
-            <div style={{textAlign:"center",padding:"60px 0",color:"var(--sr-text-muted)",fontSize:14}}>
-              <div style={{fontSize:48,marginBottom:12,opacity:.4}}>🏥</div>
-              No hospitals in network yet
-            </div>
-          )}
-
         </div>
       </div>
     </>

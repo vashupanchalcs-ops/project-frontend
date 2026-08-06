@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../ThemeContext";
+import { useTheme } from "../ThemeContext.jsx";
 import { useSmoothScroll } from "../providers/SmoothScrollProvider";
 
 export default function Settings() {

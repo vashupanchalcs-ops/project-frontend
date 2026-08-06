@@ -1,712 +1,1179 @@
-import { UserPlus, ChevronsRight, Mail, ArrowLeft, Truck, Shield, User } from "lucide-react";
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import gsap from "gsap";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-const ADMIN_EMAILS = ["vashupanchal.cs@gmail.com"];
+const ADMIN_EMAIL = "vashupanchal.cs@gmail.com";
+const BASE = "http://127.0.0.1:8000";
+const DB_KEY = "sr_users_db";
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ||
+  import.meta.env.VITE_GOOGLE_SIGNIN_CLIENT_ID ||
+  (typeof window !== "undefined" ? window.localStorage.getItem("sr_google_client_id") || "" : "");
 
-const RoleCard = ({ icon: Icon, title, desc, color, selected, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`lg-role-card ${selected ? "on" : ""}`}
-    style={{ "--role-c": color }}
-  >
-    <div className="lg-role-icon"><Icon size={15} /></div>
-    <div className="lg-role-title">{title}</div>
-    <div className="lg-role-desc">{desc}</div>
-  </button>
-);
+const getUsers = () => {
+  try {
+    return JSON.parse(localStorage.getItem(DB_KEY) || "{}");
+  } catch {
+    return {};
+  }
+};
+const saveUsers = (u) => localStorage.setItem(DB_KEY, JSON.stringify(u));
+const getUser = (email) => getUsers()[email.trim().toLowerCase()] || null;
+const saveUser = (u) => {
+  const db = getUsers();
+  db[u.email] = u;
+  saveUsers(db);
+};
 
-const Login = () => {
+const localOtpStore = {};
+const makeLocalOtp = (email) => {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  localOtpStore[email] = { code, exp: Date.now() + 5 * 60 * 1000 };
+  return code;
+};
+const verifyLocalOtp = (email, otp) => {
+  const entry = localOtpStore[email];
+  if (!entry || Date.now() > entry.exp) return false;
+  if (entry.code === String(otp).trim()) {
+    delete localOtpStore[email];
+    return true;
+  }
+  return false;
+};
+
+const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
+const normalizePhone = (v) => String(v || "").replace(/\D/g, "").slice(-10);
+
+const applySession = ({ email, name, role, phone }) => {
+  localStorage.setItem("user", email);
+  localStorage.setItem("name", name || email.split("@")[0]);
+  localStorage.setItem("role", role);
+  if (phone) localStorage.setItem("phone", phone);
+};
+
+export default function Login() {
   const navigate = useNavigate();
-  const rootRef = useRef(null);
-  const [role, setRole] = useState("user");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [ambulances, setAmbulances] = useState([]);
-  const [selectedAmb, setSelectedAmb] = useState(null);
-  const [ambLoading, setAmbLoading] = useState(false);
+  const { search } = useLocation();
 
-  const totalSteps = role === "driver" ? 3 : 2;
+  const signupMode = useMemo(() => new URLSearchParams(search).get("signup") === "1", [search]);
+  const [authMode, setAuthMode] = useState(signupMode ? "signup" : "login");
+  const [isResetMode, setIsResetMode] = useState(false);
+
+  const [step, setStep] = useState("details");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [info, setInfo] = useState("");
+  const [timer, setTimer] = useState(0);
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    role: "user",
+    phone: "",
+    contractId: "",
+    hospitalId: "",
+    registrationNumber: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [otpPurpose, setOtpPurpose] = useState("signup");
+  const [passwordVisible, setPasswordVisible] = useState({
+    password: false,
+    confirmPassword: false,
+  });
+
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
 
   useEffect(() => {
-    if (role !== "driver") return;
-    setAmbLoading(true);
-    fetch("http://127.0.0.1:8000/api/ambulances/")
-      .then(r => r.json())
-      .then(data => { setAmbulances(data); setAmbLoading(false); })
-      .catch(() => setAmbLoading(false));
-  }, [role]);
+    if (timer <= 0) return;
+    const t = setTimeout(() => setTimer((x) => x - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timer]);
 
-  const sendEmailOtp = async (e) => {
-    if (e?.preventDefault) e.preventDefault();
-    if (!name.trim()) { alert("Naam daalo pehle!"); return; }
-    if (!email.trim()) { alert("Email daalo pehle!"); return; }
-    if (role === "driver" && phone.length !== 10) { alert("10-digit phone number daalo"); return; }
-    setLoading(true);
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/send-otp/", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-      const data = await res.json();
-      if (data.status === "otp_sent") setStep(2);
-      else alert(data.message || "OTP send nahi hua");
-    } catch (err) { alert(`Server se connect nahi: ${err.message}`); }
-    setLoading(false);
-  };
+  useEffect(() => {
+    setAuthMode(signupMode ? "signup" : "login");
+    setIsResetMode(false);
+  }, [signupMode]);
 
-  const verifyEmailOtp = async (e) => {
-    e.preventDefault();
-    if (!emailOtp.trim() || emailOtp.length !== 6) { alert("6-digit OTP daalo"); return; }
-    setLoading(true);
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/verify-otp/", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp: emailOtp.trim(), email: email.trim() }),
-      });
-      const data = await res.json();
-      if (data.status === "success") {
-        const finalRole = ADMIN_EMAILS.includes(data.email) ? "admin" : role;
-        localStorage.setItem("user", data.email);
-        localStorage.setItem("name", name);
-        localStorage.setItem("role", finalRole);
-        if (finalRole === "driver") { localStorage.setItem("phone", phone); setStep(3); }
-        else navigate("/");
-      } else alert(data.message || "Invalid OTP");
-    } catch (err) { alert("Server error: " + err.message); }
-    setLoading(false);
-  };
-
-  const confirmAmbulance = async () => {
-    if (!selectedAmb) return;
-    localStorage.setItem("ambulance_id", String(selectedAmb.id));
-    localStorage.setItem("ambulance_number", selectedAmb.ambulance_number);
-    try {
-      await fetch(`http://127.0.0.1:8000/api/ambulances/${selectedAmb.id}/`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ driver: name, driver_contact: phone, driver_email: email }),
-      });
-    } catch {}
-    navigate("/");
-  };
-
-  const roleColor = { user: "#4ea8ff", driver: "#d7b56d", admin: "#ff6b2b" };
-  const rc = roleColor[role];
-
-  useLayoutEffect(() => {
-    if (!rootRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from(".lg-noise", { autoAlpha: 0, duration: 0.7, ease: "power2.out" });
-      gsap.from(".lg-orb", { scale: 0.84, autoAlpha: 0, stagger: 0.08, duration: 1.05, ease: "power3.out" });
-      gsap.from(".lg-shell", { y: 32, autoAlpha: 0, duration: 0.9, ease: "power3.out" });
-      gsap.from(".lg-shell > *", { y: 16, autoAlpha: 0, duration: 0.6, stagger: 0.06, delay: 0.18, ease: "power2.out" });
-    }, rootRef);
-    return () => ctx.revert();
+  useEffect(() => {
+    if (window.google?.accounts?.oauth2) return;
+    const existing = document.getElementById("sr-google-sdk");
+    if (existing) return;
+    const s = document.createElement("script");
+    s.id = "sr-google-sdk";
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.defer = true;
+    document.body.appendChild(s);
   }, []);
 
-  useEffect(() => {
-    if (!rootRef.current) return;
-    gsap.fromTo(
-      ".lg-title, .lg-subtitle, .lg-form, .lg-verified",
-      { y: 16, autoAlpha: 0 },
-      { y: 0, autoAlpha: 1, duration: 0.52, stagger: 0.05, ease: "power2.out" }
-    );
-  }, [step, role]);
+  const clearMsgs = () => {
+    setErr("");
+    setInfo("");
+  };
+
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "phone") {
+      setForm((f) => ({ ...f, phone: normalizePhone(value) }));
+      return;
+    }
+    setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const resolvedRole = (email, pickedRole) => {
+    if (email === ADMIN_EMAIL.toLowerCase()) return "admin";
+    if (pickedRole === "hospital") return "hospital";
+    return pickedRole === "driver" ? "driver" : "user";
+  };
+
+  const validateHospitalAccess = async (email) => {
+    try {
+      const resp = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(email)}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      return resp.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const requiresContractAccess = (role) => role === "driver" || role === "hospital";
+
+  const validateContractAccess = async ({ role, email, contractId, hospitalId, registrationNumber }) => {
+    const payload = {
+      role,
+      email,
+      contract_id: String(contractId || "").trim(),
+      hospital_id: String(hospitalId || "").trim(),
+      registration_number: String(registrationNumber || "").trim(),
+    };
+    const resp = await fetch(`${BASE}/api/auth/contract-validate/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(7000),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data?.valid) {
+      return { ok: false, error: data?.error || "Contract details do not match backend records." };
+    }
+    return { ok: true, data };
+  };
+
+  const completeLogin = (userRecord) => {
+    saveUser(userRecord);
+    applySession(userRecord);
+    if (userRecord.contract_id) localStorage.setItem("contract_id", String(userRecord.contract_id));
+    if (userRecord.registration_number) localStorage.setItem("registration_number", String(userRecord.registration_number));
+    if (userRecord.role === "driver" && userRecord.ambulance_id) {
+      localStorage.setItem("ambulance_id", String(userRecord.ambulance_id));
+      localStorage.setItem("ambulance_number", String(userRecord.ambulance_number || ""));
+    }
+    if (userRecord.role === "hospital" && userRecord.hospital_id) {
+      localStorage.setItem("hospital_id", String(userRecord.hospital_id));
+    }
+    if (userRecord.role === "driver") navigate("/driver-dashboard", { replace: true });
+    else if (userRecord.role === "hospital") navigate("/hospital/home", { replace: true });
+    else navigate("/", { replace: true });
+  };
+
+  const loginWithPassword = async (e) => {
+    if (e) e.preventDefault();
+    clearMsgs();
+
+    const email = form.email.trim().toLowerCase();
+    const existing = getUser(email);
+    // The role selected on the login form must be resolved before validating
+    // contract access. Older locally cached accounts were often saved as
+    // `user`, which otherwise made a valid driver login fall back to user UI.
+    // Admin remains email-controlled and an existing hospital/driver account
+    // keeps its protected role when the form is left on the default User tab.
+    // Treat filled ambulance credentials as an explicit driver intent too.
+    // This also handles sessions where the role toggle was reset to User.
+    const selectedRole = form.role === "user" && (form.contractId.trim() || form.registrationNumber.trim())
+      ? "driver"
+      : resolvedRole(email, form.role);
+    const role = selectedRole !== "user"
+      ? selectedRole
+      : (existing?.role || selectedRole);
+
+    if (!isValidEmail(email)) return setErr("A valid email is required.");
+    if (!form.password) return setErr("Password is required.");
+    if (!existing) return setErr("Account not found. Please sign up first.");
+    if (existing.password !== form.password) return setErr("Incorrect password.");
+
+    const phone = normalizePhone(form.phone || existing.phone || "");
+    if (role === "driver" && phone.length !== 10) {
+      return setErr("A 10-digit contact number is required for driver login.");
+    }
+    if (requiresContractAccess(role)) {
+      if (role === "hospital" && (!form.hospitalId.trim() || !form.registrationNumber.trim())) {
+        return setErr("Hospital ID and Registration Number are required.");
+      }
+      if (role === "driver" && (!form.contractId.trim() || !form.registrationNumber.trim())) {
+        return setErr("Ambulance ID and Registration Number are required.");
+      }
+      const checked = await validateContractAccess({
+        role,
+        email,
+        contractId: role === "driver" ? form.contractId : "",
+        hospitalId: role === "hospital" ? form.hospitalId : "",
+        registrationNumber: form.registrationNumber,
+      });
+      if (!checked.ok) return setErr(checked.error);
+      return completeLogin({
+        ...existing,
+        // Contract validation proves the role for this login. Do not reuse a
+        // stale locally cached `user` role from an older account record.
+        role,
+        phone: phone || existing.phone || "",
+        contract_id: checked.data.contract_id,
+        registration_number: checked.data.registration_number,
+        ambulance_id: checked.data.ambulance_id,
+        ambulance_number: checked.data.ambulance_number,
+        hospital_id: checked.data.hospital_id,
+      });
+    }
+    if (role === "hospital") {
+      const allowed = await validateHospitalAccess(email);
+      if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
+    }
+
+    completeLogin({
+      ...existing,
+      role,
+      phone: phone || existing.phone || "",
+    });
+  };
+
+  const sendResetOtp = async (e) => {
+    if (e) e.preventDefault();
+    clearMsgs();
+
+    const email = form.email.trim().toLowerCase();
+
+    if (!isValidEmail(email)) return setErr("A valid email is required.");
+    if (!form.password || form.password.length < 6) {
+      return setErr("Password must be at least 6 characters.");
+    }
+    if (form.password !== form.confirmPassword) {
+      return setErr("Password and confirm password do not match.");
+    }
+
+    const existing = getUser(email);
+    if (!existing) {
+      return setErr("Account not found. Please sign up first.");
+    }
+    const accountRole = existing?.role || resolvedRole(email, form.role);
+    if (form.role !== accountRole) {
+      setForm((f) => ({ ...f, role: accountRole }));
+    }
+    if (requiresContractAccess(accountRole)) {
+      if (accountRole === "hospital" && (!form.hospitalId.trim() || !form.registrationNumber.trim())) {
+        return setErr("Hospital ID and Registration Number are required for password reset.");
+      }
+      if (accountRole === "driver" && (!form.contractId.trim() || !form.registrationNumber.trim())) {
+        return setErr("Ambulance ID and Registration Number are required for password reset.");
+      }
+      const checked = await validateContractAccess({
+        role: accountRole,
+        email,
+        contractId: accountRole === "driver" ? form.contractId : "",
+        hospitalId: accountRole === "hospital" ? form.hospitalId : "",
+        registrationNumber: form.registrationNumber,
+      });
+      if (!checked.ok) return setErr(checked.error);
+    }
+
+    setBusy(true);
+    let backendSent = false;
+
+    try {
+      const resp = await fetch(`${BASE}/api/send-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        signal: AbortSignal.timeout(5000),
+      });
+      backendSent = resp.ok;
+    } catch {
+      backendSent = false;
+    }
+
+    const code = makeLocalOtp(email);
+    setBusy(false);
+    setOtpPurpose("reset");
+    setOtp(["", "", "", "", "", ""]);
+    setTimer(60);
+    setStep("otp");
+
+    if (backendSent) {
+      setInfo(`Password reset OTP has been sent to ${email}.`);
+    } else {
+      setInfo("OTP generated. Email service is unavailable; check developer console for OTP.");
+      console.log(`[SwiftRescue RESET OTP] ${email} -> ${code}`);
+    }
+  };
+
+  const signupWithGoogle = async () => {
+    clearMsgs();
+    const role = resolvedRole(form.email.trim().toLowerCase(), form.role);
+    const localPhone = normalizePhone(form.phone);
+
+    if (role === "driver" && localPhone.length !== 10) {
+      setErr("A 10-digit contact number is required for driver role.");
+      return;
+    }
+
+    if (!GOOGLE_CLIENT_ID) {
+      setInfo(
+        "Google sign-in is unavailable. Set VITE_GOOGLE_CLIENT_ID (or VITE_GOOGLE_OAUTH_CLIENT_ID) and restart Vite."
+      );
+      return;
+    }
+    if (!window.google?.accounts?.oauth2) {
+      setErr("Google SDK is not loaded yet. Please wait and try again.");
+      return;
+    }
+
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: "openid email profile",
+      callback: async (tokenResponse) => {
+        try {
+          if (tokenResponse?.error || !tokenResponse?.access_token) {
+            setErr("Google authentication failed.");
+            return;
+          }
+          const userResp = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+          });
+          if (!userResp.ok) {
+            setErr("Unable to fetch Google profile.");
+            return;
+          }
+          const profile = await userResp.json();
+          const email = String(profile.email || "").trim().toLowerCase();
+          if (!email) {
+            setErr("Google account does not include a valid email.");
+            return;
+          }
+
+          const existing = getUser(email);
+          const derivedRole = resolvedRole(email, form.role);
+          const targetRole = derivedRole !== "user"
+            ? derivedRole
+            : (existing?.role || derivedRole);
+          if (targetRole === "hospital") {
+            const allowed = await validateHospitalAccess(email);
+            if (!allowed) {
+              setErr("Hospital profile not found for this email. Contact admin.");
+              return;
+            }
+          }
+          let contractMeta = {};
+          if (requiresContractAccess(targetRole)) {
+            if (targetRole === "hospital" && (!form.hospitalId.trim() || !form.registrationNumber.trim())) {
+              setErr("Hospital ID and Registration Number are required.");
+              return;
+            }
+            if (targetRole === "driver" && (!form.contractId.trim() || !form.registrationNumber.trim())) {
+              setErr("Ambulance ID and Registration Number are required.");
+              return;
+            }
+            const checked = await validateContractAccess({
+              role: targetRole,
+              email,
+              contractId: targetRole === "driver" ? form.contractId : "",
+              hospitalId: targetRole === "hospital" ? form.hospitalId : "",
+              registrationNumber: form.registrationNumber,
+            });
+            if (!checked.ok) {
+              setErr(checked.error);
+              return;
+            }
+            contractMeta = checked.data;
+          }
+          const merged = {
+            email,
+            name: (profile.name || form.name || existing?.name || email.split("@")[0]).trim(),
+            role: targetRole,
+            phone: existing?.phone || localPhone || "",
+            password: existing?.password || "",
+            auth_provider: "google",
+            google_sub: profile.sub || "",
+            contract_id: contractMeta.contract_id || existing?.contract_id || "",
+            registration_number: contractMeta.registration_number || existing?.registration_number || "",
+            ambulance_id: contractMeta.ambulance_id || existing?.ambulance_id || "",
+            ambulance_number: contractMeta.ambulance_number || existing?.ambulance_number || "",
+            hospital_id: contractMeta.hospital_id || existing?.hospital_id || "",
+          };
+
+          if (merged.role === "driver" && normalizePhone(merged.phone).length !== 10) {
+            setErr("Driver account requires a 10-digit contact number.");
+            return;
+          }
+          if (!existing && authMode === "signup") {
+            setInfo("Google account created successfully.");
+          } else if (existing) {
+            setInfo("Logged in with Google successfully.");
+          }
+          completeLogin(merged);
+        } catch {
+          setErr("Google signup failed due to a network error.");
+        }
+      },
+    });
+    client.requestAccessToken();
+  };
+
+  const sendOtp = async (e) => {
+    if (e) e.preventDefault();
+    clearMsgs();
+
+    const email = form.email.trim().toLowerCase();
+    const phone = normalizePhone(form.phone);
+
+    if (!form.name.trim()) return setErr("Full name is required.");
+    if (!isValidEmail(email)) return setErr("A valid email is required.");
+    if (!form.password || form.password.length < 6) {
+      return setErr("Password must be at least 6 characters.");
+    }
+    if (form.password !== form.confirmPassword) {
+      return setErr("Password and confirm password do not match.");
+    }
+
+    if (getUser(email)) {
+      return setErr("Account already exists. Please use Login mode.");
+    }
+
+    const role = resolvedRole(email, form.role);
+    if (role === "driver" && phone.length !== 10) {
+      return setErr("A 10-digit contact number is required for driver role.");
+    }
+    if (requiresContractAccess(role)) {
+      if (role === "hospital" && (!form.hospitalId.trim() || !form.registrationNumber.trim())) {
+        return setErr("Hospital ID and Registration Number are required.");
+      }
+      if (role === "driver" && (!form.contractId.trim() || !form.registrationNumber.trim())) {
+        return setErr("Ambulance ID and Registration Number are required.");
+      }
+      const checked = await validateContractAccess({
+        role,
+        email,
+        contractId: role === "driver" ? form.contractId : "",
+        hospitalId: role === "hospital" ? form.hospitalId : "",
+        registrationNumber: form.registrationNumber,
+      });
+      if (!checked.ok) return setErr(checked.error);
+    }
+    if (role === "hospital") {
+      const allowed = await validateHospitalAccess(email);
+      if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
+    }
+
+    setBusy(true);
+    let backendSent = false;
+
+    try {
+      const resp = await fetch(`${BASE}/api/send-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        signal: AbortSignal.timeout(5000),
+      });
+      backendSent = resp.ok;
+    } catch {
+      backendSent = false;
+    }
+
+    const code = makeLocalOtp(email);
+    setBusy(false);
+    setOtpPurpose("signup");
+
+    setOtp(["", "", "", "", "", ""]);
+    setTimer(60);
+    setStep("otp");
+
+    if (backendSent) {
+      setInfo(`OTP has been sent to ${email}.`);
+    } else {
+      setInfo("OTP generated. Email service is unavailable; check developer console for OTP.");
+      console.log(`[SwiftRescue OTP] ${email} -> ${code}`);
+    }
+  };
+
+  const verifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    clearMsgs();
+
+    const email = form.email.trim().toLowerCase();
+    const entered = otp.join("");
+
+    if (entered.length !== 6) return setErr("Please enter a 6-digit OTP.");
+
+    let verified = false;
+
+    try {
+      const resp = await fetch(`${BASE}/api/verify-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: entered }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        verified = data.status === "success";
+      }
+    } catch {
+      verified = false;
+    }
+
+    if (!verified) {
+      verified = verifyLocalOtp(email, entered);
+    }
+
+    if (!verified) return setErr("OTP is invalid or expired.");
+
+    if (otpPurpose === "reset") {
+      const existing = getUser(email);
+      if (!existing) return setErr("Account not found. Please sign up first.");
+      const accountRole = existing?.role || resolvedRole(email, form.role);
+      if (form.role !== accountRole) {
+        setForm((f) => ({ ...f, role: accountRole }));
+      }
+      let resetContractMeta = {};
+      if (requiresContractAccess(accountRole)) {
+        if (accountRole === "hospital" && (!form.hospitalId.trim() || !form.registrationNumber.trim())) {
+          return setErr("Hospital ID and Registration Number are required for password reset.");
+        }
+        if (accountRole === "driver" && (!form.contractId.trim() || !form.registrationNumber.trim())) {
+          return setErr("Ambulance ID and Registration Number are required for password reset.");
+        }
+        const checked = await validateContractAccess({
+          role: accountRole,
+          email,
+          contractId: accountRole === "driver" ? form.contractId : "",
+          hospitalId: accountRole === "hospital" ? form.hospitalId : "",
+          registrationNumber: form.registrationNumber,
+        });
+        if (!checked.ok) return setErr(checked.error);
+        resetContractMeta = checked.data || {};
+      }
+      const updatedUser = {
+        ...existing,
+        role: accountRole,
+        contract_id: resetContractMeta.contract_id || existing?.contract_id || "",
+        registration_number: resetContractMeta.registration_number || existing?.registration_number || "",
+        ambulance_id: resetContractMeta.ambulance_id || existing?.ambulance_id || "",
+        ambulance_number: resetContractMeta.ambulance_number || existing?.ambulance_number || "",
+        hospital_id: resetContractMeta.hospital_id || existing?.hospital_id || "",
+        password: form.password,
+      };
+      completeLogin(updatedUser);
+      return;
+    }
+
+    const role = resolvedRole(email, form.role);
+    const phone = normalizePhone(form.phone);
+    if (role === "hospital") {
+      const allowed = await validateHospitalAccess(email);
+      if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
+    }
+    const existing = getUser(email);
+    let contractMeta = {};
+    if (requiresContractAccess(role)) {
+      const checked = await validateContractAccess({
+        role,
+        email,
+        contractId: role === "driver" ? form.contractId : "",
+        hospitalId: role === "hospital" ? form.hospitalId : "",
+        registrationNumber: form.registrationNumber,
+      });
+      if (!checked.ok) return setErr(checked.error);
+      contractMeta = checked.data || {};
+    }
+
+    const userRecord = {
+      email,
+      name: form.name.trim() || existing?.name || email.split("@")[0],
+      role,
+      phone: role === "driver" ? (phone || existing?.phone || "") : (existing?.phone || phone || ""),
+      password: form.password || existing?.password || "",
+      auth_provider: existing?.auth_provider || "password",
+      contract_id: contractMeta.contract_id || existing?.contract_id || "",
+      registration_number: contractMeta.registration_number || existing?.registration_number || "",
+      ambulance_id: contractMeta.ambulance_id || existing?.ambulance_id || "",
+      ambulance_number: contractMeta.ambulance_number || existing?.ambulance_number || "",
+      hospital_id: contractMeta.hospital_id || existing?.hospital_id || "",
+    };
+
+    if (role === "driver" && userRecord.phone.length !== 10) {
+      return setErr("A valid 10-digit contact number is required for driver login.");
+    }
+
+    completeLogin(userRecord);
+  };
+
+  const otpInput = (idx, val) => {
+    if (!/^\d*$/.test(val)) return;
+    const next = [...otp];
+    next[idx] = val.slice(-1);
+    setOtp(next);
+    if (val && idx < 5) otpRefs[idx + 1].current?.focus();
+  };
+
+  const otpKeyDown = (idx, e) => {
+    if (e.key === "Backspace" && !otp[idx] && idx > 0) otpRefs[idx - 1].current?.focus();
+    if (e.key === "Enter") verifyOtp();
+  };
+
+  const otpPaste = (e) => {
+    const txt = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (txt.length === 6) {
+      setOtp(txt.split(""));
+      otpRefs[5].current?.focus();
+    }
+    e.preventDefault();
+  };
+
+  const rolePreview = resolvedRole(form.email.trim().toLowerCase(), form.role);
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap');
-        * { box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap');
 
-        .lg-root {
-          height: 100vh;
+        .auth-root {
+          min-height: 100vh;
+          background: #f5f5f5;
           display: grid;
           place-items: center;
-          padding: 24px 16px;
-          background:
-            radial-gradient(circle at 14% 10%, rgba(255,90,80,0.2), transparent 34%),
-            radial-gradient(circle at 86% 8%, rgba(78,168,255,0.12), transparent 34%),
-            linear-gradient(125deg, #120f16 0%, #141c2b 46%, #111826 100%);
-          position: relative;
-          overflow: hidden;
-          font-family: 'Manrope', sans-serif;
+          padding: 24px;
+          font-family: 'Outfit', sans-serif;
+          color: #111;
         }
 
-        .lg-noise {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background:
-            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-          background-size: 30px 30px;
-          mix-blend-mode: soft-light;
-          opacity: 0.38;
-        }
-
-        .lg-orb {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-          filter: blur(44px);
-        }
-        .lg-orb.a { width: 360px; height: 360px; top: -130px; right: -100px; background: rgba(255,107,43,0.22); }
-        .lg-orb.b { width: 300px; height: 300px; bottom: -120px; left: -80px; background: rgba(78,168,255,0.16); }
-
-        .lg-shell {
-          width: min(100%, 960px);
-          background: rgba(7, 11, 18, 0.9);
-          border: 1px solid rgba(220, 236, 255, 0.14);
-          box-shadow: 0 28px 72px rgba(0,0,0,0.52);
-          backdrop-filter: blur(14px);
-          border-radius: 24px;
-          max-height: calc(100vh - 48px);
-          overflow: hidden;
-          scrollbar-width: none;
-          position: relative;
-          z-index: 2;
-          display: grid;
-          grid-template-columns: minmax(260px, 1fr) minmax(360px, 1.15fr);
-        }
-        .lg-shell::-webkit-scrollbar { display: none; }
-
-        .lg-side {
-          position: relative;
-          min-height: 100%;
-          padding: 26px 22px;
-          background:
-            radial-gradient(circle at 35% 20%, rgba(185,105,255,0.64) 0%, rgba(103,56,255,0.38) 34%, transparent 64%),
-            linear-gradient(180deg, #0d0f17 0%, #111726 100%);
-          border-right: 1px solid rgba(220, 236, 255, 0.12);
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          overflow: hidden;
-        }
-        .lg-side::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background:
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-          background-size: 26px 26px;
-          mix-blend-mode: soft-light;
-          opacity: 0.36;
-        }
-        .lg-side-top, .lg-side-bottom { position: relative; z-index: 1; }
-        .lg-side-brand {
-          color: #efe4d4;
-          font-family: 'Fraunces', serif;
-          font-size: 20px;
-          margin-bottom: 14px;
-        }
-        .lg-side-kicker {
-          color: rgba(239,228,212,0.66);
-          font-size: 11px;
-          letter-spacing: 1.2px;
-          text-transform: uppercase;
-        }
-        .lg-side-title {
-          margin-top: 22px;
-          font-family: 'Fraunces', serif;
-          font-size: 36px;
-          color: #fff;
-          line-height: 1.05;
-          letter-spacing: -0.6px;
-        }
-        .lg-side-title em {
-          display: block;
-          color: #c899ff;
-          font-style: normal;
-        }
-        .lg-side-sub {
-          margin-top: 12px;
-          font-size: 13px;
-          line-height: 1.65;
-          color: rgba(235,245,255,0.7);
-          max-width: 30ch;
-        }
-        .lg-side-steps { margin-top: 22px; display: flex; flex-direction: column; gap: 9px; }
-        .lg-side-step {
-          border: 1px solid rgba(235,245,255,0.14);
-          background: rgba(8, 14, 24, 0.54);
-          border-radius: 10px;
-          padding: 10px 12px;
-          font-size: 12px;
-          color: rgba(235,245,255,0.7);
-        }
-        .lg-side-step.on {
-          background: rgba(255,255,255,0.88);
-          color: #111826;
-          border-color: rgba(255,255,255,0.95);
-          font-weight: 700;
-        }
-        .lg-side-stats {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 8px;
-          margin-top: 16px;
-        }
-        .lg-side-stat {
-          border: 1px solid rgba(235,245,255,0.16);
-          background: rgba(8,14,24,0.5);
-          border-radius: 10px;
-          padding: 10px 8px;
-          text-align: center;
-        }
-        .lg-side-stat-val { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
-        .lg-side-stat-lbl {
-          margin-top: 4px;
-          font-size: 9px;
-          letter-spacing: 1.1px;
-          color: rgba(235,245,255,0.62);
-          text-transform: uppercase;
-        }
-
-        .lg-panel {
-          padding: 28px;
-          overflow-y: auto;
-          max-height: calc(100vh - 48px);
-          scrollbar-width: none;
-        }
-        .lg-panel::-webkit-scrollbar { display: none; }
-
-        .lg-brand {
-          font-family: 'Fraunces', serif;
-          color: #f1e6d2;
-          font-size: 23px;
-          letter-spacing: 0.4px;
-          margin-bottom: 3px;
-        }
-        .lg-brand-sub {
-          font-size: 11px;
-          color: rgba(241,230,210,0.56);
-          text-transform: uppercase;
-          letter-spacing: 1.3px;
-          margin-bottom: 16px;
-        }
-
-        .lg-step-badge { font-size: 11px; color: rgba(241,230,210,0.56); margin-bottom: 6px; }
-        .lg-step-badge span { color: rgba(241,230,210,0.9); font-weight: 600; }
-        .lg-step-bar { display: flex; gap: 4px; margin-bottom: 22px; }
-        .lg-pip { height: 3px; flex: 1; background: rgba(241,230,210,0.12); transition: background .25s; border-radius: 999px; }
-        .lg-pip.active { background: #ff6b2b; }
-        .lg-pip.done { background: rgba(255,107,43,0.45); }
-
-        .lg-icon-wrap {
-          width: 44px; height: 44px;
-          background: rgba(255,92,82,0.18);
-          border: 1px solid rgba(255,92,82,0.4);
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 12px;
-          border-radius: 12px;
-        }
-
-        .lg-title {
-          font-family: 'Fraunces', serif;
-          font-size: 42px;
-          color: #f7f1e5;
-          margin-bottom: 6px;
-          line-height: 1;
-          letter-spacing: -0.6px;
-        }
-        .lg-subtitle {
-          font-size: 14px;
-          color: rgba(235,245,255,0.66);
-          margin-bottom: 22px;
-        }
-        .lg-subtitle strong { color: rgba(241,230,210,0.95); }
-
-        .lg-form { display: flex; flex-direction: column; gap: 12px; }
-        .lg-role-row { display: flex; gap: 8px; margin-bottom: 4px; }
-
-        .lg-role-card {
-          flex: 1;
-          border: 1px solid rgba(235,245,255,0.14);
-          background: rgba(255,255,255,0.02);
-          padding: 12px 8px;
-          cursor: pointer;
-          color: rgba(235,245,255,0.58);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          border-radius: 14px;
-          transition: all .16s;
-        }
-        .lg-role-card.on {
-          border-color: color-mix(in srgb, var(--role-c) 70%, #d8e8ff 30%);
-          background: color-mix(in srgb, var(--role-c) 16%, transparent);
-          box-shadow: 0 12px 24px color-mix(in srgb, var(--role-c) 22%, transparent);
-          color: #fff;
-        }
-        .lg-role-icon {
-          width: 34px;
-          height: 34px;
-          border: 1px solid rgba(235,245,255,0.18);
-          display: grid;
-          place-items: center;
-          border-radius: 999px;
-        }
-        .lg-role-card.on .lg-role-icon {
-          border-color: color-mix(in srgb, var(--role-c) 65%, #d8e8ff 35%);
-          color: var(--role-c);
-          background: color-mix(in srgb, var(--role-c) 18%, transparent);
-        }
-        .lg-role-title { font-size: 11px; font-weight: 700; letter-spacing: 0.2px; }
-        .lg-role-desc { font-size: 9px; color: rgba(235,245,255,0.4); text-align: center; line-height: 1.4; }
-
-        .lg-field { display: flex; flex-direction: column; gap: 6px; }
-        .lg-label {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 1.1px;
-          text-transform: uppercase;
-          color: rgba(241,230,210,0.66);
-        }
-        .lg-input {
-          background: rgba(214, 230, 255, 0.05);
-          border: 1px solid rgba(214, 230, 255, 0.2);
-          padding: 12px 13px;
-          font-size: 14px;
-          color: #edf5ff;
-          outline: none;
-          width: 100%;
-          border-radius: 12px;
-          transition: border-color .2s, background .2s, box-shadow .2s;
-        }
-        .lg-input::placeholder { color: rgba(214,230,255,0.24); }
-        .lg-input:focus {
-          border-color: rgba(255,107,43,0.52);
-          background: rgba(255,107,43,0.06);
-          box-shadow: 0 0 0 3px rgba(255,107,43,0.16);
-        }
-
-        .lg-phone-row { display: flex; gap: 8px; }
-        .lg-prefix {
-          width: 62px;
-          background: rgba(214,230,255,0.05);
-          border: 1px solid rgba(214,230,255,0.18);
-          display: grid;
-          place-items: center;
-          color: rgba(235,245,255,0.56);
-          font-size: 13px;
-          border-radius: 12px;
-        }
-
-        .lg-otp-info {
-          background: rgba(214,230,255,0.04);
-          border: 1px solid rgba(214,230,255,0.14);
-          padding: 10px 12px;
-          font-size: 12px;
-          color: rgba(235,245,255,0.62);
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          border-radius: 12px;
-        }
-
-        .lg-btn {
-          border: none;
-          cursor: pointer;
-          width: 100%;
-          padding: 12px;
-          font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 0.2px;
-          font-family: inherit;
-          border-radius: 12px;
-          transition: all .18s;
-        }
-        .lg-btn:disabled { opacity: 0.42; cursor: not-allowed; }
-        .lg-btn-red {
-          background: linear-gradient(135deg, #ff4d4d 0%, #ff6b2b 58%, #ff8a3d 100%);
-          color: #fff;
-          box-shadow: 0 12px 24px rgba(255,88,76,0.28);
-        }
-        .lg-btn-red:hover:not(:disabled) { filter: brightness(1.04); transform: translateY(-1px); }
-        .lg-btn-ghost {
+        .auth-shell {
+          width: min(420px, 100%);
           background: transparent;
-          color: rgba(235,245,255,0.66);
-          border: 1px solid rgba(214,230,255,0.2);
-        }
-        .lg-btn-ghost:hover:not(:disabled) {
-          background: rgba(214,230,255,0.06);
-          color: #fff;
-        }
-
-        .lg-back {
-          background: none;
           border: none;
-          color: rgba(235,245,255,0.54);
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          cursor: pointer;
-          font-size: 11px;
+          box-shadow: none;
+        }
+
+        .auth-left {
+          display: none;
+        }
+
+        .auth-right {
+          background: transparent;
+          border: none;
           padding: 0;
-        }
-        .lg-back:hover { color: rgba(235,245,255,0.88); }
-
-        .lg-verified {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 11px;
-          color: #53ddb2;
-          background: rgba(83,221,178,0.08);
-          border: 1px solid rgba(83,221,178,0.28);
-          padding: 4px 10px;
-          margin-bottom: 14px;
-          border-radius: 999px;
-        }
-
-        .lg-amb-list {
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          max-height: 240px;
-          overflow-y: auto;
-        }
-        .lg-amb-item {
-          display: flex;
-          align-items: center;
           gap: 10px;
-          padding: 10px 12px;
-          border: 1px solid rgba(214,230,255,0.17);
-          background: rgba(214,230,255,0.03);
-          cursor: pointer;
-          border-radius: 12px;
-          transition: all .16s;
-        }
-        .lg-amb-item:hover {
-          background: rgba(214,230,255,0.07);
-          border-color: rgba(214,230,255,0.3);
-        }
-        .lg-amb-item.sel {
-          background: rgba(215,181,109,0.12);
-          border-color: rgba(215,181,109,0.45);
         }
 
-        .lg-footer {
+        .auth-step-title {
+          margin: 6px 0 2px;
+          font-size: 62px;
+          font-family: "Playfair Display", serif;
+          line-height: 0.94;
           text-align: center;
-          margin-top: 14px;
-          font-size: 11px;
-          color: rgba(241,230,210,0.52);
+          font-weight: 700;
         }
 
-        @media (max-width: 860px) {
-          .lg-shell {
-            grid-template-columns: 1fr;
-            width: min(100%, 560px);
-          }
-          .lg-side { display: none; }
-          .lg-panel { max-height: calc(100vh - 48px); padding: 20px 16px; }
+        .auth-step-title .hl {
+          background: #d6e800;
+          border-radius: 10px;
+          padding: 0 8px;
+          display: inline-block;
+        }
+
+          .auth-step-sub {
+          margin: 0 0 2px;
+          text-align: center;
+          color: #575757;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .auth-modes {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .auth-mode {
+          height: 38px;
+          border: 1px solid #d8d8d8;
+          border-radius: 3px;
+          background: #fff;
+          color: #111;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .auth-mode.on {
+          background: #d6e800;
+          border-color: #c6d600;
+        }
+
+        .auth-msg {
+          border-radius: 8px;
+          padding: 8px 10px;
+          margin-bottom: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1.35;
+        }
+
+        .auth-msg.err {
+          color: #b91c1c;
+          border: 1px solid rgba(185, 28, 28, 0.25);
+          background: rgba(239, 68, 68, 0.08);
+        }
+
+        .auth-msg.ok {
+          color: #065f46;
+          border: 1px solid rgba(5, 150, 105, 0.22);
+          background: rgba(16, 185, 129, 0.08);
+        }
+
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .auth-field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .auth-field label {
+          font-size: 11px;
+          color: #6b6b6b;
+          font-weight: 500;
+        }
+
+        .auth-field input {
+          height: 38px;
+          border: 1px solid #d8d8d8;
+          border-radius: 3px;
+          background: #fff;
+          padding: 0 10px;
+          font-size: 16px;
+          color: #111;
+          outline: none;
+        }
+
+        .auth-password-wrap {
+          position: relative;
+        }
+
+        .auth-password-wrap input {
+          width: 100%;
+          padding-right: 42px;
+        }
+
+        .auth-pass-toggle {
+          position: absolute;
+          right: 6px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: 1px solid #d8d8d8;
+          width: 30px;
+          height: 26px;
+          border-radius: 6px;
+          background: #fff;
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .auth-field input:focus {
+          border-color: #bfbfbf;
+        }
+
+        .auth-roles {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 8px;
+        }
+
+        .auth-role {
+          height: 38px;
+          border: 1px solid #d8d8d8;
+          border-radius: 3px;
+          background: #fff;
+          color: #111;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .auth-role.on {
+          background: #d6e800;
+          border-color: #c6d600;
+        }
+
+        .auth-note {
+          margin-top: 1px;
+          font-size: 12px;
+          color: #666;
+        }
+
+        .auth-btn {
+          margin-top: 2px;
+          height: 40px;
+          border-radius: 4px;
+          border: 1px solid #d8d8d8;
+          background: #fff;
+          color: #111;
+          font-size: 16px;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+        }
+
+        .auth-google {
+          height: 40px;
+          border-radius: 4px;
+          border: 1px solid #d8d8d8;
+          background: #fff;
+          color: #111;
+          font-size: 14px;
+          font-weight: 700;
+          font-family: inherit;
+          cursor: pointer;
+          width: 100%;
+        }
+
+        .auth-btn.alt {
+          background: #fff;
+          color: #111;
+          border-color: #d8d8d8;
+        }
+
+        .auth-btn:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        .auth-otp {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+          margin: 6px 0 4px;
+        }
+
+        .auth-otp input {
+          width: 48px;
+          height: 52px;
+          border: 1px solid #d8d8d8;
+          border-radius: 6px;
+          text-align: center;
+          font-size: 26px;
+          font-weight: 700;
+          outline: none;
+        }
+
+        .auth-resend {
+          text-align: center;
+          font-size: 12px;
+          color: #616161;
+          margin-top: 8px;
+        }
+
+        .auth-resend button,
+        .auth-back,
+        .auth-link {
+          border: none;
+          background: none;
+          color: #7a7a7a;
+          font-size: 12px;
+          text-decoration: underline;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .auth-back {
+          margin-top: 8px;
+          text-align: center;
+        }
+
+        .auth-meta {
+          margin-top: 8px;
+          text-align: center;
+          color: #7a7a7a;
+          font-size: 12px;
+        }
+
+        .auth-legal {
+          margin-top: 10px;
+          text-align: center;
+          color: #9a9a9a;
+          font-size: 10px;
+          line-height: 1.4;
         }
 
         @media (max-width: 640px) {
-          .lg-root { padding: 18px 10px; }
-          .lg-panel { padding: 18px 14px; }
-          .lg-title { font-size: 34px; }
-          .lg-role-row { gap: 6px; }
+          .auth-root {
+            padding: 12px;
+          }
+          .auth-shell {
+            width: 100%;
+            max-width: 420px;
+          }
+          .auth-step-title {
+            font-size: clamp(46px, 14vw, 62px);
+          }
+          .auth-otp input {
+            width: 44px;
+            height: 48px;
+          }
         }
       `}</style>
 
-      <div className="lg-root" ref={rootRef}>
-        <div className="lg-noise" />
-        <div className="lg-orb a" data-k72="reveal" />
-        <div className="lg-orb b" data-k72="reveal" />
-
-        <div className="lg-shell" data-k72="reveal">
-          <div className="lg-side">
-            <div className="lg-side-top">
-              <div className="lg-side-brand">OnlySwift</div>
-              <div className="lg-side-kicker">Premium Emergency Access</div>
-              <div className="lg-side-title">Get started <em>with us</em></div>
-              <div className="lg-side-sub">
-                Secure login with role-based access, OTP verification, and driver vehicle assignment in one flow.
-              </div>
-              <div className="lg-side-steps">
-                <div className={`lg-side-step ${step >= 1 ? "on" : ""}`}>Sign up / sign in account</div>
-                <div className={`lg-side-step ${step >= 2 ? "on" : ""}`}>Verify email with OTP</div>
-                {role === "driver" && <div className={`lg-side-step ${step >= 3 ? "on" : ""}`}>Select your ambulance</div>}
-              </div>
+      <div className="auth-root">
+        <div className="auth-shell">
+          <aside className="auth-left">
+            <div className="auth-star">*</div>
+            <div className="auth-left-copy">
+              <p>Hey, Hello!</p>
+              <h2>OTP based secure access to SwiftRescue workspace</h2>
             </div>
-            <div className="lg-side-bottom">
-              <div className="lg-side-stats">
-                <div className="lg-side-stat">
-                  <div className="lg-side-stat-val">24/7</div>
-                  <div className="lg-side-stat-lbl">Dispatch</div>
+          </aside>
+
+          <section className="auth-right">
+            {step === "details" && (
+              <>
+                <h2 className="auth-step-title">Log <span className="hl">in</span></h2>
+                <p className="auth-step-sub">
+                  {isResetMode
+                    ? "Reset your password with OTP verification"
+                    : authMode === "signup"
+                      ? "Create your account with OTP + password"
+                      : "Sign in with your email and password"}
+                </p>
+
+                <div className="auth-modes">
+                  <button type="button" className={`auth-mode ${authMode === "login" && !isResetMode ? "on" : ""}`} onClick={() => { clearMsgs(); setIsResetMode(false); setAuthMode("login"); }}>
+                    Login
+                  </button>
+                  <button type="button" className={`auth-mode ${authMode === "signup" && !isResetMode ? "on" : ""}`} onClick={() => { clearMsgs(); setIsResetMode(false); setAuthMode("signup"); }}>
+                    Sign Up
+                  </button>
                 </div>
-                <div className="lg-side-stat">
-                  <div className="lg-side-stat-val">&lt;8m</div>
-                  <div className="lg-side-stat-lbl">Response</div>
-                </div>
-                <div className="lg-side-stat">
-                  <div className="lg-side-stat-val">99%</div>
-                  <div className="lg-side-stat-lbl">Uptime</div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="lg-panel">
-            <div className="lg-brand">SwiftRescue</div>
-            <div className="lg-brand-sub">Emergency Response Platform</div>
+                {err ? <div className="auth-msg err">{err}</div> : null}
+                {info ? <div className="auth-msg ok">{info}</div> : null}
 
-            <div className="lg-step-badge">Step <span>{step}</span> of <span>{totalSteps}</span></div>
-            <div className="lg-step-bar">
-              {Array.from({ length: totalSteps }).map((_, i) => (
-                <div key={i} className={`lg-pip ${step === i + 1 ? "active" : step > i + 1 ? "done" : ""}`} />
-              ))}
-            </div>
-
-          {step === 1 && (
-            <>
-              <div className="lg-icon-wrap" style={{ background: `${rc}16`, borderColor: `${rc}44` }}>
-                <UserPlus size={18} color={rc} />
-              </div>
-              <div className="lg-title">Welcome back</div>
-              <div className="lg-subtitle">Choose your role and sign in to continue</div>
-
-              <form onSubmit={sendEmailOtp} className="lg-form">
-                <div>
-                  <div className="lg-label" style={{ marginBottom: 8 }}>I am a</div>
-                  <div className="lg-role-row">
-                    <RoleCard icon={User} title="User" desc="Book ambulances" color="#4ea8ff" selected={role === "user"} onClick={() => setRole("user")} />
-                    <RoleCard icon={Truck} title="Driver" desc="Navigate routes" color="#d7b56d" selected={role === "driver"} onClick={() => setRole("driver")} />
-                    <RoleCard icon={Shield} title="Admin" desc="Manage fleet" color="#ff6b2b" selected={role === "admin"} onClick={() => setRole("admin")} />
+                <form className="auth-form" onSubmit={isResetMode ? sendResetOtp : (authMode === "signup" ? sendOtp : loginWithPassword)}>
+                  <div className="auth-field">
+                    <label>Full Name</label>
+                    <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" required={authMode === "signup" && !isResetMode} />
                   </div>
-                </div>
 
-                <div className="lg-field">
-                  <label className="lg-label">Full Name</label>
-                  <input className="lg-input" type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Rahul Sharma" />
-                </div>
-                <div className="lg-field">
-                  <label className="lg-label">Email Address</label>
-                  <input className="lg-input" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
-                </div>
-                {role === "driver" && (
-                  <div className="lg-field">
-                    <label className="lg-label">Phone Number</label>
-                    <div className="lg-phone-row">
-                      <div className="lg-prefix">+91</div>
-                      <input
-                        className="lg-input"
-                        type="tel"
-                        required
-                        value={phone}
-                        onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                        placeholder="9876543210"
-                        maxLength={10}
-                        style={{ flex: 1 }}
-                      />
+                  <div className="auth-field">
+                    <label>Email Address</label>
+                    <input name="email" type="email" value={form.email} onChange={onChange} placeholder="you@example.com" required />
+                  </div>
+
+                  <div className="auth-field">
+                    <label>Choose Role</label>
+                    <div className="auth-roles">
+                      <button type="button" className={`auth-role ${form.role === "user" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "user" }))}>User</button>
+                      <button type="button" className={`auth-role ${form.role === "driver" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "driver" }))}>Driver</button>
+                      <button type="button" className={`auth-role ${form.role === "hospital" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "hospital" }))}>Hospital</button>
                     </div>
                   </div>
-                )}
 
-                <button className="lg-btn lg-btn-red" disabled={loading} style={{ marginTop: 4 }}>
-                  {loading ? "Sending OTP..." : "Continue ->"}
-                </button>
-              </form>
-            </>
-          )}
+                  {form.role === "driver" && !isResetMode && (
+                    <div className="auth-field">
+                      <label>Driver Contact (Required)</label>
+                      <input name="phone" value={form.phone} onChange={onChange} placeholder="10-digit mobile number" maxLength={10} required />
+                    </div>
+                  )}
 
-          {step === 2 && (
-            <>
-              <div className="lg-icon-wrap">
-                <Mail size={18} color="#ff6b2b" />
-              </div>
-              <div className="lg-title">Verify Email</div>
-              <div className="lg-subtitle">We sent a 6-digit code to <strong>{email}</strong></div>
-              <form onSubmit={verifyEmailOtp} className="lg-form">
-                <div className="lg-otp-info">
-                  <ChevronsRight size={12} style={{ flexShrink: 0, color: "#ff6b2b", marginTop: 1 }} />
-                  <span>Check your inbox. OTP sent to <strong style={{ color: "rgba(241,230,210,0.95)" }}>{email}</strong></span>
-                </div>
-                <div className="lg-field">
-                  <label className="lg-label">6-Digit OTP</label>
-                  <input
-                    className="lg-input"
-                    type="text"
-                    required
-                    value={emailOtp}
-                    onChange={e => setEmailOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="••••••"
-                    maxLength={6}
-                    autoFocus
-                    style={{ fontSize: 22, letterSpacing: 8, textAlign: "center" }}
-                  />
-                </div>
-                <button className="lg-btn lg-btn-red" disabled={loading || emailOtp.length !== 6}>
-                  {loading ? "Verifying..." : role === "driver" ? "Verify -> Select Ambulance" : "Verify & Login ->"}
-                </button>
-                <button type="button" className="lg-btn lg-btn-ghost" onClick={sendEmailOtp} disabled={loading}>
-                  Resend OTP
-                </button>
-                <button type="button" className="lg-back" onClick={() => setStep(1)}>
-                  <ArrowLeft size={12} /> Go back
-                </button>
-              </form>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <div className="lg-icon-wrap" style={{ background: "rgba(215,181,109,0.14)", borderColor: "rgba(215,181,109,0.34)" }}>
-                <Truck size={18} color="#d7b56d" />
-              </div>
-              <div className="lg-title">Select Ambulance</div>
-              <div className="lg-subtitle">Choose your assigned vehicle to begin tracking</div>
-              <div className="lg-verified">✓ Email verified · +91 {phone}</div>
-              {ambLoading ? (
-                <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: "rgba(235,245,255,0.5)" }}>Loading ambulances...</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div className="lg-amb-list">
-                    {ambulances.map(a => {
-                      const sc = { available: "#53ddb2", en_route: "#d7b56d", busy: "#ff6b6b", offline: "#9aa5b4" };
-                      return (
-                        <div key={a.id} className={`lg-amb-item ${selectedAmb?.id === a.id ? "sel" : ""}`} onClick={() => setSelectedAmb(a)}>
-                          <div style={{ width: 32, height: 32, background: "rgba(255,107,43,0.13)", display: "grid", placeItems: "center", fontSize: 14, flexShrink: 0 }}>🚑</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#edf5ff" }}>{a.ambulance_number}</div>
-                            <div style={{ fontSize: 10, color: "rgba(235,245,255,0.48)", marginTop: 1 }}>{a.location || "—"}</div>
-                          </div>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", color: sc[a.status] || "#9aa5b4", background: `${sc[a.status] || "#9aa5b4"}22`, border: `1px solid ${sc[a.status] || "#9aa5b4"}55`, textTransform: "uppercase", flexShrink: 0 }}>
-                            {a.status?.replace("_", " ")}
-                          </span>
+                  {(form.role === "driver" || form.role === "hospital") && (
+                    <>
+                      {form.role === "driver" && (
+                        <div className="auth-field">
+                          <label>Ambulance ID</label>
+                          <input
+                            name="contractId"
+                            value={form.contractId}
+                            onChange={onChange}
+                            placeholder="Enter ambulance contract ID (e.g. AMB-ID-0001)"
+                            required
+                          />
                         </div>
-                      );
-                    })}
+                      )}
+                      {form.role === "hospital" && (
+                        <div className="auth-field">
+                          <label>Hospital ID</label>
+                          <input
+                            name="hospitalId"
+                            value={form.hospitalId}
+                            onChange={onChange}
+                            placeholder="Enter hospital contract ID (e.g. HOSP-ID-0001)"
+                            required
+                          />
+                        </div>
+                      )}
+                      <div className="auth-field">
+                        <label>{form.role === "driver" ? "Ambulance Registration Number" : "Hospital Registration Number"}</label>
+                        <input
+                          name="registrationNumber"
+                          value={form.registrationNumber}
+                          onChange={onChange}
+                          placeholder="Enter registration number"
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="auth-field">
+                    <label>Password</label>
+                    <div className="auth-password-wrap">
+                      <input
+                        name="password"
+                        type={passwordVisible.password ? "text" : "password"}
+                        value={form.password}
+                        onChange={onChange}
+                        placeholder="Enter password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="auth-pass-toggle"
+                        onClick={() => setPasswordVisible((s) => ({ ...s, password: !s.password }))}
+                        aria-label={passwordVisible.password ? "Hide password" : "Show password"}
+                        title={passwordVisible.password ? "Hide password" : "Show password"}
+                      >
+                        {passwordVisible.password ? "🙈" : "👁"}
+                      </button>
+                    </div>
                   </div>
-                  <button className="lg-btn lg-btn-red" disabled={!selectedAmb} onClick={confirmAmbulance} style={{ marginTop: 4 }}>
-                    {selectedAmb ? `Start - ${selectedAmb.ambulance_number} ->` : "Select an ambulance first"}
+
+                  {(authMode === "signup" || isResetMode) && (
+                    <div className="auth-field">
+                      <label>Confirm Password</label>
+                      <div className="auth-password-wrap">
+                        <input
+                          name="confirmPassword"
+                          type={passwordVisible.confirmPassword ? "text" : "password"}
+                          value={form.confirmPassword}
+                          onChange={onChange}
+                          placeholder="Re-enter password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="auth-pass-toggle"
+                          onClick={() => setPasswordVisible((s) => ({ ...s, confirmPassword: !s.confirmPassword }))}
+                          aria-label={passwordVisible.confirmPassword ? "Hide confirm password" : "Show confirm password"}
+                          title={passwordVisible.confirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        >
+                          {passwordVisible.confirmPassword ? "🙈" : "👁"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="auth-note">
+                    Active role: <b>{rolePreview.toUpperCase()}</b>
+                    {rolePreview === "admin" ? ` (Admin email detected)` : ""}
+                  </div>
+
+                  <button className="auth-btn" type="submit" disabled={busy}>
+                    {busy
+                      ? (isResetMode ? "Sending reset OTP..." : (authMode === "signup" ? "Sending OTP..." : "Logging in..."))
+                      : (isResetMode ? "Send Reset OTP" : (authMode === "signup" ? "Send OTP" : "Log In"))}
                   </button>
-                  <button type="button" className="lg-back" style={{ justifyContent: "center" }} onClick={() => setStep(2)}>
-                    <ArrowLeft size={12} /> Back
+                </form>
+                {!isResetMode && (
+                  <div style={{ marginTop: 8 }}>
+                    <button className="auth-google" type="button" onClick={signupWithGoogle}>
+                      {authMode === "signup" ? "Continue with Google (Create Account)" : "Continue with Google"}
+                    </button>
+                  </div>
+                )}
+                <div className="auth-meta">
+                  <button
+                    className="auth-link"
+                    type="button"
+                    onClick={() => {
+                      clearMsgs();
+                      setIsResetMode(true);
+                      setAuthMode("login");
+                      setInfo("Enter your email, new password, and verify OTP to reset password.");
+                    }}
+                  >
+                    Forgot password?
                   </button>
                 </div>
-              )}
-            </>
-          )}
+                <div className="auth-legal">
+                  By continuing, you agree to SwiftRescue terms, conditions, and privacy policy.
+                </div>
+              </>
+            )}
 
-            <div className="lg-footer">© {new Date().getFullYear()} SwiftRescue · Emergency Response System</div>
-          </div>
+            {step === "otp" && (
+              <>
+                <h2 className="auth-step-title">Verify <span className="hl">OTP</span></h2>
+                <p className="auth-step-sub">6-digit code sent to <b>{form.email}</b></p>
+
+                {err ? <div className="auth-msg err">{err}</div> : null}
+                {info ? <div className="auth-msg ok">{info}</div> : null}
+
+                <div className="auth-otp" onPaste={otpPaste}>
+                  {otp.map((v, i) => (
+                    <input
+                      key={i}
+                      ref={otpRefs[i]}
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={v}
+                      onChange={(e) => otpInput(i, e.target.value)}
+                      onKeyDown={(e) => otpKeyDown(i, e)}
+                    />
+                  ))}
+                </div>
+
+                <button className="auth-btn alt" onClick={verifyOtp} disabled={busy || otp.join("").length !== 6}>
+                  {busy ? "Verifying..." : "Verify & Continue"}
+                </button>
+
+                <div className="auth-resend">
+                  {timer > 0 ? (
+                    <span>Resend OTP in <b>{timer}s</b></span>
+                  ) : (
+                    <button onClick={sendOtp} disabled={busy}>Resend OTP</button>
+                  )}
+                </div>
+
+                <button className="auth-back" onClick={() => { setStep("details"); clearMsgs(); }}>
+                  Edit details
+                </button>
+              </>
+            )}
+          </section>
         </div>
       </div>
     </>
   );
-};
-
-export default Login;
+}

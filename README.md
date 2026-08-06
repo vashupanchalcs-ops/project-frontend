@@ -12,6 +12,12 @@ npm install
 npm run dev
 ```
 
+Create a `.env` file from `.env.example` before starting the frontend and set:
+- `VITE_GOOGLE_MAPS_API_KEY`
+- `VITE_OPENCAGE_API_KEY`
+- `VITE_GOOGLE_CLIENT_ID`
+- Firebase `VITE_*` values if auth/media features are enabled
+
 ### Backend
 ```bash
 cd Backend
@@ -27,7 +33,7 @@ python manage.py runserver
 Deploy the `Backend` app first and get a live backend URL.
 
 - Root directory: `Backend`
-- Build command: `pip install -r requirements.txt`
+- Build command: `pip install -r requirements.txt && python manage.py collectstatic --noinput`
 - Start command: `gunicorn ambulance_tracker.wsgi:application`
 
 Set environment variables:
@@ -38,10 +44,19 @@ Set environment variables:
 - `CSRF_TRUSTED_ORIGINS=<your-frontend-domain>`
 - `EMAIL_HOST_USER=<smtp-email>`
 - `EMAIL_HOST_PASSWORD=<smtp-app-password>`
+- `GOOGLE_MAPS_API_KEY=<your-server-maps-key>`
+- `OPENCAGE_API_KEY=<your-opencage-key>`
+- `CORS_ALLOW_ALL_ORIGINS=False`
 
 Example for domains:
+- `DJANGO_ALLOWED_HOSTS=your-backend.onrender.com`
 - `CORS_ALLOWED_ORIGINS=https://your-frontend.vercel.app`
 - `CSRF_TRUSTED_ORIGINS=https://your-frontend.vercel.app`
+
+After backend deploy, run migrations once:
+```bash
+python manage.py migrate
+```
 
 ## 2) Frontend (Vercel)
 
@@ -52,6 +67,9 @@ Deploy frontend repo on Vercel:
 
 Set Vercel environment variable:
 - `VITE_API_BASE_URL=https://<your-backend-domain>`
+- `VITE_GOOGLE_MAPS_API_KEY=<your-browser-maps-key>`
+- `VITE_OPENCAGE_API_KEY=<your-opencage-key>`
+- `VITE_GOOGLE_CLIENT_ID=<your-google-oauth-client-id>`
 
 Frontend already includes runtime URL mapping in `src/main.jsx`, so existing API calls automatically switch from local URL to your production backend.
 
@@ -63,4 +81,4 @@ Frontend already includes runtime URL mapping in `src/main.jsx`, so existing API
 
 ## Security note
 
-If SMTP credentials were ever committed before, rotate them immediately in your email provider and keep only environment variables in production.
+If SMTP credentials or third-party API keys were ever committed before, rotate them immediately and keep only environment variables in production.
