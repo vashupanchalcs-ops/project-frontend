@@ -7,7 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 const SYSTEM_DESCRIPTION =
-  "SwiftRescue is a smart ambulance management system designed to deliver fast and reliable emergency response. It uses real-time tracking, data-driven insights, and efficient coordination between ambulances, hospitals, and patients. The platform reduces response time, improves decision-making, and ensures timely medical assistance—making emergency care smarter, faster, and more effective when every second truly matters.";
+  "YiCare is a smart ambulance management system designed to deliver fast and reliable emergency response. It uses real-time tracking, data-driven insights, and efficient coordination between ambulances, hospitals, and patients. The platform reduces response time, improves decision-making, and ensures timely medical assistance—making emergency care smarter, faster, and more effective when every second truly matters.";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -393,13 +393,13 @@ export default function Dashboard() {
         <div className="ad-wrap">
           <section className="ad-hero">
             <div className="ad-topnav">
-              <div className="ad-pill ad-hero-anim">SWIFTRESCUE</div>
+              <div className="ad-pill ad-hero-anim">YICARE</div>
               <div className="ad-pill ad-hero-anim">Admin Control Panel</div>
             </div>
 
             <div className="ad-content">
               <div className="ad-kicker ad-hero-anim">Emergency Command Platform</div>
-              <h1 className="ad-title dash-brand ad-hero-anim">SWIFTRESCUE</h1>
+              <h1 className="ad-title dash-brand ad-hero-anim">YICARE</h1>
               <p className="ad-sub ad-hero-anim">{SYSTEM_DESCRIPTION}</p>
 
               <div className="ad-cta ad-hero-anim">

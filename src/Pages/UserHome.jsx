@@ -556,7 +556,7 @@ export default function UserHome() {
       <div className="uh-root" ref={rootRef}>
         <div className="uh-wrap">
           <section className="uh-hero">
-            <div className="uh-kicker uh-hero-reveal">SwiftRescue Public Response Network</div>
+            <div className="uh-kicker uh-hero-reveal">YiCare Public Response Network</div>
             <h1 className="uh-title uh-hero-reveal">
               Rapid City Care
               <br />
@@ -660,7 +660,7 @@ export default function UserHome() {
             </div>
             <div className="uh-footer-grid">
               <div className="uh-foot-col">
-                <h4>SwiftRescue Command</h4>
+                <h4>YiCare Command</h4>
                 <p>
                   City-level emergency dispatch orchestration focused on faster ambulance movement,
                   smart routing, and reliable hospital coordination.

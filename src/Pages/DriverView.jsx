@@ -645,7 +645,7 @@ export default function DriverView() {
             <span style={{ fontSize: 20, flexShrink: 0 }}>🚑</span>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>Driver Dashboard</div>
-              <div style={{ fontSize: 10, color: "var(--sr-text-muted, rgba(255,246,242,0.55))" }}>SwiftRescue GPS · Live Tracking</div>
+              <div style={{ fontSize: 10, color: "var(--sr-text-muted, rgba(255,246,242,0.55))" }}>YiCare GPS · Live Tracking</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>

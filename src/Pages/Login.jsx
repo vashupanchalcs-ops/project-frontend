@@ -967,7 +967,7 @@ export default function Login() {
             <div className="auth-star">*</div>
             <div className="auth-left-copy">
               <p>Hey, Hello!</p>
-              <h2>OTP based secure access to SwiftRescue workspace</h2>
+              <h2>OTP based secure access to YiCare workspace</h2>
             </div>
           </aside>
 
@@ -1142,7 +1142,7 @@ export default function Login() {
                   </button>
                 </div>
                 <div className="auth-legal">
-                  By continuing, you agree to SwiftRescue terms, conditions, and privacy policy.
+                  By continuing, you agree to YiCare terms, conditions, and privacy policy.
                 </div>
               </>
             )}

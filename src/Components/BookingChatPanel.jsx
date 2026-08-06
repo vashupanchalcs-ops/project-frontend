@@ -317,7 +317,7 @@ export default function BookingChatPanel({
     } catch {}
     const prefix =
       latest.sender_role === "system"
-        ? "SwiftRescue update."
+        ? "YiCare update."
         : latest.sender_role === "admin"
         ? "Admin message."
         : latest.sender_role === "driver"

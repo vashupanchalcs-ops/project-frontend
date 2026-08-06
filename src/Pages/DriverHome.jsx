@@ -226,7 +226,7 @@ export default function DriverHome() {
       <div className="dh-root" ref={rootRef}>
         <div className="dh-wrap">
           <section className="dh-hero">
-            <div className="dh-kicker dh-reveal">SwiftRescue Driver Operations</div>
+            <div className="dh-kicker dh-reveal">YiCare Driver Operations</div>
             <h1 className="dh-title dh-reveal">
               Ready To Move
               <br />

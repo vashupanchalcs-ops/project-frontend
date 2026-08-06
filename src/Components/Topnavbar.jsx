@@ -775,7 +775,7 @@ const Topnavbar = () => {
       <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleProfilePicChange} />
 
       <div className="nf-nav-root">
-        <span className="nf-brand">SwiftRescue</span>
+        <span className="nf-brand">YiCare</span>
 
         {/* Desktop Search */}
         <div className="nf-search-wrap" ref={searchRef}>

@@ -3,12 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 
 const PAGE_DATA = {
   about: {
-    title: "About SwiftRescue",
+    title: "About YiCare",
     subtitle: "Emergency response network built for real-time city coordination",
     blocks: [
       {
         h: "Who We Are",
-        p: "SwiftRescue is a dispatch-first emergency platform that connects users, ambulances, hospitals, and control teams in one operational command flow.",
+        p: "YiCare is a dispatch-first emergency platform that connects users, ambulances, hospitals, and control teams in one operational command flow.",
       },
       {
         h: "What We Solve",
@@ -176,7 +176,7 @@ export default function InfoPage() {
       <div className="ip-root">
         <div className="ip-wrap">
           <section className="ip-hero">
-            <div className="ip-kicker">SwiftRescue Information</div>
+            <div className="ip-kicker">YiCare Information</div>
             <h1 className="ip-title">{data.title}</h1>
             <p className="ip-sub">{data.subtitle}</p>
           </section>
@@ -200,4 +200,3 @@ export default function InfoPage() {
     </>
   );
 }
-
