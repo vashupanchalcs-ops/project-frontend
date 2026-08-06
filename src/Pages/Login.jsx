@@ -50,7 +50,7 @@ const sendBackendOtp = async (email) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(90000),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok || data.status !== "otp_sent") {
@@ -169,7 +169,7 @@ export default function Login() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
         // Render's free instance may need time to wake up after inactivity.
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(90000),
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data?.valid) {
