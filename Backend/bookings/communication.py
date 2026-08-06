@@ -145,7 +145,7 @@ def _push_system_chat(booking: Booking, message: str):
     BookingChatMessage.objects.create(
         thread=thread,
         sender_role="system",
-        sender_name="SwiftRescue Voice/SMS Bot",
+        sender_name="YiCare Voice/SMS Bot",
         message_type="update",
         message=message,
         metadata=json.dumps({"source": "voice_sms_intake", "target_role": "all"}),

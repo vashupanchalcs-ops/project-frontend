@@ -442,14 +442,14 @@ export default function Dashboard() {
 
             <div className="ad-contact-grid">
               <motion.article className="ad-cell" whileHover={{ y: -3 }}>
-                <h3 className="ad-c-brand">SwiftRescue<br/>Command</h3>
+                <h3 className="ad-c-brand">YiCare<br/>Command</h3>
                 <p className="ad-c-text">Emergency network operations and city-level dispatch orchestration.</p>
               </motion.article>
 
               <motion.article className="ad-cell" whileHover={{ y: -3 }}>
                 <h4 className="ad-c-head">Delhi Control</h4>
                 <p className="ad-c-text">
-                  ops@swiftrescue.in<br/>
+                  ops@yicare.in<br/>
                   Emergency Call: 8882128534<br/>
                   Unit 306, Emergency Wing<br/>
                   New Delhi, India
@@ -460,7 +460,7 @@ export default function Dashboard() {
               <motion.article className="ad-cell" whileHover={{ y: -3 }}>
                 <h4 className="ad-c-head">Hospital Sync Desk</h4>
                 <p className="ad-c-text">
-                  hospitals@swiftrescue.in<br/>
+                  hospitals@yicare.in<br/>
                   +91 9899 7949 999<br/>
                   Bed availability sync<br/>
                   ICU emergency routing

@@ -108,7 +108,7 @@ class BookingChatConsumer(AsyncWebsocketConsumer):
                 ai_text = await database_sync_to_async(generate_ai_response)(message, self.role)
                 ai_msg = await self._create_message(
                     sender_role="system",
-                    sender_name="SwiftRescue AI",
+                    sender_name="YiCare AI",
                     message_type="update",
                     message=ai_text,
                     metadata={"auto": True},

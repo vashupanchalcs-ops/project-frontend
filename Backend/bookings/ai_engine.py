@@ -14,7 +14,7 @@ def _local_fallback(prompt: str, role: str = "user") -> str:
         return "Request received. The escalation has been sent to admin control and an alternate plan is now in progress."
     if role == "driver":
         return "Driver support is active. Route and hospital coordination is being handled by the admin control team."
-    return "SwiftRescue AI update: request received. The dispatch team is verifying live status and will respond shortly."
+    return "YiCare AI update: request received. The dispatch team is verifying live status and will respond shortly."
 
 
 def _post_json(url: str, payload: dict, headers=None, timeout: int = 8):
@@ -44,7 +44,7 @@ def generate_ai_response(prompt: str, role: str = "user") -> str:
         if api_key:
             try:
                 system = (
-                    "You are SwiftRescue voice/chat dispatch assistant. "
+                    "You are YiCare voice/chat dispatch assistant. "
                     "Reply in concise, professional English. "
                     "Give operational updates, ETA guidance, safety reminders. "
                     "Never provide medical diagnosis."

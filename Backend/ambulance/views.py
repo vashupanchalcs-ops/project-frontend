@@ -42,7 +42,7 @@ def _parse_json_body(request):
 
 
 def home(request):
-    return JsonResponse({"message": "SwiftRescue Backend Running"})
+    return JsonResponse({"message": "YiCare Backend Running"})
 
 
 @csrf_exempt
@@ -69,7 +69,7 @@ def send_otp(request):
         if email_configured:
             try:
                 send_mail(
-                    "SwiftRescue OTP",
+                    "YiCare OTP",
                     f"Your OTP is {otp}",
                     settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
                     [email],

@@ -53,7 +53,7 @@ export const Topnavbar = () => {
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
       }} className="text-2xl font-black tracking-tighter">
-        SwiftRescue
+        YiCare
       </div>
 
       {/* Search */}

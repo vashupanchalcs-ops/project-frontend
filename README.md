@@ -1,4 +1,4 @@
-# SwiftRescue
+# YiCare
 
 Emergency ambulance platform:
 - React + Vite frontend (`/src`)

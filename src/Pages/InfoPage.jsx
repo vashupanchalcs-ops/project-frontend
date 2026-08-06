@@ -25,7 +25,7 @@ const PAGE_DATA = {
     subtitle: "Rapid support channels for dispatch, driver, and hospital teams",
     blocks: [
       { h: "24x7 Support Desk", p: "For urgent workflow issues, contact operations immediately." },
-      { h: "Email", p: "support@swiftrescue.in" },
+      { h: "Email", p: "support@yicare.in" },
       { h: "Emergency Hotline", p: "+91 99998 70751" },
       { h: "SLA", p: "Critical operational tickets are prioritized with fast-response escalation." },
     ],
@@ -42,7 +42,7 @@ const PAGE_DATA = {
   },
   privacy: {
     title: "Privacy Policy",
-    subtitle: "How SwiftRescue handles operational and emergency data",
+    subtitle: "How YiCare handles operational and emergency data",
     blocks: [
       { h: "Data Collected", p: "Booking details, route telemetry, hospital response status, and operational logs." },
       { h: "Usage", p: "Data is used only for emergency coordination, dispatch efficiency, and audit traceability." },
@@ -60,11 +60,11 @@ const PAGE_DATA = {
   },
   contact: {
     title: "Contact Us",
-    subtitle: "Reach SwiftRescue command and integration teams",
+    subtitle: "Reach YiCare command and integration teams",
     blocks: [
-      { h: "Control Room", p: "ops@swiftrescue.in" },
-      { h: "Hospital Integration", p: "hospitals@swiftrescue.in" },
-      { h: "Business Partnerships", p: "partners@swiftrescue.in" },
+      { h: "Control Room", p: "ops@yicare.in" },
+      { h: "Hospital Integration", p: "hospitals@yicare.in" },
+      { h: "Business Partnerships", p: "partners@yicare.in" },
       { h: "Phone", p: "+91 99998 70751" },
     ],
   },

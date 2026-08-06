@@ -668,13 +668,13 @@ export default function UserHome() {
               </div>
               <div className="uh-foot-col">
                 <h4>Delhi Control</h4>
-                <p>ops@swiftrescue.in</p>
+                <p>ops@yicare.in</p>
                 <p>Emergency Call: 8882128534</p>
                 <p>Emergency Wing, New Delhi</p>
               </div>
               <div className="uh-foot-col">
                 <h4>Hospital Sync Desk</h4>
-                <p>hospitals@swiftrescue.in</p>
+                <p>hospitals@yicare.in</p>
                 <p>Live bed availability sync</p>
                 <p>ICU emergency routing support</p>
               </div>

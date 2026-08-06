@@ -51,7 +51,7 @@ const fallbackSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
     <rect width="1200" height="500" fill="url(#g)"/>
     <rect x="0" y="390" width="1200" height="110" fill="#111111" opacity="0.08"/>
     <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#111111" font-weight="700">
-      SwiftRescue Ambulance
+      YiCare Ambulance
     </text>
   </svg>`
 )}`;
