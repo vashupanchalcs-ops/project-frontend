@@ -16,7 +16,10 @@ export default function AdminHospitalDetails() {
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setHospitals(list);
-        if (list.length && !selectedHospitalId) setSelectedHospitalId(list[0].id);
+        if (list.length && !selectedHospitalId) {
+          setSelectedHospitalId(list[0].id);
+          setSelectedDashboard({ hospital: list[0], summary: {}, staff: [] });
+        }
       })
       .catch(() => setHospitals([]));
   }, []);
@@ -26,8 +29,11 @@ export default function AdminHospitalDetails() {
     fetch(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/`)
       .then((r) => r.json())
       .then((data) => setSelectedDashboard(data))
-      .catch(() => setSelectedDashboard(null));
-  }, [selectedHospitalId]);
+      .catch(() => {
+        const fallback = hospitals.find((h) => Number(h.id) === Number(selectedHospitalId));
+        if (fallback) setSelectedDashboard((current) => current || { hospital: fallback, summary: {}, staff: [] });
+      });
+  }, [selectedHospitalId, hospitals]);
 
   useEffect(() => {
     const t = setInterval(() => setPulseTime(Date.now()), 12000);
@@ -219,7 +225,10 @@ export default function AdminHospitalDetails() {
                   <div
                     key={h.id}
                     className={`ahd-item ${selectedHospitalId === h.id ? "active" : ""}`}
-                    onClick={() => setSelectedHospitalId(h.id)}
+                    onClick={() => {
+                      setSelectedHospitalId(h.id);
+                      setSelectedDashboard({ hospital: h, summary: {}, staff: [] });
+                    }}
                   >
                     <div style={{ fontWeight: 800 }}>{h.name}</div>
                     <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>{h.email || "No email"}</div>
@@ -229,6 +238,7 @@ export default function AdminHospitalDetails() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedHospitalId(h.id);
+                        setSelectedDashboard({ hospital: h, summary: {}, staff: [] });
                       }}
                     >
                       Live Track on Map
