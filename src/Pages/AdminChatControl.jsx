@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import BookingChatPanel from "../components/BookingChatPanel";
+import BookingChatPanel from "../Components/BookingChatPanel";
 
 const BASE = "http://127.0.0.1:8000";
 

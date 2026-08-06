@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import BookingChatPanel from "../components/BookingChatPanel";
+import BookingChatPanel from "../Components/BookingChatPanel";
 
 export default function DriverChangeRequests() {
   const [requests, setRequests] = useState([]);
