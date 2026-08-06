@@ -475,18 +475,26 @@ export default function Login() {
       if (role === "driver" && (!form.contractId.trim() || !form.registrationNumber.trim())) {
         return setErr("Ambulance ID and Registration Number are required.");
       }
-      const checked = await validateContractAccess({
-        role,
-        email,
-        contractId: role === "driver" ? form.contractId : "",
-        hospitalId: role === "hospital" ? form.hospitalId : "",
-        registrationNumber: form.registrationNumber,
-      });
-      if (!checked.ok) return setErr(checked.error);
+      try {
+        const checked = await validateContractAccess({
+          role,
+          email,
+          contractId: role === "driver" ? form.contractId : "",
+          hospitalId: role === "hospital" ? form.hospitalId : "",
+          registrationNumber: form.registrationNumber,
+        });
+        if (!checked.ok) return setErr(checked.error);
+      } catch (error) {
+        return setErr(error?.message || "Backend se contract details verify nahi ho paayi. Please try again.");
+      }
     }
     if (role === "hospital") {
-      const allowed = await validateHospitalAccess(email);
-      if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
+      try {
+        const allowed = await validateHospitalAccess(email);
+        if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
+      } catch (error) {
+        return setErr(error?.message || "Hospital details verify nahi ho paayi. Please try again.");
+      }
     }
 
     setBusy(true);
