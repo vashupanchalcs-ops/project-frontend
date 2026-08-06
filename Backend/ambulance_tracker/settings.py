@@ -137,7 +137,11 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").strip().lower() == "true"
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").strip().lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
+# Gmail app passwords are often copied as "abcd efgh ijkl mnop".
+# SMTP expects the raw 16-character token, so accept either pasted form.
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip().replace(" ", "")
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER).strip()
 

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const ADMIN_EMAIL = "vashupanchal.cs@gmail.com";
-const BASE = "http://127.0.0.1:8000";
+const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const IS_PROD = import.meta.env.PROD;
 const DB_KEY = "sr_users_db";
 const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
@@ -43,6 +44,20 @@ const verifyLocalOtp = (email, otp) => {
 
 const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
 const normalizePhone = (v) => String(v || "").replace(/\D/g, "").slice(-10);
+
+const sendBackendOtp = async (email) => {
+  const resp = await fetch(`${BASE}/api/send-otp/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || data.status !== "otp_sent") {
+    throw new Error(data.message || "OTP email service failed.");
+  }
+  return data;
+};
 
 const applySession = ({ email, name, role, phone }) => {
   localStorage.setItem("user", email);
@@ -288,18 +303,22 @@ export default function Login() {
     }
 
     setBusy(true);
-    let backendSent = false;
 
     try {
-      const resp = await fetch(`${BASE}/api/send-otp/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        signal: AbortSignal.timeout(5000),
-      });
-      backendSent = resp.ok;
-    } catch {
-      backendSent = false;
+      await sendBackendOtp(email);
+      setBusy(false);
+      setOtpPurpose("reset");
+      setOtp(["", "", "", "", "", ""]);
+      setTimer(60);
+      setStep("otp");
+      setInfo(`Password reset OTP has been sent to ${email}.`);
+      return;
+    } catch (otpError) {
+      if (IS_PROD) {
+        setBusy(false);
+        setErr(otpError.message || "OTP email send nahi ho paya. Backend email config check karo.");
+        return;
+      }
     }
 
     const code = makeLocalOtp(email);
@@ -309,12 +328,8 @@ export default function Login() {
     setTimer(60);
     setStep("otp");
 
-    if (backendSent) {
-      setInfo(`Password reset OTP has been sent to ${email}.`);
-    } else {
-      setInfo("OTP generated. Email service is unavailable; check developer console for OTP.");
-      console.log(`[SwiftRescue RESET OTP] ${email} -> ${code}`);
-    }
+    setInfo("Local dev OTP generated. Developer console me OTP check karo.");
+    console.log(`[SwiftRescue RESET OTP] ${email} -> ${code}`);
   };
 
   const signupWithGoogle = async () => {
@@ -475,18 +490,22 @@ export default function Login() {
     }
 
     setBusy(true);
-    let backendSent = false;
 
     try {
-      const resp = await fetch(`${BASE}/api/send-otp/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        signal: AbortSignal.timeout(5000),
-      });
-      backendSent = resp.ok;
-    } catch {
-      backendSent = false;
+      await sendBackendOtp(email);
+      setBusy(false);
+      setOtpPurpose("signup");
+      setOtp(["", "", "", "", "", ""]);
+      setTimer(60);
+      setStep("otp");
+      setInfo(`OTP has been sent to ${email}.`);
+      return;
+    } catch (otpError) {
+      if (IS_PROD) {
+        setBusy(false);
+        setErr(otpError.message || "OTP email send nahi ho paya. Backend email config check karo.");
+        return;
+      }
     }
 
     const code = makeLocalOtp(email);
@@ -497,12 +516,8 @@ export default function Login() {
     setTimer(60);
     setStep("otp");
 
-    if (backendSent) {
-      setInfo(`OTP has been sent to ${email}.`);
-    } else {
-      setInfo("OTP generated. Email service is unavailable; check developer console for OTP.");
-      console.log(`[SwiftRescue OTP] ${email} -> ${code}`);
-    }
+    setInfo("Local dev OTP generated. Developer console me OTP check karo.");
+    console.log(`[SwiftRescue OTP] ${email} -> ${code}`);
   };
 
   const verifyOtp = async (e) => {
