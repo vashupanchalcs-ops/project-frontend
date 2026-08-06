@@ -488,15 +488,6 @@ export default function Login() {
         return setErr(error?.message || "Backend se contract details verify nahi ho paayi. Please try again.");
       }
     }
-    if (role === "hospital") {
-      try {
-        const allowed = await validateHospitalAccess(email);
-        if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
-      } catch (error) {
-        return setErr(error?.message || "Hospital details verify nahi ho paayi. Please try again.");
-      }
-    }
-
     setBusy(true);
 
     try {
