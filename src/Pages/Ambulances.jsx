@@ -298,9 +298,9 @@ export default function Ambulances() {
   }
 
   const submitBooking = async () => {
-    const landmark = form.pickup_landmark.trim();
-    const city = form.pickup_city.trim();
-    const district = form.pickup_district.trim();
+    let landmark = form.pickup_landmark.trim();
+    let city = form.pickup_city.trim();
+    let district = form.pickup_district.trim();
     const hasManualLocation = Boolean(landmark || city || district);
 
     if (!form.patient_contact_number.trim()) {
@@ -316,7 +316,7 @@ export default function Ambulances() {
     try {
       const user = localStorage.getItem("name") || "Unknown";
       const email = localStorage.getItem("user") || "";
-      const pickupLocation = hasManualLocation
+      let pickupLocation = hasManualLocation
         ? `${landmark}, ${city}, ${district}`
         : "Live GPS location";
 
@@ -365,6 +365,38 @@ export default function Ambulances() {
           }
         } catch {
           // Final fallback only; booking should primarily respect form-filled location.
+        }
+      }
+
+      if (pickupCoords && !hasManualLocation && OPENCAGE_API_KEY) {
+        try {
+          const params = new URLSearchParams({
+            q: `${pickupCoords.lat},${pickupCoords.lng}`,
+            key: OPENCAGE_API_KEY,
+            language: "en",
+            limit: "1",
+            no_annotations: "1",
+          });
+          const revRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?${params.toString()}`);
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            const first = Array.isArray(revData?.results) ? revData.results[0] : null;
+            if (first) {
+              const components = first.components || {};
+              const formatted = first.formatted || "Live GPS Location";
+              
+              const resolvedCity = components.city || components.town || components.village || components.municipality || components.state_district || "";
+              const resolvedDistrict = components.county || components.subdistrict || components.state_district || "";
+              const resolvedLandmark = components.suburb || components.neighbourhood || components.road || "";
+
+              pickupLocation = formatted;
+              landmark = resolvedLandmark;
+              city = resolvedCity;
+              district = resolvedDistrict;
+            }
+          }
+        } catch (e) {
+          console.error("Reverse geocoding failed", e);
         }
       }
 

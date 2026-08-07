@@ -346,14 +346,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         ? { lat: directLat, lng: directLng }
         : null;
 
-      let resolvedPickup = null;
-      if (storedLL && textPickupLL) {
-        const drift = haversineKm(storedLL, textPickupLL);
-        // FIX: trust geocoded text if drift > 0.6km — stored coord ho sakta hai stale
-        resolvedPickup = drift > 0.6 ? textPickupLL : storedLL;
-      } else {
-        resolvedPickup = storedLL || textPickupLL || null;
-      }
+      const resolvedPickup = storedLL || textPickupLL || null;
 
       // Last resort: fresh GPS location agar geocoding fail ho gayi
       if (!resolvedPickup && gpsFreshLocRef.current?.accuracy < 150) {

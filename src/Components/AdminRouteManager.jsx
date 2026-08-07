@@ -358,13 +358,7 @@ export default function AdminRouteManager({
       if (pickupFromText) break;
     }
 
-    let pickup = null;
-    if (pickupFromText && pickupFromBooking) {
-      const driftKm = haversineKm(pickupFromText, pickupFromBooking);
-      pickup = driftKm > 0.6 ? pickupFromText : pickupFromBooking;
-    } else {
-      pickup = pickupFromText || pickupFromBooking || null;
-    }
+    const pickup = pickupFromBooking || pickupFromText || null;
 
     if (booking.assigned_hospital_id && !hospitalFromDb) {
       throw new Error("Hospital latitude/longitude missing in backend. Update hospital coordinates.");

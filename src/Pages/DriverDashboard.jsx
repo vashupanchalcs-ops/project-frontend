@@ -1004,18 +1004,10 @@ export default function DriverDashboard() {
       const pickupFromBooking = inIndia(bookingPickupLat, bookingPickupLng)
         ? { lat: bookingPickupLat, lng: bookingPickupLng }
         : null;
-      if (pickupFromText && inIndia(pickupFromText.lat, pickupFromText.lng) && pickupFromBooking) {
-        const driftKm = haversineKm(
-          { lat: pickupFromText.lat, lng: pickupFromText.lng },
-          pickupFromBooking
-        );
-        // Agar stored GPS aur address-geocode me zyada drift ho, address-geocode prefer karo.
-        const chosen = driftKm > 0.6 ? pickupFromText : pickupFromBooking;
-        pickupLL = L.latLng(chosen.lat, chosen.lng);
+      if (pickupFromBooking) {
+        pickupLL = L.latLng(pickupFromBooking.lat, pickupFromBooking.lng);
       } else if (pickupFromText && inIndia(pickupFromText.lat, pickupFromText.lng)) {
         pickupLL = L.latLng(pickupFromText.lat, pickupFromText.lng);
-      } else if (pickupFromBooking) {
-        pickupLL = L.latLng(pickupFromBooking.lat, pickupFromBooking.lng);
       }
       if (!pickupLL) {
         for (const candidate of pickupCandidates) {
@@ -2044,7 +2036,15 @@ export default function DriverDashboard() {
                         >
                           🛡 Medical Insurance Form
                         </button>
-                        {!b.report_submitted_at && (
+                        {b.report_submitted_at ? (
+                          <button
+                            className="dd-btn"
+                            style={{ background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7", cursor: "default" }}
+                            disabled
+                          >
+                            📝 Report Sended
+                          </button>
+                        ) : (
                           <button
                             className="dd-btn dd-btn-green"
                             onClick={() => submitPatientReport(b.id)}
