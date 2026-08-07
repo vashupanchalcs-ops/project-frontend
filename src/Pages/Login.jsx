@@ -143,17 +143,6 @@ export default function Login() {
     return pickedRole === "driver" ? "driver" : "user";
   };
 
-  const validateHospitalAccess = async (email) => {
-    try {
-      const resp = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(email)}`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      return resp.ok;
-    } catch {
-      return false;
-    }
-  };
-
   const requiresContractAccess = (role) => role === "driver" || role === "hospital";
 
   const validateContractAccess = async ({ role, email, contractId, hospitalId, registrationNumber }) => {
@@ -252,11 +241,6 @@ export default function Login() {
         hospital_id: checked.data.hospital_id,
       });
     }
-    if (role === "hospital") {
-      const allowed = await validateHospitalAccess(email);
-      if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
-    }
-
     completeLogin({
       ...existing,
       role,
@@ -382,13 +366,6 @@ export default function Login() {
           const targetRole = derivedRole !== "user"
             ? derivedRole
             : (existing?.role || derivedRole);
-          if (targetRole === "hospital") {
-            const allowed = await validateHospitalAccess(email);
-            if (!allowed) {
-              setErr("Hospital profile not found for this email. Contact admin.");
-              return;
-            }
-          }
           let contractMeta = {};
           if (requiresContractAccess(targetRole)) {
             if (targetRole === "hospital" && (!form.hospitalId.trim() || !form.registrationNumber.trim())) {
@@ -593,10 +570,6 @@ export default function Login() {
 
     const role = resolvedRole(email, form.role);
     const phone = normalizePhone(form.phone);
-    if (role === "hospital") {
-      const allowed = await validateHospitalAccess(email);
-      if (!allowed) return setErr("Hospital profile not found for this email. Contact admin.");
-    }
     const existing = getUser(email);
     let contractMeta = {};
     if (requiresContractAccess(role)) {
