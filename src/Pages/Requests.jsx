@@ -111,6 +111,15 @@ const Requests = () => {
     return () => ctx.revert();
   }, [bookings.length]);
 
+  useEffect(() => {
+    if (location.state?.flashMsg) {
+      const timer = setTimeout(() => {
+        navigate(location.pathname, { replace: true, state: { ...location.state, flashMsg: null } });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state?.flashMsg, location.pathname, navigate]);
+
   const updateBooking = (id, payload) => {
     fetch(`http://127.0.0.1:8000/api/bookings/${id}/`, {
       method: "PATCH",
@@ -565,9 +574,27 @@ const Requests = () => {
                   padding: "8px 12px",
                   fontSize: 12,
                   fontWeight: 700,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                {location.state.flashMsg}
+                <span>{location.state.flashMsg}</span>
+                <button
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#111",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    padding: "0 4px",
+                    marginLeft: 10,
+                  }}
+                  onClick={() => navigate(location.pathname, { replace: true, state: { ...location.state, flashMsg: null } })}
+                >
+                  ✕
+                </button>
               </div>
             )}
           </div>
