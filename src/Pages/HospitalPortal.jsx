@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { MoreVertical, Stethoscope, BedSingle, Accessibility } from "lucide-react";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 
 const getTabFromPath = (pathname) => {
   const p = String(pathname || "").toLowerCase();

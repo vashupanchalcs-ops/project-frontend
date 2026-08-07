@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const ADMIN_EMAIL = "vashupanchal.cs@gmail.com";
-const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 const IS_PROD = import.meta.env.PROD;
 const DB_KEY = "sr_users_db";
 const GOOGLE_CLIENT_ID =

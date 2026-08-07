@@ -13,7 +13,7 @@ loadGoogleMapsScript().catch(() => {});
 // migrated away from their old localhost URLs. Vercel injects the backend
 // origin through VITE_API_BASE_URL; local development keeps using Django on
 // port 8000.
-const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 const nativeFetch = window.fetch.bind(window);
 window.fetch = (input, init) => {
   if (typeof input === "string") {
