@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { MoreVertical, Stethoscope, BedSingle, Accessibility } from "lucide-react";
 
-const BASE = "http://127.0.0.1:8000";
+const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
 const getTabFromPath = (pathname) => {
   const p = String(pathname || "").toLowerCase();
@@ -69,17 +69,33 @@ export default function HospitalPortal() {
   });
 
   const hospitalEmail = (localStorage.getItem("user") || "").trim().toLowerCase();
+  const storedHospitalId = Number(localStorage.getItem("hospital_id")) || null;
 
   const fetchHospitalDashboard = async ({ silent = false } = {}) => {
-    if (!hospitalEmail) return;
+    if (!hospitalEmail && !storedHospitalId) return;
     if (!silent) setLoading(true);
     if (!silent) setErr("");
     try {
-      const byEmail = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(hospitalEmail)}`);
-      if (!byEmail.ok) throw new Error("Hospital profile not found");
-      const hospitalData = await byEmail.json();
+      let hospitalData = null;
 
-      const dashRes = await fetch(`${BASE}/api/hospitals/${hospitalData.id}/dashboard/`);
+      // Hospital ID is verified during login and remains valid if the contact
+      // email is later updated in the hospital profile.
+      if (storedHospitalId) {
+        const byId = await fetch(`${BASE}/api/hospitals/${storedHospitalId}/`);
+        if (byId.ok) hospitalData = await byId.json();
+      }
+
+      if (!hospitalData && hospitalEmail) {
+        const byEmail = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(hospitalEmail)}`);
+        if (byEmail.ok) hospitalData = await byEmail.json();
+      }
+
+      const hospitalId = Number(hospitalData?.id || hospitalData?.hospital_id);
+      if (!Number.isInteger(hospitalId) || hospitalId <= 0) {
+        throw new Error("Hospital profile not configured for this account");
+      }
+
+      const dashRes = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/`);
       if (!dashRes.ok) throw new Error("Unable to load hospital dashboard");
       const dashboard = await dashRes.json();
 
@@ -113,7 +129,7 @@ export default function HospitalPortal() {
       if (document.visibilityState === "visible") fetchHospitalDashboard({ silent: true });
     }, pollMs);
     return () => clearInterval(t);
-  }, [hospitalEmail, activeTab]);
+  }, [hospitalEmail, storedHospitalId, activeTab]);
 
   const updateResources = async () => {
     if (!hospital?.id) return;
