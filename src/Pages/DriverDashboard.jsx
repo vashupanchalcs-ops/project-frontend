@@ -736,7 +736,7 @@ export default function DriverDashboard() {
     if (origin && routePickup) {
       const road1 = await fetchRouteWithManeuvers(
         [{ lat: origin.lat, lng: origin.lng }, { lat: routePickup.lat, lng: routePickup.lng }],
-        { allowStraightFallback: false }
+        { allowStraightFallback: true }
       );
       const straightGapKm = haversineKm(
         { lat: origin.lat, lng: origin.lng },
@@ -764,7 +764,7 @@ export default function DriverDashboard() {
     if (routePickup && routeDest) {
         const road2 = await fetchRouteWithManeuvers(
           [{ lat: routePickup.lat, lng: routePickup.lng }, { lat: routeDest.lat, lng: routeDest.lng }],
-          { allowStraightFallback: false }
+          { allowStraightFallback: true }
         );
         const straightGapKm2 = haversineKm(
           { lat: routePickup.lat, lng: routePickup.lng },

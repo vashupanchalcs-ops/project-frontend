@@ -245,9 +245,9 @@ export default function AdminChatControl() {
               role="admin"
               thread={selected}
               compact
-              messageTarget="user"
-              visibleTargets={["all", "user", "admin"]}
-              allowedSenderRoles={["system", "admin", "user"]}
+              messageTarget="all"
+              visibleTargets={["all", "user", "admin", "driver"]}
+              allowedSenderRoles={["system", "admin", "user", "driver"]}
               title={selected ? `Booking #${selected.booking_id} · Admin Control Chat` : "Select booking card"}
               onMessagesChange={setChatMessages}
               extraActions={

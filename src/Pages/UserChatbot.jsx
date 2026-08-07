@@ -119,9 +119,9 @@ export default function UserChatbot() {
               thread={selected}
               compact
               instagramMode={isMobile}
-              messageTarget="admin"
-              visibleTargets={["all", "user", "admin"]}
-              allowedSenderRoles={["system", "admin", "user"]}
+              messageTarget="all"
+              visibleTargets={["all", "user", "admin", "driver"]}
+              allowedSenderRoles={["system", "admin", "user", "driver"]}
               title={selected ? `Booking #${selected.booking_id} Chat` : "Select Booking"}
               onMessagesChange={setChatMessages}
             />

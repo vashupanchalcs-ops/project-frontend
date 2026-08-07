@@ -108,9 +108,9 @@ export default function DriverChatbot() {
               role="driver"
               thread={selected}
               compact
-              messageTarget="admin"
-              visibleTargets={["all", "driver", "admin"]}
-              allowedSenderRoles={["system", "admin", "driver"]}
+              messageTarget="all"
+              visibleTargets={["all", "driver", "admin", "user"]}
+              allowedSenderRoles={["system", "admin", "driver", "user"]}
               title={selected ? `Booking #${selected.booking_id} · Driver Chat` : "Select Booking"}
               onMessagesChange={setChatMessages}
             />
