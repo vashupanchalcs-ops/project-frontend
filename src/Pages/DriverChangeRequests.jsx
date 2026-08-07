@@ -295,9 +295,9 @@ export default function DriverChangeRequests() {
                 role="admin"
                 thread={selectedThread}
                 compact
-                messageTarget="driver"
-                visibleTargets={["all", "driver", "admin"]}
-                allowedSenderRoles={["system", "admin", "driver"]}
+                messageTarget="all"
+                visibleTargets={["all", "driver", "admin", "user"]}
+                allowedSenderRoles={["system", "admin", "driver", "user"]}
                 title={selectedThread ? `Booking #${selectedThread.booking_id} · Driver Update Channel` : "Select driver booking thread"}
                 onMessagesChange={setChatMessages}
                 extraActions={

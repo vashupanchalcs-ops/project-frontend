@@ -321,25 +321,40 @@ export default function Ambulances() {
         : "Live GPS location";
 
       let pickupCoords = null;
-      if (hasManualLocation && OPENCAGE_API_KEY) {
+      if (hasManualLocation) {
         setGeocoding(true);
         try {
-          const params = new URLSearchParams({
-            q: `${pickupLocation}, India`,
-            key: OPENCAGE_API_KEY,
-            language: "en",
-            countrycode: "in",
-            limit: "1",
-            no_annotations: "1",
-          });
-          const geoRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?${params.toString()}`);
-          if (geoRes.ok) {
-            const geoData = await geoRes.json();
-            const first = Array.isArray(geoData?.results) ? geoData.results[0] : null;
-            const lat = Number(first?.geometry?.lat);
-            const lng = Number(first?.geometry?.lng);
-            if (Number.isFinite(lat) && Number.isFinite(lng)) {
-              pickupCoords = { lat, lng };
+          if (OPENCAGE_API_KEY) {
+            const params = new URLSearchParams({
+              q: `${pickupLocation}, India`,
+              key: OPENCAGE_API_KEY,
+              language: "en",
+              countrycode: "in",
+              limit: "1",
+              no_annotations: "1",
+            });
+            const geoRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?${params.toString()}`);
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              const first = Array.isArray(geoData?.results) ? geoData.results[0] : null;
+              const lat = Number(first?.geometry?.lat);
+              const lng = Number(first?.geometry?.lng);
+              if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                pickupCoords = { lat, lng };
+              }
+            }
+          }
+          if (!pickupCoords) {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pickupLocation + ", India")}&format=json&limit=1&countrycodes=in`;
+            const geoRes = await fetch(url, { headers: { "Accept-Language": "en" } });
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              const first = geoData?.[0];
+              const lat = Number(first?.lat);
+              const lng = Number(first?.lon);
+              if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                pickupCoords = { lat, lng };
+              }
             }
           }
         } catch {
@@ -349,7 +364,7 @@ export default function Ambulances() {
         }
       }
 
-      if (!pickupCoords && navigator.geolocation) {
+      if (!pickupCoords && !hasManualLocation && navigator.geolocation) {
         try {
           const gpsPosition = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
