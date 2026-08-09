@@ -5,8 +5,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 gsap.registerPlugin(ScrollTrigger);
-const COLORS = ["#e50914", "#e50914", "#e50914", "#e50914"];
-const statusColor = { available: "#e50914", en_route: "#e50914", busy: "#e50914", offline: "#e50914" };
+const COLORS = ["#e50914", "#222222", "#666666", "#999999"];;
+const statusColor = { available: "#e50914", en_route: "#222222", busy: "#666666", offline: "#999999" };;
 
 const Reports = () => {
   const [bookings,   setBookings]   = useState([]);
@@ -241,7 +241,7 @@ const Reports = () => {
         .rep-delay { color: #bf1d2d; font-weight: 800; font-size: 12px; }
         .rep-nodelay { color: rgba(17,17,17,0.38); font-size: 12px; }
         
-        .rep-action-btn { width: 34px; height: 34px; background: #fffef4; border: 1px solid rgba(17,17,17,0.12); border-radius: 10px; cursor: pointer; color: rgba(17,17,17,0.58); font-size: 16px; transition: all 0.15s; }
+        .rep-action-btn { width: 34px; height: 34px; background: #ffffff; border: 1px solid rgba(17,17,17,0.12); border-radius: 10px; cursor: pointer; color: rgba(17,17,17,0.58); font-size: 16px; transition: all 0.15s; }
         .rep-action-btn:hover { color: #111; background: #e50914; border-color: #e50914; }
         .rep-ord-footer { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 11px; color: rgba(17,17,17,0.58); }
         .rep-ord-pages { display: flex; gap: 6px; }

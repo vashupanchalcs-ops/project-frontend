@@ -22,12 +22,7 @@ import useLeaflet, {
 
 const BASE = "http://127.0.0.1:8000";
 
-const statusColor = {
-  available: "#00c853",
-  en_route:  "#f7c948",
-  busy:      "#ff4d5a",
-  offline:   "#8b8b8b",
-};
+const statusColor = { available: "#e50914", en_route: "#222222", busy: "#666666", offline: "#999999" };;
 
 const uniqueTextList = (values) => {
   const out = [], seen = new Set();

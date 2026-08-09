@@ -360,7 +360,7 @@ const Requests = () => {
           height: 30px;
           border: 1px solid rgba(20,20,20,0.2);
           border-radius: 8px;
-          background: #fffef4;
+          background: #ffffff;
           color: #111;
           cursor: pointer;
           display: flex;
@@ -497,7 +497,7 @@ const Requests = () => {
           border: 1px solid #e50914;
           border-radius: 10px;
           padding: 5px 8px;
-          background: #eaf48b;
+          background: #ffffff;
         }
 
         .req-label {

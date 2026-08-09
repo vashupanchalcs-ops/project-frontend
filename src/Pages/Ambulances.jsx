@@ -778,9 +778,9 @@ export default function Ambulances() {
           background: #ffffff;
           padding: 7px 6px;
         }
-        .amb2-ins.speed { border-color: rgba(229, 9, 20, 0.15); background: #fffef5; }
-        .amb2-ins.status { border-color: rgba(229, 9, 20, 0.15); background: #fffef5; }
-        .amb2-ins.contact { border-color: rgba(229, 9, 20, 0.15); background: #fffef5; }
+        .amb2-ins.speed { border-color: rgba(229, 9, 20, 0.15); background: #ffffff; }
+        .amb2-ins.status { border-color: rgba(229, 9, 20, 0.15); background: #ffffff; }
+        .amb2-ins.contact { border-color: rgba(229, 9, 20, 0.15); background: #ffffff; }
         .amb2-ins b {
           display: block;
           color: #111111;

@@ -109,7 +109,7 @@ export default function CaseDetails() {
         .cd-kicker { font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#111; background:#e50914; display:inline-flex; padding:5px 12px; border-radius:999px; margin-bottom:10px; }
         .cd-title { margin:0; font-size:38px; line-height:1; font-weight:950; letter-spacing:0; }
         .cd-sub { margin:8px 0 0; color:rgba(17,17,17,0.62); font-size:13px; }
-        .cd-status { border:1px solid #e50914; background:#eaf48b; border-radius:12px; padding:10px 14px; font-size:12px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+        .cd-status { border:1px solid #e50914; background: #ffffff; border-radius:12px; padding:10px 14px; font-size:12px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
         .cd-grid { display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; align-items:start; }
         .cd-section { background:#fff; border:1px solid rgba(229, 9, 20, 0.15); border-radius:16px; padding:16px; box-shadow:0 12px 28px rgba(229, 9, 20, 0.15); margin-bottom:16px; }
         .cd-section-title { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:950; margin-bottom:14px; color:#111; }

@@ -67,7 +67,7 @@ export default function HospitalResponses() {
         .hr-card {
           border: 1px solid rgba(229, 9, 20, 0.15);
           border-radius: 14px;
-          background: #fffef5;
+          background: #ffffff;
           padding: 11px 12px;
           box-shadow: 0 10px 24px rgba(229, 9, 20, 0.15);
         }
