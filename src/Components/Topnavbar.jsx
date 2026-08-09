@@ -432,6 +432,8 @@ const Topnavbar = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
+    // Keep hospital_id and saved hospital data so the next login restores the
+    // same Django-backed hospital profile instead of showing an empty form.
     window.location.reload();
   };
 

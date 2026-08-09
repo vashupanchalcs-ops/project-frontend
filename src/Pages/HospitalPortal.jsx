@@ -4,6 +4,26 @@ import gsap from "gsap";
 import { MoreVertical, Stethoscope, BedSingle, Accessibility } from "lucide-react";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
+const RESOURCE_CACHE_KEY = "swiftrescue_hospital_resources";
+
+const readResourceCache = (hospitalId) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(RESOURCE_CACHE_KEY) || "{}");
+    return cache[String(hospitalId)] || {};
+  } catch {
+    return {};
+  }
+};
+
+const saveResourceCache = (hospitalId, values) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(RESOURCE_CACHE_KEY) || "{}");
+    cache[String(hospitalId)] = { ...(cache[String(hospitalId)] || {}), ...values };
+    localStorage.setItem(RESOURCE_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Browser storage can be unavailable; Django remains the source of truth.
+  }
+};
 
 const getTabFromPath = (pathname) => {
   const p = String(pathname || "").toLowerCase();
@@ -106,14 +126,19 @@ export default function HospitalPortal() {
       setOnCallSpecialists(Array.isArray(dashboard.on_call_specialists) ? dashboard.on_call_specialists : []);
       setRedirectSuggestion(dashboard.redirect_suggestion || null);
 
-      setResourceForm({
+      const serverResources = {
         available_beds: dashboard.hospital?.available_beds ?? 0,
         icu_beds: dashboard.hospital?.icu_beds ?? 0,
         available_ventilators: dashboard.hospital?.available_ventilators ?? 0,
         status: dashboard.hospital?.status || "active",
         specializations: dashboard.hospital?.specializations || "",
         facilities: dashboard.hospital?.facilities || "",
-      });
+      };
+      const cachedResources = readResourceCache(hospitalId);
+      const savedResources = Object.keys(cachedResources).length
+        ? { ...serverResources, ...cachedResources }
+        : serverResources;
+      setResourceForm(savedResources);
       setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (e) {
       if (!silent) setErr(e.message || "Something went wrong");
@@ -140,6 +165,7 @@ export default function HospitalPortal() {
         body: JSON.stringify(resourceForm),
       });
       if (!res.ok) throw new Error("Resource update failed");
+      saveResourceCache(hospital.id, resourceForm);
       await fetchHospitalDashboard();
       setResourceEditMode(false);
     } catch {

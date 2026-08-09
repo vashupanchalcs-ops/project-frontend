@@ -79,6 +79,7 @@ export default function Login() {
   const [err, setErr] = useState("");
   const [info, setInfo] = useState("");
   const [timer, setTimer] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -636,19 +637,20 @@ export default function Login() {
 
         .auth-root {
           min-height: 100vh;
-          background: #f5f5f5;
+          background: radial-gradient(circle at 50% 15%, rgba(125,18,24,.55), transparent 38%), linear-gradient(145deg, #220709 0%, #430d12 42%, #170304 100%);
           display: grid;
           place-items: center;
           padding: 24px;
           font-family: 'Outfit', sans-serif;
-          color: #111;
+          color: #fff;
         }
 
         .auth-shell {
-          width: min(420px, 100%);
-          background: transparent;
-          border: none;
-          box-shadow: none;
+          width: min(560px, 100%);
+          background: rgba(12,5,6,.38);
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 8px;
+          box-shadow: 0 24px 70px rgba(0,0,0,.32);
         }
 
         .auth-left {
@@ -656,9 +658,10 @@ export default function Login() {
         }
 
         .auth-right {
-          background: transparent;
+          background: rgba(18,8,9,.78);
           border: none;
-          padding: 0;
+          padding: 34px 42px 30px;
+          border-radius: 8px;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -666,24 +669,21 @@ export default function Login() {
 
         .auth-step-title {
           margin: 6px 0 2px;
-          font-size: 62px;
-          font-family: "Playfair Display", serif;
-          line-height: 0.94;
+          font-size: 40px;
+          font-family: 'Outfit', sans-serif;
+          line-height: 1.1;
           text-align: center;
           font-weight: 700;
         }
 
         .auth-step-title .hl {
-          background: #d6e800;
-          border-radius: 10px;
-          padding: 0 8px;
-          display: inline-block;
+          color: #e50914;
         }
 
           .auth-step-sub {
           margin: 0 0 2px;
           text-align: center;
-          color: #575757;
+          color: #c7b8b9;
           font-size: 14px;
           font-weight: 500;
         }
@@ -697,10 +697,10 @@ export default function Login() {
 
         .auth-mode {
           height: 38px;
-          border: 1px solid #d8d8d8;
+          border: 1px solid #5b4446;
           border-radius: 3px;
-          background: #fff;
-          color: #111;
+          background: rgba(255,255,255,.05);
+          color: #fff;
           font-size: 14px;
           font-weight: 700;
           cursor: pointer;
@@ -708,8 +708,8 @@ export default function Login() {
         }
 
         .auth-mode.on {
-          background: #d6e800;
-          border-color: #c6d600;
+          background: #e50914;
+          border-color: #e50914;
         }
 
         .auth-msg {
@@ -747,18 +747,18 @@ export default function Login() {
 
         .auth-field label {
           font-size: 11px;
-          color: #6b6b6b;
+          color: #c7b8b9;
           font-weight: 500;
         }
 
         .auth-field input {
           height: 38px;
-          border: 1px solid #d8d8d8;
+          border: 1px solid #5b4446;
           border-radius: 3px;
-          background: #fff;
+          background: rgba(255,255,255,.06);
           padding: 0 10px;
           font-size: 16px;
-          color: #111;
+          color: #fff;
           outline: none;
         }
 
@@ -801,10 +801,10 @@ export default function Login() {
 
         .auth-role {
           height: 38px;
-          border: 1px solid #d8d8d8;
+          border: 1px solid #5b4446;
           border-radius: 3px;
-          background: #fff;
-          color: #111;
+          background: rgba(255,255,255,.05);
+          color: #fff;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
@@ -812,23 +812,23 @@ export default function Login() {
         }
 
         .auth-role.on {
-          background: #d6e800;
-          border-color: #c6d600;
+          background: #e50914;
+          border-color: #e50914;
         }
 
         .auth-note {
           margin-top: 1px;
           font-size: 12px;
-          color: #666;
+          color: #bba9aa;
         }
 
         .auth-btn {
           margin-top: 2px;
           height: 40px;
           border-radius: 4px;
-          border: 1px solid #d8d8d8;
-          background: #fff;
-          color: #111;
+          border: 1px solid #e50914;
+          background: #e50914;
+          color: #fff;
           font-size: 16px;
           font-weight: 600;
           font-family: inherit;
@@ -838,9 +838,9 @@ export default function Login() {
         .auth-google {
           height: 40px;
           border-radius: 4px;
-          border: 1px solid #d8d8d8;
-          background: #fff;
-          color: #111;
+          border: 1px solid #5b4446;
+          background: rgba(255,255,255,.06);
+          color: #fff;
           font-size: 14px;
           font-weight: 700;
           font-family: inherit;
@@ -849,9 +849,9 @@ export default function Login() {
         }
 
         .auth-btn.alt {
-          background: #fff;
-          color: #111;
-          border-color: #d8d8d8;
+          background: rgba(255,255,255,.06);
+          color: #fff;
+          border-color: #5b4446;
         }
 
         .auth-btn:disabled {
@@ -916,14 +916,31 @@ export default function Login() {
           line-height: 1.4;
         }
 
+        .auth-help {
+          margin-top: 22px;
+          border-top: 1px solid rgba(255,255,255,.14);
+          padding-top: 15px;
+        }
+        .auth-help-toggle {
+          border: 0;
+          background: transparent;
+          color: #fff;
+          font: 600 15px 'Outfit', sans-serif;
+          cursor: pointer;
+          padding: 0;
+        }
+        .auth-help-toggle span { color: #e50914; margin-left: 7px; }
+        .auth-help-body { margin-top: 11px; color: #bba9aa; font-size: 12px; line-height: 1.65; }
+
         @media (max-width: 640px) {
           .auth-root {
             padding: 12px;
           }
           .auth-shell {
             width: 100%;
-            max-width: 420px;
+            max-width: 560px;
           }
+          .auth-right { padding: 28px 22px 24px; }
           .auth-step-title {
             font-size: clamp(46px, 14vw, 62px);
           }
@@ -932,9 +949,221 @@ export default function Login() {
             height: 48px;
           }
         }
+
+        /* Sign-in presentation: the existing form and OTP flow stay unchanged. */
+        body:has(.auth-root)::before { display: none; }
+
+        .auth-root {
+          position: relative;
+          isolation: isolate;
+          display: block;
+          min-height: 100svh;
+          padding: 0 24px 56px;
+          overflow: hidden;
+          background:
+            radial-gradient(75% 95% at 14% 8%, rgba(144, 15, 29, 0.62), transparent 63%),
+            radial-gradient(44% 64% at 80% 12%, rgba(78, 7, 18, 0.58), transparent 68%),
+            linear-gradient(122deg, #160407 0%, #31080e 46%, #090103 100%);
+        }
+
+        .auth-root,
+        .auth-root * { font-family: 'Outfit', sans-serif !important; }
+
+        .auth-root::before,
+        .auth-root::after {
+          content: "";
+          position: absolute;
+          pointer-events: none;
+          inset: 0;
+          z-index: -1;
+        }
+
+        .auth-root::before {
+          opacity: 0.42;
+          background-image: linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+          background-size: 34px 34px;
+          mask-image: linear-gradient(to bottom, black, transparent 78%);
+        }
+
+        .auth-root::after {
+          background: linear-gradient(90deg, rgba(0, 0, 0, 0.3), transparent 36%, rgba(0, 0, 0, 0.15));
+        }
+
+        .auth-brandbar {
+          height: 112px;
+          margin: 0 -24px;
+          padding: 0 clamp(24px, 11vw, 218px);
+          display: flex;
+          align-items: center;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .auth-brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 4px 0;
+          border: 0;
+          background: transparent;
+          color: #ff1831;
+          font: 800 clamp(26px, 3.1vw, 46px)/1 'Outfit', sans-serif;
+          letter-spacing: -0.085em;
+          cursor: pointer;
+        }
+
+        .auth-brand-mark {
+          display: grid;
+          place-items: center;
+          width: 30px;
+          height: 30px;
+          border: 2px solid currentColor;
+          border-radius: 50%;
+          font-size: 23px;
+          line-height: 1;
+          letter-spacing: 0;
+        }
+
+        .auth-shell {
+          width: min(640px, 100%);
+          margin: clamp(58px, 10.5vh, 118px) clamp(0px, 20vw, 350px) 0 auto;
+          background: transparent;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        .auth-right {
+          gap: 12px;
+          padding: 30px 34px 28px;
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          border-radius: 10px;
+          background: linear-gradient(130deg, rgba(22, 7, 10, 0.78), rgba(10, 2, 4, 0.58));
+          box-shadow: 0 28px 72px rgba(0, 0, 0, 0.28);
+          backdrop-filter: blur(14px);
+        }
+
+        .auth-step-title {
+          margin: 0;
+          color: #fff;
+          font-size: clamp(32px, 4vw, 42px);
+          letter-spacing: -0.045em;
+          text-align: left;
+        }
+
+        .auth-step-title .hl { color: #fff; }
+
+        .auth-step-sub {
+          margin: 0 0 13px;
+          color: #d6c6c7;
+          font-size: 18px;
+          line-height: 1.35;
+          text-align: left;
+        }
+
+        .auth-modes { margin-bottom: 4px; }
+
+        .auth-mode,
+        .auth-role {
+          height: 42px;
+          border-color: rgba(255, 255, 255, 0.2);
+          border-radius: 5px;
+          background: rgba(255, 255, 255, 0.045);
+          transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+        }
+
+        .auth-mode:hover,
+        .auth-role:hover,
+        .auth-google:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.52); }
+
+        .auth-mode.on,
+        .auth-role.on {
+          background: #ed0c1a;
+          border-color: #ed0c1a;
+        }
+
+        .auth-form { gap: 11px; }
+        .auth-field { gap: 6px; }
+        .auth-field label { color: #d8cbcc; font-size: 12px; font-weight: 600; }
+        .auth-field input {
+          height: 52px;
+          border-color: rgba(255, 255, 255, 0.3);
+          border-radius: 5px;
+          background: rgba(8, 3, 5, 0.67);
+          color: #fff;
+          font-size: 16px;
+        }
+        .auth-field input::placeholder { color: #b3a6a7; }
+        .auth-field input:focus { border-color: #f04a54; box-shadow: 0 0 0 3px rgba(237, 12, 26, 0.16); }
+        .auth-pass-toggle { border: 0; background: transparent; color: #d8cbcc; font-size: 16px; }
+
+        .auth-btn,
+        .auth-google {
+          height: 54px;
+          border-radius: 5px;
+          font-size: 18px;
+          transition: transform 160ms ease, filter 160ms ease;
+        }
+        .auth-btn { border-color: #ed0c1a; background: #ed0c1a; font-weight: 800; }
+        .auth-btn:not(:disabled):hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .auth-btn.alt { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.26); }
+        .auth-google { border-color: rgba(255, 255, 255, 0.27); background: rgba(255, 255, 255, 0.07); }
+
+        .auth-note,
+        .auth-legal,
+        .auth-meta,
+        .auth-resend { color: #b9aaab; }
+        .auth-resend button,
+        .auth-back,
+        .auth-link { color: #fff; }
+
+        .auth-otp { justify-content: flex-start; }
+        .auth-otp input { border-color: rgba(255, 255, 255, 0.36); background: rgba(8, 3, 5, 0.7); color: #fff; }
+
+        .auth-help {
+          margin-top: 18px;
+          border-top: 0;
+          padding-top: 0;
+        }
+        .auth-help-toggle { font-size: 17px; }
+        .auth-help-toggle span { color: #fff; }
+        .auth-help-body {
+          max-width: 450px;
+          margin-top: 12px;
+          color: #d3c2c3;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+        .auth-help-learn {
+          margin-top: 10px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: #fff;
+          font: 700 14px 'Outfit', sans-serif;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+
+        @media (max-width: 760px) {
+          .auth-root { padding: 0 14px 32px; }
+          .auth-brandbar { height: 76px; margin: 0 -14px; padding: 0 18px; }
+          .auth-brand { font-size: 30px; }
+          .auth-brand-mark { width: 23px; height: 23px; font-size: 17px; }
+          .auth-shell { margin: 38px auto 0; }
+          .auth-right { padding: 24px 19px; }
+          .auth-step-sub { font-size: 16px; }
+          .auth-otp { gap: 6px; }
+          .auth-otp input { width: min(44px, 13vw); height: 50px; }
+        }
       `}</style>
 
       <div className="auth-root">
+        <header className="auth-brandbar">
+          <button type="button" className="auth-brand" onClick={() => navigate("/")} aria-label="Go to YiCare home">
+            <span className="auth-brand-mark">+</span>
+            <span>YICARE</span>
+          </button>
+        </header>
         <div className="auth-shell">
           <aside className="auth-left">
             <div className="auth-star">*</div>
@@ -969,10 +1198,12 @@ export default function Login() {
                 {info ? <div className="auth-msg ok">{info}</div> : null}
 
                 <form className="auth-form" onSubmit={isResetMode ? sendResetOtp : (authMode === "signup" ? sendOtp : loginWithPassword)}>
-                  <div className="auth-field">
-                    <label>Full Name</label>
-                    <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" required={authMode === "signup" && !isResetMode} />
-                  </div>
+                  {authMode === "signup" && !isResetMode && (
+                    <div className="auth-field">
+                      <label>Full Name</label>
+                      <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" required />
+                    </div>
+                  )}
 
                   <div className="auth-field">
                     <label>Email Address</label>
@@ -1116,6 +1347,17 @@ export default function Login() {
                 </div>
                 <div className="auth-legal">
                   By continuing, you agree to YiCare terms, conditions, and privacy policy.
+                </div>
+                <div className="auth-help">
+                  <button type="button" className="auth-help-toggle" onClick={() => setShowHelp((v) => !v)}>
+                    Get Help <span>{showHelp ? "⌃" : "⌄"}</span>
+                  </button>
+                  {showHelp && (
+                    <div className="auth-help-body">
+                      Login ke liye registered email aur password use karein. OTP ya hospital access issue ho to support team se contact karein: <b>support@yicare.in</b>.
+                      <button type="button" className="auth-help-learn" onClick={() => navigate("/login/help")}>Learn about sign-in</button>
+                    </div>
+                  )}
                 </div>
               </>
             )}

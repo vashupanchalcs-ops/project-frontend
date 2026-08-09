@@ -11,6 +11,7 @@ import Topnavbar             from "./Components/Topnavbar";
 import Ambulances            from "./Pages/Ambulances";
 import Hospitals             from "./Pages/Hospitals";
 import Login                 from "./Pages/Login";
+import SignInHelp            from "./Pages/SignInHelp";
 import Signup                from "./Pages/Signup";
 import BookingDetails        from "./Pages/BookingDetails";
 import CaseDetails           from "./Pages/CaseDetails";
@@ -133,7 +134,7 @@ const App = () => {
     return () => ctx.revert();
   }, [pathname]);
   
-  const isAuth = p === "/login" || p === "/signup";
+  const isAuth = p === "/login" || p === "/signup" || p === "/login/help";
   const isMapView = p === "/directions";
 
   // Background polling for confirmed booking (user only)
@@ -153,6 +154,7 @@ const App = () => {
       <Routes>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
+        <Route path="/login/help" element={<SignInHelp />} />
         <Route path="/signup" element={<Signup />} />
 
         {/* Homepage */}
