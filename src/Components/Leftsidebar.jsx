@@ -93,7 +93,7 @@ const Leftsidebar = () => {
           height: 64px; width: 100%;
           display: flex; align-items: center; justify-content: center;
           border-bottom: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
-          color: var(--sr-accent, #d6e800); cursor: pointer; transition: color 0.2s;
+          color: var(--sr-accent, #e50914); cursor: pointer; transition: color 0.2s;
           text-decoration: none; flex-shrink: 0;
         }
         .lsb-logo:hover { color: var(--sr-accent-hover, #eefb7b); }
@@ -114,17 +114,17 @@ const Leftsidebar = () => {
           transition: all 0.2s; cursor: pointer; text-decoration: none; flex-shrink: 0;
         }
         .lsb-item:hover {
-          background: var(--sr-sidebar-hover-bg, rgba(214,232,0,0.2));
-          color: var(--sr-sidebar-hover-c, #111);
-          border-color: var(--sr-sidebar-hover-border, rgba(214,232,0,0.62));
-          box-shadow: 0 8px 18px rgba(214,232,0,0.24);
+          background: var(--sr-sidebar-hover-bg, rgba(229,9,20,0.18));
+          color: var(--sr-sidebar-hover-c, #fff);
+          border-color: var(--sr-sidebar-hover-border, rgba(255,51,71,0.72));
+          box-shadow: 0 8px 18px rgba(229,9,20,0.28);
           transform: translateY(-1px);
         }
         .lsb-item.active {
-          background: var(--sr-sidebar-active-bg, #d6e800);
-          color: var(--sr-sidebar-active-c, #111);
-          border: 1px solid var(--sr-sidebar-hover-border, rgba(17,17,17,0.45));
-          box-shadow: 0 8px 16px rgba(214,232,0,0.26);
+          background: var(--sr-sidebar-active-bg, #e50914);
+          color: var(--sr-sidebar-active-c, #fff);
+          border: 1px solid var(--sr-sidebar-hover-border, rgba(255,51,71,0.72));
+          box-shadow: 0 8px 16px rgba(229,9,20,0.32);
         }
         .lsb-tooltip {
           position: absolute; left: 54px;
@@ -144,10 +144,10 @@ const Leftsidebar = () => {
         }
         .lsb-dot-red {
           position: absolute;
-          background: #d6e800; box-shadow: 0 0 6px #d6e800;
+          background: #e50914; box-shadow: 0 0 6px #e50914;
           animation: lsb-pulse 1.5s infinite;
           display: flex; align-items: center; justify-content: center;
-          font-size: 8px; font-weight: 800; color: #111;
+          font-size: 8px; font-weight: 800; color: #fff;
           min-width: 14px; height: 14px;
           padding: 0 3px; border-radius: 7px;
           top: 2px; right: 2px;
@@ -192,10 +192,10 @@ const Leftsidebar = () => {
         }
         .lsb-bottom-toggle {
           width: 30px;
-          border: 1px solid rgba(214,232,0,0.62);
+          border: 1px solid rgba(255,51,71,0.72);
           border-radius: 10px;
-          background: rgba(214,232,0,0.95);
-          color: #111;
+          background: #e50914;
+          color: #fff;
           font-size: 16px;
           font-weight: 800;
           cursor: pointer;
@@ -214,14 +214,14 @@ const Leftsidebar = () => {
           border-radius: 10px;
         }
         .lsb-bottom-item.active {
-          color: #111;
-          border-top-color: rgba(20,20,20,0.75);
-          background: rgba(214,232,0,0.95);
+          color: #fff;
+          border-top-color: rgba(255,255,255,0.75);
+          background: #e50914;
           border-radius: 10px 10px 0 0;
         }
         .lsb-bottom-item:hover  {
-          color: var(--sr-sidebar-hover-c, #111);
-          background: var(--sr-sidebar-hover-bg, rgba(214,232,0,0.2));
+          color: var(--sr-sidebar-hover-c, #fff);
+          background: var(--sr-sidebar-hover-bg, rgba(229,9,20,0.18));
           border-radius: 10px 10px 0 0;
         }
         .lsb-bottom-label {

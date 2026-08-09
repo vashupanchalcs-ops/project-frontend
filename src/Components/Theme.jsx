@@ -4,12 +4,12 @@
 
 export const Theme = {
   colors: {
-    bg: '#0a0a0f',
-    surface: '#0d0d14',
-    border: '#1a1a2e',
-    text: '#e8e8f0',
-    textSecondary: '#888899',
-    accent: '#ff2d55',
+    bg: '#0b0608',
+    surface: '#171013',
+    border: '#402129',
+    text: '#fff7f7',
+    textSecondary: '#c9afb3',
+    accent: '#e50914',
     success: '#00d4aa',
     warning: '#f7c948',
     error: '#ff2d55',

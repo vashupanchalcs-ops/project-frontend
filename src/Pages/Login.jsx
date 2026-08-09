@@ -990,7 +990,7 @@ export default function Login() {
         }
 
         .auth-brandbar {
-          height: 112px;
+          height: 88px;
           margin: 0 -24px;
           padding: 0 clamp(24px, 11vw, 218px);
           display: flex;
@@ -1024,8 +1024,8 @@ export default function Login() {
         }
 
         .auth-shell {
-          width: min(640px, 100%);
-          margin: clamp(58px, 10.5vh, 118px) clamp(0px, 20vw, 350px) 0 auto;
+          width: min(880px, 100%);
+          margin: clamp(18px, 3.5vh, 42px) clamp(0px, 13vw, 250px) 0 auto;
           background: transparent;
           border: 0;
           border-radius: 0;
@@ -1033,8 +1033,8 @@ export default function Login() {
         }
 
         .auth-right {
-          gap: 12px;
-          padding: 30px 34px 28px;
+          gap: 6px;
+          padding: 18px 36px 17px;
           border: 1px solid rgba(255, 255, 255, 0.09);
           border-radius: 10px;
           background: linear-gradient(130deg, rgba(22, 7, 10, 0.78), rgba(10, 2, 4, 0.58));
@@ -1045,7 +1045,7 @@ export default function Login() {
         .auth-step-title {
           margin: 0;
           color: #fff;
-          font-size: clamp(32px, 4vw, 42px);
+          font-size: clamp(30px, 3.6vw, 38px);
           letter-spacing: -0.045em;
           text-align: left;
         }
@@ -1053,18 +1053,18 @@ export default function Login() {
         .auth-step-title .hl { color: #fff; }
 
         .auth-step-sub {
-          margin: 0 0 13px;
+          margin: 0 0 5px;
           color: #d6c6c7;
           font-size: 18px;
           line-height: 1.35;
           text-align: left;
         }
 
-        .auth-modes { margin-bottom: 4px; }
+        .auth-modes { margin-bottom: 1px; }
 
         .auth-mode,
         .auth-role {
-          height: 42px;
+          height: 36px;
           border-color: rgba(255, 255, 255, 0.2);
           border-radius: 5px;
           background: rgba(255, 255, 255, 0.045);
@@ -1081,11 +1081,11 @@ export default function Login() {
           border-color: #ed0c1a;
         }
 
-        .auth-form { gap: 11px; }
-        .auth-field { gap: 6px; }
+        .auth-form { gap: 6px; }
+        .auth-field { gap: 3px; }
         .auth-field label { color: #d8cbcc; font-size: 12px; font-weight: 600; }
         .auth-field input {
-          height: 52px;
+          height: 42px;
           border-color: rgba(255, 255, 255, 0.3);
           border-radius: 5px;
           background: rgba(8, 3, 5, 0.67);
@@ -1098,9 +1098,9 @@ export default function Login() {
 
         .auth-btn,
         .auth-google {
-          height: 54px;
+          height: 42px;
           border-radius: 5px;
-          font-size: 18px;
+          font-size: 16px;
           transition: transform 160ms ease, filter 160ms ease;
         }
         .auth-btn { border-color: #ed0c1a; background: #ed0c1a; font-weight: 800; }
@@ -1112,6 +1112,8 @@ export default function Login() {
         .auth-legal,
         .auth-meta,
         .auth-resend { color: #b9aaab; }
+        .auth-meta { margin-top: 4px; }
+        .auth-legal { margin-top: 6px; }
         .auth-resend button,
         .auth-back,
         .auth-link { color: #fff; }
@@ -1120,7 +1122,7 @@ export default function Login() {
         .auth-otp input { border-color: rgba(255, 255, 255, 0.36); background: rgba(8, 3, 5, 0.7); color: #fff; }
 
         .auth-help {
-          margin-top: 18px;
+          margin-top: 7px;
           border-top: 0;
           padding-top: 0;
         }
@@ -1128,7 +1130,7 @@ export default function Login() {
         .auth-help-toggle span { color: #fff; }
         .auth-help-body {
           max-width: 450px;
-          margin-top: 12px;
+          margin-top: 8px;
           color: #d3c2c3;
           font-size: 14px;
           line-height: 1.6;
@@ -1149,8 +1151,8 @@ export default function Login() {
           .auth-brandbar { height: 76px; margin: 0 -14px; padding: 0 18px; }
           .auth-brand { font-size: 30px; }
           .auth-brand-mark { width: 23px; height: 23px; font-size: 17px; }
-          .auth-shell { margin: 38px auto 0; }
-          .auth-right { padding: 24px 19px; }
+          .auth-shell { width: min(640px, 100%); margin: 30px auto 0; }
+          .auth-right { padding: 20px 19px; }
           .auth-step-sub { font-size: 16px; }
           .auth-otp { gap: 6px; }
           .auth-otp input { width: min(44px, 13vw); height: 50px; }

@@ -59,15 +59,15 @@
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  background: var(--sr-bg, #ffffff);
-  color: var(--sr-text, #111111);
+  background: var(--sr-bg, #0b0608);
+  color: var(--sr-text, #fff7f7);
   position: relative;
   z-index: 1;
 }
 
 body {
-  background: var(--sr-bg, #ffffff);
-  color: var(--sr-text, #111111);
+  background: var(--sr-bg, #0b0608);
+  color: var(--sr-text, #fff7f7);
   width: 100%;
   overflow-x: hidden;
   margin: 0;
@@ -89,14 +89,14 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(42vmax 42vmax at 12% 14%, rgba(214, 232, 0, 0.22), transparent 72%),
-    radial-gradient(46vmax 46vmax at 86% 12%, rgba(235, 248, 94, 0.2), transparent 74%),
-    radial-gradient(40vmax 40vmax at 64% 86%, rgba(214, 232, 0, 0.16), transparent 72%);
+    radial-gradient(42vmax 42vmax at 12% 14%, rgba(164, 10, 29, 0.32), transparent 72%),
+    radial-gradient(46vmax 46vmax at 86% 12%, rgba(229, 9, 20, 0.16), transparent 74%),
+    radial-gradient(40vmax 40vmax at 64% 86%, rgba(107, 8, 20, 0.26), transparent 72%);
   filter: blur(18px);
-  animation: srYellowFloat 18s ease-in-out infinite alternate;
+  animation: srCrimsonFloat 18s ease-in-out infinite alternate;
 }
 
-@keyframes srYellowFloat {
+@keyframes srCrimsonFloat {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   50% { transform: translate3d(-1.8%, -1.2%, 0) scale(1.06); }
   100% { transform: translate3d(1.6%, 1.6%, 0) scale(1.03); }
@@ -152,7 +152,7 @@ p, span, div, button, input, textarea, label, a,
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* ── Global White + Yellow Enforcement ── */
+/* ── Shared Crimson + Black Surface Enforcement ── */
 :is(
   .ad-root, .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
   .amb2-root, .amb2-card, .amb2-stat, .amb2-ins,
@@ -163,9 +163,15 @@ p, span, div, button, input, textarea, label, a,
   .dv-root
 ) {
   background-image: none !important;
-  background-color: #ffffff !important;
-  color: #111111 !important;
-  border-color: rgba(20,20,20,0.14) !important;
+  background-color: var(--sr-surface, #171013) !important;
+  color: var(--sr-text, #fff7f7) !important;
+  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
+}
+
+:is(.ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root) {
+  background:
+    radial-gradient(circle at 10% 4%, rgba(229, 9, 20, 0.13), transparent 33%),
+    linear-gradient(135deg, #0b0608 0%, #18090e 54%, #080406 100%) !important;
 }
 
 /* Text visibility hard-fix */
@@ -174,7 +180,7 @@ p, span, div, button, input, textarea, label, a,
 ) :is(
   h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small
 ) {
-  color: #121212 !important;
+  color: var(--sr-text, #fff7f7) !important;
 }
 
 :is(
@@ -182,7 +188,7 @@ p, span, div, button, input, textarea, label, a,
 ) :is(
   .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg, .h2-desc, .amb2-desc
 ) {
-  color: rgba(17,17,17,0.8) !important;
+  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
 }
 
 :is(
@@ -190,7 +196,7 @@ p, span, div, button, input, textarea, label, a,
   .lsb-item.active, .lsb-bottom-item.active, .dd-tab.active, .lm-tab-btn.active
 ) {
   background: var(--sr-accent, #e50914) !important;
-  color: #111111 !important;
+  color: #ffffff !important;
   border-color: var(--sr-accent, #e50914) !important;
 }
 
@@ -198,7 +204,7 @@ p, span, div, button, input, textarea, label, a,
   .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn, .dcr-btn-approve
 ) {
   background: var(--sr-accent, #e50914) !important;
-  color: #111111 !important;
+  color: #ffffff !important;
   border-color: var(--sr-accent, #e50914) !important;
   box-shadow: none !important;
 }
@@ -206,22 +212,22 @@ p, span, div, button, input, textarea, label, a,
 :is(
   .amb2-title, .h2-name, .rep-header h1, .req-header h1, .ad-title, .dd-name
 ) {
-  color: #111111 !important;
+  color: var(--sr-text, #fff7f7) !important;
 }
 
 :is(
   .amb2-sub, .amb2-desc, .h2-address, .h2-desc, .rep-header p, .req-header p, .ad-sub,
   .dd-meta, .dd-row-key, .dn-card-msg
 ) {
-  color: rgba(17,17,17,0.8) !important;
+  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
 }
 
 :is(
   .amb2-status, .h2-status, .req-pill, .rep-pill, .dd-status-pill
 ) {
-  background: rgba(214,232,0,0.2) !important;
-  color: #111111 !important;
-  border-color: rgba(214,232,0,0.55) !important;
+  background: rgba(229,9,20,0.18) !important;
+  color: #fff7f7 !important;
+  border-color: rgba(255,70,85,0.48) !important;
 }
 
 /* K72-like circle fill on hover */
@@ -264,7 +270,7 @@ p, span, div, button, input, textarea, label, a,
   .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .req-card button, .req-table button,
   .hp-btn-primary, .hp-btn-secondary, .dd-btn, .lm-tab-btn, .nf-search-btn
 ):hover {
-  color: #111111 !important;
+  color: #ffffff !important;
   border-color: var(--sr-accent, #e50914) !important;
 }
 
@@ -273,3 +279,81 @@ p, span, div, button, input, textarea, label, a,
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
+
+/* Common controls used by the dashboard pages. Page-specific selectors retain
+   their layout while these tokens keep their surfaces visually consistent. */
+:not(.auth-root) :is(input, select, textarea) {
+  background-color: var(--sr-input-bg, #160b0f);
+  color: var(--sr-input-text, #fff7f7);
+  border-color: var(--sr-input-border, rgba(255,255,255,0.2));
+}
+
+:not(.auth-root) :is(input, textarea)::placeholder {
+  color: var(--sr-placeholder, rgba(255,247,247,0.48));
+}
+
+:not(.auth-root) :is(input, select, textarea):focus {
+  outline-color: var(--sr-accent, #e50914);
+  border-color: var(--sr-accent, #e50914);
+}
+
+:not(.auth-root) :is(.modal, .modal-content, .dialog, [role="dialog"]) {
+  background-color: var(--sr-modal-bg, #170b10);
+  color: var(--sr-text, #fff7f7);
+  border-color: var(--sr-border, rgba(255,255,255,0.13));
+}
+
+/* Public user home keeps its original layout and interactions, but uses the
+   same command-center palette as the signed-in dashboards. */
+.uh-root {
+  background:
+    radial-gradient(circle at 12% 4%, rgba(229, 9, 20, 0.18), transparent 30%),
+    linear-gradient(135deg, #0b0608 0%, #18090e 56%, #080406 100%) !important;
+  color: var(--sr-text, #fff7f7) !important;
+}
+
+:is(.uh-hero, .uh-stat, .uh-card, .uh-trending, .uh-trend-card, .uh-footer, .uh-how-step) {
+  background: linear-gradient(145deg, #211116 0%, #12090c 100%) !important;
+  color: var(--sr-text, #fff7f7) !important;
+  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22) !important;
+}
+
+:is(.uh-card-top, .uh-trending-head, .uh-how-head) {
+  background: linear-gradient(110deg, rgba(229,9,20,0.2), rgba(35,10,15,0.16)) !important;
+  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
+}
+
+:is(.uh-title, .uh-title span, .uh-stat-val, .uh-card-title, .uh-trending-title,
+  .uh-trend-card h4, .uh-footer-title, .uh-foot-col h4, .uh-how-title, .uh-how-step h4) {
+  color: var(--sr-text, #fff7f7) !important;
+}
+
+:is(.uh-kicker, .uh-card-tag, .uh-how-kicker, .uh-trend-no, .uh-how-no) {
+  color: #ff8b96 !important;
+}
+
+:is(.uh-sub, .uh-stat-lbl, .uh-card-desc, .uh-card-meta, .uh-trending-sub,
+  .uh-trend-card p, .uh-foot-col p, .uh-foot-col li, .uh-how-sub, .uh-how-step p) {
+  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
+}
+
+.uh-btn.primary,
+.uh-card-cta,
+.uh-footer-btn {
+  background: var(--sr-accent, #e50914) !important;
+  color: #ffffff !important;
+  border-color: var(--sr-accent, #e50914) !important;
+}
+
+.uh-btn.secondary,
+.uh-foot-link {
+  background-color: transparent !important;
+  color: var(--sr-text, #fff7f7) !important;
+  border-color: rgba(255,255,255,0.28) !important;
+}
+
+.uh-how-track,
+.uh-how-progress {
+  background: linear-gradient(90deg, #7b0712, #e50914, #ff6270) !important;
+}

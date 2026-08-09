@@ -577,12 +577,12 @@ const Topnavbar = () => {
         .nf-brand { font-size: 18px; font-weight: 900; color: var(--sr-accent); letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; margin-left: 8px; }
         .nf-search-wrap { position: relative; flex-shrink: 0; }
         .nf-search-inner { display: flex; align-items: center; background: var(--sr-nav-input-bg, rgba(255,255,255,0.06)); border: 1px solid var(--sr-nav-input-border, rgba(255,255,255,0.12)); border-radius: 4px; height: 36px; width: 300px; overflow: hidden; transition: border-color 0.2s, background 0.2s; }
-        .nf-search-inner:focus-within { border-color: rgba(214,232,0,0.75); box-shadow: 0 0 0 2px rgba(214,232,0,0.22); }
+        .nf-search-inner:focus-within { border-color: rgba(255,51,71,0.82); box-shadow: 0 0 0 2px rgba(229,9,20,0.24); }
         .nf-search-icon { padding: 0 10px; display: flex; align-items: center; flex-shrink: 0; }
         .nf-search-input { flex: 1; background: transparent; border: none; outline: none; color: var(--sr-nav-text, #fff); font-size: 13px; font-family: inherit; min-width: 0; }
         .nf-search-input::placeholder { color: var(--sr-nav-text-muted, rgba(255,255,255,0.25)); }
-        .nf-search-btn { height: 100%; padding: 0 14px; background: var(--sr-accent, #d6e800); border: none; border-left: 1px solid rgba(17,17,17,0.32); color: #111; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s; flex-shrink: 0; }
-        .nf-search-btn:hover { background: #bfd200; }
+        .nf-search-btn { height: 100%; padding: 0 14px; background: var(--sr-accent, #e50914); border: none; border-left: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s; flex-shrink: 0; }
+        .nf-search-btn:hover { background: #ff3347; }
         .nf-mobile-search-btn { display: none; width: 34px; height: 34px; border-radius: 4px; background: var(--sr-nav-input-bg); border: 1px solid var(--sr-nav-input-border); color: var(--sr-nav-text-sub); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 
         /* Mobile search overlay — top layer */
@@ -623,8 +623,8 @@ const Topnavbar = () => {
         .nf-sd-badge-full      { background: rgba(247,201,72,0.15); color: #f7c948; }
         .nf-sd-badge-critical  { background: rgba(229,9,20,0.15);   color: #ff4d5a; }
         .nf-sd-badge-closed    { background: rgba(255,255,255,0.08); color: rgba(200,200,200,0.6); }
-        .nf-sd-details-btn { font-size: 10px; font-weight: 700; background: var(--sr-accent, #d6e800); color: #111; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit; white-space: nowrap; }
-        .nf-sd-details-btn:hover { background: #bfd200; }
+        .nf-sd-details-btn { font-size: 10px; font-weight: 700; background: var(--sr-accent, #e50914); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+        .nf-sd-details-btn:hover { background: #ff3347; }
         .nf-sd-viewall { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; border-top: 1px solid var(--sr-border); background: var(--sr-hover); }
         .nf-sd-viewall-text { font-size: 11px; color: var(--sr-text-sub); }
         .nf-sd-viewall-btn  { font-size: 11px; font-weight: 700; color: var(--sr-accent); background: none; border: none; cursor: pointer; font-family: inherit; }
@@ -803,7 +803,7 @@ const Topnavbar = () => {
           <div className="nf-theme-dots">
             {Object.entries(themes).map(([key, t]) => (
               <button key={key} className="nf-dot" title={key} onClick={() => setTheme(key)}
-                style={{ background: t.dot, borderColor: theme===key ? '#d6e800' : t.dotBorder, transform: theme===key ? 'scale(1.3)' : 'scale(1)' }} />
+                style={{ background: t.dot, borderColor: theme===key ? '#ff6675' : t.dotBorder, transform: theme===key ? 'scale(1.3)' : 'scale(1)' }} />
             ))}
           </div>
         ) : null}
