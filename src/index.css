@@ -106,20 +106,19 @@
   box-sizing: border-box;
 }
 
-/* #root ko full width dena zaroori hai — warna sidebar hide ho jaata hai */
 #root {
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  background: #000000;
-  color: #ffffff;
+  background: #ffffff !important;
+  color: #111111 !important;
   position: relative;
   z-index: 1;
 }
 
 body {
-  background: #000000;
-  color: #ffffff;
+  background: #ffffff !important;
+  color: #111111 !important;
   width: 100%;
   overflow-x: hidden;
   margin: 0;
@@ -127,38 +126,29 @@ body {
   position: relative;
 }
 
+/* Completely remove floating background gradients */
+body::before {
+  display: none !important;
+}
+
 :root {
-  --sr-bg: #000000;
-  --sr-surface: #141414;
-  --sr-card-bg: #1f1f1f;
+  --sr-bg: #ffffff;
+  --sr-surface: #ffffff;
+  --sr-card-bg: #ffffff;
   --sr-accent: #e50914;
   --sr-accent-hover: #b80710;
-  --sr-border: rgba(255, 255, 255, 0.16);
-  --sr-text: #ffffff;
-  --sr-text-sub: #cccccc;
+  --sr-border: #e0e0e0;
+  --sr-text: #111111;
+  --sr-text-sub: #555555;
+  --sr-nav-bg: #000000;
+  --sr-nav-border: #1f1f1f;
+  --sr-nav-text: #ffffff;
+  --sr-sidebar-bg: #000000;
+  --sr-sidebar-border: #1f1f1f;
   --font-display: font3, "Trebuchet MS", "Segoe UI", sans-serif;
   --font-body: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
   --font-highlight: "Arial Black", Impact, "Trebuchet MS", sans-serif;
   --font-card: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: -30vmax;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(42vmax 42vmax at 12% 14%, rgba(229, 9, 20, 0.28), transparent 72%),
-    radial-gradient(46vmax 46vmax at 86% 12%, rgba(184, 7, 16, 0.22), transparent 74%),
-    radial-gradient(40vmax 40vmax at 64% 86%, rgba(229, 9, 20, 0.15), transparent 72%);
-  filter: blur(22px);
-  animation: srCrimsonFloat 18s ease-in-out infinite alternate;
-}
-
-@keyframes srCrimsonFloat {
-  50% { transform: translate3d(-1.8%, -1.2%, 0) scale(1.06); }
-  100% { transform: translate3d(1.6%, 1.6%, 0) scale(1.03); }
 }
 
 h1, h2, h3, h4, h5, h6,
@@ -181,7 +171,6 @@ h1, h2, h3, h4, h5, h6,
 p, span, div, button, input, textarea, label, a,
 .dd-row-key, .dd-row-val, .dn-card-msg, .req-card-val, .rep-table td {
   font-family: var(--font-body) !important;
-  color: inherit;
 }
 
 :is(.amb2-card, .h2-card, .req-card, .rep-sum-card, .rep-chart-card, .rep-table-card) :is(
@@ -190,300 +179,153 @@ p, span, div, button, input, textarea, label, a,
   font-family: var(--font-card) !important;
 }
 
-/* Global card hover-border treatment */
-:is(
-  .amb-card, .hosp-card, .req-card, .req-table-wrap,
-  .rep-sum-card, .rep-chart-card, .rep-table-card,
-  .an-card, .an-graph, .dl-card, .mb-card,
-  .hosp-stat, .amb-stat, .st-card
-) {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
-  will-change: transform, opacity;
-}
-
-:is(
-  .amb-card, .hosp-card, .req-card, .req-table-wrap,
-  .rep-sum-card, .rep-chart-card, .rep-table-card,
-  .an-card, .an-graph, .dl-card, .mb-card,
-  .hosp-stat, .amb-stat, .st-card
-):hover {
-  border-color: var(--sr-accent, #e50914) !important;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12) !important;
-}
-
-/* ── Shared Crimson + Black Surface Enforcement ── */
+/* ── Shared Netflix Pure White Page Background Enforcement ── */
 :is(
   .ad-root, .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
-  .amb2-root, .amb2-card, .amb2-stat, .amb2-ins,
-  .h2-root, .h2-card, .h2-stat, .h2-mini,
-  .rep-root, .rep-sum-card, .rep-chart-card, .rep-table-card,
-  .req-root, .req-table-wrap, .req-card,
-  .dd-root, .dd-card, .dd-booking-card, .dd-amb-card, .dn-card,
-  .dv-root
+  .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
+  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root, .req-root
 ) {
   background-image: none !important;
-  background-color: var(--sr-surface, #171013) !important;
-  color: var(--sr-text, #fff7f7) !important;
-  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
 }
 
-:is(.ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root) {
-  background:
-    radial-gradient(circle at 10% 4%, rgba(229, 9, 20, 0.13), transparent 33%),
-    linear-gradient(135deg, #0b0608 0%, #18090e 54%, #080406 100%) !important;
-}
-
-/* Text visibility hard-fix */
+/* Hard fix for text colors inside all page containers */
 :is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root
+  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
+  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root
 ) :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small
+  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li
 ) {
-  color: var(--sr-text, #fff7f7) !important;
+  color: #111111 !important;
 }
 
 :is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root
+  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
+  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root
 ) :is(
-  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg, .h2-desc, .amb2-desc
+  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg, .h2-desc, .amb2-desc,
+  .h2-address, .amb2-sub, .dd-meta, .dd-row-key, .hosp-sub, .amb-sub
 ) {
-  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
+  color: #555555 !important;
+}
+
+/* ── Cards on White Pages (Netflix Style: White Background, Light Border, Top Red Accent Line) ── */
+:is(
+  .amb2-card, .h2-card, .req-card, .rep-sum-card, .rep-chart-card, .rep-table-card,
+  .amb-card, .hosp-card, .req-table-wrap, .an-card, .an-graph, .dl-card, .mb-card,
+  .hosp-stat, .amb-stat, .st-card, .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
+  .hr-card, .ci-card, .ci-panel, .cd-card, .cd-panel, .arm-card, .arm-panel,
+  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .ac-card, .rtm-card,
+  .uh-hero, .uh-stat, .uh-card, .uh-trending, .uh-trend-card, .uh-footer, .uh-how-step
+) {
+  background-image: none !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border: 1px solid #e0e0e0 !important;
+  border-top: 3.5px solid #e50914 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
 :is(
-  .ad-kicker, .ad-btn.pri, .req-tag, .rep-tag, .amb2-kicker, .h2-kicker,
-  .lsb-item.active, .lsb-bottom-item.active, .dd-tab.active, .lm-tab-btn.active
-) {
-  background: var(--sr-accent, #e50914) !important;
-  color: #ffffff !important;
-  border-color: var(--sr-accent, #e50914) !important;
+  .amb2-card, .h2-card, .req-card, .rep-sum-card, .rep-chart-card, .rep-table-card,
+  .amb-card, .hosp-card, .req-table-wrap, .an-card, .an-graph, .dl-card, .mb-card,
+  .hosp-stat, .amb-stat, .st-card
+):hover {
+  border-color: #cccccc !important;
+  border-top-color: #e50914 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
 }
 
-:is(
-  .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn, .dcr-btn-approve
-) {
-  background: var(--sr-accent, #e50914) !important;
+/* ── Absolute Ban on Lime/Yellow Colors (Kill all #d6e800 / #c0cf00 / yellow glows) ── */
+*[style*="background: rgb(214, 232, 0)"],
+*[style*="background:#d6e800"],
+*[style*="background: #d6e800"],
+*[style*="background-color:#d6e800"],
+*[style*="background-color: #d6e800"] {
+  background: #e50914 !important;
   color: #ffffff !important;
-  border-color: var(--sr-accent, #e50914) !important;
+  border-color: #e50914 !important;
+  box-shadow: none !important;
+}
+
+/* Active Stat Cards / Selected Items -> Soft Red Accent (NO YELLOW) */
+:is(.hosp-stat.active, .amb-stat.active, .st-card.active, .h2-stat.active, .stat-active, .active-stat-card) {
+  background: #fff5f5 !important;
+  border: 1px solid #e50914 !important;
+  border-top: 4px solid #e50914 !important;
+  color: #e50914 !important;
+  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.15) !important;
+}
+
+:is(.hosp-stat.active, .amb-stat.active, .st-card.active, .h2-stat.active) :is(h1, h2, h3, h4, p, span, div) {
+  color: #e50914 !important;
+}
+
+/* Status Pill & Tags -> Netflix Red */
+:is(.amb2-status, .h2-status, .req-pill, .rep-pill, .dd-status-pill, .req-tag, .rep-tag, .ad-kicker, .amb2-kicker, .h2-kicker) {
+  background: #e50914 !important;
+  color: #ffffff !important;
+  border: 1px solid #e50914 !important;
+}
+
+/* ── Primary Action Buttons (Netflix Red) ── */
+:is(
+  .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
+  .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn
+) {
+  background: #e50914 !important;
+  color: #ffffff !important;
+  border: 1px solid #e50914 !important;
   box-shadow: none !important;
 }
 
 :is(
-  .amb2-title, .h2-name, .rep-header h1, .req-header h1, .ad-title, .dd-name
-) {
-  color: var(--sr-text, #fff7f7) !important;
-}
-
-:is(
-  .amb2-sub, .amb2-desc, .h2-address, .h2-desc, .rep-header p, .req-header p, .ad-sub,
-  .dd-meta, .dd-row-key, .dn-card-msg
-) {
-  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
-}
-
-:is(
-  .amb2-status, .h2-status, .req-pill, .rep-pill, .dd-status-pill
-) {
-  background: rgba(229,9,20,0.18) !important;
-  color: #fff7f7 !important;
-  border-color: rgba(255,70,85,0.48) !important;
-}
-
-/* K72-like circle fill on hover */
-:is(
-  .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .req-card button, .req-table button,
-  .hp-btn-primary, .hp-btn-secondary, .dd-btn, .lm-tab-btn, .nf-search-btn
-) {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  transition: color .2s ease, border-color .2s ease, transform .2s ease;
-}
-
-:is(
-  .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .req-card button, .req-table button,
-  .hp-btn-primary, .hp-btn-secondary, .dd-btn, .lm-tab-btn, .nf-search-btn
-)::before {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  border-radius: 999px;
-  background: var(--sr-accent, #e50914);
-  opacity: 0.95;
-  z-index: -1;
-  transition: transform .38s cubic-bezier(.22,.61,.36,1);
-}
-
-:is(
-  .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .req-card button, .req-table button,
-  .hp-btn-primary, .hp-btn-secondary, .dd-btn, .lm-tab-btn, .nf-search-btn
-):hover::before {
-  transform: translate(-50%, -50%) scale(34);
-}
-
-:is(
-  .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .req-card button, .req-table button,
-  .hp-btn-primary, .hp-btn-secondary, .dd-btn, .lm-tab-btn, .nf-search-btn
+  .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
+  .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn
 ):hover {
+  background: #b80710 !important;
+  border-color: #b80710 !important;
   color: #ffffff !important;
-  border-color: var(--sr-accent, #e50914) !important;
 }
 
-/* ── Thin scrollbar ── */
-::-webkit-scrollbar       { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
-
-/* Common controls used by the dashboard pages. Page-specific selectors retain
-   their layout while these tokens keep their surfaces visually consistent. */
+/* ── Form Controls on White Pages ── */
 :not(.auth-root) :is(input, select, textarea) {
-  background-color: var(--sr-input-bg, #160b0f);
-  color: var(--sr-input-text, #fff7f7);
-  border-color: var(--sr-input-border, rgba(255,255,255,0.2));
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border: 1px solid #cccccc !important;
 }
 
 :not(.auth-root) :is(input, textarea)::placeholder {
-  color: var(--sr-placeholder, rgba(255,247,247,0.48));
+  color: #888888 !important;
 }
 
 :not(.auth-root) :is(input, select, textarea):focus {
-  outline-color: var(--sr-accent, #e50914);
-  border-color: var(--sr-accent, #e50914);
+  outline-color: #e50914 !important;
+  border-color: #e50914 !important;
+  box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2) !important;
 }
 
+/* ── Modals & Dialogs ── */
 :not(.auth-root) :is(.modal, .modal-content, .dialog, [role="dialog"]) {
-  background-color: var(--sr-modal-bg, #170b10);
-  color: var(--sr-text, #fff7f7);
-  border-color: var(--sr-border, rgba(255,255,255,0.13));
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border: 1px solid #e0e0e0 !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Public user home keeps its original layout and interactions, but uses the
-   same command-center palette as the signed-in dashboards. */
-.uh-root {
-  background:
-    radial-gradient(circle at 12% 4%, rgba(229, 9, 20, 0.18), transparent 30%),
-    linear-gradient(135deg, #0b0608 0%, #18090e 56%, #080406 100%) !important;
-  color: var(--sr-text, #fff7f7) !important;
-}
-
-:is(.uh-hero, .uh-stat, .uh-card, .uh-trending, .uh-trend-card, .uh-footer, .uh-how-step) {
-  background: linear-gradient(145deg, #211116 0%, #12090c 100%) !important;
-  color: var(--sr-text, #fff7f7) !important;
-  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22) !important;
-}
-
-:is(.uh-card-top, .uh-trending-head, .uh-how-head) {
-  background: linear-gradient(110deg, rgba(229,9,20,0.2), rgba(35,10,15,0.16)) !important;
-  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
-}
-
-:is(.uh-title, .uh-title span, .uh-stat-val, .uh-card-title, .uh-trending-title,
-  .uh-trend-card h4, .uh-footer-title, .uh-foot-col h4, .uh-how-title, .uh-how-step h4) {
-  color: var(--sr-text, #fff7f7) !important;
-}
-
-:is(.uh-kicker, .uh-card-tag, .uh-how-kicker, .uh-trend-no, .uh-how-no) {
-  color: #ff8b96 !important;
-}
-
-:is(.uh-sub, .uh-stat-lbl, .uh-card-desc, .uh-card-meta, .uh-trending-sub,
-  .uh-trend-card p, .uh-foot-col p, .uh-foot-col li, .uh-how-sub, .uh-how-step p) {
-  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
-}
-
-.uh-btn.primary,
-.uh-card-cta,
-.uh-footer-btn {
-  background: var(--sr-accent, #e50914) !important;
-  color: #ffffff !important;
-  border-color: var(--sr-accent, #e50914) !important;
-}
-
-.uh-btn.secondary,
-.uh-foot-link {
-  background-color: transparent !important;
-  color: var(--sr-text, #fff7f7) !important;
-  border-color: rgba(255,255,255,0.28) !important;
-}
-
-.uh-how-track,
-.uh-how-progress {
-  background: linear-gradient(90deg, #7b0712, #e50914, #ff6270) !important;
-}
-
-/* Legacy operational pages used their own pale palette. These shared rules
-   keep every remaining dashboard surface on the black, white, and red system
-   without changing any booking, hospital, map, or form behavior. */
-:is(
-  .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
-  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root
-) {
-  background:
-    radial-gradient(circle at 92% 4%, rgba(229,9,20,0.13), transparent 30%),
-    linear-gradient(135deg, #090507 0%, #17090e 56%, #080406 100%) !important;
-  color: var(--sr-text, #fff7f7) !important;
-}
-
-:is(
-  .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
-  .hr-card, .hr-empty,
-  .ci-card, .ci-panel, .cd-card, .cd-panel, .arm-card, .arm-panel,
-  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card,
-  .st-card, .ac-card, .rtm-card, .mb-card, .mb-table, .mb-empty
-) {
-  background: linear-gradient(145deg, #211116 0%, #12090c 100%) !important;
-  color: var(--sr-text, #fff7f7) !important;
-  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
-  box-shadow: 0 16px 34px rgba(0,0,0,0.24) !important;
-}
-
-:is(.ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root, .dg-root,
-  .dcr-root, .ip-root, .lt-root, .lm-root, .st-root, .ac-root, .rtm-root, .page-root)
-  :is(h1, h2, h3, h4, h5, h6, p, span, td, th, label, strong, small, li, a) {
-  color: var(--sr-text, #fff7f7) !important;
-}
-
-:is(.ahd-k, .ahd-empty, .hr-sub, .hr-id, .hr-line, .ip-sub, .st-muted) {
-  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
-}
-
-.ahd-item.active,
-.hr-pill,
-.hr-btn:not(.secondary):not(.remove),
-.ahd-track-btn,
-.ad-btn.pri {
-  background: var(--sr-accent, #e50914) !important;
-  color: #ffffff !important;
-  border-color: var(--sr-accent, #e50914) !important;
-  box-shadow: 0 10px 22px rgba(229,9,20,0.24) !important;
-}
-
-:is(.hr-btn.secondary, .hr-btn.remove, .ahd-map-open, .ad-btn:not(.pri)) {
-  background: #221217 !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.28) !important;
-}
-
-.ahd-map-head {
-  background: #1b0d12 !important;
-  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
-}
-
-.ahd-map-live { color: #86efac !important; }
-
-.ad-hero::before,
-.ad-hero::after {
-  background: radial-gradient(circle, rgba(229,9,20,0.3) 0%, rgba(229,9,20,0) 70%) !important;
-}
-
-.ad-btn:not(.pri) {
-  border-color: rgba(255,70,85,0.56) !important;
-  color: #ffffff !important;
-}
+/* ── Thin Scrollbars ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #e50914; }
