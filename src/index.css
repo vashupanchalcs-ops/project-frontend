@@ -242,9 +242,10 @@ p, span, div, button, input, textarea, label, a,
   .amb-card, .hosp-card, .req-table-wrap, .an-card, .an-graph, .dl-card, .mb-card,
   .hosp-stat, .amb-stat, .st-card
 ):hover {
-  border-color: #cccccc !important;
+  transform: none !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+  background-color: #ffffff !important;
   border-top-color: #e50914 !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* ── Absolute Ban on Lime/Yellow Colors (Kill all #d6e800 / #c0cf00 / yellow glows) ── */

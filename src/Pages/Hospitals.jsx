@@ -8,17 +8,17 @@ import { BedSingle, CheckCircle2, HeartPulse } from "lucide-react";
 gsap.registerPlugin(ScrollTrigger);
 
 const statusConfig = {
-  active: { label: "ACTIVE", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
-  full: { label: "FULL", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
-  critical: { label: "CRITICAL", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
-  closed: { label: "CLOSED", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
+  active: { label: "ACTIVE", color: "#e50914", border: "#e0e0e0", bg: "#ffffff" },
+  full: { label: "FULL", color: "#111111", border: "#e0e0e0", bg: "#ffffff" },
+  critical: { label: "CRITICAL", color: "#e50914", border: "#e0e0e0", bg: "#ffffff" },
+  closed: { label: "CLOSED", color: "#555555", border: "#e0e0e0", bg: "#ffffff" },
 };
 
 const statsConfig = [
-  { label: "Total Hospitals", key: "total", accent: "#d6e800", filled: true },
-  { label: "Active", key: "active", accent: "#d6e800" },
-  { label: "Critical", key: "critical", accent: "#d6e800" },
-  { label: "Full", key: "full", accent: "#d6e800" },
+  { label: "Total Hospitals", key: "total", accent: "#e50914" },
+  { label: "Active", key: "active", accent: "#e50914" },
+  { label: "Critical", key: "critical", accent: "#e50914" },
+  { label: "Full", key: "full", accent: "#e50914" },
 ];
 
 const images = [
@@ -284,27 +284,28 @@ export default function Hospitals() {
           gap: 12px;
         }
         .h2-stat {
-          border: 1px solid rgba(214,232,0,0.46);
-          border-radius: 16px;
-          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(246,246,236,0.98));
+          border-radius: 8px;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          background: #ffffff;
           padding: 14px 16px;
           position: relative;
-          transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+          transition: none;
         }
         .h2-stat::before {
           content: none;
         }
         .h2-stat:hover {
-          background-color: #d6e800 !important;
-          background-image: none !important;
-          border-color: #111111;
-          box-shadow: 0 14px 30px rgba(214,232,0,0.32), 0 0 0 1px #111111 inset;
-          transform: translateY(-2px);
+          background-color: #ffffff !important;
+          border-color: #e0e0e0 !important;
+          border-top-color: #e50914 !important;
+          box-shadow: none !important;
+          transform: none !important;
         }
         .h2-stat .lbl {
           font-size: 11px;
           font-weight: 700;
-          color: rgba(17,17,17,0.62);
+          color: #555555;
           letter-spacing: 0.8px;
           text-transform: uppercase;
         }
@@ -316,14 +317,12 @@ export default function Hospitals() {
           color: #111111;
         }
         .h2-stat.filled {
-          background: #d6e800;
-          border-color: #111111;
-          box-shadow: 0 14px 30px rgba(214,232,0,0.32), 0 0 0 1px #111111 inset;
+          background: #ffffff;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
         }
-        .h2-stat.filled .lbl,
-        .h2-stat.filled .val {
-          color: #111111;
-        }
+        .h2-stat.filled .lbl { color: #555555; }
+        .h2-stat.filled .val { color: #111111; }
 
         .h2-sec {
           margin-top: 30px;

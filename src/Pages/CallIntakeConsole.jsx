@@ -91,16 +91,17 @@ export default function CallIntakeConsole() {
           gap:14px;
         }
         .ci-hero{
-          border:1px solid rgba(20,20,20,0.12);
-          border-radius:22px;
+          border:1px solid #e0e0e0;
+          border-top:3.5px solid #e50914;
+          border-radius:12px;
           padding:18px;
-          background:linear-gradient(145deg,#fff 0%,#f8fbe0 100%);
+          background:#ffffff;
         }
         .ci-pill{
           display:inline-flex;
-          border:1px solid rgba(214,232,0,0.9);
-          background:#d6e800;
-          color:#111;
+          border:1px solid #e50914;
+          background:#e50914;
+          color:#ffffff;
           border-radius:999px;
           padding:5px 12px;
           font-size:10px;
@@ -118,7 +119,7 @@ export default function CallIntakeConsole() {
         .ci-sub{
           margin:0;
           font-size:14px;
-          color:rgba(17,17,17,0.72);
+          color:#555555;
           line-height:1.6;
         }
         .ci-hotline{
@@ -126,17 +127,18 @@ export default function CallIntakeConsole() {
           display:inline-flex;
           align-items:center;
           gap:8px;
-          border:1px solid rgba(20,20,20,0.15);
-          background:#fff;
+          border:1px solid #cccccc;
+          background:#ffffff;
           padding:8px 12px;
           border-radius:10px;
           font-size:13px;
           font-weight:700;
         }
         .ci-card{
-          border:1px solid rgba(20,20,20,0.12);
-          border-radius:18px;
-          background:#fff;
+          border:1px solid #e0e0e0;
+          border-top:3.5px solid #e50914;
+          border-radius:12px;
+          background:#ffffff;
           padding:16px;
         }
         .ci-grid{
@@ -153,12 +155,12 @@ export default function CallIntakeConsole() {
           font-weight:800;
           text-transform:uppercase;
           letter-spacing:.8px;
-          color:rgba(17,17,17,0.62);
+          color:#555555;
         }
         .ci-input{
-          border:1px solid rgba(20,20,20,0.14);
+          border:1px solid #cccccc;
           border-radius:10px;
-          background:#fffef8;
+          background:#ffffff;
           color:#111;
           font-size:14px;
           padding:10px 12px;
@@ -166,25 +168,25 @@ export default function CallIntakeConsole() {
           font-family:inherit;
         }
         .ci-input:focus{
-          border-color:rgba(214,232,0,0.95);
-          box-shadow:0 0 0 2px rgba(214,232,0,0.25);
+          border-color:#e50914;
+          box-shadow:0 0 0 2px rgba(229,9,20,0.2);
         }
         .ci-confirm{
           margin-top:10px;
-          border:1px solid rgba(20,20,20,0.12);
+          border:1px solid #e0e0e0;
           border-radius:12px;
           padding:10px;
           display:flex;
           gap:10px;
           flex-wrap:wrap;
-          background:#fbfce8;
+          background:#fafafa;
         }
         .ci-radio{
           display:inline-flex;
           align-items:center;
           gap:7px;
-          border:1px solid rgba(20,20,20,0.15);
-          background:#fff;
+          border:1px solid #cccccc;
+          background:#ffffff;
           border-radius:999px;
           padding:7px 10px;
           font-size:12px;
@@ -198,9 +200,9 @@ export default function CallIntakeConsole() {
           flex-wrap:wrap;
         }
         .ci-btn{
-          border:1px solid rgba(20,20,20,0.15);
+          border:1px solid #cccccc;
           border-radius:10px;
-          background:#fff;
+          background:#ffffff;
           color:#111;
           padding:10px 14px;
           font-size:12px;
@@ -209,8 +211,9 @@ export default function CallIntakeConsole() {
           font-family:inherit;
         }
         .ci-btn.main{
-          background:#d6e800;
-          border-color:#d6e800;
+          background:#e50914;
+          border-color:#e50914;
+          color:#ffffff;
         }
         .ci-err{
           margin-top:8px;

@@ -91,7 +91,7 @@ export default function LiveMap() {
           cursor: pointer; display: flex; align-items: center; gap: 6px;
           white-space: nowrap; flex-shrink: 0; transition: color 0.15s;
         }
-        .lm-tab-btn.active { border-bottom-color: #d6e800; color: #111; font-weight: 800; background: #eef2b2; }
+        .lm-tab-btn.active { border-bottom-color: #e50914; color: #ffffff; font-weight: 800; background: #e50914; border-radius: 6px; }
         .lm-selected-info {
           margin-left: auto; display: flex; align-items: center;
           gap: 6px; flex-shrink: 0; padding-left: 8px;

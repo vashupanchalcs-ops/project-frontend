@@ -81,8 +81,8 @@ const Leftsidebar = () => {
           top: 0 !important; left: 0 !important;
           height: 100vh !important;
           width: 64px !important;
-          background: var(--sr-sidebar-bg, #0a0a0a);
-          border-right: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
+          background: #000000 !important;
+          border-right: 1px solid #1f1f1f !important;
           display: flex !important;
           flex-direction: column;
           align-items: center;
@@ -92,7 +92,7 @@ const Leftsidebar = () => {
         .lsb-logo {
           height: 64px; width: 100%;
           display: flex; align-items: center; justify-content: center;
-          border-bottom: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
+          border-bottom: 1px solid #1f1f1f;
           color: var(--sr-accent, #e50914); cursor: pointer; transition: color 0.2s;
           text-decoration: none; flex-shrink: 0;
         }

@@ -110,11 +110,11 @@ export default function RealTimeMap({ onSelectDriver }) {
   return (
     <>
       <style>{`
-        .rtm-root { display:flex; width:100%; height:100%; font-family:'Segoe UI',sans-serif; background:#f5f5ef; }
-        .rtm-sidebar { width:280px; min-width:280px; background:#fff; border-right:1px solid rgba(17,17,17,0.12); display:flex; flex-direction:column; }
-        .rtm-sidebar-header { padding:12px 14px; border-bottom:1px solid rgba(17,17,17,0.08); display:flex; justify-content:space-between; align-items:center; }
-        .rtm-stats { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid rgba(17,17,17,0.08); }
-        .rtm-stat { flex:1; text-align:center; border:1px solid rgba(214,232,0,0.85); background:#f9f9ee; border-radius:10px; padding:8px 4px; }
+        .rtm-root { display:flex; width:100%; height:100%; font-family:'Segoe UI',sans-serif; background:#ffffff; }
+        .rtm-sidebar { width:280px; min-width:280px; background:#fff; border-right:1px solid #e0e0e0; display:flex; flex-direction:column; }
+        .rtm-sidebar-header { padding:12px 14px; border-bottom:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; }
+        .rtm-stats { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid #e0e0e0; }
+        .rtm-stat { flex:1; text-align:center; border:1px solid #e0e0e0; border-top:3.5px solid #e50914; background:#ffffff; border-radius:8px; padding:8px 4px; }
         .rtm-low-batt-alert {
           margin: 8px 10px 0;
           border: 1px solid rgba(229, 9, 20, 0.35);
@@ -126,8 +126,8 @@ export default function RealTimeMap({ onSelectDriver }) {
           font-weight: 700;
         }
         .rtm-list { flex:1; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:8px; }
-        .rtm-item { background:#fff; border:1px solid rgba(17,17,17,0.16); border-radius:10px; padding:10px; cursor:pointer; }
-        .rtm-item.sel { background:#eef2b2; border-color:#d6e800; }
+        .rtm-item { background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:10px; cursor:pointer; }
+        .rtm-item.sel { background:#ffffff; border:1px solid #e50914; border-top:3.5px solid #e50914; }
         .rtm-item.critical { border-color: rgba(229, 9, 20, 0.45); background: rgba(229, 9, 20, 0.05); }
         .rtm-battery-badge {
           font-size: 10px;

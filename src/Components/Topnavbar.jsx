@@ -566,8 +566,8 @@ const Topnavbar = () => {
       <style>{`
         .nf-nav-root {
           position: fixed; top: 0; left: 0; right: 0; z-index: 12000; height: 64px;
-          background: var(--sr-nav-bg, #141414);
-          border-bottom: 1px solid var(--sr-nav-border, rgba(255,255,255,0.08));
+          background: #000000 !important;
+          border-bottom: 1px solid #1f1f1f !important;
           display: flex; align-items: center; padding: 0 12px 0 64px; gap: 12px;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
           transition: background 0.3s, border-color 0.3s;
