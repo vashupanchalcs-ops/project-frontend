@@ -189,13 +189,14 @@ export default function UserHome() {
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
         }
         .uh-btn.primary {
-          background: #d6e800;
-          color: #101010;
-          border-color: #d6e800;
+          background: #e50914;
+          color: #ffffff;
+          border-color: #e50914;
         }
         .uh-btn.secondary {
-          background: #fff;
+          background: #ffffff;
           color: #101010;
+          border: 1px solid #cccccc;
         }
 
         .uh-stats {
@@ -205,9 +206,10 @@ export default function UserHome() {
           gap: 10px;
         }
         .uh-stat {
-          border: 1px solid rgba(20, 20, 20, 0.12);
-          border-radius: 14px;
-          background: #fff;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 8px;
+          background: #ffffff;
           padding: 14px 16px;
         }
         .uh-stat-val {
@@ -218,12 +220,10 @@ export default function UserHome() {
           letter-spacing: -0.8px;
         }
         .uh-stat-lbl {
-          margin-top: 4px;
-          font-size: 10px;
+          font-size: 11px;
+          color: #555555;
           font-weight: 700;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          color: rgba(16, 16, 16, 0.52);
+          margin-top: 4px;
         }
 
         .uh-grid {
@@ -233,48 +233,44 @@ export default function UserHome() {
           gap: 14px;
         }
         .uh-trending {
-          margin-top: 18px;
-          border: 1px solid rgba(20,20,20,0.12);
-          border-radius: 22px;
-          background: #fff;
-          padding: 16px;
+          margin-top: 24px;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 12px;
+          background: #ffffff;
+          padding: 24px;
         }
         .uh-trending-head {
           display: flex;
-          align-items: end;
           justify-content: space-between;
-          gap: 10px;
-          margin-bottom: 12px;
+          align-items: baseline;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 18px;
         }
         .uh-trending-title {
           margin: 0;
-          font-size: clamp(24px, 3.4vw, 46px);
-          line-height: 0.95;
-          letter-spacing: -0.6px;
+          font-size: clamp(28px, 4vw, 48px);
+          letter-spacing: -0.8px;
           font-family: Georgia, "Times New Roman", serif;
         }
         .uh-trending-sub {
           margin: 0;
-          font-size: 12px;
-          color: rgba(16,16,16,0.58);
-          max-width: 450px;
+          font-size: 13px;
+          color: #555555;
+          max-width: 440px;
         }
         .uh-trending-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 10px;
+          gap: 12px;
         }
         .uh-trend-card {
-          border: 1px solid rgba(20,20,20,0.1);
-          border-radius: 14px;
-          background: linear-gradient(160deg,#fff 0%,#f8fae5 100%);
-          padding: 12px;
-          transition: transform .16s, border-color .16s, box-shadow .16s;
-        }
-        .uh-trend-card:hover {
-          transform: translateY(-2px);
-          border-color: rgba(214,232,0,.95);
-          box-shadow: 0 12px 24px rgba(214,232,0,0.2);
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 14px;
         }
         .uh-trend-no {
           width: 28px;
@@ -285,8 +281,8 @@ export default function UserHome() {
           justify-content: center;
           font-size: 11px;
           font-weight: 900;
-          background: #d6e800;
-          color: #111;
+          background: #e50914;
+          color: #ffffff;
         }
         .uh-trend-card h4 {
           margin: 8px 0 5px;
@@ -299,31 +295,33 @@ export default function UserHome() {
           margin: 0;
           font-size: 12px;
           line-height: 1.55;
-          color: rgba(16,16,16,0.7);
+          color: #555555;
         }
         .uh-card {
-          background: #fff;
-          border: 1px solid rgba(20, 20, 20, 0.12);
-          border-radius: 20px;
+          background: #ffffff;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 12px;
           overflow: hidden;
-          transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+          transition: none;
         }
         .uh-card:hover {
-          transform: translateY(-2px);
-          border-color: rgba(214, 232, 0, 0.95);
-          box-shadow: 0 18px 34px rgba(214, 232, 0, 0.24), 0 0 0 2px rgba(214, 232, 0, 0.34) inset;
+          transform: none !important;
+          border-color: #cccccc !important;
+          border-top-color: #e50914 !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
         }
         .uh-card-top {
           padding: 24px 24px 14px;
-          border-bottom: 1px solid rgba(20, 20, 20, 0.1);
-          background: linear-gradient(180deg, #ffffff 0%, #fbfce8 100%);
+          border-bottom: 1px solid #e0e0e0;
+          background: #ffffff;
         }
         .uh-card-tag {
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 1px;
           text-transform: uppercase;
-          color: #8c9600;
+          color: #e50914;
         }
         .uh-card-title {
           margin-top: 8px;
@@ -340,7 +338,7 @@ export default function UserHome() {
           margin: 0;
           font-size: 14px;
           line-height: 1.6;
-          color: rgba(16, 16, 16, 0.7);
+          color: #555555;
         }
         .uh-card-meta {
           margin-top: 12px;
@@ -348,15 +346,15 @@ export default function UserHome() {
           gap: 16px;
           flex-wrap: wrap;
           font-size: 12px;
-          color: rgba(16, 16, 16, 0.62);
+          color: #555555;
           font-weight: 600;
         }
         .uh-card-cta {
           margin-top: 14px;
           border: none;
-          border-radius: 12px;
-          background: #111;
-          color: #fff;
+          border-radius: 8px;
+          background: #e50914;
+          color: #ffffff;
           padding: 11px 14px;
           font-size: 12px;
           font-weight: 800;
@@ -366,9 +364,10 @@ export default function UserHome() {
 
         .uh-footer {
           margin-top: 24px;
-          border: 1px solid rgba(20, 20, 20, 0.12);
-          border-radius: 24px;
-          background: #fff;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 12px;
+          background: #ffffff;
           padding: 28px 24px;
         }
         .uh-footer-head {
@@ -391,8 +390,8 @@ export default function UserHome() {
           height: 56px;
           border: none;
           border-radius: 50%;
-          background: #d6e800;
-          color: #111;
+          background: #e50914;
+          color: #ffffff;
           font-size: 22px;
           cursor: pointer;
         }
@@ -400,7 +399,7 @@ export default function UserHome() {
           display: grid;
           grid-template-columns: 1.3fr 1fr 1fr 1fr;
           gap: 18px;
-          border-top: 1px solid rgba(20, 20, 20, 0.1);
+          border-top: 1px solid #e0e0e0;
           padding-top: 18px;
         }
         .uh-foot-col h4 {
@@ -413,7 +412,7 @@ export default function UserHome() {
         .uh-foot-col li {
           margin: 0 0 6px;
           font-size: 14px;
-          color: rgba(16, 16, 16, 0.7);
+          color: #555555;
           line-height: 1.55;
         }
         .uh-foot-col ul {
@@ -429,20 +428,21 @@ export default function UserHome() {
           margin: 0 0 8px;
           font-family: inherit;
           font-size: 14px;
-          color: rgba(16,16,16,0.76);
+          color: #555555;
           cursor: pointer;
           text-decoration: underline;
           text-underline-offset: 3px;
         }
         .uh-foot-link:hover {
-          color: #111;
+          color: #e50914;
         }
 
         .uh-how {
           margin-top: 22px;
-          border: 1px solid rgba(20, 20, 20, 0.12);
-          border-radius: 24px;
-          background: linear-gradient(180deg, #ffffff 0%, #f8fbe0 100%);
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 12px;
+          background: #ffffff;
           padding: 24px;
           overflow: hidden;
         }
@@ -458,7 +458,7 @@ export default function UserHome() {
           letter-spacing: 1.2px;
           text-transform: uppercase;
           font-weight: 800;
-          color: #6a6f3a;
+          color: #e50914;
         }
         .uh-how-title {
           margin: 4px 0 0;
@@ -472,20 +472,20 @@ export default function UserHome() {
           max-width: 460px;
           font-size: 14px;
           line-height: 1.6;
-          color: rgba(16, 16, 16, 0.72);
+          color: #555555;
         }
         .uh-how-track {
           margin-top: 16px;
           width: 100%;
           height: 3px;
           border-radius: 999px;
-          background: rgba(16, 16, 16, 0.08);
+          background: #e0e0e0;
           overflow: hidden;
         }
         .uh-how-progress {
           width: 100%;
           height: 100%;
-          background: linear-gradient(90deg, #c9d900 0%, #8c9600 100%);
+          background: #e50914;
         }
         .uh-how-steps {
           margin-top: 18px;
@@ -494,8 +494,9 @@ export default function UserHome() {
           gap: 12px;
         }
         .uh-how-step {
-          border: 1px solid rgba(16, 16, 16, 0.12);
-          border-radius: 16px;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 8px;
           background: #ffffff;
           padding: 14px;
           min-height: 136px;
@@ -504,7 +505,8 @@ export default function UserHome() {
           width: 34px;
           height: 34px;
           border-radius: 50%;
-          background: #d6e800;
+          background: #e50914;
+          color: #ffffff;
           display: inline-flex;
           align-items: center;
           justify-content: center;

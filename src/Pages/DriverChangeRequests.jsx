@@ -116,26 +116,27 @@ export default function DriverChangeRequests() {
         }
 
         .dcr-top   { display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px; }
-        .dcr-tag   { display:inline-flex;align-items:center;gap:6px;background:#d6e800;color:#111;border:1px solid #c9da00;border-radius:999px;padding:4px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px; }
+        .dcr-tag   { display:inline-flex;align-items:center;gap:6px;background:#e50914;color:#ffffff;border:1px solid #e50914;border-radius:999px;padding:4px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px; }
         .dcr-title { font-size:28px;font-weight:800;color:var(--sr-text,#111);letter-spacing:-.5px;margin:0 0 4px; }
         .dcr-sub   { font-size:13px;color:var(--sr-text-sub, rgba(17,17,17,.7));margin:0; }
 
         .dcr-refresh {
           display:inline-flex;align-items:center;gap:7px;
-          background:#ffffff;border:1px solid rgba(17,17,17,0.12);
+          background:#ffffff;border:1px solid #cccccc;
           border-radius:10px;padding:9px 18px;
-          font-size:13px;font-weight:700;color:var(--sr-text,#111);
+          font-size:13px;font-weight:700;color:#111;
           cursor:pointer;font-family:inherit;transition:all .15s;
         }
-        .dcr-refresh:hover { background:#f3f4dd;border-color:rgba(214,232,0,0.75); }
+        .dcr-refresh:hover { background:#f5f5f5;border-color:#e50914; }
 
         .dcr-sec-title { font-size:16px;font-weight:800;color:var(--sr-text,#111);margin-bottom:14px;letter-spacing:-.3px; }
 
         .dcr-chat-wrap {
           margin-bottom: 0;
-          border: 1px solid rgba(17,17,17,0.14);
-          border-radius: 16px;
-          background: #fff;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          border-radius: 12px;
+          background: #ffffff;
           padding: 12px;
           flex: 1;
           min-height: 0;
@@ -152,80 +153,83 @@ export default function DriverChangeRequests() {
           min-height: 0;
         }
         .dcr-chat-right{
-          border:1px solid rgba(17,17,17,0.12);
-          border-radius:12px;
+          border:1px solid #e0e0e0;
+          border-radius:10px;
           padding:10px;
-          background:#fff;
+          background:#ffffff;
           overflow:auto;
         }
         .dcr-thread-list {
-          border: 1px solid rgba(17,17,17,0.12);
-          border-radius: 12px;
+          border: 1px solid #e0e0e0;
+          border-radius: 10px;
           padding: 8px;
           max-height: 520px;
           overflow: auto;
-          background: #fcfdf3;
+          background: #ffffff;
         }
         .dcr-thread-item {
           width: 100%;
           text-align: left;
-          border: 1px solid rgba(17,17,17,0.12);
-          border-radius: 10px;
-          background: #fff;
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+          background: #ffffff;
           padding: 10px;
           margin-bottom: 8px;
           cursor: pointer;
-          transition: all .15s ease;
+          transition: none;
         }
         .dcr-thread-item.active {
-          background: #d6e800;
-          border-color: #c7d800;
+          background: #ffffff;
+          border: 1px solid #e50914;
+          border-top: 3.5px solid #e50914;
         }
         .dcr-thread-item:hover {
-          border-color: rgba(214,232,0,0.8);
+          border-color: #e50914;
         }
         .dcr-thread-item b { font-size: 13px; color: #111; }
-        .dcr-thread-item div { font-size: 11px; color: rgba(17,17,17,.72); margin-top: 2px; }
+        .dcr-thread-item div { font-size: 11px; color: #555555; margin-top: 2px; }
 
         /* REQUEST CARD */
         .dcr-card {
           background:#ffffff;
-          border:1px solid rgba(17,17,17,0.14); border-radius:16px;
+          border:1px solid #e0e0e0;
+          border-top:3.5px solid #e50914;
+          border-radius:12px;
           padding:20px 22px; margin-bottom:12px;
-          box-shadow:0 14px 30px rgba(0,0,0,.35);
-          transition:border-color .2s, box-shadow .2s, transform .2s;
+          box-shadow:0 4px 14px rgba(0,0,0,.05);
+          transition:none;
         }
-        .dcr-card:hover { border-color: rgba(214,232,0,0.9); box-shadow:0 12px 24px rgba(214,232,0,0.22); transform: translateY(-2px); }
-        .dcr-card.pending-card { border-left:4px solid rgba(214,232,0,0.82); }
+        .dcr-card:hover { border-color: #cccccc; border-top-color: #e50914; box-shadow:0 4px 14px rgba(0,0,0,.05); transform: none; }
+        .dcr-card.pending-card { border-left:4px solid #e50914; }
 
         .dcr-card-top { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px; }
         .dcr-driver-row { display:flex;align-items:center;gap:10px; }
-        .dcr-driver-av  { width:38px;height:38px;border-radius:10px;background:#d6e800;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#111;flex-shrink:0; }
-        .dcr-driver-name{ font-size:14px;font-weight:800;color:var(--sr-text,#111); }
-        .dcr-driver-mail{ font-size:11px;color:var(--sr-text-muted, rgba(17,17,17,.55));margin-top:2px; }
-        .dcr-driver-ph  { font-size:11px;color:var(--sr-text-sub, rgba(17,17,17,.72));margin-top:1px; }
+        .dcr-driver-av  { width:38px;height:38px;border-radius:10px;background:#e50914;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#ffffff;flex-shrink:0; }
+        .dcr-driver-name{ font-size:14px;font-weight:800;color:#111; }
+        .dcr-driver-mail{ font-size:11px;color:#555555;margin-top:2px; }
+        .dcr-driver-ph  { font-size:11px;color:#555555;margin-top:1px; }
 
         .dcr-status-pill { font-size:10px;font-weight:800;padding:4px 14px;border-radius:100px;border:1.5px solid;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0; }
 
         /* Ambulance change row */
-        .dcr-change-row { display:flex;align-items:center;gap:12px;background:#f7f8e8;border-radius:12px;padding:14px 16px;margin-bottom:14px; }
-        .dcr-amb-box { flex:1;background:#fff;border:1px solid rgba(17,17,17,0.14);border-radius:10px;padding:12px 14px; }
-        .dcr-amb-box-lbl { font-size:9px;font-weight:800;color:var(--sr-text-muted, rgba(17,17,17,.55));text-transform:uppercase;letter-spacing:1px;margin-bottom:4px; }
-        .dcr-amb-num     { font-size:16px;font-weight:800;color:var(--sr-text,#111); }
-        .dcr-arrow { font-size:20px;color:var(--sr-text-muted, rgba(17,17,17,.5));flex-shrink:0; }
+        .dcr-change-row { display:flex;align-items:center;gap:12px;background:#fafafa;border:1px solid #e0e0e0;border-radius:10px;padding:14px 16px;margin-bottom:14px; }
+        .dcr-amb-box { flex:1;background:#ffffff;border:1px solid #cccccc;border-radius:8px;padding:12px 14px; }
+        .dcr-amb-box-lbl { font-size:9px;font-weight:800;color:#555555;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px; }
+        .dcr-amb-num     { font-size:16px;font-weight:800;color:#111; }
+        .dcr-arrow { font-size:20px;color:#555555;flex-shrink:0; }
 
         .dcr-meta { display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px; }
-        .dcr-meta-item { font-size:11px;color:var(--sr-text-sub, rgba(17,17,17,.72)); }
-        .dcr-meta-item b { color:var(--sr-text,#111); }
+        .dcr-meta-item { font-size:11px;color:#555555; }
+        .dcr-meta-item b { color:#111; }
 
         .dcr-actions { display:flex;gap:8px;flex-wrap:wrap; }
         .dcr-btn { font-size:12px;font-weight:700;border:none;border-radius:9px;padding:9px 20px;cursor:pointer;font-family:inherit;transition:all .15s; }
-        .dcr-btn-approve { background:#d6e800;color:#111;border:1px solid #c7d800; }
-        .dcr-btn-approve:hover { filter:brightness(1.04); }
-        .dcr-btn-reject  { background:#fff;color:#111;border:1.5px solid rgba(17,17,17,0.18); }
-        .dcr-btn-reject:hover { background:#f4f4e8; }
-        .dcr-btn-delete  { background:#fff;color:var(--sr-text-sub, rgba(17,17,17,.72));border:1.5px solid rgba(17,17,17,0.16); }
-        .dcr-btn-delete:hover { background:#f3f4dd;color:#111;border-color:rgba(214,232,0,0.72); }
+        .dcr-btn-approve { background:#e50914;color:#ffffff;border:1px solid #e50914; }
+        .dcr-btn-approve:hover { background:#b80710;border-color:#b80710; }
+        .dcr-btn-reject  { background:#ffffff;color:#111;border:1.5px solid #cccccc; }
+        .dcr-btn-reject:hover { background:#f5f5f5; }
+        .dcr-btn-delete  { background:#ffffff;color:#555555;border:1.5px solid #cccccc; }
+        .dcr-btn-delete:hover { background:#f5f5f5;color:#e50914;border-color:#e50914; }
 
         /* Empty */
         .dcr-empty { padding:60px 24px;text-align:center; }

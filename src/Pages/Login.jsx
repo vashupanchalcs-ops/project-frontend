@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 
 const ADMIN_EMAIL = "vashupanchal.cs@gmail.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
@@ -773,20 +774,20 @@ export default function Login() {
 
         .auth-pass-toggle {
           position: absolute;
-          right: 6px;
+          right: 8px;
           top: 50%;
           transform: translateY(-50%);
-          border: 1px solid #d8d8d8;
-          width: 30px;
-          height: 26px;
-          border-radius: 6px;
-          background: #fff;
+          border: none;
+          background: transparent;
+          color: #cccccc;
           cursor: pointer;
-          font-size: 13px;
-          line-height: 1;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          padding: 4px;
+        }
+        .auth-pass-toggle:hover {
+          color: #ffffff;
         }
 
         .auth-field input:focus {
@@ -1216,10 +1217,10 @@ export default function Login() {
                 {info ? <div className="auth-msg ok">{info}</div> : null}
 
                 <form className="auth-form" onSubmit={isResetMode ? sendResetOtp : (authMode === "signup" ? sendOtp : loginWithPassword)}>
-                  {authMode === "signup" && !isResetMode && (
+                  {!isResetMode && (
                     <div className="auth-field">
                       <label>Full Name</label>
-                      <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" required />
+                      <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" />
                     </div>
                   )}
 
@@ -1301,7 +1302,7 @@ export default function Login() {
                         aria-label={passwordVisible.password ? "Hide password" : "Show password"}
                         title={passwordVisible.password ? "Hide password" : "Show password"}
                       >
-                        {passwordVisible.password ? "🙈" : "👁"}
+                        {passwordVisible.password ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                   </div>
@@ -1325,7 +1326,7 @@ export default function Login() {
                           aria-label={passwordVisible.confirmPassword ? "Hide confirm password" : "Show confirm password"}
                           title={passwordVisible.confirmPassword ? "Hide confirm password" : "Show confirm password"}
                         >
-                          {passwordVisible.confirmPassword ? "🙈" : "👁"}
+                          {passwordVisible.confirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
                     </div>

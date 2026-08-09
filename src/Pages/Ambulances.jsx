@@ -13,18 +13,18 @@ import useLeaflet, {
 gsap.registerPlugin(ScrollTrigger);
 
 const statusConfig = {
-  available: { label: "AVAILABLE", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
-  en_route: { label: "EN ROUTE", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
-  busy: { label: "BUSY", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
-  offline: { label: "OFFLINE", color: "#111111", border: "rgba(214,232,0,0.6)", bg: "rgba(214,232,0,0.22)" },
+  available: { label: "AVAILABLE", color: "#111111", border: "#e0e0e0", bg: "#ffffff" },
+  en_route: { label: "EN ROUTE", color: "#111111", border: "#e0e0e0", bg: "#ffffff" },
+  busy: { label: "BUSY", color: "#111111", border: "#e0e0e0", bg: "#ffffff" },
+  offline: { label: "OFFLINE", color: "#111111", border: "#e0e0e0", bg: "#ffffff" },
 };
 
 const statsConfig = [
-  { label: "Total Fleet", key: "total", accent: "#d6e800" },
-  { label: "Available", key: "available", accent: "#d6e800" },
-  { label: "En Route", key: "en_route", accent: "#d6e800" },
-  { label: "Busy", key: "busy", accent: "#d6e800" },
-  { label: "Low Battery", key: "low_battery", accent: "#ff4d4d" },
+  { label: "Total Fleet", key: "total", accent: "#e50914" },
+  { label: "Available", key: "available", accent: "#e50914" },
+  { label: "En Route", key: "en_route", accent: "#e50914" },
+  { label: "Busy", key: "busy", accent: "#e50914" },
+  { label: "Low Battery", key: "low_battery", accent: "#e50914" },
 ];
 
 const images = [
@@ -563,29 +563,30 @@ export default function Ambulances() {
           gap: 12px;
         }
         .amb2-stat {
-          border: 1px solid rgba(214,232,0,0.46);
-          border-radius: 16px;
-          background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(246,246,236,0.98));
+          border-radius: 8px;
+          border: 1px solid #e0e0e0;
+          border-top: 3.5px solid #e50914;
+          background: #ffffff;
           padding: 14px 16px;
           position: relative;
-          transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+          transition: none;
         }
         .amb2-stat::before {
           content: none;
         }
         .amb2-stat:hover {
-          background-color: #d6e800 !important;
-          background-image: none !important;
-          border-color: #111111;
-          box-shadow: 0 14px 30px rgba(214,232,0,0.32), 0 0 0 1px #111111 inset;
-          transform: translateY(-2px);
+          background-color: #ffffff !important;
+          border-color: #e0e0e0 !important;
+          border-top-color: #e50914 !important;
+          box-shadow: none !important;
+          transform: none !important;
         }
         .amb2-stat.low-battery-stat:hover {
-          background-color: #ff4d4d !important;
-          background-image: none !important;
-          border-color: #111111;
-          box-shadow: 0 14px 30px rgba(255,77,77,0.32), 0 0 0 1px #111111 inset;
-          transform: translateY(-2px);
+          background-color: #ffffff !important;
+          border-color: #e0e0e0 !important;
+          border-top-color: #e50914 !important;
+          box-shadow: none !important;
+          transform: none !important;
         }
         .amb2-stat .lbl {
           font-size: 11px;
