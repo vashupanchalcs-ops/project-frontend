@@ -935,19 +935,33 @@ export default function Login() {
 
         @media (max-width: 640px) {
           .auth-root {
-            padding: 12px;
+            padding: 68px 10px 16px !important;
           }
           .auth-shell {
-            width: 100%;
-            max-width: 560px;
+            width: 100% !important;
+            max-width: 100% !important;
           }
-          .auth-right { padding: 28px 22px 24px; }
+          .auth-right {
+            padding: 16px 16px 14px !important;
+            gap: 6px !important;
+          }
           .auth-step-title {
-            font-size: clamp(46px, 14vw, 62px);
+            font-size: 22px !important;
+          }
+          .auth-step-sub {
+            font-size: 12px !important;
+          }
+          .auth-field input {
+            height: 36px !important;
+            font-size: 14px !important;
+          }
+          .auth-btn, .auth-google {
+            height: 36px !important;
+            font-size: 14px !important;
           }
           .auth-otp input {
-            width: 44px;
-            height: 48px;
+            width: 40px;
+            height: 44px;
           }
         }
 
@@ -962,9 +976,10 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           min-height: 100vh;
-          padding: 80px 20px 40px;
+          padding: 76px 14px 20px;
           overflow-x: hidden;
           background: #000000;
+          box-sizing: border-box;
         }
 
         .auth-root,
@@ -991,30 +1006,31 @@ export default function Login() {
         }
 
         .auth-brandbar {
-          position: absolute;
+          position: fixed;
           top: 0;
           left: 0;
           right: 0;
-          height: 76px;
+          height: 60px;
           margin: 0;
-          padding: 0 40px;
+          padding: 0 20px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(0, 0, 0, 0.85);
+          border-bottom: 1px solid #1f1f1f;
+          background: rgba(0, 0, 0, 0.95);
           backdrop-filter: blur(8px);
+          z-index: 13000;
         }
 
         .auth-brand {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          padding: 4px 0;
+          gap: 8px;
+          padding: 2px 0;
           border: 0;
           background: transparent;
           color: #e50914;
-          font: 900 clamp(26px, 3.1vw, 42px)/1 'Outfit', sans-serif;
+          font: 900 24px/1 'Outfit', sans-serif;
           letter-spacing: -0.085em;
           cursor: pointer;
         }
@@ -1022,17 +1038,18 @@ export default function Login() {
         .auth-brand-mark {
           display: grid;
           place-items: center;
-          width: 30px;
-          height: 30px;
+          width: 26px;
+          height: 26px;
           border: 2px solid currentColor;
           border-radius: 50%;
-          font-size: 23px;
+          font-size: 18px;
           line-height: 1;
           letter-spacing: 0;
         }
 
         .auth-shell {
-          width: min(520px, 100%);
+          width: min(600px, 96vw);
+          max-width: 600px;
           margin: auto;
           display: flex;
           flex-direction: column;
@@ -1049,40 +1066,45 @@ export default function Login() {
 
         .auth-right {
           width: 100%;
-          gap: 10px;
-          padding: 32px 36px 28px;
-          border: 1px solid rgba(229, 9, 20, 0.3);
-          border-radius: 14px;
-          background: #141414;
-          box-shadow: 0 24px 72px rgba(0, 0, 0, 0.9), 0 0 36px rgba(229, 9, 20, 0.12);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 20px 24px 18px;
+          border: 1px solid rgba(229, 9, 20, 0.35);
+          border-radius: 12px;
+          background: #121212;
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(229, 9, 20, 0.1);
+          box-sizing: border-box;
         }
 
         .auth-step-title {
           margin: 0;
-          color: #fff;
-          font-size: clamp(30px, 3.6vw, 38px);
-          letter-spacing: -0.045em;
+          color: #ffffff;
+          font-size: 24px;
+          font-weight: 800;
+          letter-spacing: -0.035em;
           text-align: left;
         }
 
         .auth-step-title .hl { color: #fff; }
 
         .auth-step-sub {
-          margin: 0 0 5px;
-          color: #d6c6c7;
-          font-size: 18px;
-          line-height: 1.35;
+          margin: 0 0 2px;
+          color: #cccccc;
+          font-size: 13px;
+          line-height: 1.3;
           text-align: left;
         }
 
-        .auth-modes { margin-bottom: 1px; }
+        .auth-modes { margin-bottom: 2px; }
 
         .auth-mode,
         .auth-role {
-          height: 36px;
+          height: 34px;
           border-color: rgba(255, 255, 255, 0.2);
           border-radius: 5px;
           background: rgba(255, 255, 255, 0.045);
+          font-size: 14px;
           transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
         }
 
@@ -1099,25 +1121,26 @@ export default function Login() {
         }
 
         .auth-form { gap: 6px; }
-        .auth-field { gap: 3px; }
-        .auth-field label { color: #cccccc; font-size: 12px; font-weight: 600; }
+        .auth-field { gap: 2px; }
+        .auth-field label { color: #cccccc; font-size: 11px; font-weight: 600; }
         .auth-field input {
-          height: 42px;
-          border-color: rgba(255, 255, 255, 0.2);
+          height: 38px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 5px;
           background: #000000;
           color: #fff;
-          font-size: 16px;
+          font-size: 14px;
+          padding: 0 10px;
         }
-        .auth-field input::placeholder { color: #888888; }
-        .auth-field input:focus { border-color: #e50914; box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.25); }
-        .auth-pass-toggle { border: 0; background: transparent; color: #cccccc; font-size: 16px; }
+        .auth-field input::placeholder { color: #777777; }
+        .auth-field input:focus { border-color: #e50914; box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.25); }
 
         .auth-btn,
         .auth-google {
-          height: 42px;
+          height: 38px;
           border-radius: 5px;
-          font-size: 16px;
+          font-size: 14px;
+          font-weight: 700;
           transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
         }
         .auth-btn { border-color: #e50914; background: #e50914; color: #ffffff; font-weight: 800; }
