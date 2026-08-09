@@ -50,6 +50,58 @@
 }
 
 /* ── Critical fixes ── */
+@import "tailwindcss";
+
+@font-face {
+    font-family: font1;
+    src: url(../public/ambulancefonts/Arthur\ Matilde\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font2;
+    src: url(../public/ambulancefonts/Arthur\ Matilde\ Italic\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font3;
+    src: url(../public/ambulancefonts/cornella-Regular.otf);
+}
+@font-face {
+    font-family: font4;
+    src: url(../public/ambulancefonts/Debaznue\ PERSONAL\ USE\ ONLY!.ttf);
+}
+@font-face {
+    font-family: font5;
+    src: url(../public/ambulancefonts/Hannah\ Claira\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font6;
+    src: url(../public/ambulancefonts/Hannah\ Claira\ Italic\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font7;
+    src: url(../public/ambulancefonts/Makien\ DEMO\ VERSION.ttf);
+}
+@font-face {
+    font-family: font8;
+    src: url(../public/ambulancefonts/Makien\ Italic\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font9;
+    src: url(../public/ambulancefonts/Margelin\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font10;
+    src: url(../public/ambulancefonts/Margelin\ Italic\ DEMO\ VERSION.otf);
+}
+@font-face {
+    font-family: font11;
+    src: url(../public/ambulancefonts/Qafinte.otf);
+}
+@font-face {
+    font-family: font12;
+    src: url(../public/ambulancefonts/RoclinePersonalUseOnly-Regular.ttf);
+}
+
+/* ── Critical fixes ── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -59,15 +111,15 @@
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  background: var(--sr-bg, #0b0608);
-  color: var(--sr-text, #fff7f7);
+  background: #000000;
+  color: #ffffff;
   position: relative;
   z-index: 1;
 }
 
 body {
-  background: var(--sr-bg, #0b0608);
-  color: var(--sr-text, #fff7f7);
+  background: #000000;
+  color: #ffffff;
   width: 100%;
   overflow-x: hidden;
   margin: 0;
@@ -76,6 +128,14 @@ body {
 }
 
 :root {
+  --sr-bg: #000000;
+  --sr-surface: #141414;
+  --sr-card-bg: #1f1f1f;
+  --sr-accent: #e50914;
+  --sr-accent-hover: #b80710;
+  --sr-border: rgba(255, 255, 255, 0.16);
+  --sr-text: #ffffff;
+  --sr-text-sub: #cccccc;
   --font-display: font3, "Trebuchet MS", "Segoe UI", sans-serif;
   --font-body: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
   --font-highlight: "Arial Black", Impact, "Trebuchet MS", sans-serif;
@@ -89,15 +149,14 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(42vmax 42vmax at 12% 14%, rgba(164, 10, 29, 0.32), transparent 72%),
-    radial-gradient(46vmax 46vmax at 86% 12%, rgba(229, 9, 20, 0.16), transparent 74%),
-    radial-gradient(40vmax 40vmax at 64% 86%, rgba(107, 8, 20, 0.26), transparent 72%);
-  filter: blur(18px);
+    radial-gradient(42vmax 42vmax at 12% 14%, rgba(229, 9, 20, 0.28), transparent 72%),
+    radial-gradient(46vmax 46vmax at 86% 12%, rgba(184, 7, 16, 0.22), transparent 74%),
+    radial-gradient(40vmax 40vmax at 64% 86%, rgba(229, 9, 20, 0.15), transparent 72%);
+  filter: blur(22px);
   animation: srCrimsonFloat 18s ease-in-out infinite alternate;
 }
 
 @keyframes srCrimsonFloat {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
   50% { transform: translate3d(-1.8%, -1.2%, 0) scale(1.06); }
   100% { transform: translate3d(1.6%, 1.6%, 0) scale(1.03); }
 }
@@ -356,4 +415,75 @@ p, span, div, button, input, textarea, label, a,
 .uh-how-track,
 .uh-how-progress {
   background: linear-gradient(90deg, #7b0712, #e50914, #ff6270) !important;
+}
+
+/* Legacy operational pages used their own pale palette. These shared rules
+   keep every remaining dashboard surface on the black, white, and red system
+   without changing any booking, hospital, map, or form behavior. */
+:is(
+  .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
+  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root
+) {
+  background:
+    radial-gradient(circle at 92% 4%, rgba(229,9,20,0.13), transparent 30%),
+    linear-gradient(135deg, #090507 0%, #17090e 56%, #080406 100%) !important;
+  color: var(--sr-text, #fff7f7) !important;
+}
+
+:is(
+  .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
+  .hr-card, .hr-empty,
+  .ci-card, .ci-panel, .cd-card, .cd-panel, .arm-card, .arm-panel,
+  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card,
+  .st-card, .ac-card, .rtm-card, .mb-card, .mb-table, .mb-empty
+) {
+  background: linear-gradient(145deg, #211116 0%, #12090c 100%) !important;
+  color: var(--sr-text, #fff7f7) !important;
+  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
+  box-shadow: 0 16px 34px rgba(0,0,0,0.24) !important;
+}
+
+:is(.ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root, .dg-root,
+  .dcr-root, .ip-root, .lt-root, .lm-root, .st-root, .ac-root, .rtm-root, .page-root)
+  :is(h1, h2, h3, h4, h5, h6, p, span, td, th, label, strong, small, li, a) {
+  color: var(--sr-text, #fff7f7) !important;
+}
+
+:is(.ahd-k, .ahd-empty, .hr-sub, .hr-id, .hr-line, .ip-sub, .st-muted) {
+  color: var(--sr-text-sub, rgba(255,247,247,0.76)) !important;
+}
+
+.ahd-item.active,
+.hr-pill,
+.hr-btn:not(.secondary):not(.remove),
+.ahd-track-btn,
+.ad-btn.pri {
+  background: var(--sr-accent, #e50914) !important;
+  color: #ffffff !important;
+  border-color: var(--sr-accent, #e50914) !important;
+  box-shadow: 0 10px 22px rgba(229,9,20,0.24) !important;
+}
+
+:is(.hr-btn.secondary, .hr-btn.remove, .ahd-map-open, .ad-btn:not(.pri)) {
+  background: #221217 !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.28) !important;
+}
+
+.ahd-map-head {
+  background: #1b0d12 !important;
+  border-color: var(--sr-border, rgba(255,255,255,0.13)) !important;
+}
+
+.ahd-map-live { color: #86efac !important; }
+
+.ad-hero::before,
+.ad-hero::after {
+  background: radial-gradient(circle, rgba(229,9,20,0.3) 0%, rgba(229,9,20,0) 70%) !important;
+}
+
+.ad-btn:not(.pri) {
+  border-color: rgba(255,70,85,0.56) !important;
+  color: #ffffff !important;
 }

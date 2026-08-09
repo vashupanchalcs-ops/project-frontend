@@ -950,52 +950,59 @@ export default function Login() {
           }
         }
 
-        /* Sign-in presentation: the existing form and OTP flow stay unchanged. */
+        /* Sign-in presentation: Netflix style Black, White, and Red theme */
         body:has(.auth-root)::before { display: none; }
 
         .auth-root {
           position: relative;
           isolation: isolate;
-          display: block;
-          min-height: 100svh;
-          padding: 0 24px 56px;
-          overflow: hidden;
-          background:
-            radial-gradient(75% 95% at 14% 8%, rgba(144, 15, 29, 0.62), transparent 63%),
-            radial-gradient(44% 64% at 80% 12%, rgba(78, 7, 18, 0.58), transparent 68%),
-            linear-gradient(122deg, #160407 0%, #31080e 46%, #090103 100%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          padding: 80px 20px 40px;
+          overflow-x: hidden;
+          background: #000000;
         }
 
         .auth-root,
         .auth-root * { font-family: 'Outfit', sans-serif !important; }
 
-        .auth-root::before,
+        .auth-root::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          pointer-events: none;
+          opacity: 0.35;
+          background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+          background-size: 36px 36px;
+        }
+
         .auth-root::after {
           content: "";
           position: absolute;
-          pointer-events: none;
           inset: 0;
           z-index: -1;
-        }
-
-        .auth-root::before {
-          opacity: 0.42;
-          background-image: linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-          background-size: 34px 34px;
-          mask-image: linear-gradient(to bottom, black, transparent 78%);
-        }
-
-        .auth-root::after {
-          background: linear-gradient(90deg, rgba(0, 0, 0, 0.3), transparent 36%, rgba(0, 0, 0, 0.15));
+          pointer-events: none;
+          background: radial-gradient(circle at 50% 50%, rgba(229, 9, 20, 0.14), transparent 70%);
         }
 
         .auth-brandbar {
-          height: 88px;
-          margin: 0 -24px;
-          padding: 0 clamp(24px, 11vw, 218px);
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 76px;
+          margin: 0;
+          padding: 0 40px;
           display: flex;
           align-items: center;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+          justify-content: center;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(8px);
         }
 
         .auth-brand {
@@ -1005,8 +1012,8 @@ export default function Login() {
           padding: 4px 0;
           border: 0;
           background: transparent;
-          color: #ff1831;
-          font: 800 clamp(26px, 3.1vw, 46px)/1 'Outfit', sans-serif;
+          color: #e50914;
+          font: 900 clamp(26px, 3.1vw, 42px)/1 'Outfit', sans-serif;
           letter-spacing: -0.085em;
           cursor: pointer;
         }
@@ -1024,22 +1031,29 @@ export default function Login() {
         }
 
         .auth-shell {
-          width: min(880px, 100%);
-          margin: clamp(18px, 3.5vh, 42px) clamp(0px, 13vw, 250px) 0 auto;
+          width: min(520px, 100%);
+          margin: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           background: transparent;
           border: 0;
-          border-radius: 0;
           box-shadow: none;
         }
 
+        .auth-left {
+          display: none;
+        }
+
         .auth-right {
-          gap: 6px;
-          padding: 18px 36px 17px;
-          border: 1px solid rgba(255, 255, 255, 0.09);
-          border-radius: 10px;
-          background: linear-gradient(130deg, rgba(22, 7, 10, 0.78), rgba(10, 2, 4, 0.58));
-          box-shadow: 0 28px 72px rgba(0, 0, 0, 0.28);
-          backdrop-filter: blur(14px);
+          width: 100%;
+          gap: 10px;
+          padding: 32px 36px 28px;
+          border: 1px solid rgba(229, 9, 20, 0.3);
+          border-radius: 14px;
+          background: #141414;
+          box-shadow: 0 24px 72px rgba(0, 0, 0, 0.9), 0 0 36px rgba(229, 9, 20, 0.12);
         }
 
         .auth-step-title {
@@ -1077,34 +1091,36 @@ export default function Login() {
 
         .auth-mode.on,
         .auth-role.on {
-          background: #ed0c1a;
-          border-color: #ed0c1a;
+          background: #e50914;
+          border-color: #e50914;
+          color: #ffffff;
+          font-weight: 700;
         }
 
         .auth-form { gap: 6px; }
         .auth-field { gap: 3px; }
-        .auth-field label { color: #d8cbcc; font-size: 12px; font-weight: 600; }
+        .auth-field label { color: #cccccc; font-size: 12px; font-weight: 600; }
         .auth-field input {
           height: 42px;
-          border-color: rgba(255, 255, 255, 0.3);
+          border-color: rgba(255, 255, 255, 0.2);
           border-radius: 5px;
-          background: rgba(8, 3, 5, 0.67);
+          background: #000000;
           color: #fff;
           font-size: 16px;
         }
-        .auth-field input::placeholder { color: #b3a6a7; }
-        .auth-field input:focus { border-color: #f04a54; box-shadow: 0 0 0 3px rgba(237, 12, 26, 0.16); }
-        .auth-pass-toggle { border: 0; background: transparent; color: #d8cbcc; font-size: 16px; }
+        .auth-field input::placeholder { color: #888888; }
+        .auth-field input:focus { border-color: #e50914; box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.25); }
+        .auth-pass-toggle { border: 0; background: transparent; color: #cccccc; font-size: 16px; }
 
         .auth-btn,
         .auth-google {
           height: 42px;
           border-radius: 5px;
           font-size: 16px;
-          transition: transform 160ms ease, filter 160ms ease;
+          transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
         }
-        .auth-btn { border-color: #ed0c1a; background: #ed0c1a; font-weight: 800; }
-        .auth-btn:not(:disabled):hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .auth-btn { border-color: #e50914; background: #e50914; color: #ffffff; font-weight: 800; }
+        .auth-btn:not(:disabled):hover { background: #b80710; border-color: #b80710; transform: translateY(-1px); }
         .auth-btn.alt { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.26); }
         .auth-google { border-color: rgba(255, 255, 255, 0.27); background: rgba(255, 255, 255, 0.07); }
 

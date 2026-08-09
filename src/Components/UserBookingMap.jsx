@@ -346,7 +346,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         ? { lat: directLat, lng: directLng }
         : null;
 
-      const resolvedPickup = storedLL || textPickupLL || null;
+      let resolvedPickup = storedLL || textPickupLL || null;
 
       // Last resort: fresh GPS location agar geocoding fail ho gayi
       if (!resolvedPickup && gpsFreshLocRef.current?.accuracy < 150) {
