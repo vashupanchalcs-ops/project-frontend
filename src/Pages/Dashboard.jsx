@@ -87,12 +87,12 @@ export default function Dashboard() {
         .ad-hero::before {
           top: -180px;
           right: -100px;
-          background: radial-gradient(circle, rgba(214, 232, 0, 0.26) 0%, rgba(214, 232, 0, 0) 70%);
+          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 70%);
         }
         .ad-hero::after {
           left: -130px;
           bottom: -220px;
-          background: radial-gradient(circle, rgba(235, 248, 94, 0.24) 0%, rgba(235, 248, 94, 0) 70%);
+          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 70%);
           animation-delay: -4.5s;
         }
         @keyframes adFloat {
@@ -144,8 +144,8 @@ export default function Dashboard() {
           text-transform: uppercase;
           letter-spacing: 1px;
           color: #101010;
-          background: rgba(214, 232, 0, 0.85);
-          border: 1px solid rgba(214, 232, 0, 0.95);
+          background: rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(229, 9, 20, 0.15);
         }
         .ad-title {
           margin: 0;
@@ -177,8 +177,8 @@ export default function Dashboard() {
         .ad-btn {
           border-radius: 12px;
           padding: 12px 16px;
-          border: 1px solid rgba(214,232,0,0.62);
-          background: rgba(214,232,0,0.2);
+          border: 1px solid rgba(229, 9, 20, 0.15);
+          background: rgba(229, 9, 20, 0.15);
           color: #111111;
           font-size: 13px;
           font-weight: 800;
@@ -186,9 +186,9 @@ export default function Dashboard() {
           cursor: pointer;
         }
         .ad-btn.pri {
-          background: linear-gradient(90deg, #d6e800, #e8f35b);
+          background: linear-gradient(90deg, #e50914, #e8f35b);
           border-color: transparent;
-          box-shadow: 0 12px 30px rgba(214,232,0,0.38);
+          box-shadow: 0 12px 30px rgba(229, 9, 20, 0.15);
           color: #111;
         }
 
@@ -251,7 +251,7 @@ export default function Dashboard() {
         .ad-insights-head{
           padding:18px 18px 10px;
           border-bottom:1px solid rgba(20,20,20,0.08);
-          background:linear-gradient(120deg, rgba(214,232,0,0.24), rgba(214,232,0,0.08));
+          background:linear-gradient(120deg, rgba(229, 9, 20, 0.15), rgba(229, 9, 20, 0.15));
         }
         .ad-insights-head h3{
           margin:0;
@@ -275,7 +275,7 @@ export default function Dashboard() {
           background:rgba(20,20,20,0.08);
         }
         .ad-insight{
-          background:linear-gradient(160deg, #ffffff 0%, #fbfce8 100%);
+          background:linear-gradient(160deg, #ffffff 0%, #ffffff 100%);
           padding:14px;
           min-height:150px;
           transition: background .18s, transform .18s, border-color .18s, box-shadow .18s;
@@ -284,14 +284,14 @@ export default function Dashboard() {
         .ad-insight:hover{
           background:#ffffff;
           transform:translateY(-2px);
-          border-color:rgba(214,232,0,.9);
-          box-shadow:0 12px 24px rgba(214,232,0,.22);
+          border-color:rgba(229, 9, 20, 0.15);
+          box-shadow:0 12px 24px rgba(229, 9, 20, 0.15);
         }
         .ad-insight-no{
           width:28px;
           height:28px;
           border-radius:999px;
-          background:#d6e800;
+          background:#e50914;
           color:#101010;
           display:inline-flex;
           align-items:center;

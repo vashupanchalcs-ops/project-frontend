@@ -674,7 +674,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             </div>
           )}
           <div style={{
-            background: "rgba(214,232,0,0.2)", border: "1px solid rgba(214,232,0,0.7)",
+            background: "rgba(229, 9, 20, 0.15)", border: "1px solid rgba(229, 9, 20, 0.15)",
             borderRadius: 10, padding: "5px 10px", fontSize: 11, fontWeight: 700,
             maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
@@ -728,7 +728,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             <div style={{
               width: 36, height: 36,
               border: "3px solid rgba(17,17,17,0.1)",
-              borderTop: "3px solid #d6e800",
+              borderTop: "3px solid #e50914",
               borderRadius: "50%",
               animation: "ubm-spin 0.8s linear infinite",
             }} />

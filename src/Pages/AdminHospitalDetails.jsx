@@ -61,9 +61,9 @@ export default function AdminHospitalDetails() {
           color: #111;
           font-family: "Segoe UI", Arial, sans-serif;
           background:
-            radial-gradient(880px 420px at 95% 4%, rgba(214,232,0,0.22), transparent 72%),
+            radial-gradient(880px 420px at 95% 4%, rgba(229, 9, 20, 0.15), transparent 72%),
             radial-gradient(760px 380px at 3% -4%, rgba(223,235,120,0.2), transparent 70%),
-            #f5f5ef;
+            #ffffff;
         }
         .ahd-wrap { 
           max-width: 1400px; 
@@ -84,7 +84,7 @@ export default function AdminHospitalDetails() {
         }
         .ahd-card {
           border: 1px solid rgba(17,17,17,0.14);
-          background: linear-gradient(165deg, #fffef8 0%, #f6f8e7 100%);
+          background: linear-gradient(165deg, #ffffff 0%, #f6f8e7 100%);
           border-radius: 14px;
           padding: 14px;
           box-sizing: border-box;
@@ -97,7 +97,7 @@ export default function AdminHospitalDetails() {
           padding: 10px;
           margin-bottom: 8px;
           cursor: pointer;
-          background: linear-gradient(165deg, #ffffff 0%, #fbfdeb 100%);
+          background: linear-gradient(165deg, #ffffff 0%, #ffffff 100%);
           transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
         }
         .ahd-item:hover {
@@ -110,7 +110,7 @@ export default function AdminHospitalDetails() {
         .ahd-track-btn {
           margin-top: 8px;
           border: 1px solid #9fb000;
-          background: linear-gradient(135deg, #d6e800 0%, #eaf77e 100%);
+          background: linear-gradient(135deg, #e50914 0%, #ffffff 100%);
           color: #111;
           border-radius: 999px;
           font-size: 11px;

@@ -198,8 +198,8 @@ export default function Hospitals() {
           padding-top: 64px;
           padding-left: 64px;
           background:
-            radial-gradient(920px 430px at 88% 8%, rgba(214,232,0,0.2), transparent 72%),
-            radial-gradient(840px 380px at 10% -4%, rgba(235,248,94,0.16), transparent 70%),
+            radial-gradient(920px 430px at 88% 8%, rgba(229, 9, 20, 0.15), transparent 72%),
+            radial-gradient(840px 380px at 10% -4%, rgba(229, 9, 20, 0.15), transparent 70%),
             var(--sr-bg, #f7f7f2);
           color: var(--sr-page-text, #111111);
           position: relative;
@@ -220,12 +220,12 @@ export default function Hospitals() {
         .h2-root::before {
           top: -190px;
           right: -120px;
-          background: radial-gradient(circle, rgba(214, 232, 0, 0.18) 0%, rgba(214, 232, 0, 0) 70%);
+          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 70%);
         }
         .h2-root::after {
           left: -170px;
           bottom: -220px;
-          background: radial-gradient(circle, rgba(235, 248, 94, 0.16) 0%, rgba(235, 248, 94, 0) 70%);
+          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 70%);
           animation-delay: -5.5s;
         }
         @keyframes h2-float {
@@ -245,9 +245,9 @@ export default function Hospitals() {
           gap: 6px;
           padding: 6px 14px;
           border-radius: 100px;
-          border: 1px solid rgba(214,232,0,0.68);
+          border: 1px solid rgba(229, 9, 20, 0.15);
           color: #111111;
-          background: rgba(214,232,0,0.8);
+          background: rgba(229, 9, 20, 0.15);
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.8px;
@@ -268,8 +268,8 @@ export default function Hospitals() {
         }
         .h2-assign-banner {
           margin-top: 14px;
-          border: 1px solid rgba(214,232,0,0.9);
-          background: rgba(214,232,0,0.2);
+          border: 1px solid rgba(229, 9, 20, 0.15);
+          background: rgba(229, 9, 20, 0.15);
           color: #111;
           border-radius: 12px;
           padding: 10px 12px;
@@ -378,7 +378,7 @@ export default function Hospitals() {
         }
         .h2-root.admin-cut .h2-meta { gap: 6px; }
         .h2-root.admin-cut .h2-pill {
-          background: rgba(214,232,0,0.24);
+          background: rgba(229, 9, 20, 0.15);
           border-color: rgba(17,17,17,0.14);
         }
         .h2-root.admin-cut .h2-name {
@@ -411,14 +411,14 @@ export default function Hospitals() {
           transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
         }
         .h2-card:hover {
-          background: linear-gradient(165deg, rgba(214,232,0,0.18), rgba(255,255,255,0.96));
+          background: linear-gradient(165deg, rgba(229, 9, 20, 0.15), rgba(255,255,255,0.96));
           border-color: #111111;
-          box-shadow: 0 18px 34px rgba(214,232,0,0.26), 0 0 0 1px #111111 inset;
+          box-shadow: 0 18px 34px rgba(229, 9, 20, 0.15), 0 0 0 1px #111111 inset;
           transform: translateY(-4px);
         }
         .h2-card:hover .h2-mini,
         .h2-card:hover .h2-btn {
-          border-color: rgba(214,232,0,0.86);
+          border-color: rgba(229, 9, 20, 0.15);
         }
         .h2-top {
           position: relative;
@@ -464,7 +464,7 @@ export default function Hospitals() {
           padding: 3px 9px;
           border-radius: 100px;
           border: 1px solid rgba(20,20,20,0.14);
-          background: rgba(214,232,0,0.2);
+          background: rgba(229, 9, 20, 0.15);
           color: rgba(17,17,17,0.9);
           font-size: 11px;
           font-weight: 700;
@@ -503,7 +503,7 @@ export default function Hospitals() {
         .h2-mini {
           border: 1px solid #b7c600;
           border-radius: 10px;
-          background: #eef2b2;
+          background: #e50914;
           padding: 7px 6px;
           text-align: center;
         }
@@ -577,7 +577,7 @@ export default function Hospitals() {
           box-shadow: 0 12px 28px rgba(255, 31, 90, 0.32);
         }
         .h2-btn.assign {
-          background: #d6e800;
+          background: #e50914;
           color: #111;
           border: 1px solid #111;
           box-shadow: none;
@@ -587,12 +587,12 @@ export default function Hospitals() {
           cursor: not-allowed;
         }
         .h2-mini:hover {
-          border-color: rgba(214,232,0,0.95);
-          box-shadow: 0 0 0 1px rgba(214,232,0,0.3) inset;
+          border-color: rgba(229, 9, 20, 0.15);
+          box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.15) inset;
         }
         .h2-btn:hover {
-          border-color: rgba(214,232,0,0.95);
-          box-shadow: 0 0 0 1px rgba(214,232,0,0.3) inset;
+          border-color: rgba(229, 9, 20, 0.15);
+          box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.15) inset;
         }
 
         @media (max-width: 1100px) {

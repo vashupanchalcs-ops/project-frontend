@@ -61,7 +61,7 @@ export default function LiveTracking() {
           align-items: center;
           justify-content: space-between;
           padding: 12px 24px;
-          background: #fbfce8;
+          background: #ffffff;
           border-bottom: 1px solid rgba(20,20,20,0.12);
           flex-shrink: 0;
           gap: 12px;
@@ -70,14 +70,14 @@ export default function LiveTracking() {
         .lt-topbar-left  { display:flex; align-items:center; gap:12px; }
         .lt-back-btn {
           width:34px; height:34px;
-          background:rgba(214,232,0,0.22);
+          background:rgba(229, 9, 20, 0.15);
           border:1px solid rgba(20,20,20,0.12);
           border-radius:50%; color:rgba(17,17,17,0.7);
           cursor:pointer; font-family:inherit;
           display:flex; align-items:center; justify-content:center;
           transition:all 0.15s; flex-shrink:0;
         }
-        .lt-back-btn:hover { background:rgba(214,232,0,0.35); color:#111; }
+        .lt-back-btn:hover { background:rgba(229, 9, 20, 0.15); color:#111; }
         .lt-title { font-size:16px; font-weight:800; color:#111; }
         .lt-sub   { font-size:11px; color:rgba(17,17,17,0.58); margin-top:2px; }
 
@@ -85,11 +85,11 @@ export default function LiveTracking() {
         .lt-live-dot { width:8px; height:8px; border-radius:50%; background:#00d4aa; flex-shrink:0; animation:lt-pulse 1.5s infinite; box-shadow:0 0 8px rgba(0,212,170,0.7); }
 
         .lt-mybookings-btn {
-          background:rgba(214,232,0,0.2); border:1px solid rgba(20,20,20,0.12); color:#111;
+          background:rgba(229, 9, 20, 0.15); border:1px solid rgba(20,20,20,0.12); color:#111;
           border-radius:10px; padding:7px 16px; font-size:11px; font-weight:700;
           cursor:pointer; font-family:inherit; transition:background 0.15s; white-space:nowrap;
         }
-        .lt-mybookings-btn:hover { background:rgba(214,232,0,0.35); }
+        .lt-mybookings-btn:hover { background:rgba(229, 9, 20, 0.15); }
 
         /* Map fills all remaining space */
         .lt-map-wrap { flex:1; position:relative; overflow:hidden; min-height:0; }

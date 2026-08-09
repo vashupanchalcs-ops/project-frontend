@@ -92,7 +92,7 @@ export default function InfoPage() {
         .ip-hero{
           border:1px solid rgba(20,20,20,0.12);
           border-radius:24px;
-          background:linear-gradient(150deg,#fff 0%,#fbfce8 100%);
+          background:linear-gradient(150deg,#fff 0%,#ffffff 100%);
           padding:24px;
         }
         .ip-kicker{
@@ -100,7 +100,7 @@ export default function InfoPage() {
           font-weight:800;
           letter-spacing:1px;
           text-transform:uppercase;
-          color:#8c9600;
+          color:#e50914;
         }
         .ip-title{
           margin:6px 0 8px;
@@ -131,8 +131,8 @@ export default function InfoPage() {
         }
         .ip-card:hover{
           transform:translateY(-2px);
-          border-color:rgba(214,232,0,.9);
-          box-shadow:0 12px 26px rgba(214,232,0,.22);
+          border-color:rgba(229, 9, 20, 0.15);
+          box-shadow:0 12px 26px rgba(229, 9, 20, 0.15);
         }
         .ip-card h3{
           margin:0 0 6px;
@@ -164,8 +164,8 @@ export default function InfoPage() {
           font-family:inherit;
         }
         .ip-btn.main{
-          background:#d6e800;
-          border-color:#d6e800;
+          background:#e50914;
+          border-color:#e50914;
         }
         @media(max-width:767px){
           .ip-root{padding-left:0;padding-bottom:84px;}

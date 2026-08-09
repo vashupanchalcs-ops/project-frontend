@@ -96,7 +96,7 @@ export default function DriverChangeRequests() {
         .dcr-root  {
           height:100vh;
           width: calc(100vw - 64px);
-          background: var(--sr-bg, #f5f5ef);
+          background: var(--sr-bg, #ffffff);
           padding-top:64px;
           padding-left:64px;
           font-family:'DM Sans',sans-serif;
@@ -336,7 +336,7 @@ export default function DriverChangeRequests() {
             <div style={{marginBottom:28}}>
               <div className="dcr-sec-title">
                 ⏳ Pending
-                <span style={{marginLeft:8,fontSize:12,fontWeight:700,background:"#eef2b2",color:"#111",border:"1px solid rgba(214,232,0,0.75)",borderRadius:100,padding:"2px 10px"}}>{pending.length}</span>
+                <span style={{marginLeft:8,fontSize:12,fontWeight:700,background:"#e50914",color:"#111",border:"1px solid rgba(229, 9, 20, 0.15)",borderRadius:100,padding:"2px 10px"}}>{pending.length}</span>
               </div>
               {pending.map((req,i)=>(
                 <div key={i} className="dcr-card pending-card">

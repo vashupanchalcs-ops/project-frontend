@@ -92,7 +92,7 @@ export default function DriverChatbot() {
                   borderRadius: 12,
                   padding: 10,
                   marginBottom: 8,
-                  background: selectedId === t.id ? "#d6e800" : "#fff",
+                  background: selectedId === t.id ? "#e50914" : "#fff",
                   cursor: "pointer",
                 }}
               >

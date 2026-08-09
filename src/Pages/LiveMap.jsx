@@ -50,9 +50,9 @@ export default function LiveMap() {
           display: flex;
           flex-direction: column;
           background:
-            radial-gradient(920px 430px at 88% 8%, rgba(214,232,0,0.14), transparent 72%),
-            radial-gradient(840px 380px at 10% -4%, rgba(235,248,94,0.12), transparent 70%),
-            var(--sr-bg, #f5f5ef);
+            radial-gradient(920px 430px at 88% 8%, rgba(229, 9, 20, 0.15), transparent 72%),
+            radial-gradient(840px 380px at 10% -4%, rgba(229, 9, 20, 0.15), transparent 70%),
+            var(--sr-bg, #ffffff);
           color: #111;
           font-family: 'Segoe UI', sans-serif;
           overflow: hidden;

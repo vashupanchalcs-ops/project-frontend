@@ -102,7 +102,7 @@ export default function UserChatbot() {
                   borderRadius: 16,
                   padding: "8px 12px",
                   marginBottom: isMobile ? 0 : 8,
-                  background: selectedId === t.id ? "#d6e800" : (isMobile ? "#fafafa" : "#fff"),
+                  background: selectedId === t.id ? "#e50914" : (isMobile ? "#fafafa" : "#fff"),
                   cursor: "pointer",
                 }}
               >

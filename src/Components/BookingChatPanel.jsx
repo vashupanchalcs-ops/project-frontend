@@ -559,7 +559,7 @@ export default function BookingChatPanel({
           min-width: 44px;
           padding: 0;
           background:#111;
-          color:#d6e800;
+          color:#e50914;
           border: none;
           display: flex;
           align-items: center;
@@ -592,7 +592,7 @@ export default function BookingChatPanel({
           flex-shrink: 0;
         }
         .chat-panel.insta .chat-chip.on{
-          background: #d6e800;
+          background: #e50914;
           border-color: #c8de00;
         }
         .chat-panel.insta .chat-meta {

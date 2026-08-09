@@ -65,11 +65,11 @@ export default function HospitalResponses() {
           gap: 12px;
         }
         .hr-card {
-          border: 1px solid rgba(214,232,0,0.7);
+          border: 1px solid rgba(229, 9, 20, 0.15);
           border-radius: 14px;
           background: #fffef5;
           padding: 11px 12px;
-          box-shadow: 0 10px 24px rgba(214,232,0,0.16);
+          box-shadow: 0 10px 24px rgba(229, 9, 20, 0.15);
         }
         .hr-head {
           display: flex;
@@ -86,14 +86,14 @@ export default function HospitalResponses() {
           font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
-          background: #d6e800;
+          background: #e50914;
         }
         .hr-line { font-size: 12px; margin-bottom: 4px; color: rgba(17,17,17,0.84); }
         .hr-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
         .hr-btn {
           border: 1px solid #111;
           border-radius: 10px;
-          background: #d6e800;
+          background: #e50914;
           color: #111;
           height: 36px;
           font-size: 12px;
@@ -116,8 +116,8 @@ export default function HospitalResponses() {
         .hr-btn:disabled { opacity: 0.55; cursor: not-allowed; }
         .hr-auto-note {
           margin-top: 10px;
-          border: 1px solid rgba(214,232,0,0.68);
-          background: rgba(214,232,0,0.2);
+          border: 1px solid rgba(229, 9, 20, 0.15);
+          background: rgba(229, 9, 20, 0.15);
           border-radius: 8px;
           padding: 8px 10px;
           font-size: 11px;

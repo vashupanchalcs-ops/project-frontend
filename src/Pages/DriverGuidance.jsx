@@ -336,7 +336,7 @@ export default function DriverGuidance() {
       <style>{`
         .dg-root {
           min-height: 100vh;
-          background: #fdfdf9;
+          background: #ffffff;
           color: #111;
           font-family: Inter, system-ui, sans-serif;
           padding: 84px 20px 80px 84px; 
@@ -386,15 +386,15 @@ export default function DriverGuidance() {
 
         .dg-card:hover {
           transform: translateY(-4px);
-          border-color: #d6e800;
-          box-shadow: 0 12px 30px rgba(214,232,0,0.25);
+          border-color: #e50914;
+          box-shadow: 0 12px 30px rgba(229, 9, 20, 0.15);
         }
 
         .dg-carousel {
           position: relative;
           height: 220px;
           width: 100%;
-          background: #fdfdf9;
+          background: #ffffff;
           overflow: hidden;
           border-bottom: 1px solid rgba(17,17,17,0.1);
         }
@@ -451,7 +451,7 @@ export default function DriverGuidance() {
           position: absolute;
           width: 110px;
           height: 110px;
-          background: #d6e800;
+          background: #e50914;
           border-radius: 50%;
           transform: translate(10px, 10px);
           opacity: 0.85;
@@ -554,8 +554,8 @@ export default function DriverGuidance() {
         }
         .pc-card:hover {
           transform: translateY(-4px);
-          border-color: #d6e800;
-          box-shadow: 0 10px 24px rgba(214,232,0,0.15);
+          border-color: #e50914;
+          box-shadow: 0 10px 24px rgba(229, 9, 20, 0.15);
         }
         .pc-icon-wrap {
           position: relative;
@@ -570,7 +570,7 @@ export default function DriverGuidance() {
           position: absolute;
           width: 44px;
           height: 44px;
-          background: #d6e800;
+          background: #e50914;
           border-radius: 50%;
           transform: translate(4px, 4px);
           opacity: 0.6;
@@ -626,7 +626,7 @@ export default function DriverGuidance() {
           height: 180px;
           border-radius: 8px;
           overflow: hidden;
-          background: #fdfdf9;
+          background: #ffffff;
           margin-bottom: 20px;
           display: flex;
           align-items: center;
@@ -700,7 +700,7 @@ export default function DriverGuidance() {
 
         .rm-step.completed .rm-icon-node {
           background: #111;
-          color: #d6e800;
+          color: #e50914;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .rm-step.completed .rm-line {
@@ -708,10 +708,10 @@ export default function DriverGuidance() {
         }
 
         .rm-step.active .rm-icon-node {
-          background: #d6e800;
+          background: #e50914;
           color: #111;
           border-color: #111;
-          box-shadow: 0 0 0 6px rgba(214,232,0,0.3);
+          box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.15);
         }
         .rm-step.active .rm-line {
           background: linear-gradient(90deg, #111 50%, #eee 50%);
@@ -749,7 +749,7 @@ export default function DriverGuidance() {
 
       <div className="dg-root">
         <div className="dg-header">
-          <h1><ShieldCheck size={32} color="#d6e800" /> Ambulance Team Guidance</h1>
+          <h1><ShieldCheck size={32} color="#e50914" /> Ambulance Team Guidance</h1>
           <p>
             Standard First Aid and Response Protocols. Swipe or click next to view situation-specific guides for every emergency step.
           </p>

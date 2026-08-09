@@ -150,9 +150,9 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
         <div style={{ fontWeight: 900, fontSize: 18, color: "#111" }}>🏥 {hospital.name}</div>
         <div style={{ fontSize: 12, color: "#666", marginTop: 4, fontWeight: 500 }}>{hospital.address}</div>
         <div style={{
-          marginTop: 10, background: "rgba(214,232,0,0.2)", color: "#111",
+          marginTop: 10, background: "rgba(229, 9, 20, 0.15)", color: "#111",
           padding: "4px 12px", borderRadius: 100, fontSize: 11, fontWeight: 700,
-          border: "1px solid rgba(214,232,0,0.6)",
+          border: "1px solid rgba(229, 9, 20, 0.15)",
         }}>
           Tracking Hospital Location
         </div>
@@ -166,7 +166,7 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
           <div style={{ textAlign: "center" }}>
             <div style={{
               width: 36, height: 36, border: "3px solid rgba(17,17,17,0.1)",
-              borderTop: "3px solid #d6e800", borderRadius: "50%",
+              borderTop: "3px solid #e50914", borderRadius: "50%",
               margin: "0 auto 10px", animation: "dir-spin 0.8s linear infinite",
             }} />
             <p style={{ color: "rgba(17,17,17,0.5)", fontSize: 13 }}>Locating hospital…</p>
@@ -224,7 +224,7 @@ export default function Directions() {
           <button
             onClick={() => navigate("/MyBookings")}
             style={{
-              border: "1px solid rgba(17,17,17,0.15)", background: "#d6e800",
+              border: "1px solid rgba(17,17,17,0.15)", background: "#e50914",
               borderRadius: 10, padding: "10px 16px", fontWeight: 700, cursor: "pointer",
             }}
           >

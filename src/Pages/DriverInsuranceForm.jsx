@@ -180,7 +180,7 @@ export default function DriverInsuranceForm() {
             </div>
             <button
               onClick={() => navigate("/driver-dashboard?tab=bookings")}
-              style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 12, background: "#d6e800", padding: "10px 14px", fontWeight: 800, cursor: "pointer" }}
+              style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 12, background: "#e50914", padding: "10px 14px", fontWeight: 800, cursor: "pointer" }}
             >
               Back to Driver Bookings
             </button>
@@ -188,7 +188,7 @@ export default function DriverInsuranceForm() {
         </section>
 
         {msg && (
-          <div style={{ marginTop: 10, border: "1px solid rgba(156,171,0,0.5)", borderRadius: 12, background: "rgba(214,232,0,0.16)", padding: 10, fontSize: 13, fontWeight: 700 }}>
+          <div style={{ marginTop: 10, border: "1px solid rgba(156,171,0,0.5)", borderRadius: 12, background: "rgba(229, 9, 20, 0.15)", padding: 10, fontSize: 13, fontWeight: 700 }}>
             {msg}
           </div>
         )}
@@ -221,7 +221,7 @@ export default function DriverInsuranceForm() {
                       <span style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 999, padding: "6px 10px", fontWeight: 700, fontSize: 12 }}>
                         {b.pickup_location || "-"}
                       </span>
-                      <span style={{ border: "1px solid rgba(156,171,0,0.6)", background: "rgba(214,232,0,0.28)", borderRadius: 999, padding: "6px 10px", fontWeight: 800, fontSize: 12 }}>
+                      <span style={{ border: "1px solid rgba(156,171,0,0.6)", background: "rgba(229, 9, 20, 0.15)", borderRadius: 999, padding: "6px 10px", fontWeight: 800, fontSize: 12 }}>
                         {alreadySent ? "Insurance Details Sent" : "Pending Insurance Form"}
                       </span>
                     </div>
@@ -268,7 +268,7 @@ export default function DriverInsuranceForm() {
                       style={{
                         border: "1px solid rgba(17,17,17,0.32)",
                         borderRadius: 12,
-                        background: "#d6e800",
+                        background: "#e50914",
                         color: "#111",
                         padding: "11px 16px",
                         fontWeight: 900,

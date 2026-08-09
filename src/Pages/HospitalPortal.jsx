@@ -537,34 +537,34 @@ export default function HospitalPortal() {
     <>
       <style>{`
         .hp-root {
-          --hp-accent: #9cab00;
-          --hp-accent-soft: #d6e800;
+          --hp-accent: #e50914;
+          --hp-accent-soft: #e50914;
           min-height: 100vh;
           padding: 64px 0 0 64px;
           background:
-            radial-gradient(980px 450px at 92% 4%, rgba(214,232,0,0.2), transparent 74%),
-            radial-gradient(860px 400px at 2% -6%, rgba(235,248,94,0.17), transparent 72%),
-            #f6f6f0;
+            radial-gradient(980px 450px at 92% 4%, rgba(229, 9, 20, 0.15), transparent 74%),
+            radial-gradient(860px 400px at 2% -6%, rgba(229, 9, 20, 0.15), transparent 72%),
+            #ffffff;
           color: #111;
           font-family: "Segoe UI", Arial, sans-serif;
           transition: background .35s ease;
         }
         .hp-root.hp-theme-home {
-          --hp-accent: #9cab00;
-          --hp-accent-soft: #d6e800;
+          --hp-accent: #e50914;
+          --hp-accent-soft: #e50914;
           background:
-            radial-gradient(980px 450px at 92% 4%, rgba(214,232,0,0.34), transparent 74%),
-            radial-gradient(860px 400px at 2% -6%, rgba(235,248,94,0.28), transparent 72%),
-            linear-gradient(165deg, #f7faea 0%, #eef6d5 100%);
+            radial-gradient(980px 450px at 92% 4%, rgba(229, 9, 20, 0.15), transparent 74%),
+            radial-gradient(860px 400px at 2% -6%, rgba(229, 9, 20, 0.15), transparent 72%),
+            linear-gradient(165deg, #ffffff 0%, #ffffff 100%);
         }
         .hp-root.hp-theme-home .hp-card {
-          background: linear-gradient(165deg, #fffef3 0%, #f3f8d8 100%);
+          background: linear-gradient(165deg, #ffffff 0%, #ffffff 100%);
           border-color: rgba(156,171,0,0.24);
         }
         .hp-root.hp-theme-home .hp-input,
         .hp-root.hp-theme-home .hp-select,
         .hp-root.hp-theme-home .hp-textarea {
-          background: linear-gradient(165deg, #ffffff 0%, #fbfdeb 100%);
+          background: linear-gradient(165deg, #ffffff 0%, #ffffff 100%);
         }
         .hp-root.hp-theme-queue {
           --hp-accent: #d98200;
@@ -575,20 +575,20 @@ export default function HospitalPortal() {
             #fff8ef;
         }
         .hp-root.hp-theme-responses {
-          --hp-accent: #9cab00;
-          --hp-accent-soft: #d6e800;
+          --hp-accent: #e50914;
+          --hp-accent-soft: #e50914;
           background:
-            radial-gradient(980px 450px at 92% 4%, rgba(214,232,0,0.24), transparent 74%),
-            radial-gradient(860px 400px at 2% -6%, rgba(235,248,94,0.24), transparent 72%),
-            #f6fbe5;
+            radial-gradient(980px 450px at 92% 4%, rgba(229, 9, 20, 0.15), transparent 74%),
+            radial-gradient(860px 400px at 2% -6%, rgba(229, 9, 20, 0.15), transparent 72%),
+            #ffffff;
         }
         .hp-root.hp-theme-reports {
-          --hp-accent: #8d9800;
-          --hp-accent-soft: #d7e65a;
+          --hp-accent: #e50914;
+          --hp-accent-soft: #ffffff;
           background:
-            radial-gradient(980px 450px at 92% 4%, rgba(215,230,90,0.26), transparent 74%),
-            radial-gradient(860px 400px at 2% -6%, rgba(233,245,157,0.24), transparent 72%),
-            #f9fdeb;
+            radial-gradient(980px 450px at 92% 4%, rgba(229, 9, 20, 0.15), transparent 74%),
+            radial-gradient(860px 400px at 2% -6%, rgba(229, 9, 20, 0.15), transparent 72%),
+            #ffffff;
         }
         .hp-root.hp-theme-tracking {
           --hp-accent: #0f9c9a;
@@ -615,12 +615,12 @@ export default function HospitalPortal() {
             #f8f2ff;
         }
         .hp-root.hp-theme-analytics {
-          --hp-accent: #d6e800;
-          --hp-accent-soft: rgba(214,232,0,0.3);
+          --hp-accent: #e50914;
+          --hp-accent-soft: rgba(229, 9, 20, 0.15);
           background: 
-            radial-gradient(980px 450px at 92% 4%, rgba(214,232,0,0.25), transparent 74%),
-            radial-gradient(860px 400px at 2% -6%, rgba(223,234,163,0.34), transparent 72%),
-            #fdfdf9;
+            radial-gradient(980px 450px at 92% 4%, rgba(229, 9, 20, 0.15), transparent 74%),
+            radial-gradient(860px 400px at 2% -6%, rgba(229, 9, 20, 0.15), transparent 72%),
+            #ffffff;
           color: #111;
         }
         .hp-root.hp-theme-analytics .hp-card {
@@ -632,7 +632,7 @@ export default function HospitalPortal() {
         }
         .hp-root.hp-theme-analytics .hp-card:hover {
           border-color: var(--hp-accent);
-          box-shadow: 0 8px 24px rgba(214,232,0,0.15);
+          box-shadow: 0 8px 24px rgba(229, 9, 20, 0.15);
         }
         .hp-root.hp-theme-analytics .hp-card-title {
           color: #111;
@@ -641,12 +641,12 @@ export default function HospitalPortal() {
         }
         .hp-root.hp-theme-analytics .hp-empty { color: rgba(17,17,17,0.5); }
         .hp-root.hp-theme-cases {
-          --hp-accent: #9cab00;
-          --hp-accent-soft: #d6e800;
+          --hp-accent: #e50914;
+          --hp-accent-soft: #e50914;
           background:
-            radial-gradient(980px 450px at 92% 4%, rgba(214,232,0,0.24), transparent 74%),
-            radial-gradient(860px 400px at 2% -6%, rgba(238,247,130,0.26), transparent 72%),
-            #f8faef;
+            radial-gradient(980px 450px at 92% 4%, rgba(229, 9, 20, 0.15), transparent 74%),
+            radial-gradient(860px 400px at 2% -6%, rgba(229, 9, 20, 0.15), transparent 72%),
+            #ffffff;
         }
         .hp-cases-head {
           display: flex;
@@ -660,7 +660,7 @@ export default function HospitalPortal() {
           border: 1px solid rgba(156,171,0,0.35);
           border-radius: 8px;
           padding: 10px 12px;
-          background: rgba(214,232,0,0.16);
+          background: rgba(229, 9, 20, 0.15);
           text-align: right;
         }
         .hp-cases-count .v { font-size: 26px; font-weight: 900; line-height: 1; color: #111; }
@@ -794,7 +794,7 @@ export default function HospitalPortal() {
         .hp-bill-panel {
           border: 1px solid rgba(156,171,0,0.35);
           border-radius: 8px;
-          background: linear-gradient(180deg, rgba(214,232,0,0.16), rgba(255,255,255,0.96));
+          background: linear-gradient(180deg, rgba(229, 9, 20, 0.15), rgba(255,255,255,0.96));
           padding: 16px;
           align-self: start;
           position: sticky;
@@ -839,7 +839,7 @@ export default function HospitalPortal() {
           overflow: auto;
           border: 1px solid rgba(156,171,0,0.45);
           border-radius: 18px;
-          background: linear-gradient(160deg, #fffef8 0%, #f8fbe8 100%);
+          background: linear-gradient(160deg, #ffffff 0%, #f8fbe8 100%);
           box-shadow: 0 28px 80px rgba(17,17,17,0.28);
         }
         .hp-case-modal-head {
@@ -871,7 +871,7 @@ export default function HospitalPortal() {
           height: 38px;
           border-radius: 999px;
           border: 1px solid rgba(17,17,17,0.16);
-          background: #d6e800;
+          background: #e50914;
           color: #111;
           font-size: 22px;
           line-height: 1;
@@ -942,7 +942,7 @@ export default function HospitalPortal() {
         .hp-an-stat:hover {
           transform: translateY(-2px);
           border-color: var(--hp-accent);
-          box-shadow: 0 10px 24px rgba(214,232,0,0.15);
+          box-shadow: 0 10px 24px rgba(229, 9, 20, 0.15);
         }
         .hp-an-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: rgba(17,17,17,0.5); }
         .hp-an-v { font-size: 32px; font-weight: 900; color: #111; margin: 8px 0; line-height: 1; }
@@ -1015,7 +1015,7 @@ export default function HospitalPortal() {
           inset: 0;
           background:
             linear-gradient(125deg, rgba(11,16,8,0.68) 0%, rgba(11,16,8,0.42) 48%, rgba(11,16,8,0.6) 100%),
-            radial-gradient(460px 180px at 92% 6%, rgba(214,232,0,0.23), transparent 72%);
+            radial-gradient(460px 180px at 92% 6%, rgba(229, 9, 20, 0.15), transparent 72%);
         }
         .hp-home-banner > *:not(.hp-home-video-wrap) {
           position: relative;
@@ -1029,7 +1029,7 @@ export default function HospitalPortal() {
           border-radius: 50%;
           right: -40px;
           top: -40px;
-          background: radial-gradient(circle, rgba(214, 232, 0, 0.42) 0%, rgba(214, 232, 0, 0) 72%);
+          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 72%);
         }
         .hp-home-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
         .hp-home-chip-row {
@@ -1040,7 +1040,7 @@ export default function HospitalPortal() {
           max-width: 520px;
         }
         .hp-home-chip {
-          border: 1px solid rgba(214,232,0,0.58);
+          border: 1px solid rgba(229, 9, 20, 0.15);
           border-radius: 10px;
           background: rgba(255,255,255,0.12);
           backdrop-filter: blur(4px);
@@ -1146,8 +1146,8 @@ export default function HospitalPortal() {
         }
         .hp-resource-shell {
           background:
-            radial-gradient(640px 220px at 95% -20%, rgba(214,232,0,0.22), transparent 72%),
-            radial-gradient(520px 200px at -10% 120%, rgba(235,248,94,0.2), transparent 72%),
+            radial-gradient(640px 220px at 95% -20%, rgba(229, 9, 20, 0.15), transparent 72%),
+            radial-gradient(520px 200px at -10% 120%, rgba(229, 9, 20, 0.15), transparent 72%),
             linear-gradient(165deg, #fbffeb 0%, #f2f8cd 100%);
           border-color: rgba(156,171,0,0.32);
         }
@@ -1237,7 +1237,7 @@ export default function HospitalPortal() {
           border-color: color-mix(in srgb, var(--hp-accent) 65%, #333 35%);
         }
         .hp-btn.staff-top {
-          background: linear-gradient(135deg, #d6e800 0%, #f0ff8a 100%);
+          background: linear-gradient(135deg, #e50914 0%, #ffffff 100%);
           border-color: #a6b800;
           color: #111;
           font-weight: 900;
@@ -1300,7 +1300,7 @@ export default function HospitalPortal() {
           border-radius: 16px;
           padding: 20px;
           overflow: hidden;
-          background: linear-gradient(135deg, #d6e800 0%, #e8f46d 56%, #f5ffad 100%);
+          background: linear-gradient(135deg, #e50914 0%, #ffffff 56%, #ffffff 100%);
           color: #111;
           margin-bottom: 12px;
           box-shadow: 0 14px 32px rgba(156, 171, 0, 0.28);
@@ -1407,7 +1407,7 @@ export default function HospitalPortal() {
           background:
             radial-gradient(160px 70px at 14% 0%, rgba(255,255,255,0.35), transparent 70%),
             radial-gradient(150px 80px at 88% 0%, rgba(255,255,255,0.28), transparent 72%),
-            linear-gradient(120deg, #d6e800 0%, #e3f27f 52%, #f6fcb7 100%);
+            linear-gradient(120deg, #e50914 0%, #ffffff 52%, #ffffff 100%);
           border-bottom: 1px solid rgba(156,171,0,0.45);
         }
         .hp-role-controls {
@@ -1665,7 +1665,7 @@ export default function HospitalPortal() {
         }
         .hp-map-list-item.active {
           border-color: rgba(156,171,0,0.9);
-          box-shadow: 0 0 0 2px rgba(214,232,0,0.35);
+          box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.15);
         }
         .hp-map-menu-wrap { position: relative; display: inline-flex; }
         .hp-map-menu-btn {
@@ -1777,7 +1777,7 @@ export default function HospitalPortal() {
           border: 1px solid rgba(156,171,0,0.45);
           border-radius: 18px;
           background:
-            radial-gradient(360px 140px at 90% -20%, rgba(214,232,0,0.2), transparent 70%),
+            radial-gradient(360px 140px at 90% -20%, rgba(229, 9, 20, 0.15), transparent 70%),
             linear-gradient(160deg, #fffef4 0%, #f7fcd9 100%);
           padding: 14px;
           box-shadow: 0 14px 30px rgba(156,171,0,0.16);
@@ -1806,7 +1806,7 @@ export default function HospitalPortal() {
           margin-top: 8px;
           border: 1px solid rgba(156,171,0,0.45);
           border-radius: 12px;
-          background: rgba(214,232,0,0.16);
+          background: rgba(229, 9, 20, 0.15);
           padding: 10px 12px;
           font-size: 13px;
           font-weight: 800;
@@ -1852,7 +1852,7 @@ export default function HospitalPortal() {
           border-color: rgba(229,9,20,0.35);
         }
         .hp-response-status.pending {
-          background: rgba(214,232,0,0.24);
+          background: rgba(229, 9, 20, 0.15);
           color: #677600;
           border-color: rgba(156,171,0,0.45);
         }
@@ -1860,7 +1860,7 @@ export default function HospitalPortal() {
           margin-top: 8px;
           border: 1px solid rgba(156,171,0,0.48);
           border-radius: 10px;
-          background: rgba(214,232,0,0.14);
+          background: rgba(229, 9, 20, 0.15);
           padding: 8px 10px;
           font-size: 12px;
           font-weight: 700;
@@ -1926,7 +1926,7 @@ export default function HospitalPortal() {
           display: inline-flex;
           align-items: center;
           border: 1px solid rgba(156,171,0,0.5);
-          background: rgba(214,232,0,0.22);
+          background: rgba(229, 9, 20, 0.15);
           border-radius: 999px;
           font-size: 10px;
           font-weight: 900;
@@ -1976,8 +1976,8 @@ export default function HospitalPortal() {
         }
         .hp-guidance-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 14px 34px rgba(214,232,0,0.18);
-          border-color: rgba(214,232,0,0.6);
+          box-shadow: 0 14px 34px rgba(229, 9, 20, 0.15);
+          border-color: rgba(229, 9, 20, 0.15);
         }
         .hp-g-sketch {
           position: relative;
@@ -1992,7 +1992,7 @@ export default function HospitalPortal() {
           position: absolute;
           width: 80px;
           height: 80px;
-          background: #d6e800;
+          background: #e50914;
           border-radius: 50%;
           transform: translate(6px, 6px);
           opacity: 0.8;
@@ -2111,7 +2111,7 @@ export default function HospitalPortal() {
                         </video>
                         <div className="hp-home-video-overlay" />
                       </div>
-                      <div className="hp-home-anim" style={{ fontSize: 11, color: "#e3f27f", fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>Emergency Care Center</div>
+                      <div className="hp-home-anim" style={{ fontSize: 11, color: "#ffffff", fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>Emergency Care Center</div>
                       <h1 className="hp-title hp-home-anim" style={{ marginTop: 8, fontSize: "clamp(26px, 4vw, 44px)", color: "#fff" }}>{hospital.name}</h1>
                       <p className="hp-sub hp-home-anim" style={{ color: "rgba(255,255,255,0.9)" }}>
                         Take care of your patients with precision. Real-time emergency intake, specialist readiness,

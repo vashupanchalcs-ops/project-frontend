@@ -248,12 +248,12 @@ p, span, div, button, input, textarea, label, a,
   border-top-color: #e50914 !important;
 }
 
-/* ── Absolute Ban on Lime/Yellow Colors (Kill all #d6e800 / #c0cf00 / yellow glows) ── */
+/* ── Absolute Ban on Lime/Yellow Colors (Kill all #e50914 / #e50914 / yellow glows) ── */
 *[style*="background: rgb(214, 232, 0)"],
-*[style*="background:#d6e800"],
-*[style*="background: #d6e800"],
-*[style*="background-color:#d6e800"],
-*[style*="background-color: #d6e800"] {
+*[style*="background:#e50914"],
+*[style*="background: #e50914"],
+*[style*="background-color:#e50914"],
+*[style*="background-color: #e50914"] {
   background: #e50914 !important;
   color: #ffffff !important;
   border-color: #e50914 !important;
@@ -330,3 +330,26 @@ p, span, div, button, input, textarea, label, a,
 ::-webkit-scrollbar-track { background: #f1f1f1; }
 ::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #e50914; }
+
+/* ── Universal Hospital Portal & Refresh Button White Theme ── */
+:is([class*="hp-root"], [class*="hp-theme"]) {
+  background-image: none !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
+}
+
+:is(.hp-sub-header, .hp-cases-count, .hp-bill-panel, .hp-cases-head, .hp-case-modal) {
+  background-image: none !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border: 1px solid #e0e0e0 !important;
+  border-top: 3.5px solid #e50914 !important;
+}
+
+:is(.hp-refresh-btn, .hp-cases-count, button[class*="refresh"]) {
+  background: #ffffff !important;
+  color: #111111 !important;
+  border: 1px solid #cccccc !important;
+}

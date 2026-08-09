@@ -116,7 +116,7 @@ const Maps = () => {
 
   if (!mapsAvailable) {
     return (
-      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f5f5ef", color: "#111", padding: 20, textAlign: "center" }}>
+      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#ffffff", color: "#111", padding: 20, textAlign: "center" }}>
         <div>
           <div style={{ fontSize: 40, marginBottom: 10 }}>🗺️</div>
           <div style={{ fontWeight: 800, marginBottom: 6 }}>Google Maps key missing</div>
@@ -128,7 +128,7 @@ const Maps = () => {
 
   if (!mapsReady) {
     return (
-      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f5f5ef", color: "#111", padding: 20, textAlign: "center" }}>
+      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#ffffff", color: "#111", padding: 20, textAlign: "center" }}>
         <div>
           <div style={{ fontSize: 40, marginBottom: 10 }}>⌛</div>
           <div style={{ fontWeight: 800, marginBottom: 6 }}>Loading map</div>

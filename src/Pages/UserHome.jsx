@@ -139,7 +139,7 @@ export default function UserHome() {
         .uh-hero {
           border: 1px solid rgba(20, 20, 20, 0.14);
           border-radius: 24px;
-          background: linear-gradient(160deg, #ffffff 0%, #fbfce8 100%);
+          background: linear-gradient(160deg, #ffffff 0%, #ffffff 100%);
           padding: 34px 32px;
           box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
         }
@@ -148,7 +148,7 @@ export default function UserHome() {
           font-weight: 800;
           letter-spacing: 1.5px;
           text-transform: uppercase;
-          color: #6a6f3a;
+          color: #e50914;
           margin-bottom: 10px;
         }
         .uh-title {
@@ -159,7 +159,7 @@ export default function UserHome() {
           font-family: Georgia, "Times New Roman", serif;
           color: #101010;
         }
-        .uh-title span { color: #8c9600; }
+        .uh-title span { color: #e50914; }
         .uh-sub {
           margin: 18px 0 0;
           max-width: 760px;
