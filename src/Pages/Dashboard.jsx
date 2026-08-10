@@ -66,10 +66,8 @@ export default function Dashboard() {
           border-radius: 26px;
           overflow: hidden;
           min-height: 560px;
-          background:
-            linear-gradient(115deg, rgba(8,8,12,0.9) 2%, rgba(15,8,16,0.76) 52%, rgba(20,8,14,0.88) 100%),
-            url("https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=2200&q=80") center/cover no-repeat;
-          box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+          background: #000000;
+          box-shadow: none;
           isolation: isolate;
         }
         .ad-hero::before,

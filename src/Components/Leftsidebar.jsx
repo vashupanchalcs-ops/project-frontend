@@ -81,8 +81,8 @@ const Leftsidebar = () => {
           top: 0 !important; left: 0 !important;
           height: 100vh !important;
           width: 64px !important;
-          background: #ffffff !important;
-          border-right: 1px solid #000000 !important;
+          background: #000000 !important;
+          border-right: 1px solid #111111 !important;
           display: flex !important;
           flex-direction: column;
           align-items: center;
@@ -92,11 +92,11 @@ const Leftsidebar = () => {
         .lsb-logo {
           height: 64px; width: 100%;
           display: flex; align-items: center; justify-content: center;
-          border-bottom: 1px solid #000000;
-          color: #000000; cursor: pointer; transition: color 0.2s, background 0.2s;
+          border-bottom: 1px solid #111111;
+          color: #ffffff; cursor: pointer; transition: color 0.2s, background 0.2s;
           text-decoration: none; flex-shrink: 0;
         }
-        .lsb-logo:hover { color: #ffffff; background: #000000; }
+        .lsb-logo:hover { color: #000000; background: #ffffff; }
         .lsb-nav {
           flex: 1; display: flex; flex-direction: column;
           align-items: center; gap: 4px;
@@ -108,29 +108,27 @@ const Leftsidebar = () => {
         .lsb-item {
           position: relative; width: 44px; height: 44px;
           border-radius: 14px; display: flex; align-items: center;
-          justify-content: center; color: rgba(0,0,0,0.72);
-          border: 1px solid rgba(0,0,0,0.2);
-          background: #ffffff;
+          justify-content: center; color: #ffffff;
+          border: 1px solid rgba(255,255,255,0.15);
+          background: transparent;
           transition: all 0.2s; cursor: pointer; text-decoration: none; flex-shrink: 0;
         }
         .lsb-item:hover {
-          background: #000000;
-          color: #ffffff;
-          border-color: #000000;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.16);
-          transform: translateY(-1px);
+          background: #ffffff;
+          color: #000000;
+          border-color: #ffffff;
+          box-shadow: none;
+          transform: none;
         }
         .lsb-item.active {
-          background: #000000;
-          color: #ffffff;
-          border: 1px solid #000000;
-          box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+          background: #ffffff;
+          color: #000000;
+          border: 1px solid #ffffff;
+          box-shadow: none;
         }
         .lsb-tooltip {
           position: absolute; left: 54px;
           background: #000000; color: #fff;
-          font-size: 11px; font-weight: 600;
-          padding: 5px 10px; border-radius: 6px;
           white-space: nowrap; opacity: 0; pointer-events: none;
           transition: opacity 0.15s; border: 1px solid #000000;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; z-index: 99999;
