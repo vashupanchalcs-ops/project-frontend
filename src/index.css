@@ -853,3 +853,129 @@ body,
 
 ::-webkit-scrollbar-track { background: #000000; }
 ::-webkit-scrollbar-thumb { background: #ffffff; }
+
+/* Bare black layout: content hierarchy comes from type and spacing, not cards.
+   This final layer intentionally removes the old dashboard panel treatment. */
+#root :is(
+  [class*="-card"], [class*="-panel"], [class*="-stat"], [class*="-tile"],
+  [class*="-box"], [class*="-item"], [class*="-hero"], [class*="-banner"],
+  [class*="-chip"], [class*="-tag"], [class*="-metric"], [class*="-summary"],
+  [class*="-section"], [class*="-wrap"], [class*="-empty"], [class*="-head"],
+  [class*="-strip"]
+) {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Keep page spacing generous without separating every data group into a box. */
+#root :is(
+  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .hp-root, .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root,
+  .dh-root, .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root
+) {
+  background: #000000 !important;
+}
+
+#root :is(
+  .ad-hero, .uh-hero, .hp-hero, .amb2-card, .h2-card, .rep-sum-card,
+  .rep-chart-card, .rep-table-card, .req-card, .dd-card, .dd-booking-card,
+  .dv-panel, .ahd-card, .hr-card, .ci-card, .cd-card, .arm-card, .dh-card,
+  .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card,
+  .rtm-card, .mb-card, .uh-card, .hp-card, .hp-case-card, .hp-report-card,
+  .hp-response-card, .hp-role-card, .hp-guidance-card
+) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Data summaries become plain type blocks instead of floating tiles. */
+#root :is(
+  .ad-cell, .amb2-stat, .h2-stat, .h2-mini, .rep-sum-card, .uh-stat,
+  .hp-stat, .hp-case-metric, .hp-case-info-box, .hp-response-tile,
+  .hp-an-stat, .ahd-item, .ahd-staff-card, .uh-trend-card
+) {
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+/* Navigation stays present but loses the app-like outlined button treatment. */
+#root :is(.nf-nav-root, .lsb-root, .lsb-bottom, .nf-drop, .nf-profile-drop) {
+  background: #000000 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#root :is(.lsb-item, .lsb-bottom-item, .nf-bell, .nf-call-indicator, .nf-mobile-search-btn,
+  .nf-avatar, .nf-role-badge, .nf-badge, .nf-call-badge) {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
+  .nf-badge, .nf-call-badge) {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Forms retain their controls without the surrounding framed card. */
+#root :is(input, select, textarea) {
+  background: rgba(255,255,255,0.05) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+#root :is(input, select, textarea):focus {
+  outline: 1px solid rgba(255,255,255,0.65) !important;
+  outline-offset: 2px;
+}
+
+/* Text-first actions: no filled buttons or decorative outlines. */
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"],
+  .nf-search-btn, .hp-btn, .hp-staff-add-btn, .hp-case-menu-btn, .ahd-track-btn,
+  .hr-btn, .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .dd-btn, .lm-tab-btn,
+  .uh-btn, .uh-card-cta, .uh-footer-btn) {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover,
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):focus-visible {
+  background: transparent !important;
+  color: rgba(255,255,255,0.62) !important;
+}
+
+#root :is(table, thead, tbody, tr, td, th) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#root :is(.modal, .modal-content, .dialog, [role="dialog"], .hp-case-modal-box) {
+  background: rgba(0,0,0,0.94) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Login and sign-in help follow the same calm, unframed visual language. */
+#root :is(.auth-shell, .auth-right, .signin-help-card, .signin-help-section,
+  .signin-help-main, .signin-help-header, .signin-help-footer) {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
