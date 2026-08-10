@@ -54,7 +54,7 @@
 }
 
 :root {
-  --sr-bg: #cdc6b9;
+  --sr-bg: #ffffff;
   --sr-surface: #000000;
   --sr-card-bg: #000000;
   --sr-accent: #ffffff;
@@ -75,8 +75,8 @@
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  background-color: #bebaaf !important;
-  background: linear-gradient(180deg, #dfdcd6 0%, #c5bfb4 40%, #8c8374 100%) !important;
+  background-color: #ffffff !important;
+  background: #ffffff !important;
   color: #000000 !important;
   margin: 0;
   padding: 0;
@@ -84,7 +84,7 @@
   position: relative;
 }
 
-/* Remove all other background gradients */
+/* Remove all background gradients */
 body::before, body::after {
   display: none !important;
 }
@@ -101,7 +101,27 @@ body::before, body::after {
   fill: #ffffff !important;
 }
 
-/* ── Premium Warm Champagne Page Background for all Page Roots ── */
+/* ── Left Sidebar Item Visibility Fix ── */
+.lsb-item {
+  background: #111111 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+.lsb-item svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+.lsb-item:hover, .lsb-item.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+.lsb-item:hover svg, .lsb-item.active svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+/* ── Premium Pure White Page Background for all Page Roots (Squarespace Style) ── */
 :is(
   .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
   .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
@@ -110,13 +130,13 @@ body::before, body::after {
   .hp-root, [class*="-root"]:not(.nf-nav-root):not(.lsb-root)
 ) {
   background-image: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
   color: #000000 !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
-/* ── Page Titles & Text directly on the warm Champagne background ── */
+/* ── Page Titles & Text directly on the Pure White background ── */
 :is(.uh-wrap, .page-root, .uh-root, .h2-root, .amb2-root, .rep-root, .req-root, .hp-root) > :not(div[class*="card"]):not(section[class*="card"]) :is(
   h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b
 ) {
