@@ -124,8 +124,8 @@ export default function UserHome() {
       <style>{`
         .uh-root {
           min-height: 100vh;
-          background: #000000;
-          color: #ffffff;
+          background: transparent;
+          color: #000000;
           padding-top: 64px;
           padding-left: 64px;
           font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
@@ -157,14 +157,14 @@ export default function UserHome() {
           line-height: 0.95;
           letter-spacing: -1px;
           font-family: Georgia, "Times New Roman", serif;
-          color: #ffffff;
+          color: #000000;
         }
-        .uh-title span { color: #ffffff; }
+        .uh-title span { color: #000000; }
         .uh-sub {
           margin: 18px 0 0;
           max-width: 760px;
           font-size: clamp(14px, 1.5vw, 18px);
-          color: #cccccc;
+          color: #333333;
           line-height: 1.65;
         }
         .uh-actions {

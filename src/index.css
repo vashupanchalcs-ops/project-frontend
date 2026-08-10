@@ -54,19 +54,19 @@
 }
 
 :root {
-  --sr-bg: #000000;
+  --sr-bg: #cdc6b9;
   --sr-surface: #000000;
-  --sr-card-bg: #111111;
+  --sr-card-bg: #000000;
   --sr-accent: #ffffff;
   --sr-accent-hover: #e0e0e0;
-  --sr-border: #1f1f1f;
+  --sr-border: rgba(255, 255, 255, 0.08);
   --sr-text: #ffffff;
-  --sr-text-sub: #cccccc;
+  --sr-text-sub: #bbbbbb;
   --sr-nav-bg: #000000;
-  --sr-nav-border: #1f1f1f;
+  --sr-nav-border: #111111;
   --sr-nav-text: #ffffff;
   --sr-sidebar-bg: #000000;
-  --sr-sidebar-border: #1f1f1f;
+  --sr-sidebar-border: #111111;
   --font-display: font3, "Trebuchet MS", "Segoe UI", sans-serif;
   --font-body: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
 }
@@ -75,70 +75,102 @@
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  background-color: #000000 !important;
-  background: #000000 !important;
-  color: #ffffff !important;
+  background-color: #bebaaf !important;
+  background: linear-gradient(180deg, #dfdcd6 0%, #c5bfb4 40%, #8c8374 100%) !important;
+  color: #000000 !important;
   margin: 0;
   padding: 0;
   font-family: var(--font-body);
   position: relative;
 }
 
-/* Remove all background gradients */
-body::before, body::after, *::before, *::after {
-  background-image: none !important;
+/* Remove all other background gradients */
+body::before, body::after {
+  display: none !important;
 }
 
-/* ── Global Pitch Black Page Containers ── */
+/* ── Squarespace Style Top Navbar & Sidebar (Solid Black) ── */
+:is(.nf-nav-root, .lsb-root, .lsb-bottom) {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  border-color: #111111 !important;
+  color: #ffffff !important;
+}
+:is(.nf-nav-root, .lsb-root, .lsb-bottom) :is(span, div, a, svg, button) {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* ── Premium Warm Champagne Page Background for all Page Roots ── */
 :is(
-  .ad-root, .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
-  .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
   .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
   .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
   .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root, .req-root,
-  .hp-root, [class*="-root"], [class*="-shell"], [class*="-container"]
+  .hp-root, [class*="-root"]:not(.nf-nav-root):not(.lsb-root)
+) {
+  background-image: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #000000 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Page Titles & Text directly on the warm Champagne background ── */
+:is(.uh-wrap, .page-root, .uh-root, .h2-root, .amb2-root, .rep-root, .req-root, .hp-root) > :not(div[class*="card"]):not(section[class*="card"]) :is(
+  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b
+) {
+  color: #000000 !important;
+}
+:is(.uh-title, .uh-sub, .uh-trending-title, .uh-trending-sub, .uh-footer-title, .uh-how-title, .uh-how-sub, .rep-title, .rep-sub, .req-title, .req-sub, .ad-title, .hp-hero-h1, .hp-title, .amb2-title, .h2-title) {
+  color: #000000 !important;
+}
+
+/* ── Solid Black Premium Cards (Second Image Style) ── */
+:is(
+  .amb2-card, .amb-card, .h2-card, .hosp-card, .uh-card, .uh-stat, .uh-trend-card,
+  .uh-how-step, .uh-hero, .uh-footer, .ad-cell, .ad-card, .rep-sum-card, .rep-chart-card,
+  .rep-table-card, .req-card, .hp-card, .hp-sub-header, .hp-cases-count, .hp-bill-panel,
+  .hp-cases-head, .hp-case-modal, .ci-card, .cd-card, .arm-card, .dh-card, .dg-card,
+  .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card, .rtm-card, .mb-card,
+  .an-card, .an-graph, .dl-card, .req-cell
 ) {
   background-image: none !important;
   background: #000000 !important;
   background-color: #000000 !important;
   color: #ffffff !important;
-  border-color: #1f1f1f !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ── Pure White Text Globally (Squarespace Dark Mode Style) ── */
-:not(.amb2-card):not(.amb-card):not(.h2-card):not(.hosp-card) :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font, code
+/* Ensure all text inside Black Cards is White */
+:is(
+  .amb2-card, .amb-card, .h2-card, .hosp-card, .uh-card, .uh-stat, .uh-trend-card,
+  .uh-how-step, .uh-hero, .uh-footer, .ad-cell, .ad-card, .rep-sum-card, .rep-chart-card,
+  .rep-table-card, .req-card, .hp-card, .hp-case-modal, .ci-card, .cd-card, .arm-card,
+  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card,
+  .rtm-card, .mb-card, .an-card, .an-graph, .dl-card, .req-cell
+) :is(
+  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font, code, svg
 ) {
   color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
-:not(.amb2-card):not(.amb-card):not(.h2-card):not(.hosp-card) :is(
-  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg, .h2-desc, .amb2-desc
+/* Muted/Description text inside Black Cards is soft gray */
+:is(
+  .amb2-card, .amb-card, .h2-card, .hosp-card, .uh-card, .uh-stat, .uh-trend-card,
+  .uh-how-step, .uh-hero, .uh-footer, .ad-cell, .ad-card, .rep-sum-card, .rep-chart-card,
+  .rep-table-card, .req-card, .hp-card, .hp-case-modal, .ci-card, .cd-card, .arm-card,
+  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card,
+  .rtm-card, .mb-card, .an-card, .an-graph, .dl-card, .req-cell
+) :is(
+  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg,
+  .h2-desc, .amb2-desc, .uh-stat-lbl, .uh-trending-sub, .uh-trend-card p, .uh-card-desc,
+  .uh-card-meta, .uh-foot-col p, .uh-foot-col li, .uh-foot-link, .uh-how-sub, .req-label
 ) {
-  color: #cccccc !important;
-}
-
-/* ── White Cards Exception ONLY for Ambulance & Hospital Listing Cards ── */
-:is(.amb2-card, .amb-card, .h2-card, .hosp-card) {
-  background-image: none !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #ffffff !important;
-  border-radius: 8px !important;
-  box-shadow: none !important;
-}
-
-:is(.amb2-card, .amb-card, .h2-card, .hosp-card) :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font
-) {
-  color: #000000 !important;
-}
-
-:is(.amb2-card, .amb-card, .h2-card, .hosp-card) :is(
-  .muted, .sub, .desc, .meta, .amb2-sub, .amb2-desc, .h2-address, .h2-desc
-) {
-  color: #444444 !important;
+  color: #bbbbbb !important;
 }
 
 /* ── Absolute Ban on Reddish / Red Effects & Yellow Glows ── */
