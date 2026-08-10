@@ -124,8 +124,8 @@ export default function UserHome() {
       <style>{`
         .uh-root {
           min-height: 100vh;
-          background: #f7f7f2;
-          color: #101010;
+          background: #000000;
+          color: #ffffff;
           padding-top: 64px;
           padding-left: 64px;
           font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
@@ -137,11 +137,11 @@ export default function UserHome() {
         }
 
         .uh-hero {
-          border: 1px solid rgba(20, 20, 20, 0.14);
-          border-radius: 24px;
-          background: linear-gradient(160deg, #ffffff 0%, #ffffff 100%);
+          border: 1px solid #1f1f1f;
+          border-radius: 16px;
+          background: #0a0a0a;
           padding: 34px 32px;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+          box-shadow: none;
         }
         .uh-kicker {
           font-size: 11px;
@@ -157,14 +157,14 @@ export default function UserHome() {
           line-height: 0.95;
           letter-spacing: -1px;
           font-family: Georgia, "Times New Roman", serif;
-          color: #101010;
+          color: #ffffff;
         }
         .uh-title span { color: #ffffff; }
         .uh-sub {
           margin: 18px 0 0;
           max-width: 760px;
           font-size: clamp(14px, 1.5vw, 18px);
-          color: rgba(16, 16, 16, 0.72);
+          color: #cccccc;
           line-height: 1.65;
         }
         .uh-actions {
@@ -174,29 +174,29 @@ export default function UserHome() {
           flex-wrap: wrap;
         }
         .uh-btn {
-          border: 1px solid rgba(20, 20, 20, 0.18);
+          border: 1px solid #1f1f1f;
           border-radius: 999px;
           padding: 12px 20px;
           font-size: 13px;
           font-weight: 800;
           letter-spacing: 0.3px;
           cursor: pointer;
-          transition: transform 0.16s, box-shadow 0.16s;
+          transition: none;
           font-family: inherit;
         }
         .uh-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+          transform: none;
+          box-shadow: none;
         }
         .uh-btn.primary {
           background: #ffffff;
-          color: #ffffff;
+          color: #000000;
           border-color: #ffffff;
         }
         .uh-btn.secondary {
-          background: #ffffff;
-          color: #101010;
-          border: 1px solid #cccccc;
+          background: #1c1c1c;
+          color: #ffffff;
+          border: 1px solid #333333;
         }
 
         .uh-stats {
@@ -206,22 +206,21 @@ export default function UserHome() {
           gap: 10px;
         }
         .uh-stat {
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 8px;
-          background: #ffffff;
+          border: 1px solid #1f1f1f;
+          border-radius: 12px;
+          background: #0a0a0a;
           padding: 14px 16px;
         }
         .uh-stat-val {
           font-size: 32px;
           font-weight: 900;
           line-height: 1;
-          color: #111;
+          color: #ffffff;
           letter-spacing: -0.8px;
         }
         .uh-stat-lbl {
           font-size: 11px;
-          color: #555555;
+          color: #cccccc;
           font-weight: 700;
           margin-top: 4px;
         }
@@ -234,10 +233,9 @@ export default function UserHome() {
         }
         .uh-trending {
           margin-top: 24px;
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 12px;
-          background: #ffffff;
+          border: 1px solid #1f1f1f;
+          border-radius: 16px;
+          background: #0a0a0a;
           padding: 24px;
         }
         .uh-trending-head {
@@ -253,11 +251,12 @@ export default function UserHome() {
           font-size: clamp(28px, 4vw, 48px);
           letter-spacing: -0.8px;
           font-family: Georgia, "Times New Roman", serif;
+          color: #ffffff;
         }
         .uh-trending-sub {
           margin: 0;
           font-size: 13px;
-          color: #555555;
+          color: #cccccc;
           max-width: 440px;
         }
         .uh-trending-grid {
@@ -266,10 +265,9 @@ export default function UserHome() {
           gap: 12px;
         }
         .uh-trend-card {
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 8px;
-          background: #ffffff;
+          border: 1px solid #1f1f1f;
+          border-radius: 12px;
+          background: #0a0a0a;
           padding: 14px;
         }
         .uh-trend-no {
@@ -282,7 +280,7 @@ export default function UserHome() {
           font-size: 11px;
           font-weight: 900;
           background: #ffffff;
-          color: #ffffff;
+          color: #000000;
         }
         .uh-trend-card h4 {
           margin: 8px 0 5px;
@@ -290,31 +288,30 @@ export default function UserHome() {
           line-height: 1.2;
           letter-spacing: -0.2px;
           font-family: Georgia, "Times New Roman", serif;
+          color: #ffffff;
         }
         .uh-trend-card p {
           margin: 0;
           font-size: 12px;
           line-height: 1.55;
-          color: #555555;
+          color: #cccccc;
         }
         .uh-card {
-          background: #ffffff;
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 12px;
+          background: #0a0a0a;
+          border: 1px solid #1f1f1f;
+          border-radius: 16px;
           overflow: hidden;
           transition: none;
         }
         .uh-card:hover {
           transform: none !important;
-          border-color: #cccccc !important;
-          border-top-color: #ffffff !important;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+          border-color: #333333 !important;
+          box-shadow: none !important;
         }
         .uh-card-top {
           padding: 24px 24px 14px;
-          border-bottom: 1px solid #e0e0e0;
-          background: #ffffff;
+          border-bottom: 1px solid #1f1f1f;
+          background: #0a0a0a;
         }
         .uh-card-tag {
           font-size: 10px;
@@ -329,16 +326,17 @@ export default function UserHome() {
           line-height: 0.98;
           letter-spacing: -0.6px;
           font-family: Georgia, "Times New Roman", serif;
-          color: #111;
+          color: #ffffff;
         }
         .uh-card-body {
           padding: 16px 24px 24px;
+          background: #0a0a0a;
         }
         .uh-card-desc {
           margin: 0;
           font-size: 14px;
           line-height: 1.6;
-          color: #555555;
+          color: #cccccc;
         }
         .uh-card-meta {
           margin-top: 12px;
@@ -346,7 +344,7 @@ export default function UserHome() {
           gap: 16px;
           flex-wrap: wrap;
           font-size: 12px;
-          color: #555555;
+          color: #cccccc;
           font-weight: 600;
         }
         .uh-card-cta {
@@ -354,7 +352,7 @@ export default function UserHome() {
           border: none;
           border-radius: 8px;
           background: #ffffff;
-          color: #ffffff;
+          color: #000000;
           padding: 11px 14px;
           font-size: 12px;
           font-weight: 800;
@@ -364,10 +362,9 @@ export default function UserHome() {
 
         .uh-footer {
           margin-top: 24px;
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 12px;
-          background: #ffffff;
+          border: 1px solid #1f1f1f;
+          border-radius: 16px;
+          background: #0a0a0a;
           padding: 28px 24px;
         }
         .uh-footer-head {
@@ -384,6 +381,7 @@ export default function UserHome() {
           line-height: 0.9;
           letter-spacing: -1px;
           font-family: Georgia, "Times New Roman", serif;
+          color: #ffffff;
         }
         .uh-footer-btn {
           width: 56px;
@@ -391,7 +389,7 @@ export default function UserHome() {
           border: none;
           border-radius: 50%;
           background: #ffffff;
-          color: #ffffff;
+          color: #000000;
           font-size: 22px;
           cursor: pointer;
         }
@@ -399,7 +397,7 @@ export default function UserHome() {
           display: grid;
           grid-template-columns: 1.3fr 1fr 1fr 1fr;
           gap: 18px;
-          border-top: 1px solid #e0e0e0;
+          border-top: 1px solid #1f1f1f;
           padding-top: 18px;
         }
         .uh-foot-col h4 {
@@ -407,12 +405,13 @@ export default function UserHome() {
           font-size: 15px;
           letter-spacing: 0.2px;
           font-weight: 800;
+          color: #ffffff;
         }
         .uh-foot-col p,
         .uh-foot-col li {
           margin: 0 0 6px;
           font-size: 14px;
-          color: #555555;
+          color: #cccccc;
           line-height: 1.55;
         }
         .uh-foot-col ul {
@@ -428,7 +427,7 @@ export default function UserHome() {
           margin: 0 0 8px;
           font-family: inherit;
           font-size: 14px;
-          color: #555555;
+          color: #cccccc;
           cursor: pointer;
           text-decoration: underline;
           text-underline-offset: 3px;
@@ -439,10 +438,9 @@ export default function UserHome() {
 
         .uh-how {
           margin-top: 22px;
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 12px;
-          background: #ffffff;
+          border: 1px solid #1f1f1f;
+          border-radius: 16px;
+          background: #0a0a0a;
           padding: 24px;
           overflow: hidden;
         }
@@ -466,20 +464,21 @@ export default function UserHome() {
           letter-spacing: -0.8px;
           line-height: 0.95;
           font-family: Georgia, "Times New Roman", serif;
+          color: #ffffff;
         }
         .uh-how-sub {
           margin: 0;
           max-width: 460px;
           font-size: 14px;
           line-height: 1.6;
-          color: #555555;
+          color: #cccccc;
         }
         .uh-how-track {
           margin-top: 16px;
           width: 100%;
           height: 3px;
           border-radius: 999px;
-          background: #e0e0e0;
+          background: #1f1f1f;
           overflow: hidden;
         }
         .uh-how-progress {
@@ -494,10 +493,9 @@ export default function UserHome() {
           gap: 12px;
         }
         .uh-how-step {
-          border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #ffffff;
-          border-radius: 8px;
-          background: #ffffff;
+          border: 1px solid #1f1f1f;
+          border-radius: 12px;
+          background: #0a0a0a;
           padding: 14px;
           min-height: 136px;
         }
@@ -506,7 +504,7 @@ export default function UserHome() {
           height: 34px;
           border-radius: 50%;
           background: #ffffff;
-          color: #ffffff;
+          color: #000000;
           display: inline-flex;
           align-items: center;
           justify-content: center;
