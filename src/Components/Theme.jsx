@@ -4,15 +4,15 @@
 
 export const Theme = {
   colors: {
-    bg: '#ffffff',
-    surface: '#ffffff',
-    border: '#000000',
-    text: '#000000',
-    textSecondary: '#000000',
-    accent: '#000000',
-    success: '#000000',
-    warning: '#000000',
-    error: '#000000',
+    bg: '#000000',
+    surface: 'rgba(255,255,255,0.05)',
+    border: 'rgba(255,255,255,0.24)',
+    text: '#ffffff',
+    textSecondary: 'rgba(255,255,255,0.72)',
+    accent: '#ffffff',
+    success: '#ffffff',
+    warning: '#ffffff',
+    error: '#ffffff',
   },
   fonts: {
     display: "'Outfit', 'Helvetica Neue', sans-serif",

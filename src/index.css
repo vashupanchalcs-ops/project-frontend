@@ -626,3 +626,230 @@ body::before {
   color: #000000 !important;
   border-color: #000000 !important;
 }
+
+/* Midnight canvas: every route uses a true black background with white text.
+   Small visual groups stay translucent so the data hierarchy remains clear. */
+:root,
+html,
+body,
+#root {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+#root [style*="background"] {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+#root :is(
+  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .hp-root, .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root,
+  .dh-root, .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root, .signin-help-root, .auth-root
+) {
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+#root :is(
+  .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
+  .amb2-card, .amb2-stat, .amb2-ins, .h2-card, .h2-stat, .h2-mini,
+  .rep-sum-card, .rep-chart-card, .rep-table-card, .rep-ord-card,
+  .req-card, .req-table-wrap, .dd-card, .dd-booking-card, .dd-amb-card,
+  .dn-card, .dv-panel, .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
+  .hr-card, .hr-empty, .ci-card, .ci-panel, .cd-card, .cd-panel, .cd-empty,
+  .arm-card, .arm-panel, .arm-route-card, .dh-card, .dg-card, .dcr-card,
+  .ip-card, .lt-card, .lm-card, .st-card, .ac-card, .rtm-card, .mb-card,
+  .mb-table, .mb-empty, .uh-hero, .uh-stat, .uh-card, .uh-trending,
+  .uh-trend-card, .uh-footer, .uh-how-step, .signin-help-card, .auth-shell,
+  .hp-card, .hp-hero, .hp-svc, .hp-stat, .hp-case-card, .hp-case-metric,
+  .hp-case-info-box, .hp-case-detail-hero, .hp-case-detail-wide,
+  .hp-bill-panel, .hp-resource-mini, .hp-track-card, .hp-report-card,
+  .hp-response-card, .hp-response-tile, .hp-role-card, .hp-guidance-card,
+  .hp-an-stat, .hp-an-table-w, .hp-map-panel, .hp-empty
+) {
+  background: rgba(255,255,255,0.055) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.24) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(10px);
+}
+
+#root :is(
+  [class*="-card"], [class*="-panel"], [class*="-stat"], [class*="-tile"],
+  [class*="-box"], [class*="-item"], [class*="-hero"], [class*="-banner"],
+  [class*="-chip"], [class*="-tag"]
+) {
+  background-color: rgba(255,255,255,0.045) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  box-shadow: none !important;
+}
+
+#root :is(
+  h1, h2, h3, h4, h5, h6, p, span, div, label, small, strong, a,
+  li, td, th, dt, dd
+) {
+  color: #ffffff !important;
+}
+
+#root :is(input, select, textarea) {
+  background: rgba(255,255,255,0.045) !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.38) !important;
+  box-shadow: none !important;
+}
+
+#root :is(input, textarea)::placeholder {
+  color: rgba(255,255,255,0.52) !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.7) !important;
+  box-shadow: none !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) :is(svg, path, span, strong, small, div, p) {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover :is(svg, path, span, strong, small, div, p) {
+  color: #000000 !important;
+}
+
+#root :is(
+  .nf-nav-root, .lsb-root, .lsb-bottom, .nf-drop, .nf-profile-drop,
+  .nf-mobile-search-overlay, .hp-map-panel-head, .hp-card-head,
+  .ahd-map-head, .hp-case-modal-box, .signin-help-header,
+  .signin-help-footer, .auth-brandbar
+) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.22) !important;
+  box-shadow: none !important;
+}
+
+#root :is(.nf-brand, .nf-username, .nf-login-link, .lsb-logo,
+  .signin-help-header :is(strong, b, span), .signin-help-footer :is(h2, p, span, strong, b),
+  .auth-brandbar :is(.auth-brand, .auth-brand-mark, span)) {
+  color: #ffffff !important;
+}
+
+#root :is(.lsb-item, .lsb-bottom-item, .nf-bell, .nf-call-indicator, .nf-mobile-search-btn) {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.24) !important;
+  box-shadow: none !important;
+}
+
+#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
+  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
+  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+
+#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
+  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
+  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) :is(svg, path, span) {
+  color: #000000 !important;
+  stroke: currentColor;
+}
+
+#root :is(.nf-search-btn, .hp-btn, .hp-staff-add-btn, .hp-case-menu-btn,
+  .ahd-track-btn, .hr-btn, .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn,
+  .req-card button, .req-table button, .dd-btn, .lm-tab-btn, .uh-btn,
+  .uh-card-cta, .uh-footer-btn) {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.7) !important;
+  box-shadow: none !important;
+}
+
+#root :is(.hp-cases-strip, .hp-alert, .hp-home-banner, .hp-card-head,
+  .uh-card-top, .uh-trending-head, .uh-how-head) {
+  background: rgba(255,255,255,0.07) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.24) !important;
+}
+
+#root .hp-case-modal-backdrop {
+  background: rgba(0,0,0,0.78) !important;
+}
+
+#root :is(.auth-shell, .auth-right) {
+  background: rgba(255,255,255,0.055) !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.32) !important;
+  box-shadow: 0 16px 44px rgba(0,0,0,0.52) !important;
+}
+
+#root .auth-right :is(.auth-step-title, .auth-step-title .hl, .auth-step-sub,
+  .auth-field label, .auth-note, .auth-legal, .auth-meta, .auth-resend,
+  .auth-help, .auth-help-toggle, .auth-help-toggle span, .auth-help-body,
+  .auth-link, .auth-back) {
+  color: #ffffff !important;
+}
+
+#root :is(.auth-link, .auth-help-toggle, .auth-help-learn, .auth-pass-toggle) {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.5) !important;
+}
+
+#root button.auth-link,
+#root button.auth-help-toggle,
+#root button.auth-help-learn,
+#root button.auth-pass-toggle {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.5) !important;
+}
+
+#root :is(.signin-help-card, .signin-help-section, .signin-help-main) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.25) !important;
+  box-shadow: none !important;
+}
+
+#root button.signin-help-back,
+#root .signin-help-card button,
+#root button.signin-help-contact {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.7) !important;
+}
+
+#root table,
+#root thead,
+#root tbody,
+#root tr {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.24) !important;
+}
+
+#root :is(.modal, .modal-content, .dialog, [role="dialog"]) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.32) !important;
+  box-shadow: 0 16px 44px rgba(0,0,0,0.52) !important;
+}
+
+::-webkit-scrollbar-track { background: #000000; }
+::-webkit-scrollbar-thumb { background: #ffffff; }
