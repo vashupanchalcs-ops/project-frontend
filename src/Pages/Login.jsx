@@ -678,7 +678,7 @@ export default function Login() {
         }
 
         .auth-step-title .hl {
-          color: #e50914;
+          color: #ffffff;
         }
 
           .auth-step-sub {
@@ -709,8 +709,8 @@ export default function Login() {
         }
 
         .auth-mode.on {
-          background: #e50914;
-          border-color: #e50914;
+          background: #ffffff;
+          border-color: #ffffff;
         }
 
         .auth-msg {
@@ -813,8 +813,8 @@ export default function Login() {
         }
 
         .auth-role.on {
-          background: #e50914;
-          border-color: #e50914;
+          background: #ffffff;
+          border-color: #ffffff;
         }
 
         .auth-note {
@@ -827,8 +827,8 @@ export default function Login() {
           margin-top: 2px;
           height: 40px;
           border-radius: 4px;
-          border: 1px solid #e50914;
-          background: #e50914;
+          border: 1px solid #ffffff;
+          background: #ffffff;
           color: #fff;
           font-size: 16px;
           font-weight: 600;
@@ -930,7 +930,7 @@ export default function Login() {
           cursor: pointer;
           padding: 0;
         }
-        .auth-help-toggle span { color: #e50914; margin-left: 7px; }
+        .auth-help-toggle span { color: #ffffff; margin-left: 7px; }
         .auth-help-body { margin-top: 11px; color: #bba9aa; font-size: 12px; line-height: 1.65; }
 
         @media (max-width: 640px) {

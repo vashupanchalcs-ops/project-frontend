@@ -116,7 +116,7 @@ export default function DriverChangeRequests() {
         }
 
         .dcr-top   { display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px; }
-        .dcr-tag   { display:inline-flex;align-items:center;gap:6px;background:#e50914;color:#ffffff;border:1px solid #e50914;border-radius:999px;padding:4px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px; }
+        .dcr-tag   { display:inline-flex;align-items:center;gap:6px;background:#ffffff;color:#ffffff;border:1px solid #ffffff;border-radius:999px;padding:4px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px; }
         .dcr-title { font-size:28px;font-weight:800;color:var(--sr-text,#111);letter-spacing:-.5px;margin:0 0 4px; }
         .dcr-sub   { font-size:13px;color:var(--sr-text-sub, rgba(17,17,17,.7));margin:0; }
 
@@ -127,14 +127,14 @@ export default function DriverChangeRequests() {
           font-size:13px;font-weight:700;color:#111;
           cursor:pointer;font-family:inherit;transition:all .15s;
         }
-        .dcr-refresh:hover { background:#f5f5f5;border-color:#e50914; }
+        .dcr-refresh:hover { background:#f5f5f5;border-color:#ffffff; }
 
         .dcr-sec-title { font-size:16px;font-weight:800;color:var(--sr-text,#111);margin-bottom:14px;letter-spacing:-.3px; }
 
         .dcr-chat-wrap {
           margin-bottom: 0;
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 12px;
           background: #ffffff;
           padding: 12px;
@@ -180,11 +180,11 @@ export default function DriverChangeRequests() {
         }
         .dcr-thread-item.active {
           background: #ffffff;
-          border: 1px solid #e50914;
-          border-top: 3.5px solid #e50914;
+          border: 1px solid #ffffff;
+          border-top: 3.5px solid #ffffff;
         }
         .dcr-thread-item:hover {
-          border-color: #e50914;
+          border-color: #ffffff;
         }
         .dcr-thread-item b { font-size: 13px; color: #111; }
         .dcr-thread-item div { font-size: 11px; color: #555555; margin-top: 2px; }
@@ -193,18 +193,18 @@ export default function DriverChangeRequests() {
         .dcr-card {
           background:#ffffff;
           border:1px solid #e0e0e0;
-          border-top:3.5px solid #e50914;
+          border-top:3.5px solid #ffffff;
           border-radius:12px;
           padding:20px 22px; margin-bottom:12px;
           box-shadow:0 4px 14px rgba(0,0,0,.05);
           transition:none;
         }
-        .dcr-card:hover { border-color: #cccccc; border-top-color: #e50914; box-shadow:0 4px 14px rgba(0,0,0,.05); transform: none; }
-        .dcr-card.pending-card { border-left:4px solid #e50914; }
+        .dcr-card:hover { border-color: #cccccc; border-top-color: #ffffff; box-shadow:0 4px 14px rgba(0,0,0,.05); transform: none; }
+        .dcr-card.pending-card { border-left:4px solid #ffffff; }
 
         .dcr-card-top { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px; }
         .dcr-driver-row { display:flex;align-items:center;gap:10px; }
-        .dcr-driver-av  { width:38px;height:38px;border-radius:10px;background:#e50914;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#ffffff;flex-shrink:0; }
+        .dcr-driver-av  { width:38px;height:38px;border-radius:10px;background:#ffffff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#ffffff;flex-shrink:0; }
         .dcr-driver-name{ font-size:14px;font-weight:800;color:#111; }
         .dcr-driver-mail{ font-size:11px;color:#555555;margin-top:2px; }
         .dcr-driver-ph  { font-size:11px;color:#555555;margin-top:1px; }
@@ -224,12 +224,12 @@ export default function DriverChangeRequests() {
 
         .dcr-actions { display:flex;gap:8px;flex-wrap:wrap; }
         .dcr-btn { font-size:12px;font-weight:700;border:none;border-radius:9px;padding:9px 20px;cursor:pointer;font-family:inherit;transition:all .15s; }
-        .dcr-btn-approve { background:#e50914;color:#ffffff;border:1px solid #e50914; }
-        .dcr-btn-approve:hover { background:#b80710;border-color:#b80710; }
+        .dcr-btn-approve { background:#ffffff;color:#ffffff;border:1px solid #ffffff; }
+        .dcr-btn-approve:hover { background:#ffffff;border-color:#ffffff; }
         .dcr-btn-reject  { background:#ffffff;color:#111;border:1.5px solid #cccccc; }
         .dcr-btn-reject:hover { background:#f5f5f5; }
         .dcr-btn-delete  { background:#ffffff;color:#555555;border:1.5px solid #cccccc; }
-        .dcr-btn-delete:hover { background:#f5f5f5;color:#e50914;border-color:#e50914; }
+        .dcr-btn-delete:hover { background:#f5f5f5;color:#ffffff;border-color:#ffffff; }
 
         /* Empty */
         .dcr-empty { padding:60px 24px;text-align:center; }
@@ -336,7 +336,7 @@ export default function DriverChangeRequests() {
             <div style={{marginBottom:28}}>
               <div className="dcr-sec-title">
                 ⏳ Pending
-                <span style={{marginLeft:8,fontSize:12,fontWeight:700,background:"#e50914",color:"#111",border:"1px solid rgba(229, 9, 20, 0.15)",borderRadius:100,padding:"2px 10px"}}>{pending.length}</span>
+                <span style={{marginLeft:8,fontSize:12,fontWeight:700,background:"#ffffff",color:"#111",border:"1px solid rgba(255, 255, 255, 0.15)",borderRadius:100,padding:"2px 10px"}}>{pending.length}</span>
               </div>
               {pending.map((req,i)=>(
                 <div key={i} className="dcr-card pending-card">
@@ -385,7 +385,7 @@ export default function DriverChangeRequests() {
               {processed.map((req,i)=>{
                 const sc = req.status==="approved"
                   ? {c:"#00875a",bg:"rgba(0,135,90,0.09)",b:"rgba(0,135,90,0.22)"}
-                  : {c:"#E50914",bg:"rgba(229,9,20,0.09)",b:"rgba(229,9,20,0.22)"};
+                  : {c:"#ffffff",bg:"rgba(255, 255, 255, 0.15)",b:"rgba(255, 255, 255, 0.15)"};
                 return(
                   <div key={i} className="dcr-card" style={{opacity:.75}}>
                     <div className="dcr-card-top">

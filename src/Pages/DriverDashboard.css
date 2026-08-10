@@ -47,10 +47,10 @@
   transition: all 0.15s; white-space: nowrap;
   display: flex; align-items: center; justify-content: center; gap: 5px;
 }
-.dd-tab.active { color: #fff; border-bottom-color: #E50914; }
+.dd-tab.active { color: #fff; border-bottom-color: #ffffff; }
 .dd-tab:hover:not(.active) { color: rgba(255,255,255,0.7); }
 .dd-tab-badge {
-  background: #E50914; color: #fff;
+  background: #ffffff; color: #fff;
   font-size: 9px; font-weight: 800;
   border-radius: 8px; padding: 1px 5px; min-width: 14px; text-align: center;
 }
@@ -100,7 +100,7 @@
   font-size: 12px; font-weight: 700; cursor: pointer;
   font-family: inherit; transition: all 0.15s; width: 100%; margin-top: 5px;
 }
-.dd-btn-red   { background: #E50914; color: #fff; }
+.dd-btn-red   { background: #ffffff; color: #fff; }
 .dd-btn-red:hover { background: #f40612; }
 .dd-btn-green { background: #00c853; color: #000; }
 .dd-btn-green:hover { background: #00e060; }

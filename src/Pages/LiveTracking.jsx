@@ -70,14 +70,14 @@ export default function LiveTracking() {
         .lt-topbar-left  { display:flex; align-items:center; gap:12px; }
         .lt-back-btn {
           width:34px; height:34px;
-          background:rgba(229, 9, 20, 0.15);
+          background:rgba(255, 255, 255, 0.15);
           border:1px solid rgba(20,20,20,0.12);
           border-radius:50%; color:rgba(17,17,17,0.7);
           cursor:pointer; font-family:inherit;
           display:flex; align-items:center; justify-content:center;
           transition:all 0.15s; flex-shrink:0;
         }
-        .lt-back-btn:hover { background:rgba(229, 9, 20, 0.15); color:#111; }
+        .lt-back-btn:hover { background:rgba(255, 255, 255, 0.15); color:#111; }
         .lt-title { font-size:16px; font-weight:800; color:#111; }
         .lt-sub   { font-size:11px; color:rgba(17,17,17,0.58); margin-top:2px; }
 
@@ -85,11 +85,11 @@ export default function LiveTracking() {
         .lt-live-dot { width:8px; height:8px; border-radius:50%; background:#00d4aa; flex-shrink:0; animation:lt-pulse 1.5s infinite; box-shadow:0 0 8px rgba(0,212,170,0.7); }
 
         .lt-mybookings-btn {
-          background:rgba(229, 9, 20, 0.15); border:1px solid rgba(20,20,20,0.12); color:#111;
+          background:rgba(255, 255, 255, 0.15); border:1px solid rgba(20,20,20,0.12); color:#111;
           border-radius:10px; padding:7px 16px; font-size:11px; font-weight:700;
           cursor:pointer; font-family:inherit; transition:background 0.15s; white-space:nowrap;
         }
-        .lt-mybookings-btn:hover { background:rgba(229, 9, 20, 0.15); }
+        .lt-mybookings-btn:hover { background:rgba(255, 255, 255, 0.15); }
 
         /* Map fills all remaining space */
         .lt-map-wrap { flex:1; position:relative; overflow:hidden; min-height:0; }
@@ -137,7 +137,7 @@ export default function LiveTracking() {
         {/* Loading */}
         {loading && (
           <div className="lt-center">
-            <div style={{ width:40, height:40, border:"3px solid rgba(255,255,255,0.08)", borderTop:"3px solid #E50914", borderRadius:"50%", animation:"lt-spin 0.8s linear infinite" }}/>
+            <div style={{ width:40, height:40, border:"3px solid rgba(255,255,255,0.08)", borderTop:"3px solid #ffffff", borderRadius:"50%", animation:"lt-spin 0.8s linear infinite" }}/>
             <p style={{ color:"rgba(255,255,255,0.35)", fontSize:13 }}>Finding your booking...</p>
           </div>
         )}
@@ -152,7 +152,7 @@ export default function LiveTracking() {
             </div>
             <button
               onClick={()=>navigate("/Ambulances")}
-              style={{ marginTop:8, background:"#E50914", color:"#fff", border:"none", borderRadius:12, padding:"11px 24px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(229,9,20,0.35)" }}
+              style={{ marginTop:8, background:"#ffffff", color:"#fff", border:"none", borderRadius:12, padding:"11px 24px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(255, 255, 255, 0.15)" }}
             >
               🚑 Ambulance Book Karo
             </button>

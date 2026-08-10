@@ -84,15 +84,15 @@ export default function DriverHome() {
         }
         .dh-hero:hover {
           transform: translateY(-2px);
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 18px 36px rgba(229, 9, 20, 0.15), 0 0 0 2px rgba(229, 9, 20, 0.15) inset;
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 18px 36px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(255, 255, 255, 0.15) inset;
         }
         .dh-kicker {
           font-size: 11px;
           font-weight: 800;
           letter-spacing: 1.5px;
           text-transform: uppercase;
-          color: #e50914;
+          color: #ffffff;
           margin-bottom: 10px;
         }
         .dh-title {
@@ -102,7 +102,7 @@ export default function DriverHome() {
           letter-spacing: -1px;
           font-family: Georgia, "Times New Roman", serif;
         }
-        .dh-title span { color: #e50914; }
+        .dh-title span { color: #ffffff; }
         .dh-sub {
           margin-top: 16px;
           max-width: 820px;
@@ -127,7 +127,7 @@ export default function DriverHome() {
           transition: transform .16s, box-shadow .16s;
         }
         .dh-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,0,0,0.08); }
-        .dh-btn.primary { background: #e50914; color: #111; border-color: #e50914; }
+        .dh-btn.primary { background: #ffffff; color: #111; border-color: #ffffff; }
         .dh-btn.secondary { background: #fff; color: #111; }
         .dh-stats {
           margin-top: 16px;
@@ -144,8 +144,8 @@ export default function DriverHome() {
         }
         .dh-stat:hover {
           transform: translateY(-2px);
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 14px 28px rgba(229, 9, 20, 0.15), 0 0 0 1px rgba(229, 9, 20, 0.15) inset;
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 14px 28px rgba(255, 255, 255, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
         }
         .dh-stat-val {
           font-size: 34px;
@@ -175,15 +175,15 @@ export default function DriverHome() {
         }
         .dh-card:hover {
           transform: translateY(-2px);
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 18px 34px rgba(229, 9, 20, 0.15), 0 0 0 2px rgba(229, 9, 20, 0.15) inset;
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 18px 34px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(255, 255, 255, 0.15) inset;
         }
         .dh-card-tag {
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 1px;
           text-transform: uppercase;
-          color: #e50914;
+          color: #ffffff;
         }
         .dh-card h3 {
           margin: 8px 0 8px;

@@ -61,7 +61,7 @@ export default function AdminHospitalDetails() {
           color: #111;
           font-family: "Segoe UI", Arial, sans-serif;
           background:
-            radial-gradient(880px 420px at 95% 4%, rgba(229, 9, 20, 0.15), transparent 72%),
+            radial-gradient(880px 420px at 95% 4%, rgba(255, 255, 255, 0.15), transparent 72%),
             radial-gradient(760px 380px at 3% -4%, rgba(223,235,120,0.2), transparent 70%),
             #ffffff;
         }
@@ -110,7 +110,7 @@ export default function AdminHospitalDetails() {
         .ahd-track-btn {
           margin-top: 8px;
           border: 1px solid #9fb000;
-          background: linear-gradient(135deg, #e50914 0%, #ffffff 100%);
+          background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
           color: #111;
           border-radius: 999px;
           font-size: 11px;

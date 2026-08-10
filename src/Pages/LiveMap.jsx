@@ -50,8 +50,8 @@ export default function LiveMap() {
           display: flex;
           flex-direction: column;
           background:
-            radial-gradient(920px 430px at 88% 8%, rgba(229, 9, 20, 0.15), transparent 72%),
-            radial-gradient(840px 380px at 10% -4%, rgba(229, 9, 20, 0.15), transparent 70%),
+            radial-gradient(920px 430px at 88% 8%, rgba(255, 255, 255, 0.15), transparent 72%),
+            radial-gradient(840px 380px at 10% -4%, rgba(255, 255, 255, 0.15), transparent 70%),
             var(--sr-bg, #ffffff);
           color: #111;
           font-family: 'Segoe UI', sans-serif;
@@ -91,7 +91,7 @@ export default function LiveMap() {
           cursor: pointer; display: flex; align-items: center; gap: 6px;
           white-space: nowrap; flex-shrink: 0; transition: color 0.15s;
         }
-        .lm-tab-btn.active { border-bottom-color: #e50914; color: #ffffff; font-weight: 800; background: #e50914; border-radius: 6px; }
+        .lm-tab-btn.active { border-bottom-color: #ffffff; color: #ffffff; font-weight: 800; background: #ffffff; border-radius: 6px; }
         .lm-selected-info {
           margin-left: auto; display: flex; align-items: center;
           gap: 6px; flex-shrink: 0; padding-left: 8px;
@@ -171,8 +171,8 @@ export default function LiveMap() {
               {t.label}
               {t.id === "route" && selectedDriver && (
                 <span style={{
-                  background: "#e5091422", color: "#e50914",
-                  border: "1px solid #e5091444",
+                  background: "#ffffff22", color: "#ffffff",
+                  border: "1px solid #ffffff44",
                   borderRadius: 10, padding: "1px 7px",
                   fontSize: 10, fontWeight: 700,
                 }}>

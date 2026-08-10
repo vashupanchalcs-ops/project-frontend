@@ -242,7 +242,7 @@ export default function DriverVoiceReports() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
               onClick={connectMic}
-              style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 12, padding: "10px 14px", fontWeight: 800, background: micConnected ? "#e50914" : "#fff", cursor: "pointer" }}
+              style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 12, padding: "10px 14px", fontWeight: 800, background: micConnected ? "#ffffff" : "#fff", cursor: "pointer" }}
             >
               {micConnected ? "Mic Connected" : "Connect Mic"}
             </button>
@@ -267,7 +267,7 @@ export default function DriverVoiceReports() {
         )}
 
         {bookings.length === 0 && (
-          <div style={{ border: "1px dashed rgba(17,17,17,0.25)", borderRadius: 14, padding: 24, textAlign: "center", color: "rgba(17,17,17,0.65)", background: "rgba(229, 9, 20, 0.15)" }}>
+          <div style={{ border: "1px dashed rgba(17,17,17,0.25)", borderRadius: 14, padding: 24, textAlign: "center", color: "rgba(17,17,17,0.65)", background: "rgba(255, 255, 255, 0.15)" }}>
             No current bookings mapped to this driver.
           </div>
         )}
@@ -293,7 +293,7 @@ export default function DriverVoiceReports() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "start", gap: 8, position: "relative" }}>
-                    <span style={{ alignSelf: "start", border: "1px solid rgba(17,17,17,0.2)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", background: "#e50914" }}>
+                    <span style={{ alignSelf: "start", border: "1px solid rgba(17,17,17,0.2)", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", background: "#ffffff" }}>
                       {String(b.status || "pending")}
                     </span>
                     <button
@@ -308,7 +308,7 @@ export default function DriverVoiceReports() {
                         <button
                           onClick={() => deleteBooking(bid)}
                           disabled={deletingBookingId === bid}
-                          style={{ width: "100%", border: "none", background: "#fff", color: "#b00020", textAlign: "left", padding: "10px 12px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}
+                          style={{ width: "100%", border: "none", background: "#fff", color: "#ffffff", textAlign: "left", padding: "10px 12px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}
                         >
                           {deletingBookingId === bid ? "Deleting..." : "Delete"}
                         </button>
@@ -319,7 +319,7 @@ export default function DriverVoiceReports() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                   <button
                     onClick={() => (isRecording ? stopRecording() : startRecording(bid))}
-                    style={{ border: "1px solid #111", borderRadius: 10, padding: "9px 10px", cursor: "pointer", fontWeight: 800, background: isRecording ? "#111" : "#e50914", color: isRecording ? "#fff" : "#111" }}
+                    style={{ border: "1px solid #111", borderRadius: 10, padding: "9px 10px", cursor: "pointer", fontWeight: 800, background: isRecording ? "#111" : "#ffffff", color: isRecording ? "#fff" : "#111" }}
                   >
                     {isRecording ? "Stop Mic" : "Start Mic"}
                   </button>
@@ -384,7 +384,7 @@ export default function DriverVoiceReports() {
                     <button
                       onClick={() => submitReport(b)}
                       disabled={savingBookingId === bid || !aiDraft}
-                      style={{ border: "1px solid #111", borderRadius: 10, padding: "10px 14px", cursor: savingBookingId === bid || !aiDraft ? "default" : "pointer", fontWeight: 800, background: !aiDraft ? "#f3f3e8" : "#e50914", color: "#111" }}
+                      style={{ border: "1px solid #111", borderRadius: 10, padding: "10px 14px", cursor: savingBookingId === bid || !aiDraft ? "default" : "pointer", fontWeight: 800, background: !aiDraft ? "#f3f3e8" : "#ffffff", color: "#111" }}
                     >
                       {savingBookingId === bid ? "Sending..." : "Send Report To Hospital"}
                     </button>

@@ -157,7 +157,7 @@ export default function DriverRequestChat() {
                   borderRadius: 10,
                   padding: 10,
                   marginBottom: 8,
-                  background: selectedId === t.id ? "#e50914" : "#fff",
+                  background: selectedId === t.id ? "#ffffff" : "#fff",
                   cursor: "pointer",
                 }}
               >

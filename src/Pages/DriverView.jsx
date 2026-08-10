@@ -176,7 +176,7 @@ export default function DriverView() {
       // ── Draw preview straight lines immediately ──────────────────────────
       routeLine1Ref.current = L.polyline(
         [[origin.lat, origin.lng], [pickupLL.lat, pickupLL.lng]],
-        { color: "#e50914", weight: 5, opacity: 0.45, dashArray: "10,10" }
+        { color: "#ffffff", weight: 5, opacity: 0.45, dashArray: "10,10" }
       ).addTo(map);
 
       if (destLL) {
@@ -219,7 +219,7 @@ export default function DriverView() {
       );
       if (routeLine1Ref.current && pts1?.length > 1) {
         routeLine1Ref.current.setLatLngs(pts1);
-        routeLine1Ref.current.setStyle({ color: "#e50914", weight: 6, opacity: 0.95, dashArray: null });
+        routeLine1Ref.current.setStyle({ color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null });
         routeLine1Ref.current.bringToFront();
       }
 
@@ -303,7 +303,7 @@ export default function DriverView() {
       // Only update if we got a real road route (>2 points = not straight line)
       if (routeLine1Ref.current && pts?.length > 2) {
         routeLine1Ref.current.setLatLngs(pts);
-        routeLine1Ref.current.setStyle({ color: "#e50914", weight: 6, opacity: 0.95, dashArray: null });
+        routeLine1Ref.current.setStyle({ color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null });
         routeLine1Ref.current.bringToFront();
       }
     } catch {} finally {
@@ -345,10 +345,10 @@ export default function DriverView() {
             // SVG ambulance badge — pinIcon rotation se icon nahi dikhta tha
             const ambIcon = window.L.divIcon({
               className: "",
-              html: `<div style="width:42px;height:42px;border-radius:50%;background:#e50914;border:3px solid #fff;box-shadow:0 0 0 6px rgba(229,9,20,0.22),0 8px 18px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+              html: `<div style="width:42px;height:42px;border-radius:50%;background:#ffffff;border:3px solid #fff;box-shadow:0 0 0 6px rgba(255, 255, 255, 0.15),0 8px 18px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <path d="M3 13.5V8.8C3 7.81 3.81 7 4.8 7H12.3C12.78 7 13.23 7.19 13.57 7.53L15.1 9.06H17.54C18.29 9.06 18.96 9.53 19.22 10.23L20.44 13.5H21V16H19.88C19.61 17.15 18.58 18 17.35 18C16.12 18 15.09 17.15 14.82 16H9.18C8.91 17.15 7.88 18 6.65 18C5.42 18 4.39 17.15 4.12 16H3V13.5Z" fill="white"/>
-                  <rect x="5.2" y="9" width="5.2" height="3.5" rx="0.6" fill="#e50914"/>
+                  <rect x="5.2" y="9" width="5.2" height="3.5" rx="0.6" fill="#ffffff"/>
                   <circle cx="6.65" cy="16" r="1.4" fill="#111"/>
                   <circle cx="17.35" cy="16" r="1.4" fill="#111"/>
                 </svg>

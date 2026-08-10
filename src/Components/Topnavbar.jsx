@@ -451,7 +451,7 @@ const Topnavbar = () => {
   const getStatusStyle = (status) => {
     if (status === "confirmed")  return { bg:"rgba(0,212,170,0.12)",  color:"#00d4aa", border:"rgba(0,212,170,0.3)"  };
     if (status === "cancelled" || status === "rejected")
-                                 return { bg:"rgba(229,9,20,0.12)",   color:"#ff4d5a", border:"rgba(229,9,20,0.3)"   };
+                                 return { bg:"rgba(255, 255, 255, 0.15)",   color:"#ffffff", border:"rgba(255, 255, 255, 0.15)"   };
     if (status === "completed")  return { bg:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.5)", border:"rgba(255,255,255,0.15)" };
     return                              { bg:"rgba(247,201,72,0.12)", color:"#f7c948", border:"rgba(247,201,72,0.3)"  }; // pending
   };
@@ -577,12 +577,12 @@ const Topnavbar = () => {
         .nf-brand { font-size: 18px; font-weight: 900; color: var(--sr-accent); letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; margin-left: 8px; }
         .nf-search-wrap { position: relative; flex-shrink: 0; }
         .nf-search-inner { display: flex; align-items: center; background: var(--sr-nav-input-bg, rgba(255,255,255,0.06)); border: 1px solid var(--sr-nav-input-border, rgba(255,255,255,0.12)); border-radius: 4px; height: 36px; width: 300px; overflow: hidden; transition: border-color 0.2s, background 0.2s; }
-        .nf-search-inner:focus-within { border-color: rgba(255,51,71,0.82); box-shadow: 0 0 0 2px rgba(229,9,20,0.24); }
+        .nf-search-inner:focus-within { border-color: rgba(255,51,71,0.82); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15); }
         .nf-search-icon { padding: 0 10px; display: flex; align-items: center; flex-shrink: 0; }
         .nf-search-input { flex: 1; background: transparent; border: none; outline: none; color: var(--sr-nav-text, #fff); font-size: 13px; font-family: inherit; min-width: 0; }
         .nf-search-input::placeholder { color: var(--sr-nav-text-muted, rgba(255,255,255,0.25)); }
-        .nf-search-btn { height: 100%; padding: 0 14px; background: var(--sr-accent, #e50914); border: none; border-left: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s; flex-shrink: 0; }
-        .nf-search-btn:hover { background: #ff3347; }
+        .nf-search-btn { height: 100%; padding: 0 14px; background: var(--sr-accent, #ffffff); border: none; border-left: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s; flex-shrink: 0; }
+        .nf-search-btn:hover { background: #ffffff; }
         .nf-mobile-search-btn { display: none; width: 34px; height: 34px; border-radius: 4px; background: var(--sr-nav-input-bg); border: 1px solid var(--sr-nav-input-border); color: var(--sr-nav-text-sub); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 
         /* Mobile search overlay — top layer */
@@ -608,7 +608,7 @@ const Topnavbar = () => {
         .nf-sd-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--sr-border); transition: background 0.15s; }
         .nf-sd-item:hover { background: var(--sr-hover); }
         .nf-sd-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-        .nf-sd-icon-amb  { background: rgba(229,9,20,0.12); }
+        .nf-sd-icon-amb  { background: rgba(255, 255, 255, 0.15); }
         .nf-sd-icon-hosp { background: rgba(33,150,243,0.12); }
         .nf-sd-info { flex: 1; min-width: 0; }
         .nf-sd-name { font-size: 13px; font-weight: 600; color: var(--sr-text, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -617,14 +617,14 @@ const Topnavbar = () => {
         .nf-sd-badge { padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 800; white-space: nowrap; text-transform: uppercase; }
         .nf-sd-badge-available { background: rgba(0,212,170,0.15); color: #00d4aa; }
         .nf-sd-badge-en_route  { background: rgba(247,201,72,0.15); color: #f7c948; }
-        .nf-sd-badge-busy      { background: rgba(229,9,20,0.15);   color: #ff4d5a; }
+        .nf-sd-badge-busy      { background: rgba(255, 255, 255, 0.15);   color: #ffffff; }
         .nf-sd-badge-offline   { background: rgba(255,255,255,0.08); color: rgba(200,200,200,0.6); }
         .nf-sd-badge-active    { background: rgba(0,212,170,0.15); color: #00d4aa; }
         .nf-sd-badge-full      { background: rgba(247,201,72,0.15); color: #f7c948; }
-        .nf-sd-badge-critical  { background: rgba(229,9,20,0.15);   color: #ff4d5a; }
+        .nf-sd-badge-critical  { background: rgba(255, 255, 255, 0.15);   color: #ffffff; }
         .nf-sd-badge-closed    { background: rgba(255,255,255,0.08); color: rgba(200,200,200,0.6); }
-        .nf-sd-details-btn { font-size: 10px; font-weight: 700; background: var(--sr-accent, #e50914); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit; white-space: nowrap; }
-        .nf-sd-details-btn:hover { background: #ff3347; }
+        .nf-sd-details-btn { font-size: 10px; font-weight: 700; background: var(--sr-accent, #ffffff); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+        .nf-sd-details-btn:hover { background: #ffffff; }
         .nf-sd-viewall { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; border-top: 1px solid var(--sr-border); background: var(--sr-hover); }
         .nf-sd-viewall-text { font-size: 11px; color: var(--sr-text-sub); }
         .nf-sd-viewall-btn  { font-size: 11px; font-weight: 700; color: var(--sr-accent); background: none; border: none; cursor: pointer; font-family: inherit; }
@@ -666,7 +666,7 @@ const Topnavbar = () => {
         .nf-drop-time   { font-size: 10px; color: var(--sr-text-muted); }
         .nf-drop-loc    { font-size: 11px; color: var(--sr-text-sub); }
         .nf-drop-user   { font-size: 10px; color: #00d4aa; }
-        .nf-drop-status { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 100px; background: rgba(229,9,20,0.15); color: #ff4d5a; border: 1px solid rgba(229,9,20,0.3); align-self: flex-start; text-transform: uppercase; letter-spacing: 0.5px; }
+        .nf-drop-status { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 100px; background: rgba(255, 255, 255, 0.15); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.15); align-self: flex-start; text-transform: uppercase; letter-spacing: 0.5px; }
         .nf-drop-status-confirmed { background: rgba(0,212,170,0.15); color: #00d4aa; border-color: rgba(0,212,170,0.3); }
         .nf-drop-empty  { padding: 32px 24px; text-align: center; font-size: 12px; color: var(--sr-text-sub); }
         .nf-drop-empty-icon { font-size: 32px; margin-bottom: 8px; }
@@ -676,12 +676,12 @@ const Topnavbar = () => {
         .nf-user { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .nf-username { font-size: 13px; font-weight: 500; color: var(--sr-nav-text-sub, rgba(255,255,255,0.5)); white-space: nowrap; }
         .nf-role-badge { font-size: 9px; font-weight: 800; border-radius: 6px; padding: 2px 8px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; border: 1px solid; }
-        .nf-role-badge-admin { background: #d90416; color: #fff; border-color: #d90416; }
+        .nf-role-badge-admin { background: #ffffff; color: #fff; border-color: #ffffff; }
         .nf-role-badge-hospital { background: rgba(37,99,235,0.16); color: #2563eb; border-color: rgba(37,99,235,0.38); }
         .nf-role-badge-driver { background: rgba(22,163,74,0.16); color: #16a34a; border-color: rgba(22,163,74,0.38); }
         .nf-avatar-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
         .nf-avatar { width: 34px; height: 34px; border-radius: 50%; background: #2a2a2a; border: 2px solid var(--sr-accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
-        .nf-avatar-wrap:hover .nf-avatar { box-shadow: 0 0 0 3px rgba(229,9,20,0.25); }
+        .nf-avatar-wrap:hover .nf-avatar { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15); }
         .nf-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .nf-avatar-overlay { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
         .nf-avatar-wrap:hover .nf-avatar-overlay { opacity: 1; }
@@ -694,8 +694,8 @@ const Topnavbar = () => {
         .nf-profile-dp-preview img { width: 100%; height: 100%; object-fit: cover; }
         .nf-profile-item { display: flex; align-items: center; gap: 9px; padding: 8px 14px; font-size: 12px; font-weight: 500; color: var(--sr-text-sub); cursor: pointer; transition: background 0.15s, color 0.15s; }
         .nf-profile-item:hover { background: var(--sr-hover); color: var(--sr-text, #fff); }
-        .nf-profile-item.danger { color: #ff4d5a; }
-        .nf-profile-item.danger:hover { background: rgba(229,9,20,0.1); }
+        .nf-profile-item.danger { color: #ffffff; }
+        .nf-profile-item.danger:hover { background: rgba(255, 255, 255, 0.15); }
         .nf-login-link { font-size: 13px; font-weight: 600; color: var(--sr-nav-text-sub); text-decoration: none; white-space: nowrap; }
         .nf-login-link:hover { color: var(--sr-nav-text, #fff); }
 
@@ -911,6 +911,7 @@ const Topnavbar = () => {
               {role === "admin" && <span className="nf-role-badge nf-role-badge-admin">Admin</span>}
               {role === "hospital" && <span className="nf-role-badge nf-role-badge-hospital">Hospital</span>}
               {role === "driver" && <span className="nf-role-badge nf-role-badge-driver">Driver</span>}
+              <button type="button" className="nf-logout-link" onClick={logoutUser}>Logout</button>
               <div className="nf-avatar-wrap" ref={profileRef} onClick={() => setShowProfileMenu(m => !m)}>
                 <div className="nf-avatar">
                   {profilePic ? <img src={profilePic} alt="profile"/> : <span>{user[0]?.toUpperCase()}</span>}

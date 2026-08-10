@@ -21,7 +21,7 @@ const getStatusConfig = (status) => {
     case "pending":   return { color:"#f7c948", bg:"rgba(247,201,72,0.12)", border:"rgba(247,201,72,0.3)",  dot:"#f7c948", pulse:false, label:"Pending"   };
     case "completed": return { color:"rgba(17,17,17,0.58)", bg:"rgba(20,20,20,0.06)", border:"rgba(20,20,20,0.14)", dot:"rgba(17,17,17,0.45)", pulse:false, label:"Completed" };
     case "cancelled":
-    case "rejected":  return { color:"#ff4d5a", bg:"rgba(229,9,20,0.12)", border:"rgba(229,9,20,0.3)", dot:"#ff4d5a", pulse:false, label:status.charAt(0).toUpperCase()+status.slice(1) };
+    case "rejected":  return { color:"#ffffff", bg:"rgba(255, 255, 255, 0.15)", border:"rgba(255, 255, 255, 0.15)", dot:"#ffffff", pulse:false, label:status.charAt(0).toUpperCase()+status.slice(1) };
     default:          return { color:"rgba(17,17,17,0.58)", bg:"rgba(20,20,20,0.06)", border:"rgba(20,20,20,0.14)", dot:"#777", pulse:false, label:status||"Unknown" };
   }
 };
@@ -125,17 +125,17 @@ export function MyBookings() {
         .mb-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
         .mb-stat  {
           background:#ffffff;
-          border:1px solid rgba(229, 9, 20, 0.15);
+          border:1px solid rgba(255, 255, 255, 0.15);
           border-radius:14px;
           padding:20px 20px 18px;
           position:relative;
           overflow:hidden;
-          box-shadow:0 8px 22px rgba(229, 9, 20, 0.15);
+          box-shadow:0 8px 22px rgba(255, 255, 255, 0.15);
           transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
         .mb-stat:hover {
-          border-color:rgba(229, 9, 20, 0.15);
-          box-shadow:0 14px 30px rgba(229, 9, 20, 0.15);
+          border-color:rgba(255, 255, 255, 0.15);
+          box-shadow:0 14px 30px rgba(255, 255, 255, 0.15);
           transform:translateY(-2px);
         }
 
@@ -143,7 +143,7 @@ export function MyBookings() {
         .mb-filters { display:flex; flex-wrap:wrap; gap:8px; padding:16px 0 0; border-top:1px solid rgba(20,20,20,0.08); margin-bottom:0; }
         .mb-filter-btn { flex-shrink:0; padding:7px 18px; border-radius:100px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; border:1px solid rgba(20,20,20,0.16); background:#fff; color:rgba(17,17,17,0.7); transition:all 0.2s; white-space:nowrap; }
         .mb-filter-btn:hover  { border-color:rgba(20,20,20,0.3); color:#111; }
-        .mb-filter-btn.active { background:#e50914; color:#111; border-color:#e50914; box-shadow:0 4px 16px rgba(229, 9, 20, 0.15); }
+        .mb-filter-btn.active { background:#ffffff; color:#111; border-color:#ffffff; box-shadow:0 4px 16px rgba(255, 255, 255, 0.15); }
 
         /* Confirmed banner */
         .mb-banner { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:rgba(0,212,170,0.07); border:1px solid rgba(0,212,170,0.2); border-radius:16px; margin-top:20px; flex-wrap:wrap; gap:10px; cursor:pointer; transition:background 0.15s; }
@@ -154,17 +154,17 @@ export function MyBookings() {
 
         .mb-card {
           background:#ffffff;
-          border:1px solid rgba(229, 9, 20, 0.15);
+          border:1px solid rgba(255, 255, 255, 0.15);
           border-radius:20px;
           overflow:hidden;
           transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
           width:100%;
-          box-shadow:0 12px 30px rgba(229, 9, 20, 0.15);
+          box-shadow:0 12px 30px rgba(255, 255, 255, 0.15);
         }
         .mb-card:hover {
           transform:translateY(-2px);
-          border-color:rgba(229, 9, 20, 0.15);
-          box-shadow:0 18px 36px rgba(229, 9, 20, 0.15);
+          border-color:rgba(255, 255, 255, 0.15);
+          box-shadow:0 18px 36px rgba(255, 255, 255, 0.15);
         }
         .mb-card.confirmed-card {
           border-color:rgba(0,212,170,0.35);
@@ -177,18 +177,18 @@ export function MyBookings() {
         .mb-status-dot.pulse { animation:mb-pulse 1.6s infinite; }
 
         .mb-card-body  { padding:20px; }
-        .mb-amb-strip  { background:rgba(229, 9, 20, 0.15); border:1px solid rgba(20,20,20,0.12); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+        .mb-amb-strip  { background:rgba(255, 255, 255, 0.15); border:1px solid rgba(20,20,20,0.12); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:14px; margin-bottom:18px; }
         .mb-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; }
         .mb-detail-label { font-size:9px; font-weight:700; color:rgba(17,17,17,0.48); text-transform:uppercase; letter-spacing:0.7px; margin-bottom:4px; }
         .mb-detail-value { font-size:13px; color:rgba(17,17,17,0.88); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-        .mb-card-footer { padding:14px 20px; background:rgba(229, 9, 20, 0.15); border-top:1px solid rgba(20,20,20,0.08); }
-        .mb-track-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#e50914; color:#111; border:none; border-radius:14px; padding:13px 0; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; transition:background 0.15s, transform 0.15s; box-shadow:0 4px 20px rgba(229, 9, 20, 0.15); }
+        .mb-card-footer { padding:14px 20px; background:rgba(255, 255, 255, 0.15); border-top:1px solid rgba(20,20,20,0.08); }
+        .mb-track-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#ffffff; color:#111; border:none; border-radius:14px; padding:13px 0; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; transition:background 0.15s, transform 0.15s; box-shadow:0 4px 20px rgba(255, 255, 255, 0.15); }
         .mb-track-btn:hover { background:#c5d700; transform:translateY(-1px); }
-        .mb-track-btn .live-badge { background:#111; color:#e50914; font-size:9px; font-weight:900; padding:2px 8px; border-radius:100px; }
+        .mb-track-btn .live-badge { background:#111; color:#ffffff; font-size:9px; font-weight:900; padding:2px 8px; border-radius:100px; }
         .mb-delete-btn {
           width: 100%;
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 14px;
           background: #fffef2;
           color: #111;
@@ -200,8 +200,8 @@ export function MyBookings() {
           transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
         }
         .mb-delete-btn:hover {
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 10px 20px rgba(229, 9, 20, 0.15);
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 10px 20px rgba(255, 255, 255, 0.15);
           transform: translateY(-1px);
         }
         .mb-track-chip {
@@ -209,19 +209,19 @@ export function MyBookings() {
           border: none;
           border-radius: 999px;
           padding: 7px 12px;
-          background: #e50914;
+          background: #ffffff;
           color: #111;
           font-size: 10px;
           font-weight: 900;
           letter-spacing: 0.4px;
           text-transform: uppercase;
           cursor: pointer;
-          box-shadow: 0 8px 16px rgba(229, 9, 20, 0.15);
+          box-shadow: 0 8px 16px rgba(255, 255, 255, 0.15);
           transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         .mb-track-chip:hover {
           transform: translateY(-1px);
-          box-shadow: 0 10px 18px rgba(229, 9, 20, 0.15);
+          box-shadow: 0 10px 18px rgba(255, 255, 255, 0.15);
         }
 
         .mb-empty { text-align:center; padding:64px 20px; background:#fff; border:1px dashed rgba(20,20,20,0.16); border-radius:20px; margin-top:20px; }
@@ -245,7 +245,7 @@ export function MyBookings() {
 
           {/* Header */}
           <div className="page-section-header mb-reveal-top">
-            <div style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:10, fontWeight:700, color:"#111", background:"rgba(229, 9, 20, 0.15)", border:"1px solid rgba(20,20,20,0.14)", borderRadius:100, padding:"4px 14px", letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:10, fontWeight:700, color:"#111", background:"rgba(255, 255, 255, 0.15)", border:"1px solid rgba(20,20,20,0.14)", borderRadius:100, padding:"4px 14px", letterSpacing:1, textTransform:"uppercase", marginBottom:12 }}>
               🚑 My Bookings
             </div>
             <h1 style={{ fontSize:28, fontWeight:900, color:"#111", margin:"0 0 4px", letterSpacing:-0.5 }}>Booking History</h1>
@@ -288,7 +288,7 @@ export function MyBookings() {
           {/* Loading */}
           {loading && (
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"64px 0", gap:12 }}>
-              <div style={{ width:36, height:36, border:"3px solid rgba(20,20,20,0.1)", borderTop:"3px solid #e50914", borderRadius:"50%", animation:"mb-spin 0.8s linear infinite" }}/>
+              <div style={{ width:36, height:36, border:"3px solid rgba(20,20,20,0.1)", borderTop:"3px solid #ffffff", borderRadius:"50%", animation:"mb-spin 0.8s linear infinite" }}/>
               <p style={{ color:"rgba(17,17,17,0.55)", fontSize:13 }}>Loading bookings...</p>
             </div>
           )}
@@ -333,7 +333,7 @@ export function MyBookings() {
                     <div className="mb-card-body">
                       {(b.ambulance_number||b.ambulance_id) && (
                         <div className="mb-amb-strip">
-                          <div style={{ width:38, height:38, borderRadius:"50%", background:"rgba(229, 9, 20, 0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <div style={{ width:38, height:38, borderRadius:"50%", background:"rgba(255, 255, 255, 0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                             <Icons.Ambulance/>
                           </div>
                           <div>
@@ -343,12 +343,12 @@ export function MyBookings() {
                         </div>
                       )}
                       <div className="mb-detail-grid">
-                        <DetailItem icon={<Icons.MapPin/>} iconColor="#e50914"               label="Pickup Location" value={b.pickup_location}/>
+                        <DetailItem icon={<Icons.MapPin/>} iconColor="#ffffff"               label="Pickup Location" value={b.pickup_location}/>
                         <DetailItem icon={<Icons.MapPin/>} iconColor="rgba(147,112,219,0.9)" label="Assigned Hospital" value={b.assigned_hospital_name || b.destination || "Admin will assign"}/>
                         <DetailItem icon={<Icons.User/>}   iconColor="rgba(100,149,237,0.9)" label="Booked By"       value={b.booked_by}/>
                         <DetailItem icon={<Icons.Clock/>}  iconColor="rgba(17,17,17,0.5)" label="Date & Time"     value={b.created_at?new Date(b.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):null}/>
                         <DetailItem icon={<Icons.Clock/>}  iconColor="#00a58a" label="Hospital Response" value={b.hospital_response || "pending"} />
-                        <DetailItem icon={<Icons.Clock/>}  iconColor="#e50914" label="Response Note" value={b.hospital_response_note || "-"} />
+                        <DetailItem icon={<Icons.Clock/>}  iconColor="#ffffff" label="Response Note" value={b.hospital_response_note || "-"} />
                         <DetailItem icon={<Icons.Clock/>}  iconColor="#00a58a" label="Medical Insurance" value={b.insurance_status || "pending"} />
                       </div>
                     </div>

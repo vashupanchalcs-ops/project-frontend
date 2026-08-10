@@ -22,7 +22,7 @@ import useLeaflet, {
 
 const BASE = "http://127.0.0.1:8000";
 
-const statusColor = { available: "#e50914", en_route: "#222222", busy: "#666666", offline: "#999999" };;
+const statusColor = { available: "#ffffff", en_route: "#222222", busy: "#666666", offline: "#999999" };;
 
 const uniqueTextList = (values) => {
   const out = [], seen = new Set();
@@ -450,16 +450,16 @@ export default function AdminRouteManager({
         .arm-list { max-height:190px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
         .arm-item { background:#fff; border:1px solid rgba(17,17,17,0.14); border-radius:8px; padding:8px 10px; cursor:pointer; transition:background 0.12s; }
         .arm-item:hover { background:#ffffff; }
-        .arm-item.sel { background:#e50914; border-color:#e50914; }
+        .arm-item.sel { background:#ffffff; border-color:#ffffff; }
         .arm-find-btn,.arm-push-btn { width:100%; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; }
-        .arm-find-btn { background:#e50914; color:#111; padding:10px 0; margin-bottom:8px; font-size:13px; }
+        .arm-find-btn { background:#ffffff; color:#111; padding:10px 0; margin-bottom:8px; font-size:13px; }
         .arm-find-btn:disabled,.arm-push-btn:disabled { background:#d7d7cd; color:rgba(17,17,17,0.45); cursor:not-allowed; }
-        .arm-route-card { background:#ffffff; border:1px solid rgba(229, 9, 20, 0.15); border-radius:10px; padding:10px; margin-top:4px; position:sticky; bottom:8px; z-index:5; box-shadow:0 10px 24px rgba(17,17,17,0.16); }
+        .arm-route-card { background:#ffffff; border:1px solid rgba(255, 255, 255, 0.15); border-radius:10px; padding:10px; margin-top:4px; position:sticky; bottom:8px; z-index:5; box-shadow:0 10px 24px rgba(17,17,17,0.16); }
         .arm-push-btn { background:#111; color:#fff; padding:10px 0; margin-top:6px; font-size:13px; border:1px solid rgba(255,255,255,0.1); }
         .arm-map { flex:1; min-width:0; position:relative; }
         .arm-map-el { width:100%; height:100%; min-height:540px; position:relative; z-index:1; }
         .arm-toast { position:fixed; top:68px; right:16px; z-index:9999; padding:11px 16px; border-radius:8px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,0.22); }
-        .arm-toast.success { background:#e50914; color:#111; }
+        .arm-toast.success { background:#ffffff; color:#111; }
         .arm-toast.error { background:#373737; color:#fff; }
         .arm-3d-btn { position:absolute; top:10px; right:10px; z-index:5000; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.22); border-radius:9px; padding:7px 12px; font-weight:700; font-size:12px; cursor:pointer; }
         @media (max-width:767px) {

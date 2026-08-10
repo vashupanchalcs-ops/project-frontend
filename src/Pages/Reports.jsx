@@ -5,8 +5,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 gsap.registerPlugin(ScrollTrigger);
-const COLORS = ["#e50914", "#222222", "#666666", "#999999"];;
-const statusColor = { available: "#e50914", en_route: "#222222", busy: "#666666", offline: "#999999" };;
+const COLORS = ["#ffffff", "#222222", "#666666", "#999999"];;
+const statusColor = { available: "#ffffff", en_route: "#222222", busy: "#666666", offline: "#999999" };;
 
 const Reports = () => {
   const [bookings,   setBookings]   = useState([]);
@@ -116,7 +116,7 @@ const Reports = () => {
         .rep-content { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 28px; }
 
         /* Header — page level text */
-        .rep-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #111; background: rgba(229, 9, 20, 0.15); border: 1px solid rgba(229, 9, 20, 0.15); border-radius: 100px; padding: 4px 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+        .rep-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #111; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 100px; padding: 4px 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
         .rep-header h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; color: var(--sr-page-text, #fff); }
         .rep-header p  { font-size: 13px; color: var(--sr-page-text-sub, rgba(255,255,255,0.4)); }
         .rep-section-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: var(--sr-page-text, #fff); }
@@ -150,10 +150,10 @@ const Reports = () => {
         .rep-table { width: 100%; border-collapse: collapse; min-width: 700px; }
         .rep-table th { font-size: 10px; font-weight: 700; color: var(--sr-text-sub); letter-spacing: 0.8px; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--sr-border, rgba(255,255,255,0.07)); }
         .rep-table td { padding: 12px 14px; border-bottom: 1px solid var(--sr-border, rgba(255,255,255,0.04)); font-size: 12px; color: var(--sr-text, #fff); vertical-align: middle; }
-        .rep-table tr:hover td { background: rgba(229, 9, 20, 0.15); }
+        .rep-table tr:hover td { background: rgba(255, 255, 255, 0.15); }
         .rep-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; padding: 3px 10px; border-radius: 100px; border: 1px solid; text-transform: uppercase; letter-spacing: 0.5px; }
-        .rep-track-btn { border-radius: 100px; padding: 4px 14px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: inherit; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; border: 1px solid rgba(229, 9, 20, 0.15); white-space: nowrap; }
-        .rep-track-btn:hover { background: #e50914 !important; color: #111 !important; }
+        .rep-track-btn { border-radius: 100px; padding: 4px 14px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: inherit; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; border: 1px solid rgba(255, 255, 255, 0.15); white-space: nowrap; }
+        .rep-track-btn:hover { background: #ffffff !important; color: #111 !important; }
 
         /* Modal — always dark */
         .rep-modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -162,10 +162,10 @@ const Reports = () => {
         .rep-modal-info-bar { padding: 10px 20px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--sr-border); display: flex; gap: 20px; flex-wrap: wrap; }
         .rep-modal-info-label { font-size: 9px; color: var(--sr-text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
         .rep-modal-info-val   { font-size: 13px; font-weight: 700; color: var(--sr-text, #fff); margin-top: 2px; }
-        .rep-close-btn { background: rgba(229, 9, 20, 0.15); color: #111; border: 1px solid rgba(229, 9, 20, 0.15); border-radius: 100px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .rep-close-btn { background: rgba(255, 255, 255, 0.15); color: #111; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 100px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
         .rep-close-btn:hover { background: rgba(255,255,255,0.15); }
         @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
-        .gps-pulse { width: 6px; height: 6px; border-radius: 50%; background: #e50914; display: inline-block; animation: pulse 1.5s infinite; }
+        .gps-pulse { width: 6px; height: 6px; border-radius: 50%; background: #ffffff; display: inline-block; animation: pulse 1.5s infinite; }
 
         @media (max-width: 1023px) {
           .rep-root { padding-left: 64px; }
@@ -188,12 +188,12 @@ const Reports = () => {
         /* Order Table Specific Styles */
         .rep-ord-card {
           background: linear-gradient(165deg, rgba(255,255,255,0.98), rgba(247,247,238,0.98));
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 20px;
           overflow-x: auto;
           padding: 18px 20px 16px;
           margin-top: 10px;
-          box-shadow: 0 18px 38px rgba(229, 9, 20, 0.15);
+          box-shadow: 0 18px 38px rgba(255, 255, 255, 0.15);
         }
         .rep-ord-table { width: 100%; border-collapse: collapse; min-width: 1000px; text-align: left; }
         .rep-ord-table th {
@@ -213,7 +213,7 @@ const Reports = () => {
           vertical-align: middle;
           color: #111111;
         }
-        .rep-ord-table tr:hover td { background: rgba(229, 9, 20, 0.15); }
+        .rep-ord-table tr:hover td { background: rgba(255, 255, 255, 0.15); }
         
         .rep-id { font-weight: 900; font-size: 13px; color: #111; display: inline-flex; gap: 6px; align-items: center; letter-spacing: 0.2px; }
         
@@ -226,15 +226,15 @@ const Reports = () => {
         
         .rep-badge { display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; border-radius: 999px; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; border: 1px solid; }
         .rep-badge.active { background: rgba(0,200,83,0.12); color: #0a8c46; border-color: rgba(0,200,83,0.24); }
-        .rep-badge.delayed { background: rgba(229,9,20,0.08); color: #bf1d2d; border-color: rgba(229,9,20,0.18); }
-        .rep-badge.completed { background: rgba(229, 9, 20, 0.15); color: #111; border-color: rgba(229, 9, 20, 0.15); }
+        .rep-badge.delayed { background: rgba(255, 255, 255, 0.15); color: #bf1d2d; border-color: rgba(255, 255, 255, 0.15); }
+        .rep-badge.completed { background: rgba(255, 255, 255, 0.15); color: #111; border-color: rgba(255, 255, 255, 0.15); }
         .rep-badge.pending { background: rgba(179,104,0,0.09); color: #9a6200; border-color: rgba(179,104,0,0.22); }
 
         .rep-eta { font-size: 12px; color: #111; display: flex; align-items: center; gap: 6px; font-weight: 600; }
         .rep-eta .warn { color: #b36800; font-size: 14px; }
 
         .rep-driver { display: flex; align-items: center; gap: 8px; }
-        .rep-driver-av { width: 28px; height: 28px; background: linear-gradient(145deg, #e50914, #ffffff); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid rgba(17,17,17,0.08); color: #111; }
+        .rep-driver-av { width: 28px; height: 28px; background: linear-gradient(145deg, #ffffff, #ffffff); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid rgba(17,17,17,0.08); color: #111; }
         .rep-driver-name { font-size: 12px; color: #111; font-weight: 700; }
 
         .rep-vehicle { font-size: 12px; color: rgba(17,17,17,0.82); font-weight: 600; }
@@ -242,11 +242,11 @@ const Reports = () => {
         .rep-nodelay { color: rgba(17,17,17,0.38); font-size: 12px; }
         
         .rep-action-btn { width: 34px; height: 34px; background: #ffffff; border: 1px solid rgba(17,17,17,0.12); border-radius: 10px; cursor: pointer; color: rgba(17,17,17,0.58); font-size: 16px; transition: all 0.15s; }
-        .rep-action-btn:hover { color: #111; background: #e50914; border-color: #e50914; }
+        .rep-action-btn:hover { color: #111; background: #ffffff; border-color: #ffffff; }
         .rep-ord-footer { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 11px; color: rgba(17,17,17,0.58); }
         .rep-ord-pages { display: flex; gap: 6px; }
         .rep-ord-page { padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(17,17,17,0.1); background: rgba(17,17,17,0.04); color: rgba(17,17,17,0.56); font-weight: 800; }
-        .rep-ord-page.active { background: #e50914; color: #111; border-color: #e50914; }
+        .rep-ord-page.active { background: #ffffff; color: #111; border-color: #ffffff; }
 
         @media (max-width: 767px) {
           .rep-ord-card { padding: 14px 14px 12px; }
@@ -269,10 +269,10 @@ const Reports = () => {
             <div className="rep-summary">
               {[
                 { label: "Total Bookings", value: String(total).padStart(2,"0"),     accent: "rgba(255,255,255,0.4)" },
-                { label: "Completed",      value: String(completed).padStart(2,"0"), accent: "#e50914" },
-                { label: "Confirmed",      value: String(confirmed).padStart(2,"0"), accent: "#e50914" },
-                { label: "Cancelled",      value: String(cancelled).padStart(2,"0"), accent: "#e50914" },
-                { label: "Success Rate",   value: `${successRate}%`,                 accent: "#e50914" },
+                { label: "Completed",      value: String(completed).padStart(2,"0"), accent: "#ffffff" },
+                { label: "Confirmed",      value: String(confirmed).padStart(2,"0"), accent: "#ffffff" },
+                { label: "Cancelled",      value: String(cancelled).padStart(2,"0"), accent: "#ffffff" },
+                { label: "Success Rate",   value: `${successRate}%`,                 accent: "#ffffff" },
               ].map((s, i) => (
                 <motion.div key={i} className="rep-sum-card rep-anim" whileHover={{ y: -2 }}>
                   <div className="rep-sum-bar" style={{ background: s.accent }} />
@@ -342,9 +342,9 @@ const Reports = () => {
                       <YAxis tick={chartTick} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={ttStyle} />
                       <Legend wrapperStyle={{ color: "#111111", fontSize: 11, fontWeight: 600 }} />
-                      <Bar dataKey="total"     name="Total"     fill="#e50914" radius={[4,4,0,0]} />
-                      <Bar dataKey="available" name="Available" fill="#e50914"                radius={[4,4,0,0]} />
-                      <Bar dataKey="icu"       name="ICU"       fill="#e50914"                radius={[4,4,0,0]} />
+                      <Bar dataKey="total"     name="Total"     fill="#ffffff" radius={[4,4,0,0]} />
+                      <Bar dataKey="available" name="Available" fill="#ffffff"                radius={[4,4,0,0]} />
+                      <Bar dataKey="icu"       name="ICU"       fill="#ffffff"                radius={[4,4,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="rep-chart-empty">No hospitals yet</div>}
@@ -358,7 +358,7 @@ const Reports = () => {
                       <XAxis dataKey="name" tick={{ fill: "#111111", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
                       <YAxis tick={chartTick} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={ttStyle} />
-                      <Bar dataKey="bookings" fill="#e50914" radius={[6,6,0,0]} />
+                      <Bar dataKey="bookings" fill="#ffffff" radius={[6,6,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="rep-chart-empty">No data yet</div>}
@@ -481,8 +481,8 @@ const Reports = () => {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {trackedAmb.lat
-                  ? <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 100, background: "rgba(229, 9, 20, 0.15)", color: "#111", border: "1px solid rgba(229, 9, 20, 0.15)", display: "flex", alignItems: "center", gap: 6 }}><span className="gps-pulse" /> GPS Active</span>
-                  : <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 100, background: "rgba(229, 9, 20, 0.15)", color: "#111", border: "1px solid rgba(229, 9, 20, 0.15)" }}>⏳ No GPS</span>
+                  ? <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 100, background: "rgba(255, 255, 255, 0.15)", color: "#111", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: 6 }}><span className="gps-pulse" /> GPS Active</span>
+                  : <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 100, background: "rgba(255, 255, 255, 0.15)", color: "#111", border: "1px solid rgba(255, 255, 255, 0.15)" }}>⏳ No GPS</span>
                 }
                 <button className="rep-close-btn" onClick={() => setTrackedAmb(null)}>Close ✕</button>
               </div>

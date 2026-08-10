@@ -12,7 +12,7 @@ const REFRESH = 5000;
 const statusColors = {
   available: "#00c853",
   en_route: "#f7c948",
-  busy: "#ff4d5a",
+  busy: "#ffffff",
   offline: "#888888",
 };
 
@@ -114,11 +114,11 @@ export default function RealTimeMap({ onSelectDriver }) {
         .rtm-sidebar { width:280px; min-width:280px; background:#fff; border-right:1px solid #e0e0e0; display:flex; flex-direction:column; }
         .rtm-sidebar-header { padding:12px 14px; border-bottom:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; }
         .rtm-stats { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid #e0e0e0; }
-        .rtm-stat { flex:1; text-align:center; border:1px solid #e0e0e0; border-top:3.5px solid #e50914; background:#ffffff; border-radius:8px; padding:8px 4px; }
+        .rtm-stat { flex:1; text-align:center; border:1px solid #e0e0e0; border-top:3.5px solid #ffffff; background:#ffffff; border-radius:8px; padding:8px 4px; }
         .rtm-low-batt-alert {
           margin: 8px 10px 0;
-          border: 1px solid rgba(229, 9, 20, 0.35);
-          background: rgba(229, 9, 20, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           color: #a80f1a;
           border-radius: 10px;
           padding: 8px 10px;
@@ -127,8 +127,8 @@ export default function RealTimeMap({ onSelectDriver }) {
         }
         .rtm-list { flex:1; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:8px; }
         .rtm-item { background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:10px; cursor:pointer; }
-        .rtm-item.sel { background:#ffffff; border:1px solid #e50914; border-top:3.5px solid #e50914; }
-        .rtm-item.critical { border-color: rgba(229, 9, 20, 0.45); background: rgba(229, 9, 20, 0.05); }
+        .rtm-item.sel { background:#ffffff; border:1px solid #ffffff; border-top:3.5px solid #ffffff; }
+        .rtm-item.critical { border-color: rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.15); }
         .rtm-battery-badge {
           font-size: 10px;
           font-weight: 800;
@@ -145,7 +145,7 @@ export default function RealTimeMap({ onSelectDriver }) {
         .rtm-battery-badge.critical {
           color: #b31321;
           border-color: rgba(179, 19, 33, 0.35);
-          background: rgba(229, 9, 20, 0.14);
+          background: rgba(255, 255, 255, 0.15);
         }
         .rtm-map-wrap { flex:1; min-width:0; position:relative; }
         .rtm-map { width:100%; height:100%; }

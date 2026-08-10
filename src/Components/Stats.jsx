@@ -4,10 +4,10 @@ import Successrate from "../assets/Stats/Succcessrate";
 import Totalcases from "../assets/Stats/Totalcases";
 
 const cards = [
-  { component: <Activevehicles />, accent: "#E50914" },
-  { component: <Successrate />,   accent: "#E50914" },
-  { component: <Totalcases />,    accent: "#E50914" },
-  { component: <Fuelefficiency />, accent: "#E50914" },
+  { component: <Activevehicles />, accent: "#ffffff" },
+  { component: <Successrate />,   accent: "#ffffff" },
+  { component: <Totalcases />,    accent: "#ffffff" },
+  { component: <Fuelefficiency />, accent: "#ffffff" },
 ];
 
 const Stats = () => {
@@ -38,14 +38,14 @@ const Stats = () => {
           min-height: 0;
         }
         .stats-card:hover {
-          border-color: rgba(229,9,20,0.4);
+          border-color: rgba(255, 255, 255, 0.15);
           transform: scale(1.02);
         }
         .stats-card-bar {
           position: absolute;
           top: 0; left: 0; right: 0;
           height: 3px;
-          background: #E50914;
+          background: #ffffff;
           border-radius: 16px 16px 0 0;
         }
 

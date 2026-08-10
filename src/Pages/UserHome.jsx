@@ -148,7 +148,7 @@ export default function UserHome() {
           font-weight: 800;
           letter-spacing: 1.5px;
           text-transform: uppercase;
-          color: #e50914;
+          color: #ffffff;
           margin-bottom: 10px;
         }
         .uh-title {
@@ -159,7 +159,7 @@ export default function UserHome() {
           font-family: Georgia, "Times New Roman", serif;
           color: #101010;
         }
-        .uh-title span { color: #e50914; }
+        .uh-title span { color: #ffffff; }
         .uh-sub {
           margin: 18px 0 0;
           max-width: 760px;
@@ -189,9 +189,9 @@ export default function UserHome() {
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
         }
         .uh-btn.primary {
-          background: #e50914;
+          background: #ffffff;
           color: #ffffff;
-          border-color: #e50914;
+          border-color: #ffffff;
         }
         .uh-btn.secondary {
           background: #ffffff;
@@ -207,7 +207,7 @@ export default function UserHome() {
         }
         .uh-stat {
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 8px;
           background: #ffffff;
           padding: 14px 16px;
@@ -235,7 +235,7 @@ export default function UserHome() {
         .uh-trending {
           margin-top: 24px;
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 12px;
           background: #ffffff;
           padding: 24px;
@@ -267,7 +267,7 @@ export default function UserHome() {
         }
         .uh-trend-card {
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 8px;
           background: #ffffff;
           padding: 14px;
@@ -281,7 +281,7 @@ export default function UserHome() {
           justify-content: center;
           font-size: 11px;
           font-weight: 900;
-          background: #e50914;
+          background: #ffffff;
           color: #ffffff;
         }
         .uh-trend-card h4 {
@@ -300,7 +300,7 @@ export default function UserHome() {
         .uh-card {
           background: #ffffff;
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 12px;
           overflow: hidden;
           transition: none;
@@ -308,7 +308,7 @@ export default function UserHome() {
         .uh-card:hover {
           transform: none !important;
           border-color: #cccccc !important;
-          border-top-color: #e50914 !important;
+          border-top-color: #ffffff !important;
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
         }
         .uh-card-top {
@@ -321,7 +321,7 @@ export default function UserHome() {
           font-weight: 800;
           letter-spacing: 1px;
           text-transform: uppercase;
-          color: #e50914;
+          color: #ffffff;
         }
         .uh-card-title {
           margin-top: 8px;
@@ -353,7 +353,7 @@ export default function UserHome() {
           margin-top: 14px;
           border: none;
           border-radius: 8px;
-          background: #e50914;
+          background: #ffffff;
           color: #ffffff;
           padding: 11px 14px;
           font-size: 12px;
@@ -365,7 +365,7 @@ export default function UserHome() {
         .uh-footer {
           margin-top: 24px;
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 12px;
           background: #ffffff;
           padding: 28px 24px;
@@ -390,7 +390,7 @@ export default function UserHome() {
           height: 56px;
           border: none;
           border-radius: 50%;
-          background: #e50914;
+          background: #ffffff;
           color: #ffffff;
           font-size: 22px;
           cursor: pointer;
@@ -434,13 +434,13 @@ export default function UserHome() {
           text-underline-offset: 3px;
         }
         .uh-foot-link:hover {
-          color: #e50914;
+          color: #ffffff;
         }
 
         .uh-how {
           margin-top: 22px;
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 12px;
           background: #ffffff;
           padding: 24px;
@@ -458,7 +458,7 @@ export default function UserHome() {
           letter-spacing: 1.2px;
           text-transform: uppercase;
           font-weight: 800;
-          color: #e50914;
+          color: #ffffff;
         }
         .uh-how-title {
           margin: 4px 0 0;
@@ -485,7 +485,7 @@ export default function UserHome() {
         .uh-how-progress {
           width: 100%;
           height: 100%;
-          background: #e50914;
+          background: #ffffff;
         }
         .uh-how-steps {
           margin-top: 18px;
@@ -495,7 +495,7 @@ export default function UserHome() {
         }
         .uh-how-step {
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           border-radius: 8px;
           background: #ffffff;
           padding: 14px;
@@ -505,7 +505,7 @@ export default function UserHome() {
           width: 34px;
           height: 34px;
           border-radius: 50%;
-          background: #e50914;
+          background: #ffffff;
           color: #ffffff;
           display: inline-flex;
           align-items: center;

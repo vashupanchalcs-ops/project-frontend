@@ -8,10 +8,10 @@ import { calculateBookingBill, formatMoney } from "../utils/billing";
 gsap.registerPlugin(ScrollTrigger);
 
 const statusColors = {
-  pending: { color: "#111", bg: "#e50914", border: "#e50914" },
-  confirmed: { color: "#111", bg: "#e50914", border: "#e50914" },
-  completed: { color: "#111", bg: "#e50914", border: "#e50914" },
-  cancelled: { color: "#111", bg: "#e50914", border: "#e50914" },
+  pending: { color: "#111", bg: "#ffffff", border: "#ffffff" },
+  confirmed: { color: "#111", bg: "#ffffff", border: "#ffffff" },
+  completed: { color: "#111", bg: "#ffffff", border: "#ffffff" },
+  cancelled: { color: "#111", bg: "#ffffff", border: "#ffffff" },
 };
 
 const safeText = (val, fallback = "Unknown") => {
@@ -151,11 +151,11 @@ const Requests = () => {
       fontWeight: 700,
       padding: "8px 10px",
       borderRadius: 10,
-      border: "1px solid rgba(229, 9, 20, 0.15)",
+      border: "1px solid rgba(255, 255, 255, 0.15)",
       cursor: "pointer",
       fontFamily: "inherit",
       textAlign: "center",
-      background: "#e50914",
+      background: "#ffffff",
       color: "#111",
       minWidth: "110px",
       width: "100%",
@@ -268,8 +268,8 @@ const Requests = () => {
       <style>{`
         .req-root {
           background:
-            radial-gradient(920px 430px at 88% 8%, rgba(229, 9, 20, 0.15), transparent 72%),
-            radial-gradient(840px 380px at 10% -4%, rgba(229, 9, 20, 0.15), transparent 70%),
+            radial-gradient(920px 430px at 88% 8%, rgba(255, 255, 255, 0.15), transparent 72%),
+            radial-gradient(840px 380px at 10% -4%, rgba(255, 255, 255, 0.15), transparent 70%),
             var(--sr-bg, #f7f7f2);
           color: #111;
           min-height: 100vh;
@@ -297,8 +297,8 @@ const Requests = () => {
           font-size: 10px;
           font-weight: 700;
           color: #111;
-          background: rgba(229, 9, 20, 0.15);
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 100px;
           padding: 4px 14px;
           letter-spacing: 1px;
@@ -328,7 +328,7 @@ const Requests = () => {
 
         .req-card-item {
           background: linear-gradient(170deg, rgba(255,255,255,0.98), rgba(248,248,238,0.98));
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 16px;
           padding: 9px 10px;
           display: flex;
@@ -340,8 +340,8 @@ const Requests = () => {
         }
 
         .req-card-item:hover {
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 14px 30px rgba(229, 9, 20, 0.15);
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 14px 30px rgba(255, 255, 255, 0.15);
           transform: translateY(-3px);
         }
 
@@ -395,10 +395,10 @@ const Requests = () => {
           font-family: inherit;
         }
         .req-menu-item:hover {
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
         }
         .req-menu-item.delete {
-          color: #b00020;
+          color: #ffffff;
         }
         .req-modal-ov {
           position: fixed;
@@ -446,7 +446,7 @@ const Requests = () => {
           font-family: inherit;
         }
         .req-modal-btn.danger {
-          background: #e50914;
+          background: #ffffff;
           border-color: #111;
         }
 
@@ -494,7 +494,7 @@ const Requests = () => {
         }
 
         .req-cell {
-          border: 1px solid #e50914;
+          border: 1px solid #ffffff;
           border-radius: 10px;
           padding: 5px 8px;
           background: #ffffff;
@@ -532,9 +532,9 @@ const Requests = () => {
           padding: 60px;
           color: rgba(17,17,17,0.48);
           font-size: 14px;
-          border: 1px dashed rgba(229, 9, 20, 0.15);
+          border: 1px dashed rgba(255, 255, 255, 0.15);
           border-radius: 14px;
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
         }
 
         @media (max-width: 1023px) {
@@ -567,8 +567,8 @@ const Requests = () => {
               <div
                 style={{
                   marginTop: 10,
-                  border: "1px solid rgba(229, 9, 20, 0.15)",
-                  background: "rgba(229, 9, 20, 0.15)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  background: "rgba(255, 255, 255, 0.15)",
                   color: "#111",
                   borderRadius: 10,
                   padding: "8px 12px",

@@ -77,13 +77,13 @@ const makeAmbulanceBadgeIcon = (L) =>
     className: "",
     html: `<div style="
       width:42px;height:42px;border-radius:50%;
-      background:#e50914;border:3px solid #fff;
-      box-shadow:0 0 0 6px rgba(229,9,20,0.22),0 8px 18px rgba(0,0,0,0.35);
+      background:#ffffff;border:3px solid #fff;
+      box-shadow:0 0 0 6px rgba(255, 255, 255, 0.15),0 8px 18px rgba(0,0,0,0.35);
       display:flex;align-items:center;justify-content:center;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
         <path d="M3 13.5V8.8C3 7.81 3.81 7 4.8 7H12.3C12.78 7 13.23 7.19 13.57 7.53L15.1 9.06H17.54C18.29 9.06 18.96 9.53 19.22 10.23L20.44 13.5H21V16H19.88C19.61 17.15 18.58 18 17.35 18C16.12 18 15.09 17.15 14.82 16H9.18C8.91 17.15 7.88 18 6.65 18C5.42 18 4.39 17.15 4.12 16H3V13.5Z" fill="white"/>
-        <rect x="5.2" y="9" width="5.2" height="3.5" rx="0.6" fill="#e50914"/>
-        <rect x="12.2" y="9.4" width="2.8" height="2.2" rx="0.4" fill="#e50914"/>
+        <rect x="5.2" y="9" width="5.2" height="3.5" rx="0.6" fill="#ffffff"/>
+        <rect x="12.2" y="9.4" width="2.8" height="2.2" rx="0.4" fill="#ffffff"/>
         <circle cx="6.65" cy="16" r="1.4" fill="#111"/>
         <circle cx="17.35" cy="16" r="1.4" fill="#111"/>
       </svg>
@@ -503,7 +503,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         if (!routeLine1Ref.current) {
           // ── Pehli baar: TURANT straight dashed line + stats ──────────────
           routeLine1Ref.current = L.polyline(straight, {
-            color: "#e50914", weight: 6, opacity: 0.8, dashArray: "8,6",
+            color: "#ffffff", weight: 6, opacity: 0.8, dashArray: "8,6",
           }).addTo(map);
           setLegStats((prev) => ({
             ...prev,
@@ -531,7 +531,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
                 if (routeLine1Ref.current && pts?.length > 2) {
                   routeLine1Ref.current.setLatLngs(pts);
                   routeLine1Ref.current.setStyle({
-                    color: "#e50914", weight: 6, opacity: 0.95, dashArray: null,
+                    color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null,
                   });
                   routeLine1Ref.current.bringToFront();
                   const d1 = pathKm(pts);
@@ -575,7 +575,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
                 if (routeLine1Ref.current && pts?.length > 2) {
                   routeLine1Ref.current.setLatLngs(pts);
                   routeLine1Ref.current.setStyle({
-                    color: "#e50914", weight: 6, opacity: 0.95, dashArray: null,
+                    color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null,
                   });
                   routeLine1Ref.current.bringToFront();
                   const d1 = pathKm(pts);
@@ -626,7 +626,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
           {/* Leg 1: Ambulance → Pickup */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#e50914", fontWeight: 900, fontSize: 20, lineHeight: 1 }}>
+            <div style={{ color: "#ffffff", fontWeight: 900, fontSize: 20, lineHeight: 1 }}>
               {legStats.d1 != null ? `${legStats.d1} km · ~${legStats.m1} min` : "Locating…"}
             </div>
             <div style={{ fontSize: 10, color: "rgba(17,17,17,0.5)", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>
@@ -674,7 +674,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             </div>
           )}
           <div style={{
-            background: "rgba(229, 9, 20, 0.15)", border: "1px solid rgba(229, 9, 20, 0.15)",
+            background: "rgba(255, 255, 255, 0.15)", border: "1px solid rgba(255, 255, 255, 0.15)",
             borderRadius: 10, padding: "5px 10px", fontSize: 11, fontWeight: 700,
             maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
@@ -697,14 +697,14 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         padding: "6px 20px", display: "flex", alignItems: "center", gap: 16,
         flexShrink: 0, fontSize: 11, flexWrap: "wrap",
       }}>
-        <span style={{ color: "#e50914", fontWeight: 700 }}>🚑 Booking #{booking?.id}</span>
+        <span style={{ color: "#ffffff", fontWeight: 700 }}>🚑 Booking #{booking?.id}</span>
         <span style={{ color: "rgba(17,17,17,0.6)" }}>·</span>
         <span style={{ color: "rgba(17,17,17,0.7)" }}>📍 {booking?.pickup_location || "—"}</span>
         <span style={{ color: "rgba(17,17,17,0.6)" }}>·</span>
         <span style={{ color: "rgba(17,17,17,0.7)" }}>{booking?.ambulance_number || "AMB-0000"}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <span style={{ width: 10, height: 4, borderRadius: 2, background: "#e50914", display: "inline-block" }} />
+            <span style={{ width: 10, height: 4, borderRadius: 2, background: "#ffffff", display: "inline-block" }} />
             <span style={{ fontSize: 10, color: "rgba(17,17,17,0.65)" }}>Amb → Pickup</span>
           </span>
           <span style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -728,7 +728,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             <div style={{
               width: 36, height: 36,
               border: "3px solid rgba(17,17,17,0.1)",
-              borderTop: "3px solid #e50914",
+              borderTop: "3px solid #ffffff",
               borderRadius: "50%",
               animation: "ubm-spin 0.8s linear infinite",
             }} />

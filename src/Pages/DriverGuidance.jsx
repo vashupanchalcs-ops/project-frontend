@@ -34,7 +34,7 @@ const GUIDANCE_STEPS = [
     id: 3,
     title: '3) ABC Assessment',
     icon: Stethoscope,
-    color: '#e50914',
+    color: '#ffffff',
     slides: [
       { subtitle: "1. Head-Tilt Chin-Lift", desc: "Place one hand on the forehead and two fingers under the bony part of the chin to open the airway.", img: "" },
       { subtitle: "2. Check Clear Airway", desc: "Look deeply inside the mouth for visible physical obstructions like broken teeth, food, or fluid.", img: "" },
@@ -48,7 +48,7 @@ const GUIDANCE_STEPS = [
     id: 4,
     title: '4) Severe Bleeding Control',
     icon: Droplet,
-    color: '#e50914',
+    color: '#ffffff',
     slides: [
       { subtitle: "1. Identify Bleed Source", desc: "Swiftly scan and cut clothing to locate the exact point of the most severe hemorrhage.", img: "" },
       { subtitle: "2. Apply Direct Pressure", desc: "Press down forcefully directly on the bleeding wound utilizing your whole body weight if needed.", img: "" },
@@ -62,7 +62,7 @@ const GUIDANCE_STEPS = [
     id: 5,
     title: '5) Spine & Neck Stabilization',
     icon: User,
-    color: '#e50914',
+    color: '#ffffff',
     slides: [
       { subtitle: "1. Hold Head Steady", desc: "Place your hands firmly on both sides of the patient's head to prevent them from turning.", img: "" },
       { subtitle: "2. Maintain Neutral Spine", desc: "Ensure the head remains perfectly aligned with the torso inline without pulling forcefully.", img: "" },
@@ -76,7 +76,7 @@ const GUIDANCE_STEPS = [
     id: 6,
     title: '6) Basic Life Support (CPR)',
     icon: Activity,
-    color: '#e50914',
+    color: '#ffffff',
     slides: [
       { subtitle: "1. Check Pulse & Breath", desc: "Confirm the patient is unresponsive and absolutely has no pulse before initiating chest compressions.", img: "" },
       { subtitle: "2. Hand Placement", desc: "Interlock both hands and place the heel on the exact lower half of the central breastbone.", img: "" },
@@ -132,7 +132,7 @@ const GUIDANCE_STEPS = [
     id: 10,
     title: '10) Hospital Pre-Alert',
     icon: Hospital,
-    color: '#e50914',
+    color: '#ffffff',
     slides: [
       { subtitle: "1. Use Radio/Portal", desc: "Contact the receiving hospital's inner emergency trauma department directly as early as structurally possible.", img: "" },
       { subtitle: "2. Report Injury Mech.", desc: "Tell the doctors exactly how the kinetic injury violently happened (e.g. violent high-speed unbelted car crash).", img: "" },
@@ -386,8 +386,8 @@ export default function DriverGuidance() {
 
         .dg-card:hover {
           transform: translateY(-4px);
-          border-color: #e50914;
-          box-shadow: 0 12px 30px rgba(229, 9, 20, 0.15);
+          border-color: #ffffff;
+          box-shadow: 0 12px 30px rgba(255, 255, 255, 0.15);
         }
 
         .dg-carousel {
@@ -451,7 +451,7 @@ export default function DriverGuidance() {
           position: absolute;
           width: 110px;
           height: 110px;
-          background: #e50914;
+          background: #ffffff;
           border-radius: 50%;
           transform: translate(10px, 10px);
           opacity: 0.85;
@@ -554,8 +554,8 @@ export default function DriverGuidance() {
         }
         .pc-card:hover {
           transform: translateY(-4px);
-          border-color: #e50914;
-          box-shadow: 0 10px 24px rgba(229, 9, 20, 0.15);
+          border-color: #ffffff;
+          box-shadow: 0 10px 24px rgba(255, 255, 255, 0.15);
         }
         .pc-icon-wrap {
           position: relative;
@@ -570,7 +570,7 @@ export default function DriverGuidance() {
           position: absolute;
           width: 44px;
           height: 44px;
-          background: #e50914;
+          background: #ffffff;
           border-radius: 50%;
           transform: translate(4px, 4px);
           opacity: 0.6;
@@ -700,7 +700,7 @@ export default function DriverGuidance() {
 
         .rm-step.completed .rm-icon-node {
           background: #111;
-          color: #e50914;
+          color: #ffffff;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .rm-step.completed .rm-line {
@@ -708,10 +708,10 @@ export default function DriverGuidance() {
         }
 
         .rm-step.active .rm-icon-node {
-          background: #e50914;
+          background: #ffffff;
           color: #111;
           border-color: #111;
-          box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.15);
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.15);
         }
         .rm-step.active .rm-line {
           background: linear-gradient(90deg, #111 50%, #eee 50%);
@@ -749,7 +749,7 @@ export default function DriverGuidance() {
 
       <div className="dg-root">
         <div className="dg-header">
-          <h1><ShieldCheck size={32} color="#e50914" /> Ambulance Team Guidance</h1>
+          <h1><ShieldCheck size={32} color="#ffffff" /> Ambulance Team Guidance</h1>
           <p>
             Standard First Aid and Response Protocols. Swipe or click next to view situation-specific guides for every emergency step.
           </p>

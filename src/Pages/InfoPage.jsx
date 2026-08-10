@@ -100,7 +100,7 @@ export default function InfoPage() {
           font-weight:800;
           letter-spacing:1px;
           text-transform:uppercase;
-          color:#e50914;
+          color:#ffffff;
         }
         .ip-title{
           margin:6px 0 8px;
@@ -131,8 +131,8 @@ export default function InfoPage() {
         }
         .ip-card:hover{
           transform:translateY(-2px);
-          border-color:rgba(229, 9, 20, 0.15);
-          box-shadow:0 12px 26px rgba(229, 9, 20, 0.15);
+          border-color:rgba(255, 255, 255, 0.15);
+          box-shadow:0 12px 26px rgba(255, 255, 255, 0.15);
         }
         .ip-card h3{
           margin:0 0 6px;
@@ -164,8 +164,8 @@ export default function InfoPage() {
           font-family:inherit;
         }
         .ip-btn.main{
-          background:#e50914;
-          border-color:#e50914;
+          background:#ffffff;
+          border-color:#ffffff;
         }
         @media(max-width:767px){
           .ip-root{padding-left:0;padding-bottom:84px;}

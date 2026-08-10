@@ -473,16 +473,16 @@ export default function BookingChatPanel({
           min-height: 0;
         }
         .chat-msg{max-width:78%;padding:10px 12px;border-radius:16px;border:1px solid rgba(20,20,20,.08);font-size:13px;line-height:1.4}
-        .chat-msg.mine{align-self:flex-end;background:#e50914;border-color:#e50914;color:#fff}
+        .chat-msg.mine{align-self:flex-end;background:#ffffff;border-color:#ffffff;color:#fff}
         .chat-msg.other{align-self:flex-start;background:#fff;border-color:#d9ddd0;color:#111}
         .chat-meta{margin-top:4px;font-size:10px;color:#5d606f}
         .chat-ctrl{padding:10px;border-top:1px solid rgba(20,20,20,.1);display:flex;gap:8px;flex-wrap:wrap;background:#f6f7f2}
         .chat-ctrl textarea{flex:1;min-height:44px;max-height:88px;border:1px solid rgba(20,20,20,.2);border-radius:12px;padding:9px 10px;font-family:inherit;background:#fff;color:#111}
-        .chat-btn{border:none;border-radius:12px;background:#e50914;color:#fff;padding:10px 12px;font-weight:700;cursor:pointer}
+        .chat-btn{border:none;border-radius:12px;background:#ffffff;color:#fff;padding:10px 12px;font-weight:700;cursor:pointer}
         .chat-btn:disabled{opacity:.55;cursor:not-allowed}
         .chat-voice-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid rgba(20,20,20,.08);background:#f9faf4}
         .chat-chip{border:1px solid rgba(20,20,20,.18);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;background:#fff;color:#111}
-        .chat-chip.on{background:#e50914;border-color:#e50914;color:#fff}
+        .chat-chip.on{background:#ffffff;border-color:#ffffff;color:#fff}
         .chat-panel.insta{
           border-radius: 0;
           border: none;
@@ -524,7 +524,7 @@ export default function BookingChatPanel({
           border-bottom-left-radius: 4px;
         }
         .chat-panel.insta .chat-msg.mine{
-          background:#e50914;
+          background:#ffffff;
           color:#fff;
           align-self:flex-end;
           border-bottom-right-radius: 4px;
@@ -559,7 +559,7 @@ export default function BookingChatPanel({
           min-width: 44px;
           padding: 0;
           background:#111;
-          color:#e50914;
+          color:#ffffff;
           border: none;
           display: flex;
           align-items: center;
@@ -592,7 +592,7 @@ export default function BookingChatPanel({
           flex-shrink: 0;
         }
         .chat-panel.insta .chat-chip.on{
-          background: #e50914;
+          background: #ffffff;
           border-color: #c8de00;
         }
         .chat-panel.insta .chat-meta {

@@ -62,7 +62,7 @@ const sendPush = (title, body, tag = "") => {
 const SC = {
   available: { c:"#00d4aa", bg:"rgba(0,212,170,0.12)", b:"rgba(0,212,170,0.3)"  },
   en_route:  { c:"#f7c948", bg:"rgba(247,201,72,0.12)", b:"rgba(247,201,72,0.3)" },
-  busy:      { c:"#ff4d5a", bg:"rgba(229,9,20,0.12)",   b:"rgba(229,9,20,0.3)"   },
+  busy:      { c:"#ffffff", bg:"rgba(255, 255, 255, 0.15)",   b:"rgba(255, 255, 255, 0.15)"   },
   offline:   { c:"rgba(255,255,255,0.35)", bg:"rgba(255,255,255,0.05)", b:"rgba(255,255,255,0.1)" },
 };
 const logColor = { info:"#888", success:"#00c853", warn:"#ffaa00", error:"#f44336" };
@@ -450,7 +450,7 @@ export default function DriverDashboard() {
           if (driverMarker.current) {
             driverMarker.current.setLatLng([loc.lat, loc.lng]);
           } else {
-            const icon = makePinIcon("#E50914", "🚑");
+            const icon = makePinIcon("#ffffff", "🚑");
             if (icon) driverMarker.current = window.L.marker([loc.lat, loc.lng], { icon })
               .addTo(mapObj.current)
               .bindPopup(`<div style="background:var(--sr-surface,#171420);color:var(--sr-text,#fff6f2);padding:8px 12px;border-radius:8px;border:1px solid var(--sr-border,rgba(255,255,255,0.12));font-weight:700">📍 ${driverName} yahan hai</div>`, { className: "sr-dark-popup" });
@@ -671,7 +671,7 @@ export default function DriverDashboard() {
       driverMarker.current.setLatLng([originLL.lat, originLL.lng]);
       return;
     }
-    const icon = makePinIcon("#E50914", "🚑");
+    const icon = makePinIcon("#ffffff", "🚑");
     if (!icon) return;
     driverMarker.current = L.marker([originLL.lat, originLL.lng], { icon })
       .addTo(mapObj.current)
@@ -750,7 +750,7 @@ export default function DriverDashboard() {
       if (routeLineRef.current) { try { mapObj.current.removeLayer(routeLineRef.current); } catch {} }
       if (safeRoad1.length > 1) {
         routeLineRef.current = L.polyline(safeRoad1, {
-          color: "#e50914", // Red for Ambulance -> Pickup
+          color: "#ffffff", // Red for Ambulance -> Pickup
           weight: 6,
           opacity: road1.path?.length > 1 ? 0.92 : 0.7,
           dashArray: road1.path?.length > 1 ? null : "12,10",
@@ -1326,7 +1326,7 @@ export default function DriverDashboard() {
 
         /* ── Root ── */
         .dd-root {
-          --dd-primary: #e50914;
+          --dd-primary: #ffffff;
           --dd-primary-2: #ebf85e;
           --dd-ink: #111111;
           --dd-sub: rgba(17,17,17,0.66);
@@ -1340,12 +1340,12 @@ export default function DriverDashboard() {
           --sr-text-sub: rgba(17,17,17,0.72);
           --sr-text-muted: rgba(17,17,17,0.56);
           --sr-input-bg: #f1f2e8;
-          --sr-hover: rgba(229, 9, 20, 0.15);
+          --sr-hover: rgba(255, 255, 255, 0.15);
           --sr-accent-muted: rgba(17,17,17,0.26);
           min-height: 100vh;
           background:
-            radial-gradient(920px 430px at 88% 8%, rgba(229, 9, 20, 0.15), transparent 72%),
-            radial-gradient(840px 380px at 10% -4%, rgba(229, 9, 20, 0.15), transparent 70%),
+            radial-gradient(920px 430px at 88% 8%, rgba(255, 255, 255, 0.15), transparent 72%),
+            radial-gradient(840px 380px at 10% -4%, rgba(255, 255, 255, 0.15), transparent 70%),
             #f4f5ee;
           color: var(--dd-ink);
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -1371,12 +1371,12 @@ export default function DriverDashboard() {
         .dd-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .dd-name { font-weight: 700; font-size: 13px; color: var(--dd-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dd-meta { font-size: 10px; color: var(--dd-sub); margin-top: 2px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-        .dd-meta-pill { background: rgba(229, 9, 20, 0.15); border: 1px solid rgba(17,17,17,0.14); border-radius: 10px; padding: 1px 6px; font-size: 9px; color: #222; }
+        .dd-meta-pill { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(17,17,17,0.14); border-radius: 10px; padding: 1px 6px; font-size: 9px; color: #222; }
         .dd-status-pill { display: flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; border: 1px solid; white-space: nowrap; }
         .dd-low-battery-banner {
           margin: 10px 16px 0;
-          border: 1px solid rgba(229, 9, 20, 0.35);
-          background: rgba(229, 9, 20, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           color: #a80f1a;
           border-radius: 10px;
           padding: 9px 12px;
@@ -1416,8 +1416,8 @@ export default function DriverDashboard() {
           transition: all 0.15s; white-space: nowrap;
           display: flex; align-items: center; justify-content: center; gap: 5px;
         }
-        .dd-tab.active { color: var(--dd-ink); border-bottom-color: var(--dd-primary); background: rgba(229, 9, 20, 0.15); }
-        .dd-tab:hover:not(.active) { color: #222; background: rgba(229, 9, 20, 0.15); }
+        .dd-tab.active { color: var(--dd-ink); border-bottom-color: var(--dd-primary); background: rgba(255, 255, 255, 0.15); }
+        .dd-tab:hover:not(.active) { color: #222; background: rgba(255, 255, 255, 0.15); }
         .dd-tab-badge {
           background: var(--dd-primary); color: #111;
           font-size: 9px; font-weight: 800;
@@ -1443,7 +1443,7 @@ export default function DriverDashboard() {
           border-top: 2px solid transparent;
           transition: all 0.15s; position: relative;
         }
-        .dd-bnav-item.active { border-top-color: var(--dd-primary); background: rgba(229, 9, 20, 0.15); }
+        .dd-bnav-item.active { border-top-color: var(--dd-primary); background: rgba(255, 255, 255, 0.15); }
         .dd-bnav-icon { font-size: 18px; line-height: 1; }
         .dd-bnav-label { font-size: 8px; font-weight: 700; color: var(--dd-sub); }
         .dd-bnav-item.active .dd-bnav-label { color: #111; }
@@ -1470,7 +1470,7 @@ export default function DriverDashboard() {
 
         /* ── Cards ── */
         .dd-card { background: var(--dd-surface); border: 1px solid var(--dd-line); border-radius: 10px; padding: 12px; transition: border-color .2s ease, transform .2s ease; }
-        .dd-card:hover { border-color: #111; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(229, 9, 20, 0.15); }
+        .dd-card:hover { border-color: #111; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255, 255, 255, 0.15); }
         .dd-card-title { font-weight: 700; font-size: 12px; margin-bottom: 10px; color: #111; text-transform: uppercase; letter-spacing: 0.5px; }
         .dd-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(17,17,17,0.08); }
         .dd-row:last-child { border-bottom: none; }
@@ -1495,7 +1495,7 @@ export default function DriverDashboard() {
 
         /* ── Booking Cards ── */
         .dd-booking-card { background: var(--dd-surface); border: 1px solid var(--dd-line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; transition: border-color .2s ease, transform .2s ease; }
-        .dd-booking-card:hover { border-color: #111; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(229, 9, 20, 0.15); }
+        .dd-booking-card:hover { border-color: #111; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255, 255, 255, 0.15); }
         .dd-booking-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
         .dd-booking-right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
         .dd-booking-amb { font-weight: 800; font-size: 13px; }
@@ -1515,7 +1515,7 @@ export default function DriverDashboard() {
         .dd-menu-title { font-size: 11px; font-weight: 800; color: #111; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .dd-menu-sub { font-size: 11px; color: rgba(17,17,17,0.74); margin-bottom: 8px; line-height: 1.45; }
         .dd-menu-danger {
-          width: 100%; border: 1px solid #111; background: #e50914; color: #111;
+          width: 100%; border: 1px solid #111; background: #ffffff; color: #111;
           border-radius: 8px; padding: 8px 10px; font-size: 11px; font-weight: 800; cursor: pointer;
           transition: all .15s ease;
         }
@@ -1584,14 +1584,14 @@ export default function DriverDashboard() {
           font-size: 11px;
           color: rgba(17,17,17,0.72);
           border: 1px solid rgba(17,17,17,0.14);
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           border-radius: 10px;
           padding: 8px 10px;
         }
 
         /* ── Ambulance Tab ── */
         .dd-amb-card { background: var(--dd-surface); border: 1px solid var(--dd-line); border-radius: 14px; padding: 16px; margin-bottom: 14px; transition: border-color .2s ease, transform .2s ease; }
-        .dd-amb-card:hover { border-color: #111; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(229, 9, 20, 0.15); }
+        .dd-amb-card:hover { border-color: #111; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255, 255, 255, 0.15); }
         .dd-amb-number { font-size: 20px; font-weight: 900; margin-bottom: 4px; }
         .dd-amb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
         .dd-amb-field { background: var(--dd-surface-2); border-radius: 8px; padding: 10px 12px; border: 1px solid var(--dd-line); }
@@ -1599,11 +1599,11 @@ export default function DriverDashboard() {
         .dd-amb-fval { font-size: 12px; font-weight: 600; color: #111; }
         .dd-amb-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
         .dd-amb-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; border: 1.5px solid var(--dd-line); background: var(--dd-surface-2); cursor: pointer; transition: all 0.15s; }
-        .dd-amb-item:hover { background: rgba(229, 9, 20, 0.15); border-color: #111; }
-        .dd-amb-item.selected { background: rgba(229, 9, 20, 0.15); border-color: #111; }
+        .dd-amb-item:hover { background: rgba(255, 255, 255, 0.15); border-color: #111; }
+        .dd-amb-item.selected { background: rgba(255, 255, 255, 0.15); border-color: #111; }
         .dd-amb-item-name { font-size: 13px; font-weight: 700; }
         .dd-amb-item-sub  { font-size: 10px; color: var(--dd-sub); margin-top: 1px; }
-        .dd-pending-banner { background: rgba(229, 9, 20, 0.15); border: 1px solid rgba(17,17,17,0.16); border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #111; margin-bottom: 14px; }
+        .dd-pending-banner { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(17,17,17,0.16); border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #111; margin-bottom: 14px; }
 
         /* ── Route Card ── */
         .dd-route-card { border-radius: 10px; padding: 12px; }
@@ -1614,8 +1614,8 @@ export default function DriverDashboard() {
 
         /* ── Notifications ── */
         .dn-card { background: var(--dd-surface); border: 1px solid var(--dd-line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: background 0.15s; }
-        .dn-card.unread { border-color: #111; background: rgba(229, 9, 20, 0.15); }
-        .dn-card:hover { background: rgba(229, 9, 20, 0.15); border-color: #111; }
+        .dn-card.unread { border-color: #111; background: rgba(255, 255, 255, 0.15); }
+        .dn-card:hover { background: rgba(255, 255, 255, 0.15); border-color: #111; }
         .dn-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
         .dn-card-title { font-size: 13px; font-weight: 700; color: #111; }
         .dn-card-time { font-size: 10px; color: var(--dd-sub); white-space: nowrap; }
@@ -1716,7 +1716,7 @@ export default function DriverDashboard() {
                 className="dd-status-pill"
                 style={{
                   color: isBatteryCritical ? "#b31321" : "#0b7a35",
-                  background: isBatteryCritical ? "rgba(229,9,20,0.12)" : "rgba(0,200,83,0.11)",
+                  background: isBatteryCritical ? "rgba(255, 255, 255, 0.15)" : "rgba(0,200,83,0.11)",
                   borderColor: isBatteryCritical ? "rgba(179,19,33,0.35)" : "rgba(11,122,53,0.35)",
                 }}
               >
@@ -1782,7 +1782,7 @@ export default function DriverDashboard() {
                       className="dd-battery-bar-fill"
                       style={{
                         width: `${normalizedBattery}%`,
-                        background: isBatteryCritical ? "#e50914" : "#00c853",
+                        background: isBatteryCritical ? "#ffffff" : "#00c853",
                       }}
                     />
                   </div>
@@ -1845,7 +1845,7 @@ export default function DriverDashboard() {
                 <button
                   onClick={() => setVoiceEnabled(!voiceEnabled)}
                   style={{
-                    background: voiceEnabled ? "#e50914" : "#fff",
+                    background: voiceEnabled ? "#ffffff" : "#fff",
                     color: "#111",
                     border: "1px solid rgba(17,17,17,0.2)", padding: "6px 12px", borderRadius: 8, cursor: "pointer",
                     fontWeight: 700, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
@@ -1861,7 +1861,7 @@ export default function DriverDashboard() {
                     top: 12,
                     left: 12,
                     zIndex: 5000,
-                    background: "rgba(229,9,20,0.92)",
+                    background: "rgba(255, 255, 255, 0.15)",
                     color: "#fff",
                     border: "1px solid rgba(255,255,255,0.4)",
                     borderRadius: 10,
@@ -1911,7 +1911,7 @@ export default function DriverDashboard() {
                   pending:   { c:"#f7c948", bg:"rgba(247,201,72,0.12)",  bd:"rgba(247,201,72,0.3)"  },
                   confirmed: { c:"#00d4aa", bg:"rgba(0,212,170,0.12)",   bd:"rgba(0,212,170,0.3)"   },
                   completed: { c:"rgba(255,255,255,0.4)", bg:"rgba(255,255,255,0.05)", bd:"rgba(255,255,255,0.1)" },
-                  cancelled: { c:"#ff4d5a", bg:"rgba(229,9,20,0.12)",    bd:"rgba(229,9,20,0.3)"    },
+                  cancelled: { c:"#ffffff", bg:"rgba(255, 255, 255, 0.15)",    bd:"rgba(255, 255, 255, 0.15)"    },
                 }[b.status] || { c:"#888", bg:"rgba(255,255,255,0.05)", bd:"rgba(255,255,255,0.1)" };
                 return (
                   <div key={b.id} className="dd-booking-card dd-anim">
@@ -2105,9 +2105,9 @@ export default function DriverDashboard() {
                     <div className="dn-card-time">{new Date(n.timestamp).toLocaleString("en-IN", { hour:"2-digit", minute:"2-digit", day:"numeric", month:"short" })}</div>
                   </div>
                   <div className="dn-card-msg">{n.message}</div>
-                  {n.type === "booking" && <div style={{ marginTop:6, fontSize:11, color:"#E50914", fontWeight:600 }}>Tap to view booking →</div>}
+                  {n.type === "booking" && <div style={{ marginTop:6, fontSize:11, color:"#ffffff", fontWeight:600 }}>Tap to view booking →</div>}
                   {(n.type === "approved" || n.type === "rejected") && (
-                    <div style={{ marginTop:6, fontSize:11, color: n.type==="approved"?"#00c853":"#ff4d5a", fontWeight:600 }}>
+                    <div style={{ marginTop:6, fontSize:11, color: n.type==="approved"?"#00c853":"#ffffff", fontWeight:600 }}>
                       {n.type === "approved" ? "✅ Approved!" : "❌ Rejected"}
                     </div>
                   )}
@@ -2148,7 +2148,7 @@ export default function DriverDashboard() {
                         className="dd-battery-bar-fill"
                         style={{
                           width: `${normalizedBattery}%`,
-                          background: isBatteryCritical ? "#e50914" : "#00c853",
+                          background: isBatteryCritical ? "#ffffff" : "#00c853",
                         }}
                       />
                     </div>
@@ -2177,7 +2177,7 @@ export default function DriverDashboard() {
                       const as = SC[a.status] || SC.offline;
                       return (
                         <div key={a.id} className={`dd-amb-item ${changeReqAmb?.id===a.id?"selected":""}`} onClick={() => setChangeReqAmb(a)}>
-                          <div style={{ width:30, height:30, borderRadius:7, background:"rgba(229, 9, 20, 0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🚑</div>
+                          <div style={{ width:30, height:30, borderRadius:7, background:"rgba(255, 255, 255, 0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🚑</div>
                           <div style={{ flex:1, minWidth:0 }}>
                             <div className="dd-amb-item-name">{a.ambulance_number}</div>
                             <div className="dd-amb-item-sub">{a.location||"—"}</div>
@@ -2215,11 +2215,11 @@ export default function DriverDashboard() {
                 const as = SC[a.status] || SC.offline;
                 const isMe = a.id === ambId;
                 return (
-                  <div key={a.id} className="dd-booking-card dd-anim" style={{ border: isMe ? "1px solid rgba(229,9,20,0.4)" : "1px solid rgba(255,124,166,0.28)" }}>
+                  <div key={a.id} className="dd-booking-card dd-anim" style={{ border: isMe ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid rgba(255,124,166,0.28)" }}>
                     <div className="dd-booking-top">
                       <div className="dd-booking-amb">
                         🚑 {a.ambulance_number}
-                        {isMe && <span style={{ marginLeft:8, fontSize:9, fontWeight:700, background:"rgba(229,9,20,0.15)", color:"#E50914", border:"1px solid rgba(229,9,20,0.3)", borderRadius:6, padding:"2px 7px" }}>MERI</span>}
+                        {isMe && <span style={{ marginLeft:8, fontSize:9, fontWeight:700, background:"rgba(255, 255, 255, 0.15)", color:"#ffffff", border:"1px solid rgba(255, 255, 255, 0.15)", borderRadius:6, padding:"2px 7px" }}>MERI</span>}
                       </div>
                       <span className="dd-booking-pill" style={{ color:as.c, background:as.bg, borderColor:as.b }}>{a.status?.replace("_"," ")}</span>
                     </div>
@@ -2251,7 +2251,7 @@ export default function DriverDashboard() {
                 const hsc = {
                   active:   { c:"#00d4aa", bg:"rgba(0,212,170,0.12)", b:"rgba(0,212,170,0.3)"  },
                   full:     { c:"#f7c948", bg:"rgba(247,201,72,0.12)", b:"rgba(247,201,72,0.3)" },
-                  critical: { c:"#ff4d5a", bg:"rgba(229,9,20,0.12)",   b:"rgba(229,9,20,0.3)"   },
+                  critical: { c:"#ffffff", bg:"rgba(255, 255, 255, 0.15)",   b:"rgba(255, 255, 255, 0.15)"   },
                   closed:   { c:"rgba(255,255,255,0.35)", bg:"rgba(255,255,255,0.05)", b:"rgba(255,255,255,0.1)" },
                 }[h.status] || { c:"#888", bg:"rgba(255,255,255,0.05)", b:"rgba(255,255,255,0.1)" };
                 return (

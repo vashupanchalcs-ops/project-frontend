@@ -79,7 +79,7 @@ export default function AnalyticsCharts() {
           cursor:pointer;font-family:inherit;transition:all .15s;
         }
         .ac-tab:hover  { border-color:rgba(0,0,0,0.2);color:#0a0a0a; }
-        .ac-tab.on     { background:#E50914;color:#fff;border-color:#E50914;box-shadow:0 3px 10px rgba(229,9,20,0.22); }
+        .ac-tab.on     { background:#ffffff;color:#fff;border-color:#ffffff;box-shadow:0 3px 10px rgba(255, 255, 255, 0.15); }
         .ac-pills      { display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap; }
         .ac-pill       { font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;display:flex;align-items:center;gap:4px; }
         .ac-pill-dot   { width:6px;height:6px;border-radius:50%; }
@@ -116,8 +116,8 @@ export default function AnalyticsCharts() {
               <span className="ac-pill-dot" style={{background:"#b36800"}}/>
               {pend} Pending
             </span>
-            <span className="ac-pill" style={{background:"rgba(229,9,20,0.08)",color:"#E50914",border:"1px solid rgba(229,9,20,0.18)"}}>
-              <span className="ac-pill-dot" style={{background:"#E50914"}}/>
+            <span className="ac-pill" style={{background:"rgba(255, 255, 255, 0.15)",color:"#ffffff",border:"1px solid rgba(255, 255, 255, 0.15)"}}>
+              <span className="ac-pill-dot" style={{background:"#ffffff"}}/>
               {canc} Cancelled
             </span>
             <span className="ac-pill" style={{background:"rgba(0,0,0,0.05)",color:"#6e6e73",border:"1px solid rgba(0,0,0,0.1)"}}>
@@ -135,7 +135,7 @@ export default function AnalyticsCharts() {
                 <YAxis allowDecimals={false} tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<Tip/>}/>
                 <Legend wrapperStyle={{fontSize:11,fontFamily:"'DM Sans',sans-serif",paddingTop:4}}/>
-                <Line type="monotone" dataKey="bookings"  name="Bookings"  stroke="#E50914" strokeWidth={2.5} dot={{r:3,fill:"#E50914"}}  activeDot={{r:5}}/>
+                <Line type="monotone" dataKey="bookings"  name="Bookings"  stroke="#ffffff" strokeWidth={2.5} dot={{r:3,fill:"#ffffff"}}  activeDot={{r:5}}/>
                 <Line type="monotone" dataKey="completed" name="Completed" stroke="#0a0a0a" strokeWidth={2.5} dot={{r:3,fill:"#0a0a0a"}}  activeDot={{r:5}} strokeDasharray="5 5"/>
               </LineChart>
             </ResponsiveContainer>
@@ -146,7 +146,7 @@ export default function AnalyticsCharts() {
                 <XAxis dataKey="name" tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
                 <YAxis allowDecimals={false} tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<Tip/>}/>
-                <Bar dataKey="count" name="Count" radius={[6,6,0,0]} fill="#E50914"/>
+                <Bar dataKey="count" name="Count" radius={[6,6,0,0]} fill="#ffffff"/>
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -49,97 +49,19 @@
     src: url(../public/ambulancefonts/RoclinePersonalUseOnly-Regular.ttf);
 }
 
-/* ── Critical fixes ── */
-@import "tailwindcss";
-
-@font-face {
-    font-family: font1;
-    src: url(../public/ambulancefonts/Arthur\ Matilde\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font2;
-    src: url(../public/ambulancefonts/Arthur\ Matilde\ Italic\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font3;
-    src: url(../public/ambulancefonts/cornella-Regular.otf);
-}
-@font-face {
-    font-family: font4;
-    src: url(../public/ambulancefonts/Debaznue\ PERSONAL\ USE\ ONLY!.ttf);
-}
-@font-face {
-    font-family: font5;
-    src: url(../public/ambulancefonts/Hannah\ Claira\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font6;
-    src: url(../public/ambulancefonts/Hannah\ Claira\ Italic\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font7;
-    src: url(../public/ambulancefonts/Makien\ DEMO\ VERSION.ttf);
-}
-@font-face {
-    font-family: font8;
-    src: url(../public/ambulancefonts/Makien\ Italic\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font9;
-    src: url(../public/ambulancefonts/Margelin\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font10;
-    src: url(../public/ambulancefonts/Margelin\ Italic\ DEMO\ VERSION.otf);
-}
-@font-face {
-    font-family: font11;
-    src: url(../public/ambulancefonts/Qafinte.otf);
-}
-@font-face {
-    font-family: font12;
-    src: url(../public/ambulancefonts/RoclinePersonalUseOnly-Regular.ttf);
-}
-
-/* ── Critical fixes ── */
 *, *::before, *::after {
-  box-sizing: border-box;
-}
-
-#root {
-  width: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
-  background: #ffffff !important;
-  color: #111111 !important;
-  position: relative;
-  z-index: 1;
-}
-
-body {
-  background: #ffffff !important;
-  color: #111111 !important;
-  width: 100%;
-  overflow-x: hidden;
-  margin: 0;
-  font-family: var(--font-body, "Trebuchet MS", "Segoe UI", Tahoma, sans-serif);
-  position: relative;
-}
-
-/* Completely remove floating background gradients */
-body::before {
-  display: none !important;
+  box-sizing: border-box !important;
 }
 
 :root {
-  --sr-bg: #ffffff;
-  --sr-surface: #ffffff;
-  --sr-card-bg: #ffffff;
-  --sr-accent: #e50914;
-  --sr-accent-hover: #b80710;
-  --sr-border: #e0e0e0;
-  --sr-text: #111111;
-  --sr-text-sub: #555555;
+  --sr-bg: #000000;
+  --sr-surface: #000000;
+  --sr-card-bg: #111111;
+  --sr-accent: #ffffff;
+  --sr-accent-hover: #e0e0e0;
+  --sr-border: #1f1f1f;
+  --sr-text: #ffffff;
+  --sr-text-sub: #cccccc;
   --sr-nav-bg: #000000;
   --sr-nav-border: #1f1f1f;
   --sr-nav-text: #ffffff;
@@ -147,835 +69,144 @@ body::before {
   --sr-sidebar-border: #1f1f1f;
   --font-display: font3, "Trebuchet MS", "Segoe UI", sans-serif;
   --font-body: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
-  --font-highlight: "Arial Black", Impact, "Trebuchet MS", sans-serif;
-  --font-card: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6,
-.title-font,
-.ad-title,
-.hp-hero-h1,
-.rep-header h1,
-.req-header h1 {
-  font-family: var(--font-display) !important;
-  letter-spacing: -0.02em;
+#root, body {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  position: relative;
 }
 
-.ad-title,
-.dash-highlight,
-.dash-brand {
-  font-family: var(--font-highlight) !important;
-  letter-spacing: -0.03em !important;
+/* Remove all background gradients */
+body::before, body::after, *::before, *::after {
+  background-image: none !important;
 }
 
-p, span, div, button, input, textarea, label, a,
-.dd-row-key, .dd-row-val, .dn-card-msg, .req-card-val, .rep-table td {
-  font-family: var(--font-body) !important;
-}
-
-:is(.amb2-card, .h2-card, .req-card, .rep-sum-card, .rep-chart-card, .rep-table-card) :is(
-  h1, h2, h3, h4, h5, p, span, button, a, div
-) {
-  font-family: var(--font-card) !important;
-}
-
-/* ── Shared Netflix Pure White Page Background Enforcement ── */
+/* ── Global Pitch Black Page Containers ── */
 :is(
   .ad-root, .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
   .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
   .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
   .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root, .req-root
+  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root, .req-root,
+  .hp-root, [class*="-root"], [class*="-shell"], [class*="-container"]
 ) {
+  background-image: none !important;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #1f1f1f !important;
+}
+
+/* ── Pure White Text Globally (Squarespace Dark Mode Style) ── */
+:not(.amb2-card):not(.amb-card):not(.h2-card):not(.hosp-card) :is(
+  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font, code
+) {
+  color: #ffffff !important;
+}
+
+:not(.amb2-card):not(.amb-card):not(.h2-card):not(.hosp-card) :is(
+  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg, .h2-desc, .amb2-desc
+) {
+  color: #cccccc !important;
+}
+
+/* ── White Cards Exception ONLY for Ambulance & Hospital Listing Cards ── */
+:is(.amb2-card, .amb-card, .h2-card, .hosp-card) {
   background-image: none !important;
   background: #ffffff !important;
   background-color: #ffffff !important;
-  color: #111111 !important;
-}
-
-/* Hard fix for text colors inside all page containers */
-:is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
-  .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
-  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root
-) :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li
-) {
-  color: #111111 !important;
-}
-
-:is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
-  .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
-  .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root
-) :is(
-  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg, .h2-desc, .amb2-desc,
-  .h2-address, .amb2-sub, .dd-meta, .dd-row-key, .hosp-sub, .amb-sub
-) {
-  color: #555555 !important;
-}
-
-/* ── Cards on White Pages (Netflix Style: White Background, Light Border, Top Red Accent Line) ── */
-:is(
-  .amb2-card, .h2-card, .req-card, .rep-sum-card, .rep-chart-card, .rep-table-card,
-  .amb-card, .hosp-card, .req-table-wrap, .an-card, .an-graph, .dl-card, .mb-card,
-  .hosp-stat, .amb-stat, .st-card, .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
-  .hr-card, .ci-card, .ci-panel, .cd-card, .cd-panel, .arm-card, .arm-panel,
-  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .ac-card, .rtm-card,
-  .uh-hero, .uh-stat, .uh-card, .uh-trending, .uh-trend-card, .uh-footer, .uh-how-step
-) {
-  background-image: none !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  color: #111111 !important;
-  border: 1px solid #e0e0e0 !important;
-  border-top: 3.5px solid #e50914 !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
   border-radius: 8px !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+  box-shadow: none !important;
 }
 
-:is(
-  .amb2-card, .h2-card, .req-card, .rep-sum-card, .rep-chart-card, .rep-table-card,
-  .amb-card, .hosp-card, .req-table-wrap, .an-card, .an-graph, .dl-card, .mb-card,
-  .hosp-stat, .amb-stat, .st-card
-):hover {
-  transform: none !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
-  background-color: #ffffff !important;
-  border-top-color: #e50914 !important;
+:is(.amb2-card, .amb-card, .h2-card, .hosp-card) :is(
+  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font
+) {
+  color: #000000 !important;
 }
 
-/* ── Absolute Ban on Lime/Yellow Colors (Kill all #e50914 / #e50914 / yellow glows) ── */
-*[style*="background: rgb(214, 232, 0)"],
-*[style*="background:#e50914"],
+:is(.amb2-card, .amb-card, .h2-card, .hosp-card) :is(
+  .muted, .sub, .desc, .meta, .amb2-sub, .amb2-desc, .h2-address, .h2-desc
+) {
+  color: #444444 !important;
+}
+
+/* ── Absolute Ban on Reddish / Red Effects & Yellow Glows ── */
 *[style*="background: #e50914"],
-*[style*="background-color:#e50914"],
-*[style*="background-color: #e50914"] {
-  background: #e50914 !important;
-  color: #ffffff !important;
-  border-color: #e50914 !important;
-  box-shadow: none !important;
-}
-
-/* Active Stat Cards / Selected Items -> Soft Red Accent (NO YELLOW) */
-:is(.hosp-stat.active, .amb-stat.active, .st-card.active, .h2-stat.active, .stat-active, .active-stat-card) {
-  background: #fff5f5 !important;
-  border: 1px solid #e50914 !important;
-  border-top: 4px solid #e50914 !important;
-  color: #e50914 !important;
-  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.15) !important;
-}
-
-:is(.hosp-stat.active, .amb-stat.active, .st-card.active, .h2-stat.active) :is(h1, h2, h3, h4, p, span, div) {
-  color: #e50914 !important;
-}
-
-/* Status Pill & Tags -> Netflix Red */
-:is(.amb2-status, .h2-status, .req-pill, .rep-pill, .dd-status-pill, .req-tag, .rep-tag, .ad-kicker, .amb2-kicker, .h2-kicker) {
-  background: #e50914 !important;
-  color: #ffffff !important;
-  border: 1px solid #e50914 !important;
-}
-
-/* ── Primary Action Buttons (Netflix Red) ── */
-:is(
-  .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
-  .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn
-) {
-  background: #e50914 !important;
-  color: #ffffff !important;
-  border: 1px solid #e50914 !important;
-  box-shadow: none !important;
-}
-
-:is(
-  .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
-  .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn
-):hover {
-  background: #b80710 !important;
-  border-color: #b80710 !important;
-  color: #ffffff !important;
-}
-
-/* ── Form Controls on White Pages ── */
-:not(.auth-root) :is(input, select, textarea) {
-  background-color: #ffffff !important;
-  color: #111111 !important;
-  border: 1px solid #cccccc !important;
-}
-
-:not(.auth-root) :is(input, textarea)::placeholder {
-  color: #888888 !important;
-}
-
-:not(.auth-root) :is(input, select, textarea):focus {
-  outline-color: #e50914 !important;
-  border-color: #e50914 !important;
-  box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2) !important;
-}
-
-/* ── Modals & Dialogs ── */
-:not(.auth-root) :is(.modal, .modal-content, .dialog, [role="dialog"]) {
-  background-color: #ffffff !important;
-  color: #111111 !important;
-  border: 1px solid #e0e0e0 !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* ── Thin Scrollbars ── */
-::-webkit-scrollbar       { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #e50914; }
-
-/* ── Universal Hospital Portal & Refresh Button White Theme ── */
-:is([class*="hp-root"], [class*="hp-theme"]) {
-  background-image: none !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  color: #111111 !important;
-}
-
-:is(.hp-sub-header, .hp-cases-count, .hp-bill-panel, .hp-cases-head, .hp-case-modal) {
-  background-image: none !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  color: #111111 !important;
-  border: 1px solid #e0e0e0 !important;
-  border-top: 3.5px solid #e50914 !important;
-}
-
-:is(.hp-refresh-btn, .hp-cases-count, button[class*="refresh"]) {
-  background: #ffffff !important;
-  color: #111111 !important;
-  border: 1px solid #cccccc !important;
-}
-
-/* Monochrome interface: a single Google-inspired black and white system for
-   every role and route. Existing layouts and data interactions stay intact. */
-:root,
-html,
-body,
-#root {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-
-body::before {
-  display: none !important;
-}
-
-/* Media and map tiles are desaturated individually so fixed navigation keeps
-   its viewport positioning while the visible interface remains monochrome. */
-#root :is(img, svg, canvas, iframe, video) {
-  filter: grayscale(1) !important;
-}
-
-#root :is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
-  .hp-root, .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root,
-  .dh-root, .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root, .signin-help-root, .auth-root
-) {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-}
-
-#root :is(
-  .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
-  .amb2-card, .amb2-stat, .amb2-ins, .h2-card, .h2-stat, .h2-mini,
-  .rep-sum-card, .rep-chart-card, .rep-table-card, .rep-ord-card,
-  .req-card, .req-table-wrap, .dd-card, .dd-booking-card, .dd-amb-card,
-  .dn-card, .dv-panel, .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
-  .hr-card, .hr-empty, .ci-card, .ci-panel, .cd-card, .cd-panel, .cd-empty,
-  .arm-card, .arm-panel, .arm-route-card, .dh-card, .dg-card, .dcr-card,
-  .ip-card, .lt-card, .lm-card, .st-card, .ac-card, .rtm-card, .mb-card,
-  .mb-table, .mb-empty, .uh-hero, .uh-stat, .uh-card, .uh-trending,
-  .uh-trend-card, .uh-footer, .uh-how-step, .signin-help-card, .auth-shell,
-  .hp-card, .hp-hero, .hp-svc, .hp-stat, .hp-case-card, .hp-case-metric,
-  .hp-case-info-box, .hp-case-detail-hero, .hp-case-detail-wide,
-  .hp-bill-panel, .hp-resource-mini, .hp-track-card, .hp-report-card,
-  .hp-response-card, .hp-response-tile, .hp-role-card, .hp-guidance-card,
-  .hp-an-stat, .hp-an-table-w, .hp-map-panel, .hp-empty
-) {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-/* Covers the remaining page-specific utility classes without changing their
-   layout or event handlers. */
-#root :is(
-  [class*="-card"], [class*="-panel"], [class*="-stat"], [class*="-tile"],
-  [class*="-box"], [class*="-item"], [class*="-hero"], [class*="-banner"],
-  [class*="-chip"], [class*="-tag"]
-) {
-  background-color: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-#root :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, label, small, strong, a,
-  li, td, th, dt, dd
-) {
-  color: #000000 !important;
-}
-
-#root :is(input, select, textarea) {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-#root :is(input, textarea)::placeholder {
-  color: rgba(0,0,0,0.56) !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) {
-  background: #000000 !important;
-  color: #ffffff !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) :is(svg, path) {
-  color: #ffffff !important;
-  stroke: currentColor;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) :is(span, strong, small, div, p) {
-  color: #ffffff !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover :is(svg, path) {
-  color: #000000 !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover :is(span, strong, small, div, p) {
-  color: #000000 !important;
-}
-
-#root :is(
-  .nf-nav-root, .lsb-root, .lsb-bottom, .nf-drop, .nf-profile-drop,
-  .nf-mobile-search-overlay, .hp-map-panel-head, .hp-card-head,
-  .ahd-map-head, .hp-case-modal-box
-) {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-#root :is(.nf-brand, .nf-username, .nf-login-link, .nf-avatar, .lsb-logo) {
-  color: #000000 !important;
-}
-
-#root :is(.lsb-item, .lsb-bottom-item, .nf-bell, .nf-call-indicator, .nf-mobile-search-btn) {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
-  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
-  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) {
-  background: #000000 !important;
-  color: #ffffff !important;
-  border-color: #000000 !important;
-}
-
-#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
-  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
-  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) :is(svg, path, span) {
-  color: #ffffff !important;
-  stroke: currentColor;
-}
-
-#root :is(.nf-search-btn, .hp-btn, .hp-staff-add-btn, .hp-case-menu-btn,
-  .ahd-track-btn, .hr-btn, .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn,
-  .req-card button, .req-table button, .dd-btn, .lm-tab-btn, .uh-btn,
-  .uh-card-cta, .uh-footer-btn) {
-  background: #000000 !important;
-  color: #ffffff !important;
-  border-color: #000000 !important;
-  box-shadow: none !important;
-}
-
-#root :is(.hp-cases-strip, .hp-case-modal-backdrop, .hp-alert, .hp-home-banner,
-  .hp-card-head, .uh-card-top, .uh-trending-head, .uh-how-head) {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-}
-
-/* Login keeps a compact centered form, now with the same white canvas and
-   high-contrast black controls as the rest of the product. */
-#root .auth-root::before,
-#root .auth-root::after {
-  display: none !important;
-}
-
-#root .auth-brandbar {
-  background: #000000 !important;
-  border-color: #000000 !important;
-}
-
-#root .auth-brandbar :is(.auth-brand, .auth-brand-mark, span) {
-  color: #ffffff !important;
-}
-
-#root :is(.auth-shell, .auth-right) {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.12) !important;
-}
-
-#root .auth-right :is(.auth-step-title, .auth-step-title .hl, .auth-step-sub,
-  .auth-field label, .auth-note, .auth-legal, .auth-meta, .auth-resend,
-  .auth-help, .auth-help-toggle, .auth-help-toggle span, .auth-help-body,
-  .auth-link, .auth-back) {
-  color: #000000 !important;
-}
-
-#root .auth-pass-toggle {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-}
-
-#root .hp-case-modal-backdrop {
-  background: rgba(0,0,0,0.64) !important;
-}
-
-#root :is(.hp-map-frame, .ahd-map-wrap iframe, .gm-style) {
-  filter: grayscale(1) contrast(1.08) !important;
-}
-
-#root [style*="background"] {
-  background-color: #ffffff !important;
-  background-image: none !important;
-}
-
-#root table,
-#root thead,
-#root tbody,
-#root tr {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-}
-
-#root :is(.modal, .modal-content, .dialog, [role="dialog"]) {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: 0 12px 36px rgba(0,0,0,0.16) !important;
-}
-
-::-webkit-scrollbar-track { background: #ffffff; }
-::-webkit-scrollbar-thumb { background: #000000; }
-
-/* Compact text actions should remain links rather than solid action bars. */
-#root :is(.auth-link, .auth-help-toggle, .auth-help-learn, .auth-pass-toggle) {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-}
-
-#root :is(.auth-link, .auth-help-toggle, .auth-help-learn) :is(span, strong, small) {
-  color: #000000 !important;
-}
-
-#root button.auth-link,
-#root button.auth-help-toggle,
-#root button.auth-help-learn,
-#root button.auth-pass-toggle {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-}
-
-#root .signin-help-header :is(strong, b, span),
-#root .signin-help-footer :is(h2, p, span, strong, b) {
-  color: #ffffff !important;
-}
-
-#root button.signin-help-back,
-#root .signin-help-card button,
-#root button.signin-help-contact {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
-}
-
-/* Midnight canvas: every route uses a true black background with white text.
-   Small visual groups stay translucent so the data hierarchy remains clear. */
-:root,
-html,
-body,
-#root {
-  background: #000000 !important;
-  color: #ffffff !important;
-}
-
-#root [style*="background"] {
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-#root :is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
-  .hp-root, .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root,
-  .dh-root, .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root, .signin-help-root, .auth-root
-) {
-  background: #000000 !important;
-  background-image: none !important;
-  color: #ffffff !important;
-}
-
-#root :is(
-  .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
-  .amb2-card, .amb2-stat, .amb2-ins, .h2-card, .h2-stat, .h2-mini,
-  .rep-sum-card, .rep-chart-card, .rep-table-card, .rep-ord-card,
-  .req-card, .req-table-wrap, .dd-card, .dd-booking-card, .dd-amb-card,
-  .dn-card, .dv-panel, .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
-  .hr-card, .hr-empty, .ci-card, .ci-panel, .cd-card, .cd-panel, .cd-empty,
-  .arm-card, .arm-panel, .arm-route-card, .dh-card, .dg-card, .dcr-card,
-  .ip-card, .lt-card, .lm-card, .st-card, .ac-card, .rtm-card, .mb-card,
-  .mb-table, .mb-empty, .uh-hero, .uh-stat, .uh-card, .uh-trending,
-  .uh-trend-card, .uh-footer, .uh-how-step, .signin-help-card, .auth-shell,
-  .hp-card, .hp-hero, .hp-svc, .hp-stat, .hp-case-card, .hp-case-metric,
-  .hp-case-info-box, .hp-case-detail-hero, .hp-case-detail-wide,
-  .hp-bill-panel, .hp-resource-mini, .hp-track-card, .hp-report-card,
-  .hp-response-card, .hp-response-tile, .hp-role-card, .hp-guidance-card,
-  .hp-an-stat, .hp-an-table-w, .hp-map-panel, .hp-empty
-) {
-  background: rgba(255,255,255,0.055) !important;
-  background-image: none !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.24) !important;
-  box-shadow: none !important;
-  backdrop-filter: blur(10px);
-}
-
-#root :is(
-  [class*="-card"], [class*="-panel"], [class*="-stat"], [class*="-tile"],
-  [class*="-box"], [class*="-item"], [class*="-hero"], [class*="-banner"],
-  [class*="-chip"], [class*="-tag"]
-) {
-  background-color: rgba(255,255,255,0.045) !important;
-  background-image: none !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.2) !important;
-  box-shadow: none !important;
-}
-
-#root :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, label, small, strong, a,
-  li, td, th, dt, dd
-) {
-  color: #ffffff !important;
-}
-
-#root :is(input, select, textarea) {
-  background: rgba(255,255,255,0.045) !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.38) !important;
-  box-shadow: none !important;
-}
-
-#root :is(input, textarea)::placeholder {
-  color: rgba(255,255,255,0.52) !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.7) !important;
-  box-shadow: none !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) :is(svg, path, span, strong, small, div, p) {
-  color: #ffffff !important;
-  stroke: currentColor;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover :is(svg, path, span, strong, small, div, p) {
-  color: #000000 !important;
-}
-
-#root :is(
-  .nf-nav-root, .lsb-root, .lsb-bottom, .nf-drop, .nf-profile-drop,
-  .nf-mobile-search-overlay, .hp-map-panel-head, .hp-card-head,
-  .ahd-map-head, .hp-case-modal-box, .signin-help-header,
-  .signin-help-footer, .auth-brandbar
-) {
-  background: #000000 !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.22) !important;
-  box-shadow: none !important;
-}
-
-#root :is(.nf-brand, .nf-username, .nf-login-link, .lsb-logo,
-  .signin-help-header :is(strong, b, span), .signin-help-footer :is(h2, p, span, strong, b),
-  .auth-brandbar :is(.auth-brand, .auth-brand-mark, span)) {
-  color: #ffffff !important;
-}
-
-#root :is(.lsb-item, .lsb-bottom-item, .nf-bell, .nf-call-indicator, .nf-mobile-search-btn) {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.24) !important;
-  box-shadow: none !important;
-}
-
-#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
-  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
-  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) {
+*[style*="background:#e50914"],
+*[style*="background-color: #e50914"],
+*[style*="background-color:#e50914"] {
   background: #ffffff !important;
   color: #000000 !important;
   border-color: #ffffff !important;
 }
 
-#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
-  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
-  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) :is(svg, path, span) {
+/* ── Buttons: Primary White (Squarespace GET STARTED Style) ── */
+:is(
+  .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
+  .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn,
+  button[type="submit"], .auth-btn
+) {
+  background: #ffffff !important;
   color: #000000 !important;
-  stroke: currentColor;
+  border: 1px solid #ffffff !important;
+  box-shadow: none !important;
+  font-weight: 800 !important;
 }
 
-#root :is(.nf-search-btn, .hp-btn, .hp-staff-add-btn, .hp-case-menu-btn,
-  .ahd-track-btn, .hr-btn, .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn,
-  .req-card button, .req-table button, .dd-btn, .lm-tab-btn, .uh-btn,
-  .uh-card-cta, .uh-footer-btn) {
-  background: transparent !important;
+/* Secondary Buttons */
+:is(
+  .ad-btn.sec, .amb2-btn.sec, .h2-btn.sec, .hp-btn-secondary,
+  .uh-btn.secondary, .auth-google, .dcr-refresh
+) {
+  background: #1c1c1c !important;
   color: #ffffff !important;
-  border-color: rgba(255,255,255,0.7) !important;
+  border: 1px solid #333333 !important;
   box-shadow: none !important;
 }
 
-#root :is(.hp-cases-strip, .hp-alert, .hp-home-banner, .hp-card-head,
-  .uh-card-top, .uh-trending-head, .uh-how-head) {
-  background: rgba(255,255,255,0.07) !important;
-  background-image: none !important;
+/* ── Inputs / Textareas / Selects (Squarespace Search Bar Style) ── */
+:is(input, select, textarea, .nf-search-inner) {
+  background-color: #1a1a1a !important;
+  background: #1a1a1a !important;
   color: #ffffff !important;
-  border-color: rgba(255,255,255,0.24) !important;
+  border: 1px solid #333333 !important;
 }
 
-#root .hp-case-modal-backdrop {
-  background: rgba(0,0,0,0.78) !important;
+:is(input, textarea)::placeholder {
+  color: #888888 !important;
 }
 
-#root :is(.auth-shell, .auth-right) {
-  background: rgba(255,255,255,0.055) !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.32) !important;
-  box-shadow: 0 16px 44px rgba(0,0,0,0.52) !important;
+:is(input, select, textarea):focus {
+  outline: none !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
 }
 
-#root .auth-right :is(.auth-step-title, .auth-step-title .hl, .auth-step-sub,
-  .auth-field label, .auth-note, .auth-legal, .auth-meta, .auth-resend,
-  .auth-help, .auth-help-toggle, .auth-help-toggle span, .auth-help-body,
-  .auth-link, .auth-back) {
-  color: #ffffff !important;
+/* ── Universal Zero Hover Animations / Scale / Glow Rule ── */
+* {
+  transition: none !important;
+  animation-play-state: running;
 }
 
-#root :is(.auth-link, .auth-help-toggle, .auth-help-learn, .auth-pass-toggle) {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.5) !important;
-}
-
-#root button.auth-link,
-#root button.auth-help-toggle,
-#root button.auth-help-learn,
-#root button.auth-pass-toggle {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.5) !important;
-}
-
-#root :is(.signin-help-card, .signin-help-section, .signin-help-main) {
-  background: #000000 !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.25) !important;
+*:hover {
+  transform: none !important;
   box-shadow: none !important;
+  filter: none !important;
 }
 
-#root button.signin-help-back,
-#root .signin-help-card button,
-#root button.signin-help-contact {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.7) !important;
-}
-
-#root table,
-#root thead,
-#root tbody,
-#root tr {
-  background: transparent !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.24) !important;
-}
-
-#root :is(.modal, .modal-content, .dialog, [role="dialog"]) {
-  background: #000000 !important;
-  color: #ffffff !important;
-  border-color: rgba(255,255,255,0.32) !important;
-  box-shadow: 0 16px 44px rgba(0,0,0,0.52) !important;
-}
-
+/* ── Scrollbars ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #000000; }
-::-webkit-scrollbar-thumb { background: #ffffff; }
-
-/* Bare black layout: content hierarchy comes from type and spacing, not cards.
-   This final layer intentionally removes the old dashboard panel treatment. */
-#root :is(
-  [class*="-card"], [class*="-panel"], [class*="-stat"], [class*="-tile"],
-  [class*="-box"], [class*="-item"], [class*="-hero"], [class*="-banner"],
-  [class*="-chip"], [class*="-tag"], [class*="-metric"], [class*="-summary"],
-  [class*="-section"], [class*="-wrap"], [class*="-empty"], [class*="-head"],
-  [class*="-strip"]
-) {
-  background: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Keep page spacing generous without separating every data group into a box. */
-#root :is(
-  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
-  .hp-root, .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root,
-  .dh-root, .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
-  .ac-root, .rtm-root, .page-root
-) {
-  background: #000000 !important;
-}
-
-#root :is(
-  .ad-hero, .uh-hero, .hp-hero, .amb2-card, .h2-card, .rep-sum-card,
-  .rep-chart-card, .rep-table-card, .req-card, .dd-card, .dd-booking-card,
-  .dv-panel, .ahd-card, .hr-card, .ci-card, .cd-card, .arm-card, .dh-card,
-  .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card,
-  .rtm-card, .mb-card, .uh-card, .hp-card, .hp-case-card, .hp-report-card,
-  .hp-response-card, .hp-role-card, .hp-guidance-card
-) {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-/* Data summaries become plain type blocks instead of floating tiles. */
-#root :is(
-  .ad-cell, .amb2-stat, .h2-stat, .h2-mini, .rep-sum-card, .uh-stat,
-  .hp-stat, .hp-case-metric, .hp-case-info-box, .hp-response-tile,
-  .hp-an-stat, .ahd-item, .ahd-staff-card, .uh-trend-card
-) {
-  min-height: 0 !important;
-  padding: 0 !important;
-}
-
-/* Navigation stays present but loses the app-like outlined button treatment. */
-#root :is(.nf-nav-root, .lsb-root, .lsb-bottom, .nf-drop, .nf-profile-drop) {
-  background: #000000 !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-#root :is(.lsb-item, .lsb-bottom-item, .nf-bell, .nf-call-indicator, .nf-mobile-search-btn,
-  .nf-avatar, .nf-role-badge, .nf-badge, .nf-call-badge) {
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-
-#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
-  .nf-badge, .nf-call-badge) {
-  background: transparent !important;
-  color: #ffffff !important;
-}
-
-/* Forms retain their controls without the surrounding framed card. */
-#root :is(input, select, textarea) {
-  background: rgba(255,255,255,0.05) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  color: #ffffff !important;
-  box-shadow: none !important;
-}
-
-#root :is(input, select, textarea):focus {
-  outline: 1px solid rgba(255,255,255,0.65) !important;
-  outline-offset: 2px;
-}
-
-/* Text-first actions: no filled buttons or decorative outlines. */
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"],
-  .nf-search-btn, .hp-btn, .hp-staff-add-btn, .hp-case-menu-btn, .ahd-track-btn,
-  .hr-btn, .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn, .dd-btn, .lm-tab-btn,
-  .uh-btn, .uh-card-cta, .uh-footer-btn) {
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  color: #ffffff !important;
-  box-shadow: none !important;
-  text-decoration: underline;
-  text-underline-offset: 0.22em;
-}
-
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover,
-#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):focus-visible {
-  background: transparent !important;
-  color: rgba(255,255,255,0.62) !important;
-}
-
-#root :is(table, thead, tbody, tr, td, th) {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-#root :is(.modal, .modal-content, .dialog, [role="dialog"], .hp-case-modal-box) {
-  background: rgba(0,0,0,0.94) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-
-/* Login and sign-in help follow the same calm, unframed visual language. */
-#root :is(.auth-shell, .auth-right, .signin-help-card, .signin-help-section,
-  .signin-help-main, .signin-help-header, .signin-help-footer) {
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
+::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #ffffff; }

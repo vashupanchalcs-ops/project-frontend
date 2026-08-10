@@ -104,7 +104,7 @@ const Maps = () => {
             <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:2px">Driver: ${a.driver}</div>
             <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:2px">Contact: ${a.driver_contact}</div>
             <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px">Location: ${a.location}</div>
-            <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;background:${isBooked?"rgba(229,9,20,0.2)":"rgba(0,212,170,0.15)"};color:${isBooked?"#ff4d5a":"#00d4aa"};border:1px solid ${isBooked?"#ff4d5a":"#00d4aa"}">
+            <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;background:${isBooked?"rgba(255, 255, 255, 0.15)":"rgba(0,212,170,0.15)"};color:${isBooked?"#ffffff":"#00d4aa"};border:1px solid ${isBooked?"#ffffff":"#00d4aa"}">
               ${isBooked ? "🔴 Booked" : a.status}
             </span>
           </div>

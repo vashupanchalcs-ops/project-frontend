@@ -20,11 +20,11 @@ const statusConfig = {
 };
 
 const statsConfig = [
-  { label: "Total Fleet", key: "total", accent: "#e50914" },
-  { label: "Available", key: "available", accent: "#e50914" },
-  { label: "En Route", key: "en_route", accent: "#e50914" },
-  { label: "Busy", key: "busy", accent: "#e50914" },
-  { label: "Low Battery", key: "low_battery", accent: "#e50914" },
+  { label: "Total Fleet", key: "total", accent: "#ffffff" },
+  { label: "Available", key: "available", accent: "#ffffff" },
+  { label: "En Route", key: "en_route", accent: "#ffffff" },
+  { label: "Busy", key: "busy", accent: "#ffffff" },
+  { label: "Low Battery", key: "low_battery", accent: "#ffffff" },
 ];
 
 const images = [
@@ -45,7 +45,7 @@ const fallbackSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
     <defs>
       <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#f1f7aa"/>
-        <stop offset="100%" stop-color="#e50914"/>
+        <stop offset="100%" stop-color="#ffffff"/>
       </linearGradient>
     </defs>
     <rect width="1200" height="500" fill="url(#g)"/>
@@ -488,8 +488,8 @@ export default function Ambulances() {
           padding-top: 64px;
           padding-left: 64px;
           background:
-            radial-gradient(860px 420px at 85% 8%, rgba(229, 9, 20, 0.15), transparent 72%),
-            radial-gradient(840px 380px at 12% -4%, rgba(229, 9, 20, 0.15), transparent 70%),
+            radial-gradient(860px 420px at 85% 8%, rgba(255, 255, 255, 0.15), transparent 72%),
+            radial-gradient(840px 380px at 12% -4%, rgba(255, 255, 255, 0.15), transparent 70%),
             var(--sr-bg, #f7f7f2);
           color: var(--sr-page-text, #111111);
           position: relative;
@@ -510,12 +510,12 @@ export default function Ambulances() {
         .amb2-root::before {
           top: -180px;
           right: -120px;
-          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 70%);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 70%);
         }
         .amb2-root::after {
           left: -160px;
           bottom: -220px;
-          background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(229, 9, 20, 0.15) 70%);
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 70%);
           animation-delay: -5.5s;
         }
         @keyframes amb2-float {
@@ -534,9 +534,9 @@ export default function Ambulances() {
           gap: 6px;
           padding: 6px 14px;
           border-radius: 100px;
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           color: #111111;
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.8px;
@@ -565,7 +565,7 @@ export default function Ambulances() {
         .amb2-stat {
           border-radius: 8px;
           border: 1px solid #e0e0e0;
-          border-top: 3.5px solid #e50914;
+          border-top: 3.5px solid #ffffff;
           background: #ffffff;
           padding: 14px 16px;
           position: relative;
@@ -577,14 +577,14 @@ export default function Ambulances() {
         .amb2-stat:hover {
           background-color: #ffffff !important;
           border-color: #e0e0e0 !important;
-          border-top-color: #e50914 !important;
+          border-top-color: #ffffff !important;
           box-shadow: none !important;
           transform: none !important;
         }
         .amb2-stat.low-battery-stat:hover {
           background-color: #ffffff !important;
           border-color: #e0e0e0 !important;
-          border-top-color: #e50914 !important;
+          border-top-color: #ffffff !important;
           box-shadow: none !important;
           transform: none !important;
         }
@@ -603,7 +603,7 @@ export default function Ambulances() {
           color: #111111;
         }
         .amb2-stat.low-battery-stat .val {
-          color: #ff4d4d;
+          color: #ffffff;
         }
 
         .amb2-sec {
@@ -666,14 +666,14 @@ export default function Ambulances() {
           transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
         }
         .amb2-card:hover {
-          background: linear-gradient(165deg, rgba(229, 9, 20, 0.15), rgba(255,255,255,0.96));
+          background: linear-gradient(165deg, rgba(255, 255, 255, 0.15), rgba(255,255,255,0.96));
           border-color: #111111;
-          box-shadow: 0 18px 34px rgba(229, 9, 20, 0.15), 0 0 0 1px #111111 inset;
+          box-shadow: 0 18px 34px rgba(255, 255, 255, 0.15), 0 0 0 1px #111111 inset;
           transform: translateY(-4px);
         }
         .amb2-card:hover .amb2-ins,
         .amb2-card:hover .amb2-btn {
-          border-color: rgba(229, 9, 20, 0.15);
+          border-color: rgba(255, 255, 255, 0.15);
         }
         .amb2-top {
           position: relative;
@@ -699,7 +699,7 @@ export default function Ambulances() {
           top: 10px;
           left: 10px;
           z-index: 2;
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           color: #111111;
           border: 1px solid #111111;
           border-radius: 100px;
@@ -733,7 +733,7 @@ export default function Ambulances() {
           padding: 3px 8px;
           border-radius: 100px;
           border: 1px solid rgba(20,20,20,0.14);
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           color: rgba(17,17,17,0.9);
           font-size: 11px;
           font-weight: 700;
@@ -774,13 +774,13 @@ export default function Ambulances() {
         }
         .amb2-ins {
           border-radius: 10px;
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           background: #ffffff;
           padding: 7px 6px;
         }
-        .amb2-ins.speed { border-color: rgba(229, 9, 20, 0.15); background: #ffffff; }
-        .amb2-ins.status { border-color: rgba(229, 9, 20, 0.15); background: #ffffff; }
-        .amb2-ins.contact { border-color: rgba(229, 9, 20, 0.15); background: #ffffff; }
+        .amb2-ins.speed { border-color: rgba(255, 255, 255, 0.15); background: #ffffff; }
+        .amb2-ins.status { border-color: rgba(255, 255, 255, 0.15); background: #ffffff; }
+        .amb2-ins.contact { border-color: rgba(255, 255, 255, 0.15); background: #ffffff; }
         .amb2-ins b {
           display: block;
           color: #111111;
@@ -818,15 +818,15 @@ export default function Ambulances() {
           text-shadow: none;
         }
         .amb2-btn.main {
-          background: #e50914;
-          border-color: #e50914;
+          background: #ffffff;
+          border-color: #ffffff;
           box-shadow: none;
           color: #111111;
         }
         .amb2-btn.main.alt {
-          background: #e50914;
+          background: #ffffff;
           color: #111111;
-          border-color: #e50914;
+          border-color: #ffffff;
           box-shadow: none;
         }
         .amb2-btn.icon {
@@ -837,12 +837,12 @@ export default function Ambulances() {
           cursor: not-allowed;
         }
         .amb2-ins:hover {
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.15) inset;
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
         }
         .amb2-btn:hover:not(:disabled) {
-          border-color: rgba(229, 9, 20, 0.15);
-          box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.15) inset;
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
         }
 
         .amb-toast {
@@ -923,9 +923,9 @@ export default function Ambulances() {
         }
 
         .amb-admin-card {
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 12px;
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           padding: 10px;
         }
         .amb-admin-grid {
@@ -934,7 +934,7 @@ export default function Ambulances() {
           gap: 8px;
         }
         .amb-admin-stat {
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 10px;
           background: #f8f9e5;
           color: #111;
@@ -961,7 +961,7 @@ export default function Ambulances() {
           gap: 7px;
         }
         .amb-admin-row {
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 9px;
           background: #fefef4;
           padding: 8px 9px;
@@ -974,8 +974,8 @@ export default function Ambulances() {
           gap: 8px;
         }
         .amb-admin-pill {
-          border: 1px solid rgba(229, 9, 20, 0.15);
-          background: #e50914;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: #ffffff;
           color: #111;
           border-radius: 999px;
           padding: 2px 8px;
@@ -1032,9 +1032,9 @@ export default function Ambulances() {
 
         /* Battery diagnostic card in details modal */
         .amb-battery-diag {
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 12px;
-          background: rgba(229, 9, 20, 0.15);
+          background: rgba(255, 255, 255, 0.15);
           padding: 12px 14px;
           margin-top: 6px;
         }
@@ -1061,7 +1061,7 @@ export default function Ambulances() {
           font-weight: 900;
           line-height: 1;
         }
-        .amb-battery-diag-level.critical { color: #ff4d4d; }
+        .amb-battery-diag-level.critical { color: #ffffff; }
         .amb-battery-diag-level.healthy { color: #16a34a; }
         .amb-battery-diag-bar-wrap {
           flex: 1;
@@ -1153,7 +1153,7 @@ export default function Ambulances() {
         .amb-split-left::-webkit-scrollbar-thumb { background: rgba(17,17,17,0.2); border-radius: 4px; }
         .amb-split-right {
           background: #fffef6;
-          border: 1px solid rgba(229, 9, 20, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 16px;
           padding: 20px;
           box-shadow: 0 16px 34px rgba(0,0,0,0.1);
@@ -1172,9 +1172,9 @@ export default function Ambulances() {
           gap: 4px;
         }
         .amb-side-card.active {
-          border-color: #e50914;
+          border-color: #ffffff;
           background: #fdfdf5;
-          box-shadow: inset 4px 0 0 #e50914;
+          box-shadow: inset 4px 0 0 #ffffff;
         }
         .amb-side-card:hover {
           background: #fafaf5;
@@ -1223,8 +1223,8 @@ export default function Ambulances() {
                 <div
                   style={{
                     marginTop: 12,
-                    border: "1px solid rgba(229, 9, 20, 0.15)",
-                    background: "rgba(229, 9, 20, 0.15)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "rgba(255, 255, 255, 0.15)",
                     color: "#111",
                     borderRadius: 10,
                     padding: "8px 12px",
@@ -1268,7 +1268,7 @@ export default function Ambulances() {
                 const speed = a.speed ? `${Math.round(a.speed)} km/h` : "0 km/h";
                 const battery = typeof a.battery === "number" ? a.battery : null;
                 const isCriticalBattery = battery !== null && battery < 20;
-                const batteryColor = isCriticalBattery ? "#ff4d4d" : "#22c55e";
+                const batteryColor = isCriticalBattery ? "#ffffff" : "#22c55e";
                 const pickupDistance = getDistanceToPickup(a);
                 return (
                   <motion.article className="amb2-card amb2-anim" key={a.id} whileHover={{ y: -4 }}>
@@ -1386,7 +1386,7 @@ export default function Ambulances() {
                  {(() => {
                     const battery = typeof selectedAmb?.battery === "number" ? selectedAmb.battery : null;
                     const isCriticalBattery = battery !== null && battery < 20;
-                    const batteryColor = isCriticalBattery ? "#ff4d4d" : "#22c55e";
+                    const batteryColor = isCriticalBattery ? "#ffffff" : "#22c55e";
                     if (battery === null) return null;
                     return (
                       <div className={`amb-battery-diag${isCriticalBattery ? " critical" : ""}`} style={{ marginBottom: 16 }}>
@@ -1435,8 +1435,8 @@ export default function Ambulances() {
             <div className="amb2-scroll" style={{ marginTop: 18 }}>
               <div
                 style={{
-                  border: "1px solid rgba(229, 9, 20, 0.15)",
-                  background: "linear-gradient(165deg, rgba(229, 9, 20, 0.15), rgba(255,255,255,0.98))",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  background: "linear-gradient(165deg, rgba(255, 255, 255, 0.15), rgba(255,255,255,0.98))",
                   borderRadius: 18,
                   padding: "16px 18px",
                   display: "flex",
@@ -1533,7 +1533,7 @@ export default function Ambulances() {
 
       {showDetailsModal && selectedAmb && !isSplitView && (
         <div className="amb-modal-ov" onClick={(e) => e.target === e.currentTarget && setShowDetailsModal(false)}>
-          <div className="amb-modal" style={{ width: "min(880px, 100%)", background: "#fffef6", color: "#111", border: "1px solid rgba(229, 9, 20, 0.15)" }}>
+          <div className="amb-modal" style={{ width: "min(880px, 100%)", background: "#fffef6", color: "#111", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
             <h3 style={{ color: "#111" }}>Ambulance Detail — {selectedAmb.ambulance_number || "AMB-0000"}</h3>
             <p style={{ color: "rgba(17,17,17,0.72)" }}>
               Driver: {selectedAmb.driver || "N/A"} · Contact: {selectedAmb.driver_contact || "-"} · Status: {(statusConfig[selectedAmb.status] || statusConfig.offline).label}
@@ -1543,7 +1543,7 @@ export default function Ambulances() {
             {(() => {
               const battery = typeof selectedAmb.battery === "number" ? selectedAmb.battery : null;
               const isCriticalBattery = battery !== null && battery < 20;
-              const batteryColor = isCriticalBattery ? "#ff4d4d" : "#22c55e";
+              const batteryColor = isCriticalBattery ? "#ffffff" : "#22c55e";
               if (battery === null) return null;
               return (
                 <div className={`amb-battery-diag${isCriticalBattery ? " critical" : ""}`}>

@@ -65,7 +65,7 @@ export default function HospitalCaseReportView() {
           </div>
           <button
             onClick={() => navigate("/hospital/reports")}
-            style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 10, background: "#e50914", padding: "10px 14px", fontWeight: 800, cursor: "pointer" }}
+            style={{ border: "1px solid rgba(17,17,17,0.2)", borderRadius: 10, background: "#ffffff", padding: "10px 14px", fontWeight: 800, cursor: "pointer" }}
           >
             Back To Case Reports
           </button>
