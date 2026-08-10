@@ -25,8 +25,8 @@ export default function SignInHelp() {
       <style>{`
         .signin-help-root {
           min-height: 100svh;
-          background: #fbfaf9;
-          color: #171313;
+          background: #ffffff;
+          color: #000000;
           font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
         }
         .signin-help-header {
@@ -36,9 +36,9 @@ export default function SignInHelp() {
           justify-content: space-between;
           gap: 20px;
           padding: 0 clamp(20px, 8vw, 170px);
-          background: #080505;
+          background: #000000;
           color: #fff;
-          border-top: 3px solid #e90c1a;
+          border-top: 0;
         }
         .signin-help-brand {
           display: inline-flex;
@@ -49,7 +49,7 @@ export default function SignInHelp() {
           font-weight: 700;
           letter-spacing: -0.035em;
         }
-        .signin-help-brand strong { color: #ef1020; font-size: 30px; letter-spacing: -0.08em; }
+        .signin-help-brand strong { color: #ffffff; font-size: 30px; letter-spacing: -0.08em; }
         .signin-help-brand span { height: 31px; width: 1px; background: rgba(255,255,255,.45); }
         .signin-help-login {
           border: 1px solid rgba(255,255,255,.65);
@@ -72,15 +72,15 @@ export default function SignInHelp() {
         .signin-help-title { max-width: 800px; margin: 54px 0 36px; font-size: clamp(38px, 5vw, 66px); line-height: .98; letter-spacing: -0.055em; }
         .signin-help-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 400px); gap: clamp(34px, 8vw, 100px); align-items: start; }
         .signin-help-lead { margin: 0 0 28px; font-size: 20px; line-height: 1.55; }
-        .signin-help-section { border-bottom: 1px solid #d7d1cf; }
-        .signin-help-section button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 15px; border: 0; padding: 18px 0; background: transparent; color: #151111; text-align: left; font: 800 18px inherit; cursor: pointer; }
-        .signin-help-section button span { color: #e90c1a; font-size: 24px; }
-        .signin-help-section p { max-width: 760px; margin: -2px 0 21px; font-size: 17px; line-height: 1.6; color: #433a3a; }
-        .signin-help-card { border: 1px solid #d7d1cf; border-top: 7px solid #e90c1a; padding: 24px; background: #fff; box-shadow: 0 10px 30px rgba(42, 13, 17, .07); }
+        .signin-help-section { border-bottom: 1px solid #000000; }
+        .signin-help-section button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 15px; border: 0; padding: 18px 0; background: transparent; color: #000000; text-align: left; font: 800 18px inherit; cursor: pointer; }
+        .signin-help-section button span { color: #000000; font-size: 24px; }
+        .signin-help-section p { max-width: 760px; margin: -2px 0 21px; font-size: 17px; line-height: 1.6; color: rgba(0,0,0,0.72); }
+        .signin-help-card { border: 1px solid #000000; border-top: 7px solid #000000; padding: 24px; background: #fff; box-shadow: none; }
         .signin-help-card h2 { margin: 0 0 14px; font-size: 24px; letter-spacing: -0.03em; }
-        .signin-help-card button { display: block; border: 0; border-bottom: 1px solid #ece7e5; padding: 14px 0; background: transparent; color: #171313; text-align: left; font: 600 16px inherit; text-decoration: underline; cursor: pointer; }
+        .signin-help-card button { display: block; border: 0; border-bottom: 1px solid #000000; padding: 14px 0; background: transparent; color: #000000; text-align: left; font: 600 16px inherit; text-decoration: underline; cursor: pointer; }
         .signin-help-card button:last-child { border-bottom: 0; }
-        .signin-help-footer { margin-top: 82px; padding: 42px clamp(20px, 8vw, 170px) 56px; background: radial-gradient(circle at 87% 5%, #8d0713, transparent 40%), #070505; color: #fff; }
+        .signin-help-footer { margin-top: 82px; padding: 42px clamp(20px, 8vw, 170px) 56px; background: #000000; color: #fff; }
         .signin-help-footer h2 { margin: 0 0 15px; font-size: 28px; }
         .signin-help-contact { border: 0; border-radius: 4px; padding: 13px 28px; background: #fff; color: #111; font: 800 16px inherit; cursor: pointer; }
         @media (max-width: 760px) {

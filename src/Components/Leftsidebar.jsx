@@ -81,8 +81,8 @@ const Leftsidebar = () => {
           top: 0 !important; left: 0 !important;
           height: 100vh !important;
           width: 64px !important;
-          background: #000000 !important;
-          border-right: 1px solid #1f1f1f !important;
+          background: #ffffff !important;
+          border-right: 1px solid #000000 !important;
           display: flex !important;
           flex-direction: column;
           align-items: center;
@@ -92,11 +92,11 @@ const Leftsidebar = () => {
         .lsb-logo {
           height: 64px; width: 100%;
           display: flex; align-items: center; justify-content: center;
-          border-bottom: 1px solid #1f1f1f;
-          color: var(--sr-accent, #e50914); cursor: pointer; transition: color 0.2s;
+          border-bottom: 1px solid #000000;
+          color: #000000; cursor: pointer; transition: color 0.2s, background 0.2s;
           text-decoration: none; flex-shrink: 0;
         }
-        .lsb-logo:hover { color: var(--sr-accent-hover, #eefb7b); }
+        .lsb-logo:hover { color: #ffffff; background: #000000; }
         .lsb-nav {
           flex: 1; display: flex; flex-direction: column;
           align-items: center; gap: 4px;
@@ -108,43 +108,43 @@ const Leftsidebar = () => {
         .lsb-item {
           position: relative; width: 44px; height: 44px;
           border-radius: 14px; display: flex; align-items: center;
-          justify-content: center; color: var(--sr-sidebar-text, rgba(255,255,255,0.3));
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.01);
+          justify-content: center; color: rgba(0,0,0,0.72);
+          border: 1px solid rgba(0,0,0,0.2);
+          background: #ffffff;
           transition: all 0.2s; cursor: pointer; text-decoration: none; flex-shrink: 0;
         }
         .lsb-item:hover {
-          background: var(--sr-sidebar-hover-bg, rgba(229,9,20,0.18));
-          color: var(--sr-sidebar-hover-c, #fff);
-          border-color: var(--sr-sidebar-hover-border, rgba(255,51,71,0.72));
-          box-shadow: 0 8px 18px rgba(229,9,20,0.28);
+          background: #000000;
+          color: #ffffff;
+          border-color: #000000;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.16);
           transform: translateY(-1px);
         }
         .lsb-item.active {
-          background: var(--sr-sidebar-active-bg, #e50914);
-          color: var(--sr-sidebar-active-c, #fff);
-          border: 1px solid var(--sr-sidebar-hover-border, rgba(255,51,71,0.72));
-          box-shadow: 0 8px 16px rgba(229,9,20,0.32);
+          background: #000000;
+          color: #ffffff;
+          border: 1px solid #000000;
+          box-shadow: 0 8px 16px rgba(0,0,0,0.18);
         }
         .lsb-tooltip {
           position: absolute; left: 54px;
-          background: #1a1a1a; color: #fff;
+          background: #000000; color: #fff;
           font-size: 11px; font-weight: 600;
           padding: 5px 10px; border-radius: 6px;
           white-space: nowrap; opacity: 0; pointer-events: none;
-          transition: opacity 0.15s; border: 1px solid rgba(255,255,255,0.1);
+          transition: opacity 0.15s; border: 1px solid #000000;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; z-index: 99999;
         }
         .lsb-item:hover .lsb-tooltip { opacity: 1; }
         .lsb-dot {
           position: absolute; top: 6px; right: 6px;
           width: 6px; height: 6px; border-radius: 50%;
-          background: #00c853; box-shadow: 0 0 6px #00c853;
+          background: #000000; box-shadow: none;
           animation: lsb-pulse 1.5s infinite;
         }
         .lsb-dot-red {
           position: absolute;
-          background: #e50914; box-shadow: 0 0 6px #e50914;
+          background: #000000; box-shadow: none;
           animation: lsb-pulse 1.5s infinite;
           display: flex; align-items: center; justify-content: center;
           font-size: 8px; font-weight: 800; color: #fff;
@@ -158,7 +158,7 @@ const Leftsidebar = () => {
         }
         .lsb-divider {
           width: 28px; height: 1px;
-          background: rgba(255,255,255,0.07);
+          background: #000000;
           margin: 4px 0; flex-shrink: 0;
         }
 
@@ -166,8 +166,8 @@ const Leftsidebar = () => {
         .lsb-bottom {
           display: none;
           position: fixed; bottom: 0; left: 0; right: 0;
-          height: 62px; background: var(--sr-sidebar-bg, #0a0a0a);
-          border-top: 1px solid var(--sr-sidebar-border, rgba(255,255,255,0.07));
+          height: 62px; background: #ffffff;
+          border-top: 1px solid #000000;
           z-index: 9999;
           align-items: stretch;
           gap: 6px;
@@ -192,9 +192,9 @@ const Leftsidebar = () => {
         }
         .lsb-bottom-toggle {
           width: 30px;
-          border: 1px solid rgba(255,51,71,0.72);
+          border: 1px solid #000000;
           border-radius: 10px;
-          background: #e50914;
+          background: #000000;
           color: #fff;
           font-size: 16px;
           font-weight: 800;
@@ -208,20 +208,20 @@ const Leftsidebar = () => {
         .lsb-bottom-item {
           display: flex; flex-direction: column; align-items: center;
           justify-content: center; gap: 2px; min-width: 72px; height: 100%;
-          color: var(--sr-bottom-item-color, rgba(17,17,17,0.62)); text-decoration: none;
+          color: rgba(0,0,0,0.72); text-decoration: none;
           transition: color 0.2s; position: relative;
           border-top: 2px solid transparent;
           border-radius: 10px;
         }
         .lsb-bottom-item.active {
           color: #fff;
-          border-top-color: rgba(255,255,255,0.75);
-          background: #e50914;
+          border-top-color: #ffffff;
+          background: #000000;
           border-radius: 10px 10px 0 0;
         }
         .lsb-bottom-item:hover  {
-          color: var(--sr-sidebar-hover-c, #fff);
-          background: var(--sr-sidebar-hover-bg, rgba(229,9,20,0.18));
+          color: #fff;
+          background: #000000;
           border-radius: 10px 10px 0 0;
         }
         .lsb-bottom-label {
@@ -235,7 +235,7 @@ const Leftsidebar = () => {
         .lsb-bottom-dot {
           position: absolute; top: 6px; right: calc(50% - 14px);
           width: 5px; height: 5px; border-radius: 50%;
-          background: #00c853; box-shadow: 0 0 5px #00c853;
+          background: #000000; box-shadow: none;
           animation: lsb-pulse 1.5s infinite;
         }
 

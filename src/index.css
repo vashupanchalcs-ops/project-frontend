@@ -353,3 +353,276 @@ p, span, div, button, input, textarea, label, a,
   color: #111111 !important;
   border: 1px solid #cccccc !important;
 }
+
+/* Monochrome interface: a single Google-inspired black and white system for
+   every role and route. Existing layouts and data interactions stay intact. */
+:root,
+html,
+body,
+#root {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+body::before {
+  display: none !important;
+}
+
+/* Media and map tiles are desaturated individually so fixed navigation keeps
+   its viewport positioning while the visible interface remains monochrome. */
+#root :is(img, svg, canvas, iframe, video) {
+  filter: grayscale(1) !important;
+}
+
+#root :is(
+  .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
+  .hp-root, .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root,
+  .dh-root, .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
+  .ac-root, .rtm-root, .page-root, .signin-help-root, .auth-root
+) {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #000000 !important;
+}
+
+#root :is(
+  .ad-hero, .ad-cell, .ad-contact-grid, .ad-contact-band,
+  .amb2-card, .amb2-stat, .amb2-ins, .h2-card, .h2-stat, .h2-mini,
+  .rep-sum-card, .rep-chart-card, .rep-table-card, .rep-ord-card,
+  .req-card, .req-table-wrap, .dd-card, .dd-booking-card, .dd-amb-card,
+  .dn-card, .dv-panel, .ahd-card, .ahd-item, .ahd-staff-card, .ahd-map-wrap,
+  .hr-card, .hr-empty, .ci-card, .ci-panel, .cd-card, .cd-panel, .cd-empty,
+  .arm-card, .arm-panel, .arm-route-card, .dh-card, .dg-card, .dcr-card,
+  .ip-card, .lt-card, .lm-card, .st-card, .ac-card, .rtm-card, .mb-card,
+  .mb-table, .mb-empty, .uh-hero, .uh-stat, .uh-card, .uh-trending,
+  .uh-trend-card, .uh-footer, .uh-how-step, .signin-help-card, .auth-shell,
+  .hp-card, .hp-hero, .hp-svc, .hp-stat, .hp-case-card, .hp-case-metric,
+  .hp-case-info-box, .hp-case-detail-hero, .hp-case-detail-wide,
+  .hp-bill-panel, .hp-resource-mini, .hp-track-card, .hp-report-card,
+  .hp-response-card, .hp-response-tile, .hp-role-card, .hp-guidance-card,
+  .hp-an-stat, .hp-an-table-w, .hp-map-panel, .hp-empty
+) {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Covers the remaining page-specific utility classes without changing their
+   layout or event handlers. */
+#root :is(
+  [class*="-card"], [class*="-panel"], [class*="-stat"], [class*="-tile"],
+  [class*="-box"], [class*="-item"], [class*="-hero"], [class*="-banner"],
+  [class*="-chip"], [class*="-tag"]
+) {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#root :is(
+  h1, h2, h3, h4, h5, h6, p, span, div, label, small, strong, a,
+  li, td, th, dt, dd
+) {
+  color: #000000 !important;
+}
+
+#root :is(input, select, textarea) {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#root :is(input, textarea)::placeholder {
+  color: rgba(0,0,0,0.56) !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) :is(svg, path) {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]) :is(span, strong, small, div, p) {
+  color: #ffffff !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover :is(svg, path) {
+  color: #000000 !important;
+}
+
+#root :is(button, input[type="button"], input[type="submit"], input[type="reset"]):hover :is(span, strong, small, div, p) {
+  color: #000000 !important;
+}
+
+#root :is(
+  .nf-nav-root, .lsb-root, .lsb-bottom, .nf-drop, .nf-profile-drop,
+  .nf-mobile-search-overlay, .hp-map-panel-head, .hp-card-head,
+  .ahd-map-head, .hp-case-modal-box
+) {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#root :is(.nf-brand, .nf-username, .nf-login-link, .nf-avatar, .lsb-logo) {
+  color: #000000 !important;
+}
+
+#root :is(.lsb-item, .lsb-bottom-item, .nf-bell, .nf-call-indicator, .nf-mobile-search-btn) {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
+  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
+  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+#root :is(.lsb-item.active, .lsb-bottom-item.active, .nf-avatar, .nf-role-badge,
+  .nf-badge, .nf-call-badge, .hp-pill, .hp-report-status, .hp-response-status,
+  .hp-an-status, .hr-pill, .req-pill, .rep-pill, .dd-status-pill, .ad-kicker) :is(svg, path, span) {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
+#root :is(.nf-search-btn, .hp-btn, .hp-staff-add-btn, .hp-case-menu-btn,
+  .ahd-track-btn, .hr-btn, .ad-btn, .amb2-btn, .h2-btn, .rep-track-btn,
+  .req-card button, .req-table button, .dd-btn, .lm-tab-btn, .uh-btn,
+  .uh-card-cta, .uh-footer-btn) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#root :is(.hp-cases-strip, .hp-case-modal-backdrop, .hp-alert, .hp-home-banner,
+  .hp-card-head, .uh-card-top, .uh-trending-head, .uh-how-head) {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+/* Login keeps a compact centered form, now with the same white canvas and
+   high-contrast black controls as the rest of the product. */
+#root .auth-root::before,
+#root .auth-root::after {
+  display: none !important;
+}
+
+#root .auth-brandbar {
+  background: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#root .auth-brandbar :is(.auth-brand, .auth-brand-mark, span) {
+  color: #ffffff !important;
+}
+
+#root :is(.auth-shell, .auth-right) {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12) !important;
+}
+
+#root .auth-right :is(.auth-step-title, .auth-step-title .hl, .auth-step-sub,
+  .auth-field label, .auth-note, .auth-legal, .auth-meta, .auth-resend,
+  .auth-help, .auth-help-toggle, .auth-help-toggle span, .auth-help-body,
+  .auth-link, .auth-back) {
+  color: #000000 !important;
+}
+
+#root .auth-pass-toggle {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#root .hp-case-modal-backdrop {
+  background: rgba(0,0,0,0.64) !important;
+}
+
+#root :is(.hp-map-frame, .ahd-map-wrap iframe, .gm-style) {
+  filter: grayscale(1) contrast(1.08) !important;
+}
+
+#root [style*="background"] {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+#root table,
+#root thead,
+#root tbody,
+#root tr {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#root :is(.modal, .modal-content, .dialog, [role="dialog"]) {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.16) !important;
+}
+
+::-webkit-scrollbar-track { background: #ffffff; }
+::-webkit-scrollbar-thumb { background: #000000; }
+
+/* Compact text actions should remain links rather than solid action bars. */
+#root :is(.auth-link, .auth-help-toggle, .auth-help-learn, .auth-pass-toggle) {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#root :is(.auth-link, .auth-help-toggle, .auth-help-learn) :is(span, strong, small) {
+  color: #000000 !important;
+}
+
+#root button.auth-link,
+#root button.auth-help-toggle,
+#root button.auth-help-learn,
+#root button.auth-pass-toggle {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+#root .signin-help-header :is(strong, b, span),
+#root .signin-help-footer :is(h2, p, span, strong, b) {
+  color: #ffffff !important;
+}
+
+#root button.signin-help-back,
+#root .signin-help-card button,
+#root button.signin-help-contact {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
