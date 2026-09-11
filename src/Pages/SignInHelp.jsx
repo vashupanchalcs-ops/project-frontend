@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 const helpSections = [
   {
     title: "Sign in with your email and password",
-    body: "Open the YiCare sign-in screen, choose your role, enter the email address and password used when your account was created, then select Log In.",
+    body: "Open the Aarogya sign-in screen, choose your role, enter the email address and password used when your account was created, then select Log In.",
   },
   {
     title: "Use a one-time password (OTP)",
-    body: "When you create an account or reset your password, YiCare sends a six-digit OTP to your registered email address. Enter it before the timer expires.",
+    body: "When you create an account or reset your password, Aarogya sends a six-digit OTP to your registered email address. Enter it before the timer expires.",
   },
   {
     title: "Sign in as a driver or hospital",
@@ -97,13 +97,13 @@ export default function SignInHelp() {
       `}</style>
 
       <header className="signin-help-header">
-        <div className="signin-help-brand"><strong>YICARE</strong><span /><b>Help Center</b></div>
+        <div className="signin-help-brand"><strong>Aarogya</strong><span /><b>Help Center</b></div>
         <button className="signin-help-login" type="button" onClick={() => navigate("/Login")}>Sign In</button>
       </header>
 
       <main className="signin-help-main">
         <button className="signin-help-back" type="button" onClick={() => navigate("/Login")}>← Back to sign in</button>
-        <h1 className="signin-help-title">How to sign in to YiCare</h1>
+        <h1 className="signin-help-title">How to sign in to Aarogya</h1>
         <div className="signin-help-grid">
           <section>
             <p className="signin-help-lead">Use the account email and password you registered with. Keep your role details ready if you are signing in as a driver or hospital.</p>
@@ -127,7 +127,7 @@ export default function SignInHelp() {
 
       <footer className="signin-help-footer">
         <h2>Need more help?</h2>
-        <button className="signin-help-contact" type="button" onClick={() => window.location.href = "mailto:support@yicare.in"}>Contact support</button>
+        <button className="signin-help-contact" type="button" onClick={() => window.location.href = "mailto:support@aarogya.in"}>Contact support</button>
       </footer>
     </div>
   );

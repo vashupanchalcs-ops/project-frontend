@@ -50,7 +50,7 @@ export default function AnalyticsCharts() {
   const Tip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div style={{background:"#fff",border:"1px solid rgba(0,0,0,0.09)",borderRadius:10,padding:"9px 13px",boxShadow:"0 4px 16px rgba(0,0,0,0.09)",fontFamily:"'DM Sans',sans-serif"}}>
+      <div style={{background:"#fff",border:"1px solid #f59a23",borderRadius:10,padding:"9px 13px",boxShadow:"none",fontFamily:"Roboto, sans-serif"}}>
         {label && <div style={{fontSize:10,fontWeight:700,color:"#a1a1a6",marginBottom:4}}>{label}</div>}
         {payload.map((p,i)=>(
           <div key={i} style={{fontSize:12,fontWeight:700,color:p.color||"#0a0a0a",display:"flex",alignItems:"center",gap:6}}>
@@ -65,7 +65,7 @@ export default function AnalyticsCharts() {
   return (
     <>
       <style>{`
-        .ac-root { background:#fff; height:100%; display:flex; flex-direction:column; font-family:'DM Sans',sans-serif; }
+        .ac-root { background:#fff; height:100%; display:flex; flex-direction:column; font-family:Roboto, sans-serif; }
 
         /* Tabs + summary row */
         .ac-bar {
@@ -78,8 +78,8 @@ export default function AnalyticsCharts() {
           border:1.5px solid rgba(0,0,0,0.1);background:#f8f8fa;color:rgba(0,0,0,0.45);
           cursor:pointer;font-family:inherit;transition:all .15s;
         }
-        .ac-tab:hover  { border-color:rgba(0,0,0,0.2);color:#0a0a0a; }
-        .ac-tab.on     { background:#ffffff;color:#fff;border-color:#ffffff;box-shadow:0 3px 10px rgba(255, 255, 255, 0.15); }
+        .ac-tab:hover  { border-color:#f59a23;color:#111111; }
+        .ac-tab.on     { background:#f59a23;color:#111111;border-color:#f59a23;box-shadow:none; }
         .ac-pills      { display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap; }
         .ac-pill       { font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;display:flex;align-items:center;gap:4px; }
         .ac-pill-dot   { width:6px;height:6px;border-radius:50%; }
@@ -91,7 +91,7 @@ export default function AnalyticsCharts() {
         .recharts-cartesian-axis-tick-value {
           fill:#a1a1a6 !important;
           font-size:11px !important;
-          font-family:'DM Sans',sans-serif !important;
+          font-family:Roboto, sans-serif !important;
         }
         .recharts-cartesian-grid-horizontal line,
         .recharts-cartesian-grid-vertical line {
@@ -108,16 +108,16 @@ export default function AnalyticsCharts() {
           <button className={`ac-tab ${activeTab==="trends"?"on":""}`} onClick={()=>setActiveTab("trends")}>Booking Trends</button>
           <button className={`ac-tab ${activeTab==="fleet"?"on":""}`}  onClick={()=>setActiveTab("fleet")}>Fleet Status</button>
           <div className="ac-pills">
-            <span className="ac-pill" style={{background:"rgba(0,135,90,0.09)",color:"#00875a",border:"1px solid rgba(0,135,90,0.18)"}}>
-              <span className="ac-pill-dot" style={{background:"#00875a"}}/>
+            <span className="ac-pill" style={{background:"#ffffff",color:"#111111",border:"1px solid #126f1e"}}>
+              <span className="ac-pill-dot" style={{background:"#126f1e"}}/>
               {conf} Confirmed
             </span>
-            <span className="ac-pill" style={{background:"rgba(179,104,0,0.09)",color:"#b36800",border:"1px solid rgba(179,104,0,0.18)"}}>
-              <span className="ac-pill-dot" style={{background:"#b36800"}}/>
+            <span className="ac-pill" style={{background:"#fff3df",color:"#111111",border:"1px solid #f59a23"}}>
+              <span className="ac-pill-dot" style={{background:"#f59a23"}}/>
               {pend} Pending
             </span>
-            <span className="ac-pill" style={{background:"rgba(255, 255, 255, 0.15)",color:"#ffffff",border:"1px solid rgba(255, 255, 255, 0.15)"}}>
-              <span className="ac-pill-dot" style={{background:"#ffffff"}}/>
+            <span className="ac-pill" style={{background:"#fff3df",color:"#111111",border:"1px solid #f59a23"}}>
+              <span className="ac-pill-dot" style={{background:"#f59a23"}}/>
               {canc} Cancelled
             </span>
             <span className="ac-pill" style={{background:"rgba(0,0,0,0.05)",color:"#6e6e73",border:"1px solid rgba(0,0,0,0.1)"}}>
@@ -131,22 +131,22 @@ export default function AnalyticsCharts() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{top:4,right:12,left:-20,bottom:0}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)"/>
-                <XAxis dataKey="date" tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
-                <YAxis allowDecimals={false} tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
+                <XAxis dataKey="date" tick={{fill:"#111111",fontSize:11,fontFamily:"Roboto, sans-serif"}} axisLine={false} tickLine={false}/>
+                <YAxis allowDecimals={false} tick={{fill:"#111111",fontSize:11,fontFamily:"Roboto, sans-serif"}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<Tip/>}/>
-                <Legend wrapperStyle={{fontSize:11,fontFamily:"'DM Sans',sans-serif",paddingTop:4}}/>
-                <Line type="monotone" dataKey="bookings"  name="Bookings"  stroke="#ffffff" strokeWidth={2.5} dot={{r:3,fill:"#ffffff"}}  activeDot={{r:5}}/>
-                <Line type="monotone" dataKey="completed" name="Completed" stroke="#0a0a0a" strokeWidth={2.5} dot={{r:3,fill:"#0a0a0a"}}  activeDot={{r:5}} strokeDasharray="5 5"/>
+                <Legend wrapperStyle={{fontSize:11,fontFamily:"Roboto, sans-serif",paddingTop:4}}/>
+                <Line type="monotone" dataKey="bookings"  name="Bookings"  stroke="#f59a23" strokeWidth={2.5} dot={{r:3,fill:"#f59a23"}}  activeDot={{r:5}}/>
+                <Line type="monotone" dataKey="completed" name="Completed" stroke="#126f1e" strokeWidth={2.5} dot={{r:3,fill:"#126f1e"}}  activeDot={{r:5}} strokeDasharray="5 5"/>
               </LineChart>
             </ResponsiveContainer>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={ambData} margin={{top:4,right:12,left:-20,bottom:0}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)"/>
-                <XAxis dataKey="name" tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
-                <YAxis allowDecimals={false} tick={{fill:"#a1a1a6",fontSize:11,fontFamily:"'DM Sans',sans-serif"}} axisLine={false} tickLine={false}/>
+                <XAxis dataKey="name" tick={{fill:"#111111",fontSize:11,fontFamily:"Roboto, sans-serif"}} axisLine={false} tickLine={false}/>
+                <YAxis allowDecimals={false} tick={{fill:"#111111",fontSize:11,fontFamily:"Roboto, sans-serif"}} axisLine={false} tickLine={false}/>
                 <Tooltip content={<Tip/>}/>
-                <Bar dataKey="count" name="Count" radius={[6,6,0,0]} fill="#ffffff"/>
+                <Bar dataKey="count" name="Count" radius={[6,6,0,0]} fill="#f59a23"/>
               </BarChart>
             </ResponsiveContainer>
           )}

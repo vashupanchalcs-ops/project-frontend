@@ -51,11 +51,43 @@ const fallbackSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
     <rect width="1200" height="500" fill="url(#g)"/>
     <rect x="0" y="390" width="1200" height="110" fill="#111111" opacity="0.08"/>
     <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#111111" font-weight="700">
-      YiCare Ambulance
+      Aarogya Ambulance
     </text>
   </svg>`
 )}`;
 const OPENCAGE_API_KEY = (import.meta?.env?.VITE_OPENCAGE_API_KEY || "").trim();
+
+const PICKUP_LOCATION_FALLBACKS = [
+  { terms: ["shiv vihar"], lat: 28.7217, lng: 77.2784 },
+  { terms: ["loni", "ghaziabad"], lat: 28.7519, lng: 77.2872 },
+  { terms: ["noida"], lat: 28.5355, lng: 77.3910 },
+  { terms: ["greater noida"], lat: 28.4744, lng: 77.5030 },
+  { terms: ["delhi", "new delhi"], lat: 28.6139, lng: 77.2090 },
+];
+
+const normalizeAddress = (value = "") =>
+  String(value).toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+
+const fallbackPickupLocation = (address) => {
+  const normalized = normalizeAddress(address);
+  return PICKUP_LOCATION_FALLBACKS.find(({ terms }) => terms.some((term) => normalized.includes(term))) || null;
+};
+
+const reverseGeocodePickup = async (lat, lng) => {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&zoom=18`;
+    const response = await fetch(url, { headers: { "Accept-Language": "en" } });
+    const result = response.ok ? await response.json() : null;
+    const address = result?.address || {};
+    return {
+      label: result?.display_name || "Current device location",
+      city: address.city || address.town || address.village || address.county || "",
+      district: address.state_district || address.county || "",
+    };
+  } catch {
+    return { label: "Current device location", city: "", district: "" };
+  }
+};
 
 export default function Ambulances() {
   const [ambulances, setAmbulances] = useState([]);
@@ -64,21 +96,32 @@ export default function Ambulances() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAmb, setSelectedAmb] = useState(null);
   const [form, setForm] = useState({
+    pickup_address: "",
     pickup_landmark: "",
     pickup_city: "",
     pickup_district: "",
     patient_contact_number: "",
+    booking_for_other: false,
   });
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [locationPermission, setLocationPermission] = useState("prompt");
+  const [locationMode, setLocationMode] = useState("gps");
+  const [confirmedPickup, setConfirmedPickup] = useState(null);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [manualSuggestions, setManualSuggestions] = useState([]);
   const [toast, setToast] = useState(null);
   const [isSplitView, setIsSplitView] = useState(false);
+  const [mapLocation, setMapLocation] = useState(null);
+  const [mapLocationStatus, setMapLocationStatus] = useState("idle");
 
   const leafletReady = useLeaflet();
   const mapRef = useRef(null);
   const mapElRef = useRef(null);
   const routeLineRef = useRef(null);
-  const layerRef = useRef({ amb: null, pickup: null, hospital: null });
+  const userRouteRef = useRef(null);
+  const mapRouteRequestRef = useRef(0);
+  const layerRef = useRef({ amb: null, pickup: null, hospital: null, user: null });
 
   const isAdmin = localStorage.getItem("role") === "admin";
   const isDriver = localStorage.getItem("role") === "driver";
@@ -88,6 +131,56 @@ export default function Ambulances() {
   const assignBookingId = isAdmin ? Number(location.state?.assignBookingId || 0) : 0;
   const reassignBookingId = isAdmin ? Number(location.state?.reassignBookingId || 0) : 0;
   const rootRef = useRef(null);
+  const pickupWatchRef = useRef(null);
+
+  const clearPickupWatch = () => {
+    if (pickupWatchRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(pickupWatchRef.current);
+      pickupWatchRef.current = null;
+    }
+  };
+
+  useEffect(() => () => clearPickupWatch(), []);
+
+  useEffect(() => {
+    const query = form.pickup_address.trim();
+    const manualEntryRequired = form.booking_for_other || locationMode === "manual" || locationPermission === "denied";
+    if (!manualEntryRequired || query.length < 3) {
+      setManualSuggestions([]);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${query}, India`)}&format=jsonv2&limit=5&countrycodes=in`;
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: { "Accept-Language": "en" },
+        });
+        const results = response.ok ? await response.json() : [];
+        if (controller.signal.aborted) return;
+        setManualSuggestions(
+          Array.isArray(results)
+            ? results
+                .map((result) => ({
+                  label: result.display_name,
+                  lat: Number(result.lat),
+                  lng: Number(result.lon),
+                }))
+                .filter((result) => Number.isFinite(result.lat) && Number.isFinite(result.lng))
+            : []
+        );
+      } catch (error) {
+        if (error?.name !== "AbortError") setManualSuggestions([]);
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [form.booking_for_other, form.pickup_address, locationMode, locationPermission]);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/ambulances/")
@@ -148,12 +241,128 @@ export default function Ambulances() {
     if (isAdmin || isDriver) return;
     setSelectedAmb(a);
     setForm({
+      pickup_address: "",
       pickup_landmark: "",
       pickup_city: "",
       pickup_district: "",
       patient_contact_number: "",
+      booking_for_other: false,
     });
+    setLocationPermission("prompt");
+    setLocationMode("gps");
+    setConfirmedPickup(null);
+    setLocationMessage("");
+    setManualSuggestions([]);
     setShowModal(true);
+    // This runs from the user's Book action so the browser can display its
+    // native location-permission prompt immediately.
+    requestPickupLocation();
+  };
+
+  useEffect(() => {
+    if (!isUser || new URLSearchParams(location.search).get("book") !== "1") return;
+    openBooking(null);
+    navigate("/Ambulances", { replace: true });
+  }, [isUser, location.search, navigate]);
+
+  const requestPickupLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setLocationPermission("denied");
+      setLocationMode("manual");
+      setLocationMessage("Enter your pickup address.");
+      return;
+    }
+
+    clearPickupWatch();
+    setLocationPermission("requesting");
+    setLocationMessage("Requesting location...");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = Number(position.coords.latitude);
+        const lng = Number(position.coords.longitude);
+        clearPickupWatch();
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          setLocationPermission("denied");
+          setLocationMode("manual");
+          setLocationMessage("Enter your pickup address.");
+          return;
+        }
+        // The map and booking always use the browser's exact permissioned pin.
+        // Reverse geocoding only provides a readable address for the user.
+        const place = await reverseGeocodePickup(lat, lng);
+        setConfirmedPickup({
+          lat,
+          lng,
+          accuracy: Number(position.coords.accuracy) || null,
+          source: "gps",
+          label: place.label,
+        });
+        setForm((previous) => ({
+          ...previous,
+          pickup_address: place.label === "Current device location" ? previous.pickup_address : place.label,
+          pickup_city: place.city || previous.pickup_city,
+          pickup_district: place.district || previous.pickup_district,
+        }));
+        setLocationPermission("granted");
+        setLocationMode("gps");
+        setLocationMessage("Location confirmed.");
+      },
+      (error) => {
+        clearPickupWatch();
+        setLocationPermission(error?.code === 1 ? "denied" : "unavailable");
+        setLocationMode("manual");
+        setLocationMessage("Enter your pickup address.");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
+  };
+
+  const confirmManualPickup = async () => {
+    const address = form.pickup_address.trim();
+    if (!address) {
+      showToast("Enter the pickup address before confirming it.", "err");
+      return;
+    }
+
+    setGeocoding(true);
+    setLocationMessage("Confirming address...");
+    try {
+      const chosenSuggestion = manualSuggestions.find((item) => item.label === address);
+      let resolved = chosenSuggestion ? { lat: chosenSuggestion.lat, lng: chosenSuggestion.lng } : null;
+      if (OPENCAGE_API_KEY) {
+        const params = new URLSearchParams({
+          q: `${address}, India`, key: OPENCAGE_API_KEY, language: "en",
+          countrycode: "in", limit: "1", no_annotations: "1",
+        });
+        const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?${params}`);
+        const first = response.ok ? (await response.json())?.results?.[0] : null;
+        const lat = Number(first?.geometry?.lat);
+        const lng = Number(first?.geometry?.lng);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) resolved = { lat, lng };
+      }
+      if (!resolved) {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${address}, India`)}&format=json&limit=1&countrycodes=in`;
+        const response = await fetch(url, { headers: { "Accept-Language": "en" } });
+        const first = response.ok ? (await response.json())?.[0] : null;
+        const lat = Number(first?.lat);
+        const lng = Number(first?.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) resolved = { lat, lng };
+      }
+      // Keep common service areas usable when a public geocoder is rate-limited
+      // or unavailable. The browser GPS action still provides the exact pin.
+      if (!resolved) resolved = fallbackPickupLocation(address);
+      if (!resolved) throw new Error("Address not found");
+
+      setConfirmedPickup({ ...resolved, source: "manual", label: address });
+      setLocationPermission("manual");
+      setLocationMode("manual");
+      setLocationMessage("Location confirmed.");
+    } catch {
+      setLocationMessage("Enter a more detailed address.");
+      showToast("Unable to confirm this address.", "err");
+    } finally {
+      setGeocoding(false);
+    }
   };
 
   const openDetails = (a) => {
@@ -169,6 +378,41 @@ export default function Ambulances() {
        mapRef.current = null;
     }
   };
+
+  const requestMapLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setMapLocationStatus("unavailable");
+      return;
+    }
+    setMapLocationStatus("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude);
+        const lng = Number(position.coords.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          setMapLocationStatus("unavailable");
+          return;
+        }
+        setMapLocation({ lat, lng });
+        setMapLocationStatus("granted");
+      },
+      () => setMapLocationStatus("denied"),
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
+    );
+  };
+
+  const openMapDirections = () => {
+    const lat = Number(selectedAmb?.latitude);
+    const lng = Number(selectedAmb?.longitude);
+    if (!mapLocation || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${mapLocation.lat},${mapLocation.lng}&destination=${lat},${lng}&travelmode=driving`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  useEffect(() => {
+    if (!isSplitView || mapLocation || mapLocationStatus !== "idle") return;
+    requestMapLocation();
+  }, [isSplitView, mapLocation, mapLocationStatus]);
 
   useEffect(() => {
     if (!isSplitView || !selectedAmb || !leafletReady || !mapElRef.current || mapRef.current || !window.L) return;
@@ -194,8 +438,11 @@ export default function Ambulances() {
        if (layer) map.removeLayer(layer);
     });
     if (routeLineRef.current) map.removeLayer(routeLineRef.current);
-    layerRef.current = { amb: null, pickup: null, hospital: null };
+    if (userRouteRef.current) map.removeLayer(userRouteRef.current);
+    layerRef.current = { amb: null, pickup: null, hospital: null, user: null };
     routeLineRef.current = null;
+    userRouteRef.current = null;
+    const requestId = ++mapRouteRequestRef.current;
 
     const alat = Number(selectedAmb.latitude);
     const alng = Number(selectedAmb.longitude);
@@ -203,8 +450,14 @@ export default function Ambulances() {
 
     const bounds = L.latLngBounds();
     if (ambPos) {
-      layerRef.current.amb = L.marker([ambPos.lat, ambPos.lng], { icon: makePinIcon("#111", "🚑") }).addTo(map);
+      layerRef.current.amb = L.marker([ambPos.lat, ambPos.lng], { icon: makePinIcon("#126f1e", "🚑") }).addTo(map);
       bounds.extend([ambPos.lat, ambPos.lng]);
+    }
+
+    if (mapLocation) {
+      layerRef.current.user = L.marker([mapLocation.lat, mapLocation.lng], { icon: makePinIcon("#f59a23", "📍") }).addTo(map);
+      layerRef.current.user.bindPopup("Your location");
+      bounds.extend([mapLocation.lat, mapLocation.lng]);
     }
 
     // Attempt to load route if there's an active booking for this ambulance
@@ -218,25 +471,41 @@ export default function Ambulances() {
            let pickupPos = (Number.isFinite(plat) && Number.isFinite(plng)) ? { lat: plat, lng: plng } : null;
            
            if (pickupPos) {
-             layerRef.current.pickup = L.marker([pickupPos.lat, pickupPos.lng], { icon: makePinIcon("#f7c948", "📍") }).addTo(map);
+             layerRef.current.pickup = L.marker([pickupPos.lat, pickupPos.lng], { icon: makePinIcon("#f59a23", "📍") }).addTo(map);
              bounds.extend([pickupPos.lat, pickupPos.lng]);
              
-             const pts = await fetchRoadRoute([ambPos, pickupPos]);
-             const safePts = pts?.length > 1 ? pts : [ambPos, pickupPos];
-             routeLineRef.current = L.polyline(safePts, { color: "#eab308", weight: 5, opacity: 0.96 }).addTo(map);
-             bounds.extend(routeLineRef.current.getBounds());
+             const pts = await fetchRoadRoute([ambPos, pickupPos], { retries: 2 });
+             if (pts?.length > 1) {
+               if (requestId !== mapRouteRequestRef.current) return;
+               routeLineRef.current = L.polyline(pts, { color: "#f59a23", weight: 5, opacity: 0.96 }).addTo(map);
+               bounds.extend(routeLineRef.current.getBounds());
+             }
              
              map.fitBounds(bounds, { padding: [30, 30] });
            }
         } catch(e) {}
       })();
-    } else if (bounds.isValid()) {
+    }
+
+    if (mapLocation && ambPos) {
+      (async () => {
+        try {
+          const points = await fetchRoadRoute([mapLocation, ambPos], { retries: 2 });
+          if (!points?.length || requestId !== mapRouteRequestRef.current) return;
+          userRouteRef.current = L.polyline(points, { color: "#126f1e", weight: 5, opacity: 0.92 }).addTo(map);
+          bounds.extend(userRouteRef.current.getBounds());
+          map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+        } catch {}
+      })();
+    }
+
+    if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
     } else {
       map.setView([DELHI.lat, DELHI.lng], 12);
     }
     
-  }, [isSplitView, selectedAmb, bookings]);
+  }, [isSplitView, selectedAmb, bookings, mapLocation]);
 
   const handleAmbImageError = (e) => {
     const img = e.currentTarget;
@@ -301,119 +570,32 @@ export default function Ambulances() {
     let landmark = form.pickup_landmark.trim();
     let city = form.pickup_city.trim();
     let district = form.pickup_district.trim();
-    const hasManualLocation = Boolean(landmark || city || district);
+    const requiresManualAddress = form.booking_for_other || locationMode === "manual" || locationPermission === "denied";
 
     if (!form.patient_contact_number.trim()) {
       showToast("Contact number is required.", "err");
       return;
     }
 
-    if (hasManualLocation && (!landmark || !city || !district)) {
-      showToast("Agar manual location fill kar rahe ho to landmark, city aur district tino fill karo.", "err");
+    if (requiresManualAddress && !form.pickup_address.trim()) {
+      showToast("A pickup address is required for another person or a manual booking.", "err");
+      return;
+    }
+
+    if (!confirmedPickup) {
+      showToast("Confirm the pickup location before submitting.", "err");
       return;
     }
     setLoading(true);
     try {
       const user = localStorage.getItem("name") || "Unknown";
       const email = localStorage.getItem("user") || "";
-      let pickupLocation = hasManualLocation
-        ? `${landmark}, ${city}, ${district}`
-        : "Live GPS location";
-
-      let pickupCoords = null;
-      if (hasManualLocation) {
-        setGeocoding(true);
-        try {
-          if (OPENCAGE_API_KEY) {
-            const params = new URLSearchParams({
-              q: `${pickupLocation}, India`,
-              key: OPENCAGE_API_KEY,
-              language: "en",
-              countrycode: "in",
-              limit: "1",
-              no_annotations: "1",
-            });
-            const geoRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?${params.toString()}`);
-            if (geoRes.ok) {
-              const geoData = await geoRes.json();
-              const first = Array.isArray(geoData?.results) ? geoData.results[0] : null;
-              const lat = Number(first?.geometry?.lat);
-              const lng = Number(first?.geometry?.lng);
-              if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                pickupCoords = { lat, lng };
-              }
-            }
-          }
-          if (!pickupCoords) {
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pickupLocation + ", India")}&format=json&limit=1&countrycodes=in`;
-            const geoRes = await fetch(url, { headers: { "Accept-Language": "en" } });
-            if (geoRes.ok) {
-              const geoData = await geoRes.json();
-              const first = geoData?.[0];
-              const lat = Number(first?.lat);
-              const lng = Number(first?.lon);
-              if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                pickupCoords = { lat, lng };
-              }
-            }
-          }
-        } catch {
-          // keep flow running even if geocoder is unreachable
-        } finally {
-          setGeocoding(false);
-        }
-      }
-
-      if (!pickupCoords && !hasManualLocation && navigator.geolocation) {
-        try {
-          const gpsPosition = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0,
-            });
-          });
-          const gpsLat = Number(gpsPosition?.coords?.latitude);
-          const gpsLng = Number(gpsPosition?.coords?.longitude);
-          if (Number.isFinite(gpsLat) && Number.isFinite(gpsLng)) {
-            pickupCoords = { lat: gpsLat, lng: gpsLng };
-          }
-        } catch {
-          // Final fallback only; booking should primarily respect form-filled location.
-        }
-      }
-
-      if (pickupCoords && !hasManualLocation && OPENCAGE_API_KEY) {
-        try {
-          const params = new URLSearchParams({
-            q: `${pickupCoords.lat},${pickupCoords.lng}`,
-            key: OPENCAGE_API_KEY,
-            language: "en",
-            limit: "1",
-            no_annotations: "1",
-          });
-          const revRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?${params.toString()}`);
-          if (revRes.ok) {
-            const revData = await revRes.json();
-            const first = Array.isArray(revData?.results) ? revData.results[0] : null;
-            if (first) {
-              const components = first.components || {};
-              const formatted = first.formatted || "Live GPS Location";
-              
-              const resolvedCity = components.city || components.town || components.village || components.municipality || components.state_district || "";
-              const resolvedDistrict = components.county || components.subdistrict || components.state_district || "";
-              const resolvedLandmark = components.suburb || components.neighbourhood || components.road || "";
-
-              pickupLocation = formatted;
-              landmark = resolvedLandmark;
-              city = resolvedCity;
-              district = resolvedDistrict;
-            }
-          }
-        } catch (e) {
-          console.error("Reverse geocoding failed", e);
-        }
-      }
+      // The confirmed value is immutable for this booking flow. Never replace it
+      // with a later GPS reading or a second geocoding result.
+      const pickupCoords = { lat: confirmedPickup.lat, lng: confirmedPickup.lng };
+      const pickupLocation = confirmedPickup.source === "manual"
+        ? form.pickup_address.trim()
+        : confirmedPickup.label || "Current device location";
 
       const res = await fetch("http://127.0.0.1:8000/api/bookings/", {
         method: "POST",
@@ -426,8 +608,8 @@ export default function Ambulances() {
           booked_by: user,
           booked_by_email: email,
           pickup_location: pickupLocation,
-          pickup_latitude: pickupCoords?.lat ?? null,
-          pickup_longitude: pickupCoords?.lng ?? null,
+          pickup_latitude: pickupCoords.lat,
+          pickup_longitude: pickupCoords.lng,
           pickup_landmark: landmark,
           pickup_city: city,
           pickup_district: district,
@@ -1208,6 +1390,189 @@ export default function Ambulances() {
            .amb-split-left { height: 260px; }
            .amb-split-right { height: auto; }
         }
+
+        /* Compact fleet cards: image-led, data-rich, and red-accented. */
+        html body #root .amb2-grid.amb2-grid {
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 18px;
+        }
+        html body #root .amb2-card.amb2-card {
+          background: #ffffff !important;
+          border: 1px solid #ead6d7 !important;
+          border-radius: 18px !important;
+          box-shadow: 0 10px 24px rgba(29, 16, 17, .10) !important;
+        }
+        html body #root .amb2-card.amb2-card:hover {
+          background: #ffffff !important;
+          border-color: #e50914 !important;
+          box-shadow: 0 14px 30px rgba(229, 9, 20, .18) !important;
+          transform: translateY(-4px);
+        }
+        html body #root .amb2-top { height: 154px; background: #b20710 !important; }
+        html body #root .amb2-top::after { background: linear-gradient(135deg, rgba(229, 9, 20, .68), rgba(0, 0, 0, .08)) !important; }
+        html body #root .amb2-top img { filter: saturate(.9) contrast(1.04) !important; }
+        html body #root .amb2-speed,
+        html body #root .amb2-status {
+          background: #ffffff !important;
+          border-color: #ffffff !important;
+          color: #b20710 !important;
+          border-radius: 999px !important;
+        }
+        html body #root .amb2-body { padding: 15px !important; }
+        html body #root .amb2-pill { background: #fff6f6 !important; border-color: #f2c7ca !important; color: #a70a12 !important; }
+        html body #root .amb2-title { color: #151515 !important; font-size: 21px !important; font-weight: 700 !important; }
+        html body #root :is(.amb2-sub, .amb2-desc) { color: #5d5d5d !important; }
+        html body #root .amb2-insights { gap: 5px; }
+        html body #root .amb2-ins {
+          background: #fff8f8 !important;
+          border-color: #f2dbdc !important;
+          border-radius: 8px !important;
+        }
+        html body #root .amb2-ins b { color: #202124 !important; }
+        html body #root .amb2-ins span { color: #8b5a5d !important; }
+        html body #root .amb2-btn,
+        html body #root .amb2-btn.main,
+        html body #root .amb2-btn.main.alt {
+          background: #e50914 !important;
+          border-color: #e50914 !important;
+          border-radius: 8px !important;
+          color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        html body #root .amb2-btn.icon { background: #fff6f6 !important; border-color: #e50914 !important; color: #b20710 !important; }
+        html body #root .amb2-btn:hover:not(:disabled) { background: #b20710 !important; border-color: #b20710 !important; }
+        html body #root .amb2-btn.icon:hover:not(:disabled) { color: #ffffff !important; }
+
+        /* Keep the fleet view inside the white and #f0f0f0 application system. */
+        html body #root .amb2-card.amb2-card {
+          background: #ffffff !important;
+          border-color: #dedede !important;
+          box-shadow: none !important;
+        }
+        html body #root .amb2-card.amb2-card:hover {
+          background: #ffffff !important;
+          border-color: #bdbdbd !important;
+          box-shadow: none !important;
+        }
+        html body #root .amb2-top { background: #f0f0f0 !important; }
+        html body #root .amb2-top::after { background: linear-gradient(135deg, rgba(0, 0, 0, .10), transparent 68%) !important; }
+        html body #root :is(.amb2-speed, .amb2-status) { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; }
+        html body #root :is(.amb2-pill, .amb2-ins) { background: #f0f0f0 !important; border-color: #dedede !important; color: #111111 !important; }
+        html body #root .amb2-ins :is(b, span) { color: #111111 !important; }
+        html body #root :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt) {
+          background: #111111 !important;
+          border-color: #111111 !important;
+          color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        html body #root :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt):hover:not(:disabled) { background: #2d2d2d !important; border-color: #2d2d2d !important; }
+
+        /* User booking opens as a wide, compact card while keeping the existing location workflow. */
+        html body #root .amb-modal-ov {
+          background: #ffffff !important;
+          align-items: start !important;
+          overflow-y: auto !important;
+          padding: 82px 32px 24px !important;
+        }
+        html body #root .amb-modal {
+          width: min(760px, 100%) !important;
+          max-height: calc(100vh - 106px) !important;
+          overflow-y: auto !important;
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px 16px !important;
+          padding: 20px !important;
+          border: 1px solid rgba(18, 111, 30, .28) !important;
+          border-radius: 16px !important;
+          background: #ffffff !important;
+          color: #111111 !important;
+          box-shadow: none !important;
+        }
+        html body #root .amb-modal > :is(h3, p, .amb-location-explainer, .amb-location-choice, .amb-location-action, .amb-manual-location, .amb-location-confirmed, .amb-location-note, .amb-modal-actions, div[style]) { grid-column: 1 / -1; }
+        html body #root .amb-modal h3 { color: #111111 !important; }
+        html body #root .amb-modal p,
+        html body #root .amb-modal :is(.amb-location-explainer span, .amb-location-action small, .amb-location-note, div[style]) { color: #111111 !important; }
+        html body #root .amb-modal :is(.amb-field label, .amb-manual-location label, .amb-location-explainer strong, .amb-location-action b, .amb-location-choice) { color: #111111 !important; }
+        html body #root .amb-modal :is(input, textarea, select) { background: #ffffff !important; border-color: rgba(18, 111, 30, .35) !important; color: #111111 !important; }
+        html body #root .amb-location-action { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; align-items: center !important; gap: 16px !important; }
+        html body #root .amb-manual-location { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px !important; align-items: end !important; }
+        html body #root .amb-manual-location > label { grid-column: 1 / -1; }
+        html body #root .amb-modal-actions { display: flex !important; justify-content: flex-end !important; gap: 10px !important; }
+        html body #root .amb-modal-actions .amb2-btn { min-width: 150px !important; }
+        html body #root .amb-modal :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt),
+        html body #root .amb-modal :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt):hover:not(:disabled) {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+        }
+        @media (max-width: 720px) {
+          html body #root .amb-modal-ov { padding: 72px 12px 16px !important; }
+          html body #root .amb-modal { grid-template-columns: 1fr !important; max-height: calc(100vh - 88px) !important; }
+          html body #root .amb-field { grid-column: 1 / -1; }
+          html body #root .amb-location-action,
+          html body #root .amb-manual-location { grid-template-columns: 1fr !important; }
+        }
+
+        /* Fleet cards retain a stable white surface with yellow information blocks. */
+        html body #root .amb2-card.amb2-card,
+        html body #root .amb2-card.amb2-card:hover { background: #ffffff !important; border-color: rgba(18, 111, 30, .22) !important; box-shadow: none !important; transform: none !important; }
+        html body #root .amb2-card.amb2-card:hover :is(.amb2-ins, .amb2-btn) { border-color: #f59a23 !important; }
+        html body #root .amb2-top { background: #ffffff !important; }
+        html body #root .amb2-top::after { background: linear-gradient(180deg, transparent 55%, rgba(18, 111, 30, .10)) !important; }
+        html body #root :is(.amb2-speed, .amb2-status, .amb2-pill, .amb2-ins) { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        html body #root .amb2-ins :is(b, span) { color: #111111 !important; }
+        html body #root :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt),
+        html body #root :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt):hover:not(:disabled) { background: #126f1e !important; border-color: #126f1e !important; color: #ffffff !important; box-shadow: none !important; transform: none !important; }
+        html body #root .amb2-btn.icon,
+        html body #root .amb2-btn.icon:hover:not(:disabled) { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        /* Fleet cards keep green borders, yellow actions, and readable spacing. */
+        html body #root#root .amb2-card.amb2-card,
+        html body #root#root .amb2-card.amb2-card:hover {
+          background: #ffffff !important;
+          border-color: #126f1e !important;
+          box-shadow: none !important;
+          transform: none !important;
+        }
+        html body #root#root .amb2-card.amb2-card:hover { background: #f4fbf4 !important; }
+        html body #root#root .amb2-top::after {
+          background: linear-gradient(180deg, rgba(245, 154, 35, .52), rgba(245, 154, 35, .08)) !important;
+        }
+        html body #root#root .amb2-top img { filter: sepia(.24) saturate(.92) !important; }
+        html body #root#root .amb2-body { padding: 18px !important; display: grid !important; gap: 10px !important; }
+        html body #root#root .amb2-desc { margin: 0 !important; line-height: 1.5 !important; }
+        html body #root#root .amb2-insights { gap: 8px !important; }
+        html body #root#root .amb2-ins { min-height: 64px !important; padding: 9px 8px !important; }
+        html body #root#root :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt),
+        html body #root#root :is(.amb2-btn, .amb2-btn.main, .amb2-btn.main.alt):hover:not(:disabled) {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+          transform: none !important;
+        }
+        html body #root#root .amb2-btn.icon,
+        html body #root#root .amb2-btn.icon:hover:not(:disabled) { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        html body #root#root .amb-side-card.active {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          box-shadow: none !important;
+        }
+        html body #root#root .amb-side-card.active :is(b, span, .amb-admin-sub) { color: #111111 !important; }
+        html body #root#root .amb-side-card:hover { background: #fff3df !important; }
+        html body #root#root .amb-map-status {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 10px;
+          padding: 9px 11px;
+          border: 1px solid #f59a23;
+          border-radius: 10px;
+          background: #fff3df;
+          color: #111111;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        html body #root#root .amb-map-status button { border: 1px solid #f59a23; border-radius: 7px; padding: 6px 9px; background: #f59a23; color: #111111; font: inherit; cursor: pointer; white-space: nowrap; }
       `}</style>
 
       {toast && <div className={`amb-toast ${toast.type}`}>{toast.msg}</div>}
@@ -1271,7 +1636,7 @@ export default function Ambulances() {
                 const batteryColor = isCriticalBattery ? "#ffffff" : "#22c55e";
                 const pickupDistance = getDistanceToPickup(a);
                 return (
-                  <motion.article className="amb2-card amb2-anim" key={a.id} whileHover={{ y: -4 }}>
+                  <motion.article className="amb2-card amb2-anim" key={a.id}>
                     <div className="amb2-top">
                       <img
                         src={getImage(i)}
@@ -1412,6 +1777,20 @@ export default function Ambulances() {
                  <div className="amb-map-box">
                     <div ref={mapElRef} style={{ width: "100%", height: "100%" }} />
                  </div>
+                 <div className="amb-map-status">
+                   <span>
+                     {mapLocationStatus === "granted"
+                       ? "Your location and route to this ambulance are shown on the map."
+                       : mapLocationStatus === "requesting"
+                         ? "Allow location access to show your route."
+                         : "Location access is needed to show your route."}
+                   </span>
+                   {mapLocationStatus === "granted" ? (
+                     <button type="button" onClick={openMapDirections}>Open directions</button>
+                   ) : (
+                     <button type="button" onClick={requestMapLocation}>Use my location</button>
+                   )}
+                 </div>
 
                  {(() => {
                     if (!selectedAmb) return null;
@@ -1449,7 +1828,7 @@ export default function Ambulances() {
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: "#111" }}>Book My Ambulance</div>
                   <div style={{ fontSize: 13, color: "rgba(17,17,17,0.72)" }}>
-                    Request submit karo. Admin nearest ambulance assign karega and aapko live updates milte rahenge.
+                    Submit your request. The admin will assign the nearest ambulance and you will receive live updates.
                   </div>
                 </div>
                 <button
@@ -1458,11 +1837,18 @@ export default function Ambulances() {
                   onClick={() => {
                     setSelectedAmb(null);
                     setForm({
+                      pickup_address: "",
                       pickup_landmark: "",
                       pickup_city: "",
                       pickup_district: "",
                       patient_contact_number: "",
+                      booking_for_other: false,
                     });
+                    setLocationPermission("prompt");
+                    setLocationMode("gps");
+                    setConfirmedPickup(null);
+                    setLocationMessage("");
+                    setManualSuggestions([]);
                     setShowModal(true);
                   }}
                 >
@@ -1477,48 +1863,115 @@ export default function Ambulances() {
       {showModal && (
         <div className="amb-modal-ov" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <div className="amb-modal">
-            <h3>{selectedAmb ? `Book ${selectedAmb.ambulance_number}` : "Book My Ambulance"}</h3>
-            <p>
-              {selectedAmb
-                ? `Driver: ${selectedAmb.driver} · Contact: ${selectedAmb.driver_contact || "-"}`
-                : "Nearest available ambulance will be assigned by admin dispatch."}
-            </p>
+            <h3>Book an ambulance</h3>
+            <p>Share your pickup location and contact number.</p>
 
-            <div className="amb-field">
-              <label>Pickup Landmark</label>
-              <input
-                value={form.pickup_landmark}
-                onChange={(e) => setForm((p) => ({ ...p, pickup_landmark: e.target.value }))}
-                placeholder="Landmark (blank chhodo to GPS use hoga)"
-              />
+            <div className="amb-location-explainer">
+              <strong>Pickup location</strong>
             </div>
-            <div className="amb-field">
-              <label>City</label>
+
+            <label className="amb-location-choice">
               <input
-                value={form.pickup_city}
-                onChange={(e) => setForm((p) => ({ ...p, pickup_city: e.target.value }))}
-                placeholder="City (optional with GPS)"
+                type="checkbox"
+                checked={form.booking_for_other}
+                onChange={(event) => {
+                  const bookingForOther = event.target.checked;
+                  setForm((previous) => ({ ...previous, booking_for_other: bookingForOther }));
+                  if (bookingForOther) {
+                    clearPickupWatch();
+                    setLocationMode("manual");
+                    setConfirmedPickup(null);
+                    setLocationMessage("Enter their pickup address.");
+                  }
+                }}
               />
+              Use another pickup address
+            </label>
+
+            <div className="amb-location-action">
+              <div><b>Use current location</b></div>
+              <button
+                className="amb2-btn"
+                type="button"
+                disabled={locationPermission === "requesting"}
+                onClick={() => {
+                  setForm((previous) => ({ ...previous, booking_for_other: false }));
+                  setLocationMode("gps");
+                  requestPickupLocation();
+                }}
+              >
+                {locationPermission === "requesting" ? "Requesting location..." : locationPermission === "granted" ? "Location confirmed" : "Give location access"}
+              </button>
             </div>
-            <div className="amb-field">
-              <label>District</label>
-              <input
-                value={form.pickup_district}
-                onChange={(e) => setForm((p) => ({ ...p, pickup_district: e.target.value }))}
-                placeholder="District (optional with GPS)"
-              />
-            </div>
-            <div className="amb-field">
+
+            {(form.booking_for_other || locationMode === "manual" || locationPermission === "denied" || locationPermission === "unavailable") && (
+              <div className="amb-manual-location">
+                <label>Pickup address</label>
+                <input
+                  list="pickup-address-suggestions"
+                  value={form.pickup_address}
+                  onChange={(event) => {
+                    const pickupAddress = event.target.value;
+                    setForm((previous) => ({ ...previous, pickup_address: pickupAddress }));
+                    const selected = manualSuggestions.find((item) => item.label === pickupAddress);
+                    if (selected) {
+                      setConfirmedPickup({ lat: selected.lat, lng: selected.lng, source: "manual", label: selected.label });
+                      setLocationPermission("manual");
+                      setLocationMessage("Location confirmed.");
+                    } else {
+                      setConfirmedPickup(null);
+                    }
+                  }}
+                  placeholder="House, street, landmark, city"
+                />
+                <datalist id="pickup-address-suggestions">
+                  {manualSuggestions.map((suggestion) => (
+                    <option key={`${suggestion.lat}-${suggestion.lng}`} value={suggestion.label} />
+                  ))}
+                  <option value="Shiv Vihar, Delhi" />
+                  <option value="Loni, Ghaziabad" />
+                  <option value="Noida, Uttar Pradesh" />
+                  <option value="New Delhi, Delhi" />
+                </datalist>
+                <button className="amb2-btn" type="button" disabled={geocoding} onClick={confirmManualPickup}>
+                  {geocoding ? "Confirming address..." : "Confirm address"}
+                </button>
+              </div>
+            )}
+
+            {locationPermission === "denied" && (
+              <button className="amb2-btn" type="button" onClick={() => setLocationMode("manual")}>Use manual address instead</button>
+            )}
+
+            {!form.booking_for_other && locationMode === "manual" && (
+              <button
+                className="amb2-btn"
+                type="button"
+                onClick={() => {
+                  setLocationMode("gps");
+                  setLocationPermission("prompt");
+                  setConfirmedPickup(null);
+                  setLocationMessage("");
+                }}
+              >
+                Use current location instead
+              </button>
+            )}
+
+            {confirmedPickup && (
+              <div className="amb-location-confirmed">
+                Location confirmed
+              </div>
+            )}
+            {locationMessage && !confirmedPickup && <div className="amb-location-note">{locationMessage}</div>}
+
+            <div className="amb-field" style={{ gridColumn: "1 / -1" }}>
               <label>Contact Number</label>
               <input
                 value={form.patient_contact_number}
                 onChange={(e) => setForm((p) => ({ ...p, patient_contact_number: e.target.value }))}
                 placeholder="Contact number"
               />
-            </div>
-
-            <div style={{ fontSize: 12, color: "rgba(255,246,242,0.7)" }}>
-              Hospital admin assigns dispatch team based on availability.
             </div>
 
             <div className="amb-modal-actions">

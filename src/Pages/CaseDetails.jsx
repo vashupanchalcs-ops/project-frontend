@@ -137,7 +137,7 @@ export default function CaseDetails() {
           {loading ? (
             <div className="cd-empty" style={{ marginTop: 18 }}>Loading case details...</div>
           ) : !booking ? (
-            <div className="cd-empty" style={{ marginTop: 18 }}>Case details nahi mile.</div>
+            <div className="cd-empty" style={{ marginTop: 18 }}>Case details were not found.</div>
           ) : (
             <>
               <div className="cd-top" style={{ marginTop: 18 }}>

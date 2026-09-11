@@ -17,6 +17,26 @@ const inIndia = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) &&
   lat >= 6 && lat <= 38 && lng >= 68 && lng <= 98;
 
+const HOSPITAL_LOCATION_FALLBACKS = [
+  { terms: ["sharda", "saharda"], lat: 28.4744, lng: 77.5030 },
+  { terms: ["noida"], lat: 28.5355, lng: 77.3910 },
+  { terms: ["ghaziabad", "loni"], lat: 28.6692, lng: 77.4538 },
+  { terms: ["delhi", "new delhi"], lat: 28.6139, lng: 77.2090 },
+];
+
+const fallbackHospitalCoord = (hospital) => {
+  const locationText = [
+    hospital?.name,
+    hospital?.address,
+    hospital?.city,
+    hospital?.district,
+    hospital?.location,
+  ].filter(Boolean).join(" ");
+  const normalized = normalizePlace(locationText);
+  return HOSPITAL_LOCATION_FALLBACKS.find(({ terms }) => terms.some((term) => normalized.includes(term)))
+    || { lat: DELHI.lat, lng: DELHI.lng };
+};
+
 // Multi-query Nominatim fallback
 async function nominatimGeocode(queries) {
   for (const q of queries) {
@@ -40,17 +60,19 @@ async function resolveHospitalCoord(hospital) {
   const key  = normalizePlace(name);
 
   // 1. Coords already on hospital object
-  const hLat = parseFloat(hospital?.latitude);
-  const hLng = parseFloat(hospital?.longitude);
+  const hLat = parseFloat(hospital?.latitude ?? hospital?.lat ?? hospital?.location?.lat);
+  const hLng = parseFloat(hospital?.longitude ?? hospital?.lng ?? hospital?.location?.lng);
   if (inIndia(hLat, hLng)) return { lat: hLat, lng: hLng };
 
-  // 2. Geocode with fallbacks
-  const address = hospital?.address || "";
-  return nominatimGeocode([
-    address ? `${name}, ${address}, India` : null,
-    `${name} hospital Delhi NCR, India`,
-    `${name}, India`,
-  ]);
+  // Correct the known spelling variant before geocoding. If the service is
+  // unavailable, render an approximate city marker instead of an endless loader.
+  const searchName = key.includes("sharda") ? "Sharda Hospital" : name;
+  const address = hospital?.address || hospital?.city || hospital?.district || "";
+  return (await nominatimGeocode([
+    address ? `${searchName}, ${address}, India` : null,
+    `${searchName} Delhi NCR, India`,
+    `${searchName}, India`,
+  ])) || fallbackHospitalCoord(hospital);
 }
 
 const buildBookingFromState = (state) => {
@@ -64,6 +86,8 @@ const buildBookingFromState = (state) => {
     assigned_hospital_name: state.hospital || state.assigned_hospital_name || "",
     destination: state.destination || "",
     pickup_location: state.pickupLocation || state.pickup_location || "",
+    pickup_latitude: state.pickup_latitude ?? state.pickupLat ?? null,
+    pickup_longitude: state.pickup_longitude ?? state.pickupLng ?? null,
     pickup_landmark: state.pickup_landmark || "",
     pickup_city: state.pickup_city || "",
     pickup_district: state.pickup_district || "",
@@ -78,14 +102,17 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
   const leafletReady = useLeaflet();
   const [driverLoc, setDriverLoc] = useState(null);
   const [hospCoord, setHospCoord] = useState(null);
+  const [routeError, setRouteError] = useState("");
 
-  // Get user's GPS location
+  // Keep a live position while this map is open rather than using a stale
+  // one-shot coordinate.
   useEffect(() => {
     if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (pos) => setDriverLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => console.error("GPS error:", err)
-    );
+    , { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   // Resolve hospital coordinates using our fixed logic
@@ -113,13 +140,18 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
       fetchRoadRoute([driverLoc, hospCoord])
         .then((pts) => {
           if (pts?.length > 1) {
-            L.polyline(pts, { color: "#ffffff", weight: 6, opacity: 0.9 }).addTo(m);
+            setRouteError("");
+            L.polyline(pts, { color: "#126f1e", weight: 6, opacity: 0.9 }).addTo(m);
             m.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
           } else {
+            setRouteError("Road route is unavailable. Check your connection and try again.");
             m.fitBounds(L.latLngBounds([driverLoc, hospCoord]), { padding: [60, 60] });
           }
         })
-        .catch(() => m.fitBounds(L.latLngBounds([driverLoc, hospCoord]), { padding: [60, 60] }));
+        .catch(() => {
+          setRouteError("Road route is unavailable. Check your connection and try again.");
+          m.fitBounds(L.latLngBounds([driverLoc, hospCoord]), { padding: [60, 60] });
+        });
     } else {
       m.setView([hospCoord.lat, hospCoord.lng], 15);
     }
@@ -157,6 +189,15 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
           Tracking Hospital Location
         </div>
       </div>
+      {routeError && (
+        <div style={{
+          position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 999,
+          background: "#fff", color: "#111", padding: "10px 14px", borderRadius: 10,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.2)", fontSize: 12, fontWeight: 700,
+        }}>
+          {routeError}
+        </div>
+      )}
 
       {!hospCoord && (
         <div style={{

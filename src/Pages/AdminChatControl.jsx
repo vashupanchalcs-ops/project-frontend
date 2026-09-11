@@ -110,7 +110,11 @@ export default function AdminChatControl() {
   };
 
   return (
-    <div style={{ paddingLeft: isMobile ? 0 : 64, paddingTop: 64, height: "100vh", background: "#f7f7f2", overflow: "hidden" }}>
+    <div className="night-page" style={{ paddingLeft: isMobile ? 0 : 64, paddingTop: 64, height: "100vh", background: "#f7f7f2", overflow: "hidden" }}>
+      <style>{`
+        html body #root#root .acc-thread:hover { background: #fff3df !important; border-color: #f59a23 !important; }
+        html body #root#root .acc-thread.acc-thread-selected { background: #f59a23 !important; border-color: #f59a23 !important; }
+      `}</style>
       <div
         style={{
           maxWidth: 1520,
@@ -149,18 +153,22 @@ export default function AdminChatControl() {
           >
             {loading && <div style={{ fontSize: 13, color: "#666" }}>Loading...</div>}
             {!loading && threads.length === 0 && <div style={{ fontSize: 13, color: "#666" }}>No booking chat threads.</div>}
-            {threads.map((t) => (
+            {threads.map((t) => {
+              const isSelected = selectedId === t.id;
+              const isPending = String(t.booking?.status || "").toLowerCase() === "pending";
+              return (
               <button
                 key={t.id}
+                className={`acc-thread ${isSelected ? "acc-thread-selected" : ""}`}
                 onClick={() => setSelectedId(t.id)}
                 style={{
                   width: "100%",
                   textAlign: "left",
-                  border: "1px solid rgba(20,20,20,.14)",
+                  border: `1px solid ${isSelected || isPending ? "#f59a23" : "rgba(20,20,20,.14)"}`,
                   borderRadius: 12,
                   padding: 10,
                   marginBottom: 8,
-                  background: selectedId === t.id ? "#ffffff" : "#fff",
+                  background: isSelected ? "#f59a23" : isPending ? "#fff3df" : "#fff",
                   cursor: "pointer",
                 }}
               >
@@ -237,7 +245,8 @@ export default function AdminChatControl() {
                   {t.booking?.pickup_location || "-"} → {t.booking?.assigned_hospital_name || t.booking?.destination || "hospital pending"}
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
 
           <div style={{ minHeight: 0, height: "100%" }}>

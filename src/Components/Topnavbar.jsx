@@ -87,7 +87,7 @@ const Topnavbar = () => {
     return () => document.body.classList.remove('sr-search-open');
   }, [showMobileSearch]);
 
-  // Screen size badalne par stale mobile overlay ko auto close karo (manual refresh ki need nahi).
+  // Close a stale mobile overlay after a screen-size change without a manual refresh.
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 768) {
@@ -104,7 +104,7 @@ const Topnavbar = () => {
   const fileInputRef = useRef(null);
   const navigate     = useNavigate();
 
-  // ── USER notifications: apni bookings fetch karo ──
+  // ── USER notifications: fetch the user's bookings ──
   const fetchUserNotifications = () => {
     if (role !== "user" && role !== null && role !== "") return;
     // role "user" ya logged-in non-admin non-driver
@@ -176,7 +176,7 @@ const Topnavbar = () => {
         }).slice(0, 12);
 
         setNotifs(notifs);
-        // Unread = confirmed ya rejected jo user ne abhi nahi dekha
+        // Unread means a confirmed or rejected booking the user has not viewed.
         const notifKey = `user_notif_read_${userEmail}`;
         const readIds  = JSON.parse(localStorage.getItem(notifKey) || "[]");
         setUnread(
@@ -595,7 +595,7 @@ const Topnavbar = () => {
         .nf-mobile-search-overlay.open { display: flex; }
         .nf-mobile-search-overlay .nf-search-inner { width: 100%; flex: 1; min-width: 0; }
 
-        /* Pages ko push karo jab search overlay open ho */
+        /* Shift pages when the search overlay is open. */
         body.sr-search-open .hosp-root,
         body.sr-search-open .amb-root,
         body.sr-search-open [class*="-root"] {
@@ -772,12 +772,230 @@ const Topnavbar = () => {
           .nf-mobile-search-overlay .nf-search-icon { padding: 0 8px; }
           .nf-mobile-search-overlay .nf-search-btn { min-width: 50px; padding: 0 8px; font-size: 10px; }
         }
+
+        /* Shared white/red navigation treatment. */
+        .nf-nav-root {
+          background: #ffffff !important;
+          border-bottom-color: #dedede !important;
+          color: #191919 !important;
+        }
+        .nf-brand { color: #e50914 !important; }
+        .nf-search-inner,
+        .nf-mobile-search-overlay {
+          background: #ffffff !important;
+          border-color: #dedede !important;
+        }
+        .nf-search-inner:focus-within { border-color: #e50914 !important; box-shadow: 0 0 0 2px rgba(229, 9, 20, .12) !important; }
+        .nf-search-input,
+        .nf-search-input::placeholder { color: #191919 !important; }
+        .nf-search-btn,
+        .nf-sd-details-btn {
+          background: #e50914 !important;
+          color: #ffffff !important;
+          border-color: #e50914 !important;
+        }
+        .nf-search-btn:hover,
+        .nf-sd-details-btn:hover { background: #b20710 !important; }
+        .nf-bell,
+        .nf-mobile-search-btn,
+        .nf-call-indicator {
+          background: #ffffff !important;
+          border-color: #e50914 !important;
+          color: #c8102e !important;
+        }
+        .nf-call-indicator.ok,
+        .nf-call-indicator.alert { background: #fff1f2 !important; border-color: #e50914 !important; color: #c8102e !important; }
+        .nf-call-badge,
+        .nf-badge,
+        .nf-role-badge-admin,
+        .nf-role-badge-hospital,
+        .nf-role-badge-driver {
+          background: #e50914 !important;
+          border-color: #e50914 !important;
+          color: #ffffff !important;
+        }
+        .nf-drop,
+        .nf-profile-drop,
+        .nf-search-drop,
+        .nf-mobile-search-drop {
+          background: #ffffff !important;
+          border-color: #dedede !important;
+          box-shadow: 0 12px 28px rgba(25, 25, 25, .12) !important;
+        }
+        .nf-sd-section,
+        .nf-profile-role,
+        .nf-drop-footer-btn,
+        .nf-logout-link,
+        .nf-login-link { color: #c8102e !important; }
+        .nf-sd-item:hover,
+        .nf-drop-item:hover,
+        .nf-user-notif:hover,
+        .nf-profile-item:hover { background: #fff1f2 !important; }
+        .nf-sd-badge,
+        .nf-drop-status,
+        .nf-drop-status-confirmed,
+        .nf-user-notif-badge { background: #fff1f2 !important; border-color: #e50914 !important; color: #c8102e !important; }
+        .nf-username,
+        .nf-sd-name,
+        .nf-drop-title,
+        .nf-user-notif-title,
+        .nf-drop-amb,
+        .nf-profile-name { color: #191919 !important; }
+        .nf-sd-sub,
+        .nf-drop-time,
+        .nf-drop-loc,
+        .nf-drop-user,
+        .nf-profile-email,
+        .nf-user-notif-msg { color: #666666 !important; }
+        .nf-avatar,
+        .nf-profile-dp-preview { background: #ffffff !important; border-color: #e50914 !important; color: #c8102e !important; }
+
+        /* Neutral production navigation: hover never hides an icon or label. */
+        .nf-brand,
+        .nf-brand:hover { color: #202124 !important; }
+        .nf-search-inner:focus-within { border-color: #202124 !important; box-shadow: 0 0 0 2px rgba(32, 33, 36, .12) !important; }
+        .nf-search-btn,
+        .nf-sd-details-btn { background: #202124 !important; border-color: #202124 !important; color: #ffffff !important; }
+        .nf-search-btn:hover,
+        .nf-sd-details-btn:hover { background: #000000 !important; color: #ffffff !important; }
+        .nf-bell,
+        .nf-mobile-search-btn,
+        .nf-call-indicator {
+          background: #ffffff !important;
+          border-color: #dadce0 !important;
+          color: #202124 !important;
+        }
+        .nf-nav-root :is(button, a):hover {
+          background: #f1f3f4 !important;
+          border-color: #dadce0 !important;
+          color: #202124 !important;
+        }
+        .nf-nav-root :is(button, a) :is(svg, path) {
+          fill: none !important;
+          stroke: currentColor !important;
+        }
+        .nf-call-indicator.ok,
+        .nf-call-indicator.alert,
+        .nf-call-badge,
+        .nf-badge,
+        .nf-role-badge-admin,
+        .nf-role-badge-hospital,
+        .nf-role-badge-driver {
+          background: #202124 !important;
+          border-color: #202124 !important;
+          color: #ffffff !important;
+        }
+        .nf-sd-section,
+        .nf-profile-role,
+        .nf-drop-footer-btn,
+        .nf-logout-link,
+        .nf-login-link { color: #202124 !important; }
+        .nf-sd-item:hover,
+        .nf-drop-item:hover,
+        .nf-user-notif:hover,
+        .nf-profile-item:hover { background: #f1f3f4 !important; }
+        .nf-avatar,
+        .nf-profile-dp-preview { border-color: #202124 !important; color: #202124 !important; }
+
+        /* The header stays horizontal and red communicates interaction without a dark hover tile. */
+        #root .nf-nav-root {
+          background: #0b0b0b !important;
+          border-bottom-color: #252525 !important;
+          flex-wrap: nowrap !important;
+        }
+        #root .nf-brand,
+        #root .nf-brand:hover { color: #e50914 !important; }
+        #root .nf-nav-root :is(button, a),
+        #root .nf-nav-root :is(button, a):hover {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #f5f5f5 !important;
+        }
+        #root .nf-nav-root :is(button, a):hover { color: #e50914 !important; }
+        #root .nf-nav-root :is(button, a) :is(svg, path) { fill: none !important; stroke: currentColor !important; }
+        #root .nf-search-inner { background: #151515 !important; border-color: #3b3b3b !important; border-radius: 0 !important; }
+        #root .nf-search-input,
+        #root .nf-search-input::placeholder { color: #f5f5f5 !important; }
+        #root .nf-search-inner:focus-within { border-color: #e50914 !important; box-shadow: 0 0 0 1px rgba(229, 9, 20, .35) !important; }
+        #root .nf-search-btn,
+        #root .nf-search-btn:hover { background: #e50914 !important; border-color: #e50914 !important; border-radius: 0 !important; color: #ffffff !important; }
+        #root .nf-search-btn:hover { background: #b20710 !important; border-color: #b20710 !important; }
+        #root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator) { background: transparent !important; border-color: #4b4b4b !important; border-radius: 0 !important; color: #f5f5f5 !important; }
+        #root .nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator):hover { background: transparent !important; border-color: #e50914 !important; color: #e50914 !important; }
+        #root :is(.nf-login-link, .nf-logout-link) { color: #f5f5f5 !important; }
+        #root :is(.nf-login-link, .nf-logout-link):hover { color: #e50914 !important; }
+        #root .nf-avatar { background: transparent !important; border-color: #f5f5f5 !important; color: #f5f5f5 !important; }
+        #root .nf-avatar-wrap:hover .nf-avatar { border-color: #e50914 !important; color: #e50914 !important; }
+
+        /* This extra specificity keeps the same header at the mobile breakpoint. */
+        html body #root .nf-nav-root.nf-nav-root {
+          background: #0b0b0b !important;
+          border-bottom-color: #252525 !important;
+          color: #f5f5f5 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root .nf-brand { color: #e50914 !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-username, .nf-login-link, .nf-logout-link) { color: #f5f5f5 !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-login-link, .nf-logout-link):hover { color: #e50914 !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator) {
+          background: transparent !important;
+          border-color: #4b4b4b !important;
+          color: #f5f5f5 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator):hover {
+          background: transparent !important;
+          border-color: #e50914 !important;
+          color: #e50914 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator) :is(svg, path) {
+          color: #f5f5f5 !important;
+          fill: none !important;
+          stroke: #f5f5f5 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator):hover :is(svg, path) {
+          color: #e50914 !important;
+          stroke: #e50914 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root .nf-avatar :is(span, img) { color: #f5f5f5 !important; }
+
+        /* White and soft-gray navigation: every icon stays black and readable. */
+        html body #root .nf-nav-root.nf-nav-root {
+          background: #ffffff !important;
+          border-bottom-color: #dedede !important;
+          color: #111111 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root :is(span, a, button),
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-brand, .nf-login-link, .nf-logout-link) { color: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(button, a) { background: transparent !important; border-color: transparent !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(button, a):hover { background: #f0f0f0 !important; border-color: #f0f0f0 !important; color: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(button, a):active { background: transparent !important; border-color: transparent !important; color: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(button, a) :is(svg, path) { fill: none !important; stroke: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root .nf-search-inner { background: #f0f0f0 !important; border-color: #dedede !important; }
+        html body #root .nf-nav-root.nf-nav-root .nf-search-input,
+        html body #root .nf-nav-root.nf-nav-root .nf-search-input::placeholder { color: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root .nf-search-btn,
+        html body #root .nf-nav-root.nf-nav-root .nf-search-btn:hover { background: #111111 !important; border-color: #111111 !important; color: #ffffff !important; }
+        html body #root .nf-nav-root.nf-nav-root .nf-search-btn :is(svg, path) { stroke: #ffffff !important; }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator) {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #111111 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator):hover {
+          background: #f0f0f0 !important;
+          border-color: #f0f0f0 !important;
+          color: #111111 !important;
+        }
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator) :is(svg, path),
+        html body #root .nf-nav-root.nf-nav-root :is(.nf-bell, .nf-mobile-search-btn, .nf-call-indicator):hover :is(svg, path) { stroke: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root .nf-avatar,
+        html body #root .nf-nav-root.nf-nav-root .nf-avatar-wrap:hover .nf-avatar { background: transparent !important; border-color: #111111 !important; color: #111111 !important; }
+        html body #root .nf-nav-root.nf-nav-root .nf-avatar :is(span, img) { color: #111111 !important; }
       `}</style>
 
       <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleProfilePicChange} />
 
       <div className="nf-nav-root">
-        <span className="nf-brand">YiCare</span>
+        <span className="nf-brand">Aarogya</span>
 
         {/* Desktop Search */}
         <div className="nf-search-wrap" ref={searchRef}>
@@ -826,10 +1044,10 @@ const Topnavbar = () => {
             <div className="nf-drop">
               <div className="nf-drop-header">
                 <span className="nf-drop-title">
-                  {role === "driver" ? "🔔 Meri Notifications"
+                  {role === "driver" ? "🔔 My Notifications"
                    : role === "admin" ? "🔔 Notifications"
                    : role === "hospital" ? "🏥 Hospital Alerts"
-                   : "🔔 Meri Bookings"}
+                   : "🔔 My Bookings"}
                 </span>
                 <span className="nf-drop-count">{notifications.length} items</span>
               </div>
@@ -837,7 +1055,7 @@ const Topnavbar = () => {
                 {notifications.length === 0 ? (
                     <div className="nf-drop-empty">
                       <div className="nf-drop-empty-icon">🔔</div>
-                      {role === "admin" || role === "driver" || role === "hospital" ? "Koi notification nahi" : "Abhi koi booking nahi"}
+                      {role === "admin" || role === "driver" || role === "hospital" ? "No notifications" : "No bookings yet"}
                     </div>
                 ) : role !== "admin" && role !== "driver" && role !== "hospital" ? (
                   // ── USER: Booking status cards ──

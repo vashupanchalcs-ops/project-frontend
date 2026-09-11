@@ -56,7 +56,7 @@ export default function HospitalCaseReportView() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f6f8ef", padding: isMobile ? "84px 16px 30px 16px" : "84px 16px 30px 80px", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+    <div className="night-page" style={{ minHeight: "100vh", background: "#f6f8ef", padding: isMobile ? "84px 16px 30px 16px" : "84px 16px 30px 80px", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <div style={{ border: "1px solid rgba(17,17,17,0.14)", borderRadius: 16, background: "#fff", padding: 16, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div>

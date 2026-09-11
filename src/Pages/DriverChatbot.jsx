@@ -41,7 +41,7 @@ export default function DriverChatbot() {
   const selected = threads.find((t) => t.id === selectedId) || threads[0] || null;
 
   return (
-    <div style={{ paddingLeft: isMobile ? 0 : 64, paddingTop: 64, height: "100vh", background: "#f7f7f2", overflow: "hidden" }}>
+    <div className="night-page" style={{ paddingLeft: isMobile ? 0 : 64, paddingTop: 64, height: "100vh", background: "#f7f7f2", overflow: "hidden" }}>
       <div
         style={{
           maxWidth: 1600,

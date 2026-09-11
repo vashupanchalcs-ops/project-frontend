@@ -235,6 +235,14 @@ export default function CallIntakeConsole() {
           font-weight:700;
           padding:8px 10px;
         }
+        .ci-root { background: #ffffff; color: #111111; font-family: Roboto, sans-serif; }
+        .ci-hero, .ci-card { border-color: rgba(18, 111, 30, .20); border-top-color: #f59a23; }
+        .ci-pill { border-color: #f59a23; background: #fff3df; color: #111111; }
+        .ci-input:focus { border-color: #126f1e; box-shadow: none; }
+        .ci-confirm { border-color: #f59a23; background: #fff3df; }
+        .ci-btn.main { background: #126f1e; border-color: #126f1e; color: #ffffff; }
+        .ci-btn { border-color: #f59a23; background: #ffffff; color: #111111; }
+        .ci-err { border-color: #f59a23; background: #fff3df; color: #111111; }
         @media(max-width:767px){
           .ci-root{padding-left:0;padding-bottom:80px;}
           .ci-wrap{padding:14px 10px 96px;}
@@ -248,8 +256,8 @@ export default function CallIntakeConsole() {
             <span className="ci-pill">Voice Booking Console</span>
             <h1 className="ci-title">Call Intake</h1>
             <p className="ci-sub">
-              Incoming call details yahan capture karo. Confirm digit <strong>2</strong> se booking create hogi
-              aur same admin booking workflow me push ho jayegi.
+              Capture incoming call details here. Confirming digit <strong>2</strong> creates the booking
+              and sends it to the admin booking workflow.
             </p>
             <div className="ci-hotline">Hotline Number: {hotline}</div>
           </section>

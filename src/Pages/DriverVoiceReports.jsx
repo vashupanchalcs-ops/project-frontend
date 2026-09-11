@@ -88,18 +88,18 @@ export default function DriverVoiceReports() {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicConnected(true);
     } catch {
-      setErrorMsg("Mic permission denied. Browser settings me microphone allow karo.");
+      setErrorMsg("Microphone permission was denied. Allow it in your browser settings.");
     }
   };
 
   const startRecording = (bookingId) => {
     setErrorMsg("");
     if (!speechAvailable) {
-      setErrorMsg("Speech recognition browser me supported nahi hai.");
+      setErrorMsg("Speech recognition is not supported in this browser.");
       return;
     }
     if (!micConnected) {
-      setErrorMsg("Pehle mic connect karo.");
+      setErrorMsg("Connect the microphone first.");
       return;
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -122,13 +122,13 @@ export default function DriverVoiceReports() {
         }));
         setSentNowByBooking((prev) => ({ ...prev, [bookingId]: false }));
       };
-      rec.onerror = () => setErrorMsg("Mic recognition error. Dobara try karo.");
+      rec.onerror = () => setErrorMsg("Microphone recognition failed. Try again.");
       rec.onend = () => setRecordingBookingId(0);
       rec.start();
       recRef.current = rec;
       setRecordingBookingId(bookingId);
     } catch {
-      setErrorMsg("Mic start nahi hua.");
+      setErrorMsg("The microphone could not be started.");
     }
   };
 
@@ -147,11 +147,11 @@ export default function DriverVoiceReports() {
     const transcript = String(transcriptByBooking[bid] || "").trim();
     const aiDraft = String(aiDraftByBooking[bid] || "").trim();
     if (!transcript) {
-      setErrorMsg("Transcript required hai.");
+      setErrorMsg("A transcript is required.");
       return;
     }
     if (!aiDraft) {
-      setErrorMsg("Pehle AI Modify Report karo, phir send karo.");
+      setErrorMsg("Generate the AI-edited report before sending it.");
       return;
     }
     setSavingBookingId(bid);
@@ -185,7 +185,7 @@ export default function DriverVoiceReports() {
     if (!bid) return;
     const transcript = String(transcriptByBooking[bid] || "").trim();
     if (!transcript) {
-      setErrorMsg("AI modify ke liye transcript required hai.");
+      setErrorMsg("A transcript is required to generate the AI-edited report.");
       return;
     }
     setRefiningBookingId(bid);
@@ -212,7 +212,7 @@ export default function DriverVoiceReports() {
   const deleteBooking = async (bookingId) => {
     const bid = Number(bookingId || 0);
     if (!bid) return;
-    const ok = window.confirm(`Booking #${bid} delete karni hai?`);
+    const ok = window.confirm(`Delete booking #${bid}?`);
     if (!ok) return;
     setDeletingBookingId(bid);
     setErrorMsg("");
@@ -229,14 +229,14 @@ export default function DriverVoiceReports() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#ffffff", padding: isMobile ? "84px 16px 90px 16px" : "84px 16px 30px 80px", fontFamily: "'Helvetica Neue', Arial, sans-serif", overflowX: "hidden" }}>
+    <div className="night-page" style={{ minHeight: "100vh", background: "#ffffff", padding: isMobile ? "84px 16px 90px 16px" : "84px 16px 30px 80px", fontFamily: "'Helvetica Neue', Arial, sans-serif", overflowX: "hidden" }}>
       <div style={{ maxWidth: 1340, margin: "0 auto" }}>
         <div style={{ border: "1px solid rgba(17,17,17,0.14)", borderRadius: 16, background: "#fff", padding: 18, marginBottom: 14, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 11, letterSpacing: 1, fontWeight: 800, color: "rgba(17,17,17,0.6)" }}>DRIVER VOICE INTAKE</div>
             <h1 style={{ margin: "5px 0 0", fontSize: 34, lineHeight: 1 }}>Current Booking Voice Reports</h1>
             <div style={{ marginTop: 7, fontSize: 13, color: "rgba(17,17,17,0.7)" }}>
-              Mic se patient condition bolo, system text me convert karega aur modified report hospital ko bhej dega.
+              Describe the patient's condition using the microphone. The system will transcribe it and send the edited report to the hospital.
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -257,7 +257,7 @@ export default function DriverVoiceReports() {
 
         {!speechAvailable && (
           <div style={{ border: "1px solid #d99", background: "#fff3f3", color: "#b00", borderRadius: 12, padding: 10, marginBottom: 12, fontSize: 12 }}>
-            Browser speech recognition support available nahi hai. Chrome me open karo.
+            Speech recognition is not available in this browser. Open this page in Chrome.
           </div>
         )}
         {errorMsg && (
@@ -342,7 +342,7 @@ export default function DriverVoiceReports() {
                 <textarea
                   value={transcript}
                   onChange={(e) => setTranscriptByBooking((prev) => ({ ...prev, [bid]: e.target.value }))}
-                  placeholder="Mic transcript yahan ayega..."
+                  placeholder="Your microphone transcript will appear here..."
                   style={{ width: "100%", minHeight: 96, border: "1px solid rgba(17,17,17,0.18)", borderRadius: 10, padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 13, boxSizing: "border-box", background: "#fff" }}
                 />
                 <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>

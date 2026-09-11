@@ -1,10 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
-import { MoreVertical, Stethoscope, BedSingle, Accessibility } from "lucide-react";
+import { ArrowRight, BedSingle, MapPinned, MoreVertical, Stethoscope, Accessibility } from "lucide-react";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const RESOURCE_CACHE_KEY = "swiftrescue_hospital_resources";
+
+const fetchJsonOrNull = async (url) => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
+
+const rememberHospitalSession = (hospitalData) => {
+  if (!hospitalData?.id) return;
+  localStorage.setItem("hospital_id", String(hospitalData.id));
+  if (hospitalData.name) localStorage.setItem("name", hospitalData.name);
+};
 
 const readResourceCache = (hospitalId) => {
   try {
@@ -101,19 +120,30 @@ export default function HospitalPortal() {
       // Hospital ID is verified during login and remains valid if the contact
       // email is later updated in the hospital profile.
       if (storedHospitalId) {
-        const byId = await fetch(`${BASE}/api/hospitals/${storedHospitalId}/`);
-        if (byId.ok) hospitalData = await byId.json();
+        hospitalData = await fetchJsonOrNull(`${BASE}/api/hospitals/${storedHospitalId}/`);
       }
 
       if (!hospitalData && hospitalEmail) {
-        const byEmail = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(hospitalEmail)}`);
-        if (byEmail.ok) hospitalData = await byEmail.json();
+        hospitalData = await fetchJsonOrNull(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(hospitalEmail)}`);
+      }
+
+      if (!hospitalData) {
+        const allHospitals = await fetchJsonOrNull(`${BASE}/api/hospitals/`);
+        const activeHospitals = Array.isArray(allHospitals)
+          ? allHospitals.filter((item) => item && item.is_active !== false)
+          : [];
+        const nameHint = (localStorage.getItem("name") || "").trim().toLowerCase();
+        hospitalData =
+          activeHospitals.find((item) => String(item.email || "").trim().toLowerCase() === hospitalEmail) ||
+          activeHospitals.find((item) => nameHint && String(item.name || "").trim().toLowerCase() === nameHint) ||
+          (activeHospitals.length === 1 ? activeHospitals[0] : null);
       }
 
       const hospitalId = Number(hospitalData?.id || hospitalData?.hospital_id);
       if (!Number.isInteger(hospitalId) || hospitalId <= 0) {
         throw new Error("Hospital profile not configured for this account");
       }
+      rememberHospitalSession({ ...hospitalData, id: hospitalId });
 
       const dashRes = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/`);
       if (!dashRes.ok) throw new Error("Unable to load hospital dashboard");
@@ -2016,7 +2046,46 @@ export default function HospitalPortal() {
           margin: 0;
         }
 
+        /* Compact hospital command dashboard with the same data-first hierarchy as admin. */
+        .hp-root.hp-theme-home .hp-home-hero,
+        .hp-root.hp-theme-home .hp-hero { display: none; }
+        .hp-command-top { margin-bottom: 14px; }
+        .hp-command-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+        .hp-command-eyebrow { color: #e31b2f; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .hp-command-head h1 { margin: 5px 0 0; color: #17263a; font-size: clamp(24px, 3vw, 36px); letter-spacing: -.04em; line-height: 1.05; }
+        .hp-command-head p { max-width: 650px; margin: 8px 0 0; color: #68758a; font-size: 13px; line-height: 1.5; }
+        .hp-command-alert { display: flex; align-items: center; gap: 10px; min-width: 214px; padding: 13px 15px; border: 0; border-radius: 10px; background: #e31b2f; color: #fff; text-align: left; font: inherit; cursor: pointer; }
+        .hp-command-alert:hover { background: #bd1426; }
+        .hp-command-alert b { display: block; font-size: 12px; }
+        .hp-command-alert span { display: block; margin-top: 2px; font-size: 10px; opacity: .88; }
+        .hp-command-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .hp-command-stat { padding: 15px; border: 1px solid #e1e7f0; border-radius: 12px; background: #fff; }
+        .hp-command-stat .k { color: #728096; font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+        .hp-command-stat .v { margin-top: 7px; color: #17263a; font-size: 28px; font-weight: 800; line-height: 1; }
+        .hp-command-stat .s { margin-top: 6px; color: #778398; font-size: 10px; }
+        .hp-command-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, .85fr) minmax(260px, .85fr); gap: 12px; margin-top: 12px; }
+        .hp-command-panel { min-width: 0; border: 1px solid #e1e7f0; border-radius: 12px; background: #fff; overflow: hidden; }
+        .hp-command-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 15px; border-bottom: 1px solid #edf0f4; }
+        .hp-command-panel-head b { color: #26364a; font-size: 13px; }
+        .hp-command-panel-head button { border: 0; padding: 0; background: transparent; color: #e31b2f; font: 700 10px inherit; cursor: pointer; }
+        .hp-command-list { padding: 4px 15px 14px; }
+        .hp-command-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 11px 0; border-bottom: 1px solid #edf0f4; }
+        .hp-command-row:last-child { border-bottom: 0; }
+        .hp-command-row b { display: block; overflow: hidden; color: #26364a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+        .hp-command-row span { display: block; overflow: hidden; margin-top: 3px; color: #778398; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+        .hp-command-tag { border-radius: 999px; padding: 4px 7px; background: #fff0f2; color: #b8172a; font-size: 9px; font-style: normal; font-weight: 800; text-transform: capitalize; }
+        .hp-command-meter { display: grid; gap: 12px; padding: 18px 15px; }
+        .hp-command-meter-row { display: grid; gap: 6px; }
+        .hp-command-meter-row > div { display: flex; justify-content: space-between; color: #4d5a6e; font-size: 11px; }
+        .hp-command-meter-track { height: 7px; overflow: hidden; border-radius: 999px; background: #edf0f4; }
+        .hp-command-meter-fill { display: block; height: 100%; border-radius: inherit; background: #e31b2f; }
+        .hp-command-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 15px; }
+        .hp-command-action { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 61px; padding: 10px; border: 1px solid #f1d4d9; border-radius: 10px; background: #fff7f8; color: #b8172a; text-align: left; font: 700 11px inherit; cursor: pointer; }
+        .hp-command-action:hover { border-color: #e31b2f; background: #fff0f2; color: #b8172a; }
+        .hp-command-empty { padding: 24px 15px; color: #778398; font-size: 12px; text-align: center; }
         @media (max-width: 1100px) {
+          .hp-command-grid { grid-template-columns: 1fr 1fr; }
+          .hp-command-grid > :last-child { grid-column: 1 / -1; }
           .hp-home-hero { grid-template-columns: 1fr; }
           .hp-doc-grid { grid-template-columns: 1fr 1fr; }
           .hp-grid { grid-template-columns: 1fr 1fr; }
@@ -2044,6 +2113,9 @@ export default function HospitalPortal() {
           .hp-an-table-w { overflow-x: auto; }
         }
         @media (max-width: 767px) {
+          .hp-command-head { flex-direction: column; }
+          .hp-command-alert { width: 100%; }
+          .hp-command-stats, .hp-command-grid { grid-template-columns: 1fr 1fr; }
           .hp-guidance-grid { grid-template-columns: 1fr; }
           .hp-root { padding-left: 0; padding-bottom: 72px; padding-top: 64px; }
           .hp-root.hp-map-page { height: auto; overflow: auto; }
@@ -2058,6 +2130,78 @@ export default function HospitalPortal() {
           .hp-an-top { grid-template-columns: repeat(2, 1fr); }
           .hp-an-mid { grid-template-columns: 1fr; }
           .hp-an-table-w { overflow-x: auto; }
+        }
+        @media (max-width: 520px) {
+          .hp-command-stats, .hp-command-grid { grid-template-columns: 1fr; }
+          .hp-command-grid > :last-child { grid-column: auto; }
+        }
+
+        /* One operational palette across every hospital portal tab. */
+        html body #root#root#root .hp-root,
+        html body #root#root#root .hp-root:is(
+          .hp-theme-home, .hp-theme-queue, .hp-theme-responses, .hp-theme-reports,
+          .hp-theme-tracking, .hp-theme-resources, .hp-theme-staff, .hp-theme-analytics,
+          .hp-theme-cases
+        ) {
+          --hp-accent: #f59a23 !important;
+          --hp-accent-soft: #fff3df !important;
+          background: #ffffff !important;
+          color: #111111 !important;
+        }
+        html body #root#root#root .hp-root :is(
+          .hp-card, .hp-stat, .hp-case-card, .hp-case-detail-hero, .hp-case-modal,
+          .hp-bill-panel, .hp-an-stat, .hp-an-table-w, .hp-response-card,
+          .hp-report-card, .hp-resource-shell, .hp-role-card, .hp-staff-personal-card,
+          .hp-doc-card, .hp-track-card, .hp-command-panel, .hp-command-stat
+        ) {
+          background: #ffffff !important;
+          border-color: rgba(18, 111, 30, .35) !important;
+          box-shadow: none !important;
+        }
+        html body #root#root#root .hp-root :is(
+          .hp-card, .hp-stat, .hp-case-card, .hp-response-card, .hp-report-card,
+          .hp-resource-shell, .hp-role-card, .hp-doc-card, .hp-track-card
+        ):hover {
+          background: #fff3df !important;
+          border-color: #f59a23 !important;
+          box-shadow: none !important;
+          transform: none !important;
+        }
+        html body #root#root#root .hp-root :is(
+          .hp-btn.primary, .hp-btn.ok, .hp-btn-primary, .hp-command-alert,
+          .hp-command-action, .hp-command-meter-fill, .hp-track-btn
+        ) {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+        }
+        html body #root#root#root .hp-root :is(
+          .hp-btn.primary, .hp-btn.ok, .hp-btn-primary, .hp-command-alert,
+          .hp-command-action, .hp-track-btn
+        ):hover:not(:disabled) {
+          background: #126f1e !important;
+          border-color: #126f1e !important;
+          color: #ffffff !important;
+        }
+        html body #root#root#root .hp-root :is(
+          .hp-availability.yes, .hp-response-status.ready, .hp-an-status,
+          .hp-live-pill, .hp-live-status
+        ) {
+          background: #e8f5e9 !important;
+          color: #126f1e !important;
+          border-color: #126f1e !important;
+        }
+        html body #root#root#root .hp-root :is(
+          .hp-availability.no, .hp-response-status.not_ready, .hp-response-status.pending,
+          .hp-cases-count, .hp-warning-pill
+        ) {
+          background: #fff3df !important;
+          color: #111111 !important;
+          border-color: #f59a23 !important;
+        }
+        html body #root#root#root .hp-root :is(.hp-input, .hp-select, .hp-textarea):focus {
+          border-color: #126f1e !important;
+          box-shadow: 0 0 0 3px rgba(18, 111, 30, .14) !important;
         }
       `}</style>
 
@@ -2095,6 +2239,50 @@ export default function HospitalPortal() {
             <>
               {activeTab === "home" && (
                 <>
+                  <section className="hp-command-top">
+                    <header className="hp-command-head">
+                      <div>
+                        <div className="hp-command-eyebrow">Aarogya hospital command</div>
+                        <h1>Welcome back, {hospital.name || "Hospital Team"}</h1>
+                        <p>Live readiness across emergency intake, bed capacity, staff, and assigned ambulance cases.</p>
+                      </div>
+                      <button className="hp-command-alert" onClick={() => navigate("/hospital/queue")}>
+                        <Stethoscope size={22} />
+                        <span><b>Emergency Queue</b>{queue.length} case{queue.length === 1 ? "" : "s"} awaiting review</span>
+                      </button>
+                    </header>
+                    <div className="hp-command-stats">
+                      <article className="hp-command-stat"><div className="k">Active Cases</div><div className="v">{summary?.active_cases ?? 0}</div><div className="s">Current hospital workflow</div></article>
+                      <article className="hp-command-stat"><div className="k">Available Beds</div><div className="v">{hospital.available_beds ?? 0}</div><div className="s">Ready for emergency intake</div></article>
+                      <article className="hp-command-stat"><div className="k">ICU Beds</div><div className="v">{hospital.icu_beds ?? 0}</div><div className="s">Critical care capacity</div></article>
+                      <article className="hp-command-stat"><div className="k">On-call Staff</div><div className="v">{onCallSpecialists.length}</div><div className="s">Specialists currently active</div></article>
+                    </div>
+                  </section>
+                  <section className="hp-command-grid">
+                    <article className="hp-command-panel">
+                      <div className="hp-command-panel-head"><b>Incoming patient activity</b><button onClick={() => navigate("/hospital/queue")}>View queue</button></div>
+                      <div className="hp-command-list">
+                        {queue.length ? queue.slice(0, 5).map((item) => <div className="hp-command-row" key={item.booking_id}><div><b>Booking #{item.booking_id} · {item.patient_name || "Patient"}</b><span>{item.pickup_location || item.ambulance_number || "Emergency case"}</span></div><em className="hp-command-tag">{String(item.hospital_response || "pending").replaceAll("_", " ")}</em></div>) : <div className="hp-command-empty">No incoming emergency cases right now.</div>}
+                      </div>
+                    </article>
+                    <article className="hp-command-panel">
+                      <div className="hp-command-panel-head"><b>Resource readiness</b><button onClick={() => navigate("/hospital/resources")}>Manage</button></div>
+                      <div className="hp-command-meter">
+                        <div className="hp-command-meter-row"><div><span>Available beds</span><b>{hospital.available_beds ?? 0}</b></div><div className="hp-command-meter-track"><i className="hp-command-meter-fill" style={{ width: `${Math.min(Number(hospital.available_beds || 0) * 5, 100)}%` }} /></div></div>
+                        <div className="hp-command-meter-row"><div><span>ICU beds</span><b>{hospital.icu_beds ?? 0}</b></div><div className="hp-command-meter-track"><i className="hp-command-meter-fill" style={{ width: `${Math.min(Number(hospital.icu_beds || 0) * 10, 100)}%` }} /></div></div>
+                        <div className="hp-command-meter-row"><div><span>Ventilators</span><b>{hospital.available_ventilators ?? 0}</b></div><div className="hp-command-meter-track"><i className="hp-command-meter-fill" style={{ width: `${Math.min(Number(hospital.available_ventilators || 0) * 10, 100)}%` }} /></div></div>
+                      </div>
+                    </article>
+                    <article className="hp-command-panel">
+                      <div className="hp-command-panel-head"><b>Quick actions</b><span /></div>
+                      <div className="hp-command-actions">
+                        <button className="hp-command-action" onClick={() => navigate("/hospital/responses")}>Review responses <ArrowRight size={16} /></button>
+                        <button className="hp-command-action" onClick={() => navigate("/hospital/staff")}>Manage staff <Stethoscope size={16} /></button>
+                        <button className="hp-command-action" onClick={() => navigate("/hospital/live-track")}>Live track <MapPinned size={16} /></button>
+                        <button className="hp-command-action" onClick={() => navigate("/hospital/reports")}>Case reports <BedSingle size={16} /></button>
+                      </div>
+                    </article>
+                  </section>
                   <div className="hp-home-hero">
                     <section className="hp-home-banner">
                       <div className="hp-home-video-wrap">

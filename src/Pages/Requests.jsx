@@ -165,23 +165,24 @@ const Requests = () => {
       <div className="req-actions">
         {b.status === "pending" && (
           <>
-            <button style={btnStyle} onClick={() => updateStatus(b.id, "confirmed")}>✓ Confirm</button>
-            <button style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
+            <button className="req-action req-confirm" style={btnStyle} onClick={() => updateStatus(b.id, "confirmed")}>✓ Confirm</button>
+            <button className="req-action req-cancel" style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
           </>
         )}
 
         {b.status === "confirmed" && !b.sent_to_driver && (
           <>
-            <button style={btnStyle} onClick={() => openAmbulanceAssign(b.id)}>
+            <button className="req-action req-assign" style={btnStyle} onClick={() => openAmbulanceAssign(b.id)}>
               {Number(b.ambulance_id || 0) > 0 ? "Reassign Ambulance" : "Assign Nearest Ambulance"}
             </button>
             {b.driver_rejected_once && (
-              <button style={btnStyle} onClick={() => openAmbulanceReassign(b.id)}>
+              <button className="req-action req-assign" style={btnStyle} onClick={() => openAmbulanceReassign(b.id)}>
                 Assign Another Ambulance
               </button>
             )}
             {Number(b.ambulance_id || 0) > 0 && b.assigned_hospital_name && b.hospital_response === "ready" && (
               <button
+                className="req-action req-assign"
                 style={btnStyle}
                 onClick={() => updateBooking(b.id, { send_to_driver: true })}
               >
@@ -190,6 +191,7 @@ const Requests = () => {
             )}
             {!(Number(b.ambulance_id || 0) > 0 && b.assigned_hospital_name && b.hospital_response === "ready") && (
               <div
+                className="req-action req-waiting"
                 style={{
                   ...btnStyle,
                   background: "#fffbd6",
@@ -206,13 +208,13 @@ const Requests = () => {
                   : "Assign Hospital First"}
               </div>
             )}
-            <button style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
+            <button className="req-action req-cancel" style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
           </>
         )}
 
         {b.status === "confirmed" && (
           <>
-            <button style={btnStyle} onClick={() => openHospitalAssign(b.id)}>
+            <button className="req-action req-assign" style={btnStyle} onClick={() => openHospitalAssign(b.id)}>
               {b.assigned_hospital_name ? "Reassign Hospital" : "Assign Hospital"}
             </button>
           </>
@@ -220,6 +222,7 @@ const Requests = () => {
 
         {b.report_submitted_at && !b.report_sent_to_hospital && (
           <button
+            className="req-action req-assign"
             style={{
               ...btnStyle,
               opacity: b.assigned_hospital_name ? 1 : 0.6,
@@ -233,18 +236,19 @@ const Requests = () => {
         )}
 
         {b.report_sent_to_hospital && (
-          <button style={{ ...btnStyle, background: "#fffbd6" }} disabled>
+          <button className="req-action req-waiting" style={{ ...btnStyle, background: "#fffbd6" }} disabled>
             Report sent to hospital
           </button>
         )}
 
         {b.status === "confirmed" && b.sent_to_driver && (
-          <button style={{ ...btnStyle, background: "#fffbd6" }} disabled>
+          <button className="req-action req-waiting" style={{ ...btnStyle, background: "#fffbd6" }} disabled>
             {b.driver_task_completed ? "Task Completed by Driver" : "Dispatched to Driver"}
           </button>
         )}
         {b.status === "confirmed" && b.sent_to_driver && !b.driver_rejected_once && (
           <button
+            className="req-action req-assign"
             style={{ ...btnStyle, background: "#111", color: "#fff", borderColor: "#111" }}
             onClick={() => navigate("/LiveMap", { state: { openRouteManager: true, bookingId: b.id, ambulanceId: b.ambulance_id } })}
           >
@@ -253,11 +257,11 @@ const Requests = () => {
         )}
 
         {b.status === "completed" && b.driver_task_completed && (
-          <button style={{ ...btnStyle, background: "#fffbd6" }} disabled>Task Completed by Driver</button>
+          <button className="req-action req-waiting" style={{ ...btnStyle, background: "#fffbd6" }} disabled>Task Completed by Driver</button>
         )}
 
         {(b.status === "completed" || b.status === "cancelled") && (
-          <button style={btnStyle} onClick={() => deleteBooking(b.id)}>🗑 Delete</button>
+          <button className="req-action req-cancel" style={btnStyle} onClick={() => deleteBooking(b.id)}>🗑 Delete</button>
         )}
       </div>
     );
@@ -555,6 +559,48 @@ const Requests = () => {
           .req-actions { grid-template-columns: 1fr; }
           .req-amb { font-size: 22px; }
         }
+
+        /* Each booking stays in one clear green-bordered card. */
+        .req-grid { gap: 18px; }
+        .req-card-item,
+        .req-card-item:hover {
+          background: #ffffff;
+          border: 1px solid #126f1e;
+          box-shadow: none;
+          transform: none;
+        }
+        .req-card-item:hover { background: #f4fbf4; }
+        .req-body { gap: 10px; }
+        .req-cell { border-color: rgba(18, 111, 30, .30); padding: 9px 10px; }
+        .req-footer { border-top-color: rgba(18, 111, 30, .26); padding-top: 12px; }
+        .req-actions { gap: 10px; }
+        .req-action {
+          border-color: #126f1e !important;
+          background: #ffffff !important;
+          color: #111111 !important;
+          box-shadow: none !important;
+          transition: background .15s ease, border-color .15s ease, color .15s ease !important;
+        }
+        .req-action:hover:not(:disabled) { background: #126f1e !important; border-color: #126f1e !important; color: #ffffff !important; }
+        .req-action.req-confirm { background: #126f1e !important; border-color: #126f1e !important; color: #ffffff !important; }
+        .req-action.req-confirm:hover { background: #f59a23 !important; border-color: #f59a23 !important; color: #111111 !important; }
+        .req-action.req-assign:hover { background: #f59a23 !important; border-color: #f59a23 !important; color: #111111 !important; }
+        .req-action.req-cancel { border-color: #c92828 !important; color: #c92828 !important; }
+        .req-action.req-cancel:hover { background: #c92828 !important; border-color: #c92828 !important; color: #ffffff !important; }
+        .req-action.req-waiting { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        /* Center each request and apply yellow actions consistently. */
+        html body #root#root .req-content { width: min(1320px, calc(100% - 40px)) !important; margin: 0 auto !important; }
+        html body #root#root .req-card-item,
+        html body #root#root .req-card-item:hover { background: #f4fbf4 !important; border-color: #126f1e !important; border-radius: 18px !important; box-shadow: none !important; transform: none !important; }
+        html body #root#root .req-cell { background: #ffffff !important; border-color: #f59a23 !important; }
+        html body #root#root .req-action.req-confirm,
+        html body #root#root .req-action.req-confirm:hover,
+        html body #root#root .req-action.req-cancel,
+        html body #root#root .req-action.req-cancel:hover {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+        }
       `}</style>
 
       <div className="req-root" ref={rootRef}>
@@ -606,7 +652,7 @@ const Requests = () => {
               {bookings.map((b, i) => {
                 const sc = statusColors[b.status] || statusColors.pending;
                 return (
-                  <motion.article key={b.id} className="req-card-item" whileHover={{ y: -2 }}>
+                  <motion.article key={b.id} className="req-card-item">
                     <button
                       className="req-menu-trigger"
                       onClick={(e) => {

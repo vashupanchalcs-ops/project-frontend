@@ -1,11 +1,11 @@
 /**
  * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
  *
- * FIX: resolveCoords mein geocodeInIndia call karta hai jo LOCAL_HINTS se
+ * FIX: resolveCoords uses geocodeInIndia with LOCAL_HINTS to
  * Shiv Vihar ka correct coord (28.7419, 77.3158) return karega.
- * Pehle wrong coord (Ghaziabad) aa raha tha kyunki LOCAL_HINTS galat tha.
+ * The prior Ghaziabad coordinate was incorrect because LOCAL_HINTS was wrong.
  *
- * Baaki sab same — sirf route display polish kiya gaya hai.
+ * The remaining route display behavior is unchanged.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import useLeaflet, {
@@ -15,7 +15,6 @@ import useLeaflet, {
   makePinIcon,
   normalizePlace,
   fetchRoadRoute,
-  fetchNearestRoadPoint,
   LIGHT_TILE,
   SATELLITE_TILE,
 } from "../hooks/useLeaflet";
@@ -383,19 +382,20 @@ export default function AdminRouteManager({
 
       setPickupCoord(pickup);
 
-      const pickupRoadPoint      = (await fetchNearestRoadPoint(pickup))      || pickup;
-      const destinationRoadPoint = (await fetchNearestRoadPoint(destination)) || destination;
-      const leg1 = await fetchRoadRoute([ambCoord,          pickupRoadPoint],      { allowStraightFallback: true });
-      const leg2 = await fetchRoadRoute([pickupRoadPoint,   destinationRoadPoint], { allowStraightFallback: true });
-      const safeLeg1 = leg1.length > 1 ? leg1 : [[ambCoord.lat, ambCoord.lng], [pickup.lat, pickup.lng]];
-      const safeLeg2 = leg2.length > 1 ? leg2 : [[pickup.lat, pickup.lng], [destination.lat, destination.lng]];
+      // Use the exact confirmed booking pin and never portray a failed route
+      // request as a road route.
+      const leg1 = await fetchRoadRoute([ambCoord, pickup], { retries: 2 });
+      const leg2 = await fetchRoadRoute([pickup, destination], { retries: 2 });
+      if (leg1.length < 2 || leg2.length < 2) {
+        throw new Error("Road route is temporarily unavailable. Please retry.");
+      }
 
       setDestCoord(destination);
-      setRouteLeg1(safeLeg1);
-      setRouteLeg2(safeLeg2);
+      setRouteLeg1(leg1);
+      setRouteLeg2(leg2);
 
       // Use actual path distances for stats
-      const stats = toRoadStats(safeLeg1, safeLeg2, ambCoord, pickup, destination);
+      const stats = toRoadStats(leg1, leg2, ambCoord, pickup, destination);
       setRouteStats(stats);
       showToast(`Route found: ${stats.distKm} km · ~${stats.mins} min`);
     } catch (e) {

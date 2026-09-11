@@ -3,7 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 const ADMIN_EMAIL = "vashupanchal.cs@gmail.com";
-const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
+// In Vite development, send OTPs to the local Django server. It prints the
+// code in that terminal; deployed builds continue to use the Render backend.
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const IS_PROD = import.meta.env.PROD;
 const DB_KEY = "sr_users_db";
 const GOOGLE_CLIENT_ID =
@@ -56,6 +61,11 @@ const sendBackendOtp = async (email) => {
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok || data.status !== "otp_sent") {
     throw new Error(data.message || "OTP email service failed.");
+  }
+  if (data.delivery === "console") {
+    throw new Error(
+      "Email delivery is not configured on local Django. Add Gmail SMTP settings and restart Django, or use the local development OTP from the console."
+    );
   }
   return data;
 };
@@ -303,7 +313,7 @@ export default function Login() {
     } catch (otpError) {
       if (IS_PROD) {
         setBusy(false);
-        setErr(otpError.message || "OTP email send nahi ho paya. Backend email config check karo.");
+        setErr(otpError.message || "The OTP email could not be sent. Check the backend email configuration.");
         return;
       }
     }
@@ -315,7 +325,7 @@ export default function Login() {
     setTimer(60);
     setStep("otp");
 
-    setInfo("Local dev OTP generated. Developer console me OTP check karo.");
+    setInfo("A local development OTP was generated. Check the developer console for the OTP.");
     console.log(`[SwiftRescue RESET OTP] ${email} -> ${code}`);
   };
 
@@ -465,7 +475,7 @@ export default function Login() {
         });
         if (!checked.ok) return setErr(checked.error);
       } catch (error) {
-        return setErr(error?.message || "Backend se contract details verify nahi ho paayi. Please try again.");
+        return setErr(error?.message || "The contract details could not be verified. Please try again.");
       }
     }
     setBusy(true);
@@ -482,7 +492,7 @@ export default function Login() {
     } catch (otpError) {
       if (IS_PROD) {
         setBusy(false);
-        setErr(otpError.message || "OTP email send nahi ho paya. Backend email config check karo.");
+        setErr(otpError.message || "The OTP email could not be sent. Check the backend email configuration.");
         return;
       }
     }
@@ -495,7 +505,7 @@ export default function Login() {
     setTimer(60);
     setStep("otp");
 
-    setInfo("Local dev OTP generated. Developer console me OTP check karo.");
+    setInfo("A local development OTP was generated. Check the developer console for the OTP.");
     console.log(`[SwiftRescue OTP] ${email} -> ${code}`);
   };
 
@@ -1181,13 +1191,189 @@ export default function Login() {
           .auth-otp { gap: 6px; }
           .auth-otp input { width: min(44px, 13vw); height: 50px; }
         }
+
+        /* Final YiCare sign-in treatment: a focused white form with emergency-red actions. */
+        .auth-root {
+          min-height: 100vh;
+          padding: 104px 24px 36px;
+          display: grid;
+          place-items: center;
+          background: #ffffff !important;
+          color: #191919 !important;
+        }
+        .auth-brandbar {
+          position: fixed;
+          height: 82px;
+          justify-content: flex-start;
+          padding: 0 clamp(24px, 11vw, 216px);
+          background: #ffffff !important;
+          border-bottom: 1px solid #dedede;
+          box-shadow: none;
+        }
+        .auth-brand {
+          color: #e50914 !important;
+          font-size: 32px;
+          letter-spacing: -0.065em;
+        }
+        .auth-brand-mark {
+          width: 28px;
+          height: 28px;
+          border-color: #e50914;
+        }
+        .auth-shell {
+          width: min(540px, 100%);
+          max-width: 540px;
+          margin: 0 auto;
+        }
+        .auth-right {
+          padding: 30px 34px 28px;
+          gap: 10px;
+          background: #ffffff !important;
+          border: 1px solid #dedede;
+          border-top: 4px solid #e50914;
+          border-radius: 8px;
+          box-shadow: 0 12px 32px rgba(25, 25, 25, 0.08);
+        }
+        .auth-step-title,
+        .auth-step-title .hl { color: #191919 !important; }
+        .auth-step-title .hl { color: #e50914 !important; }
+        .auth-step-title { font-size: 32px; }
+        .auth-step-sub,
+        .auth-note,
+        .auth-legal,
+        .auth-meta,
+        .auth-resend,
+        .auth-help-body { color: #666666 !important; }
+        .auth-field label { color: #c8102e !important; font-weight: 700; }
+        .auth-field input {
+          height: 46px;
+          border: 1px solid #bdbdbd !important;
+          border-radius: 4px;
+          color: #191919 !important;
+          background: #ffffff !important;
+        }
+        .auth-field input:focus {
+          border-color: #e50914 !important;
+          box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.12) !important;
+        }
+        .auth-mode,
+        .auth-role,
+        .auth-btn.alt,
+        .auth-google {
+          color: #c8102e !important;
+          border: 1px solid #e50914 !important;
+          background: #ffffff !important;
+        }
+        .auth-mode.on,
+        .auth-role.on,
+        .auth-btn {
+          background: #e50914 !important;
+          border-color: #e50914 !important;
+          color: #ffffff !important;
+        }
+        .auth-btn:not(:disabled):hover,
+        .auth-mode:hover,
+        .auth-role:hover,
+        .auth-google:hover,
+        .auth-btn.alt:hover {
+          background: #b20710 !important;
+          border-color: #b20710 !important;
+          color: #ffffff !important;
+          transform: none;
+        }
+        .auth-pass-toggle { color: #c8102e !important; }
+        .auth-otp input {
+          border: 1px solid #bdbdbd !important;
+          border-radius: 4px;
+          background: #ffffff !important;
+          color: #191919 !important;
+        }
+        .auth-otp input:focus { border-color: #e50914 !important; }
+        .auth-msg.err {
+          color: #b20710 !important;
+          background: #fff1f2 !important;
+          border-color: #f2aeb4 !important;
+        }
+        .auth-msg.ok {
+          color: #191919 !important;
+          background: #ffffff !important;
+          border-color: #dedede !important;
+        }
+        .auth-resend button,
+        .auth-back,
+        .auth-link,
+        .auth-help-toggle,
+        .auth-help-toggle span,
+        .auth-help-learn { color: #c8102e !important; }
+        .auth-help { border-top: 1px solid #ededed; padding-top: 14px; }
+
+        @media (max-width: 760px) {
+          .auth-root { padding: 96px 14px 28px; align-items: start; }
+          .auth-brandbar { height: 68px; padding: 0 18px; }
+          .auth-brand { font-size: 26px; }
+          .auth-right { padding: 24px 18px; }
+          .auth-step-title { font-size: 28px; }
+        }
+
+        /* Keep the YiCare mark visible against the dark authentication header. */
+        #root .auth-root button.auth-brand,
+        #root .auth-root button.auth-brand:hover,
+        #root .auth-root button.auth-brand > span,
+        #root .auth-root button.auth-brand > .auth-brand-mark {
+          color: #e50914 !important;
+          border-color: #e50914 !important;
+          background: transparent !important;
+        }
+        html body #root .auth-root button.auth-brand,
+        html body #root .auth-root button.auth-brand:hover,
+        html body #root .auth-root button.auth-brand > span,
+        html body #root .auth-root button.auth-brand > .auth-brand-mark {
+          color: #111111 !important;
+          border-color: #111111 !important;
+          background: transparent !important;
+        }
+
+        /* Only the selected Sign In tab is yellow; every other login control stays neutral. */
+        .auth-root { font-family: Roboto, sans-serif !important; background: #ffffff !important; }
+        .auth-right { border-top-color: #dedede !important; box-shadow: none !important; }
+        .auth-step-title .hl { color: #111111 !important; }
+        .auth-field label, .auth-pass-toggle { color: #111111 !important; }
+        .auth-field input:focus, .auth-otp input:focus { border-color: #111111 !important; box-shadow: none !important; }
+        .auth-mode { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; }
+        .auth-mode.on, .auth-mode.on:hover { background: #f59a23 !important; border-color: #f59a23 !important; color: #111111 !important; }
+        .auth-mode:hover { background: #ffffff !important; border-color: #111111 !important; color: #111111 !important; }
+        .auth-role, .auth-role.on, .auth-role:hover { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; }
+        .auth-role.on { box-shadow: none !important; }
+        .auth-btn, .auth-btn.alt, .auth-btn.alt:hover { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; }
+        .auth-google, .auth-google:hover { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; transform: none !important; }
+        .auth-msg.err { color: #111111 !important; background: #ffffff !important; border-color: #dedede !important; }
+        .auth-pass-toggle { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; }
+        .auth-back { display: block !important; width: 100% !important; padding: 10px !important; border: 1px solid #dedede !important; background: #ffffff !important; color: #111111 !important; }
+        .auth-resend button, .auth-link, .auth-help-toggle, .auth-help-toggle span, .auth-help-learn { color: #111111 !important; }
+
+        /* Keep the brand green; selected sign-in and role choices use yellow only. */
+        html body #root#root .auth-root button.auth-brand,
+        html body #root#root .auth-root button.auth-brand:hover,
+        html body #root#root .auth-root button.auth-brand > span,
+        html body #root#root .auth-root button.auth-brand > .auth-brand-mark {
+          color: #126f1e !important;
+          border-color: #126f1e !important;
+          background: transparent !important;
+        }
+        html body #root#root .auth-root .auth-role.on,
+        html body #root#root .auth-root .auth-role.on:hover,
+        html body #root#root .auth-root .auth-btn:not(.alt) {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+        }
       `}</style>
 
       <div className="auth-root">
         <header className="auth-brandbar">
-          <button type="button" className="auth-brand" onClick={() => navigate("/")} aria-label="Go to YiCare home">
+          <button type="button" className="auth-brand" onClick={() => navigate("/")} aria-label="Go to Aarogya home">
             <span className="auth-brand-mark">+</span>
-            <span>YICARE</span>
+            <span>Aarogya</span>
           </button>
         </header>
         <div className="auth-shell">
@@ -1195,14 +1381,14 @@ export default function Login() {
             <div className="auth-star">*</div>
             <div className="auth-left-copy">
               <p>Hey, Hello!</p>
-              <h2>OTP based secure access to YiCare workspace</h2>
+              <h2>OTP based secure access to Aarogya workspace</h2>
             </div>
           </aside>
 
           <section className="auth-right">
             {step === "details" && (
               <>
-                <h2 className="auth-step-title">Log <span className="hl">in</span></h2>
+                <h2 className="auth-step-title">Sign <span className="hl">in</span></h2>
                 <p className="auth-step-sub">
                   {isResetMode
                     ? "Reset your password with OTP verification"
@@ -1213,7 +1399,7 @@ export default function Login() {
 
                 <div className="auth-modes">
                   <button type="button" className={`auth-mode ${authMode === "login" && !isResetMode ? "on" : ""}`} onClick={() => { clearMsgs(); setIsResetMode(false); setAuthMode("login"); }}>
-                    Login
+                    Sign In
                   </button>
                   <button type="button" className={`auth-mode ${authMode === "signup" && !isResetMode ? "on" : ""}`} onClick={() => { clearMsgs(); setIsResetMode(false); setAuthMode("signup"); }}>
                     Sign Up
@@ -1223,20 +1409,20 @@ export default function Login() {
                 {err ? <div className="auth-msg err">{err}</div> : null}
                 {info ? <div className="auth-msg ok">{info}</div> : null}
 
-                <form className="auth-form" onSubmit={isResetMode ? sendResetOtp : (authMode === "signup" ? sendOtp : loginWithPassword)}>
-                  {!isResetMode && (
+                <form className={`auth-form ${authMode === "login" && !isResetMode ? "auth-login-form" : ""}`} onSubmit={isResetMode ? sendResetOtp : (authMode === "signup" ? sendOtp : loginWithPassword)}>
+                  {authMode === "signup" && !isResetMode && (
                     <div className="auth-field">
                       <label>Full Name</label>
                       <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" />
                     </div>
                   )}
 
-                  <div className="auth-field">
+                  <div className="auth-field auth-email-field">
                     <label>Email Address</label>
                     <input name="email" type="email" value={form.email} onChange={onChange} placeholder="you@example.com" required />
                   </div>
 
-                  <div className="auth-field">
+                  <div className="auth-field auth-role-field">
                     <label>Choose Role</label>
                     <div className="auth-roles">
                       <button type="button" className={`auth-role ${form.role === "user" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "user" }))}>User</button>
@@ -1291,7 +1477,7 @@ export default function Login() {
                     </>
                   )}
 
-                  <div className="auth-field">
+                  <div className="auth-field auth-password-field">
                     <label>Password</label>
                     <div className="auth-password-wrap">
                       <input
@@ -1347,7 +1533,7 @@ export default function Login() {
                   <button className="auth-btn" type="submit" disabled={busy}>
                     {busy
                       ? (isResetMode ? "Sending reset OTP..." : (authMode === "signup" ? "Sending OTP..." : "Logging in..."))
-                      : (isResetMode ? "Send Reset OTP" : (authMode === "signup" ? "Send OTP" : "Log In"))}
+                      : (isResetMode ? "Send Reset OTP" : (authMode === "signup" ? "Send OTP" : "Sign In"))}
                   </button>
                 </form>
                 {!isResetMode && (
@@ -1372,7 +1558,7 @@ export default function Login() {
                   </button>
                 </div>
                 <div className="auth-legal">
-                  By continuing, you agree to YiCare terms, conditions, and privacy policy.
+                  By continuing, you agree to Aarogya terms, conditions, and privacy policy.
                 </div>
                 <div className="auth-help">
                   <button type="button" className="auth-help-toggle" onClick={() => setShowHelp((v) => !v)}>
@@ -1380,7 +1566,7 @@ export default function Login() {
                   </button>
                   {showHelp && (
                     <div className="auth-help-body">
-                      Login ke liye registered email aur password use karein. OTP ya hospital access issue ho to support team se contact karein: <b>support@yicare.in</b>.
+                      Use your registered email and password to sign in. For OTP or hospital access issues, contact the support team: <b>support@aarogya.in</b>.
                       <button type="button" className="auth-help-learn" onClick={() => navigate("/login/help")}>Learn about sign-in</button>
                     </div>
                   )}

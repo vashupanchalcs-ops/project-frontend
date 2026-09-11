@@ -2,12 +2,10 @@
  * UserBookingMap.jsx — src/Components/UserBookingMap.jsx
  *
  * KEY FIXES:
- * 1. USER GPS LOCATION — maximumAge:0 forces fresh GPS, not stale cached coords
- *    enableHighAccuracy:true for best accuracy
- * 2. ROUTE POLYLINE — both legs (amb→pickup, pickup→hospital) draw real road
- *    routes via OSRM. Falls back to dashed straight line only if OSRM fails.
- * 3. PICKUP COORD — GPS watchPosition used if user is the one being tracked,
- *    otherwise geocoded from booking fields
+ * 1. PICKUP COORD — the saved booking coordinate is immutable and drives the
+ *    marker, backend route origin, and every displayed route.
+ * 2. ROUTE POLYLINE — both legs use a road-routing provider; failures show an
+ *    error state rather than a misleading straight line.
  * 4. LEG STATS — calculated from actual route path length, not crow-flies
  * 5. MAP BOUNDS — auto-fits to show all 3 markers + both route lines
  */
@@ -17,8 +15,6 @@ import useLeaflet, {
   DELHI,
   makePinIcon,
   fetchRoadRoute,
-  fetchNearestRoadPoint,
-  geocodeInIndia,
 } from "../hooks/useLeaflet";
 
 const BASE = "http://127.0.0.1:8000";
@@ -37,6 +33,19 @@ const normalizeHosp = (v = "") =>
 const inIndia = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) &&
   lat >= 6 && lat <= 38 && lng >= 68 && lng <= 98;
+
+const HOSPITAL_LOCATION_FALLBACKS = [
+  { terms: ["sharda", "saharda"], lat: 28.4744, lng: 77.5030 },
+  { terms: ["noida"], lat: 28.5355, lng: 77.3910 },
+  { terms: ["ghaziabad", "loni"], lat: 28.6692, lng: 77.4538 },
+  { terms: ["delhi", "new delhi"], lat: 28.6139, lng: 77.2090 },
+];
+
+const fallbackHospitalLatLng = (name, cityHint) => {
+  const normalized = normalizeHosp(`${name || ""} ${cityHint || ""}`);
+  return HOSPITAL_LOCATION_FALLBACKS.find(({ terms }) => terms.some((term) => normalized.includes(term)))
+    || { lat: DELHI.lat, lng: DELHI.lng };
+};
 
 const haversineKm = (a, b) => {
   const R = 6371;
@@ -166,39 +175,18 @@ async function resolveHospitalLatLng(hospName, hospitalsArr, cityHint = "", assi
   }
 
   // 2) External geocoding fallbacks
+  const searchName = key.includes("sharda") ? "Sharda Hospital" : hospName;
   const fallbackQueries = [
-    cityHint ? `${hospName} hospital ${cityHint}, India` : null,
-    cityHint ? `${hospName} ${cityHint}, India`          : null,
-    `${hospName} hospital Delhi NCR, India`,
-    `${hospName}, India`,
+    cityHint ? `${searchName} hospital ${cityHint}, India` : null,
+    cityHint ? `${searchName} ${cityHint}, India`          : null,
+    `${searchName} Delhi NCR, India`,
+    `${searchName}, India`,
   ].filter(Boolean);
 
   return (
     (await openCageGeocode(fallbackQueries)) ||
-    (await nominatimGeocode(fallbackQueries))
-  );
-}
-
-// ── Pickup coordinate resolution ──────────────────────────────────────────────
-async function resolvePickupLatLng({ pickup = "", landmark = "", city = "", district = "" } = {}) {
-  const structured = [landmark, city, district].filter(Boolean).join(", ");
-  const queries = [
-    structured,
-    [pickup, city, district].filter(Boolean).join(", "),
-    pickup,
-  ].filter(Boolean);
-
-  for (const q of queries) {
-    try {
-      const loc = await geocodeInIndia(q, { landmark, area: pickup, city, district });
-      if (loc) return loc;
-    } catch {}
-  }
-
-  const extQueries = queries.map((q) => `${q}, India`);
-  return (
-    (await openCageGeocode(extQueries)) ||
-    (await nominatimGeocode(extQueries))
+    (await nominatimGeocode(fallbackQueries)) ||
+    fallbackHospitalLatLng(hospName, cityHint)
   );
 }
 
@@ -211,13 +199,11 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   const ambMarkerRef        = useRef(null);
   const pickupMarkerRef     = useRef(null);
   const hospMarkerRef       = useRef(null);
-  const routeLine1Ref       = useRef(null); // Ambulance → Pickup (red)
-  const routeLine2Ref       = useRef(null); // Pickup → Hospital  (blue)
+  const routeLine1Ref       = useRef(null); // Ambulance to pickup (green)
+  const routeLine2Ref       = useRef(null); // Pickup to hospital (yellow)
   const pollRef             = useRef(null);
-  const gpsWatchRef         = useRef(null);
   const lastAmbOriginRef    = useRef(null);
-  const gpsFreshLocRef      = useRef(null);
-  const hasFittedRef        = useRef(false); // map sirf pehli baar auto-fit hoga
+  const hasFittedRef        = useRef(false); // Auto-fit the map only once.
   const pickupLLRef         = useRef(null);  // pickupLL ka ref — always latest
   const hospLLRef           = useRef(null);  // hospLL ka ref
   const route1FetchingRef   = useRef(false); // OSRM fetch in progress guard
@@ -230,8 +216,8 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   const [legStats,        setLegStats]        = useState({ d1: null, m1: null, d2: null, m2: null });
   const [elapsed,         setElapsed]         = useState(0);
   const [mapReady,        setMapReady]        = useState(false);
-  // GPS accuracy indicator
-  const [gpsAccuracy,     setGpsAccuracy]     = useState(null);
+  const [routeState, setRouteState] = useState({ leg1: "idle", leg2: "idle", error: "" });
+  const [routeRetry, setRouteRetry] = useState(0);
 
   // ── Elapsed timer ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -276,45 +262,11 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     };
   }, [leafletReady]);
 
-  // ── FIX: Get USER GPS with maximumAge:0 (fresh, not cached) ────────────────
-  // This ensures user's actual current location is used for pickup
-  useEffect(() => {
-    if (!("geolocation" in navigator)) return;
-
-    // FIX: maximumAge:0 forces fresh GPS reading every time
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const accuracy = Math.round(pos.coords.accuracy); // metres
-        setGpsAccuracy(accuracy);
-
-        if (!inIndia(lat, lng)) return;
-
-        // Store fresh GPS in ref — used as last-resort pickup fallback
-        gpsFreshLocRef.current = { lat, lng, accuracy };
-      },
-      (err) => {
-        console.warn("GPS error:", err.message);
-      },
-      {
-        enableHighAccuracy: true, // FIX: always request GPS chip, not WiFi/cell
-        maximumAge:         0,    // FIX: never use cached location
-        timeout:            15000,
-      }
-    );
-
-    gpsWatchRef.current = watchId;
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []); // eslint-disable-line
-
   // ── Resolve pickup + hospital from booking fields ───────────────────────────
   useEffect(() => {
     if (!booking || !hospitalsLoaded) return;
 
     const hospName       = booking.assigned_hospital_name || booking.destination || "";
-    const pickup         = booking.pickup_location   || "";
-    const pickupLandmark = booking.pickup_landmark   || booking.landmark || "";
     const pickupCity     = booking.pickup_city       || "";
     const pickupDistrict = booking.pickup_district   || "";
     const cityHint       = pickupCity || pickupDistrict || "";
@@ -322,13 +274,8 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     let cancelled = false;
 
     (async () => {
-      const [textPickupLL, hLL] = await Promise.all([
-        resolvePickupLatLng({
-          pickup,
-          landmark: pickupLandmark,
-          city:     pickupCity,
-          district: pickupDistrict,
-        }),
+      const [, hLL] = await Promise.all([
+        Promise.resolve(null),
         resolveHospitalLatLng(
           hospName,
           hospitals,
@@ -339,21 +286,19 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
       if (cancelled) return;
 
-      // Prefer explicit booking coords, then geocoded, then GPS
+      // The booking coordinate is the single source of truth. Old records that
+      // do not contain a confirmed point need an address update before routing.
       const directLat = Number(booking?.pickup_latitude);
       const directLng = Number(booking?.pickup_longitude);
       const storedLL  = inIndia(directLat, directLng)
         ? { lat: directLat, lng: directLng }
         : null;
 
-      let resolvedPickup = storedLL || textPickupLL || null;
-
-      // Last resort: fresh GPS location agar geocoding fail ho gayi
-      if (!resolvedPickup && gpsFreshLocRef.current?.accuracy < 150) {
-        resolvedPickup = { lat: gpsFreshLocRef.current.lat, lng: gpsFreshLocRef.current.lng };
+      if (storedLL) {
+        setPickupLL(storedLL);
+      } else {
+        setRouteState((previous) => ({ ...previous, error: "This booking has no confirmed pickup coordinate. Update the pickup address before routing." }));
       }
-
-      if (resolvedPickup) setPickupLL(resolvedPickup);
       if (hLL) setHospLL(hLL);
     })();
 
@@ -418,42 +363,29 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
       }
     }
 
-    // Route 2: Pickup → Hospital (BLUE) — sirf ek baar draw hoti hai
+    // Route 2: Pickup → Hospital. The origin below is the stored booking pin,
+    // never a snapped or freshly geocoded replacement.
     if (pickupLL && hospLL && !routeLine2Ref.current) {
-      const straight = [[pickupLL.lat, pickupLL.lng], [hospLL.lat, hospLL.lng]];
-
-      // Turant dashed preview
-      routeLine2Ref.current = L.polyline(straight, {
-        color: "#2563eb", weight: 5, opacity: 0.45, dashArray: "10,10",
-      }).addTo(map);
-
-      // Real road route fetch — campus hospitals me straight line use hogi (no OSRM loop)
       (async () => {
+        setRouteState((previous) => ({ ...previous, leg2: "loading", error: "" }));
         try {
-          const snapPickup = (await fetchNearestRoadPoint(pickupLL)) || pickupLL;
-          const snapHosp   = (await fetchNearestRoadPoint(hospLL))   || hospLL;
-          const pts = await fetchRoadRoute([snapPickup, snapHosp], { allowStraightFallback: true });
-
-          if (routeLine2Ref.current && pts?.length >= 2) {
-            routeLine2Ref.current.setLatLngs(pts);
-            const isSolid = pts.length > 2;
-            routeLine2Ref.current.setStyle({
-              color: "#2563eb", weight: 6,
-              opacity: isSolid ? 0.92 : 0.7,
-              dashArray: isSolid ? null : "12,10",
-            });
-            routeLine2Ref.current.bringToFront();
-            const d2 = pathKm(pts);
-            setLegStats((prev) => ({ ...prev, d2: d2.toFixed(1), m2: approxMins(d2) }));
-          }
+          const pts = await fetchRoadRoute([pickupLL, hospLL], { retries: 2 });
+          if (!pts || pts.length < 2) throw new Error("No road route returned");
+          routeLine2Ref.current = L.polyline(pts, {
+            color: "#f59a23", weight: 6, opacity: 0.92,
+          }).addTo(map);
+          routeLine2Ref.current.bringToFront();
+          const d2 = pathKm(pts);
+          setLegStats((prev) => ({ ...prev, d2: d2.toFixed(1), m2: approxMins(d2) }));
+          setRouteState((previous) => ({ ...previous, leg2: "ready" }));
           fitBounds(true);
         } catch (e) {
           console.warn("Route 2 fetch failed:", e);
-          fitBounds(true);
+          setRouteState((previous) => ({ ...previous, leg2: "error", error: "Hospital route could not be loaded. Retrying is available after the next update." }));
         }
       })();
     }
-  }, [mapReady, pickupLL, hospLL, fitBounds]);
+  }, [mapReady, pickupLL, hospLL, fitBounds, routeRetry]);
 
   // ── Poll ambulance live location ────────────────────────────────────────────
   const pollAmbulance = useCallback(async () => {
@@ -491,100 +423,37 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         ambMarkerRef.current.bringToFront();
       }
 
-      // Route 1: Ambulance → Pickup (RED)
-      // Use ref (not state) — always latest pickupLL even if state not yet synced
+      // Route 1: Ambulance → Pickup. The pickup request coordinate is always
+      // the immutable booking pin, never a refreshed GPS or snapped point.
       const pLL = pickupLLRef.current;
-      const hLL = hospLLRef.current;
 
       if (pLL) {
-        const d1Crow   = haversineKm(loc, pLL) * 1.22;
-        const straight = [[loc.lat, loc.lng], [pLL.lat, pLL.lng]];
-
-        if (!routeLine1Ref.current) {
-          // ── Pehli baar: TURANT straight dashed line + stats ──────────────
-          routeLine1Ref.current = L.polyline(straight, {
-            color: "#ffffff", weight: 6, opacity: 0.8, dashArray: "8,6",
-          }).addTo(map);
-          setLegStats((prev) => ({
-            ...prev,
-            d1: d1Crow.toFixed(1),
-            m1: approxMins(d1Crow),
-          }));
-          if (!hasFittedRef.current) fitBounds();
-
-          // Background mein OSRM fetch — flicker-free
-          if (!route1FetchingRef.current) {
-            route1FetchingRef.current = true;
-            lastAmbOriginRef.current  = { ...loc };
-            const capturedLoc = { ...loc };
-            const capturedPLL = { ...pLL };
-            ;(async () => {
-              try {
-                const [sA, sP] = await Promise.all([
-                  fetchNearestRoadPoint(capturedLoc),
-                  fetchNearestRoadPoint(capturedPLL),
-                ]);
-                const pts = await fetchRoadRoute(
-                  [sA || capturedLoc, sP || capturedPLL],
-                  { allowStraightFallback: true }
-                );
-                if (routeLine1Ref.current && pts?.length > 2) {
-                  routeLine1Ref.current.setLatLngs(pts);
-                  routeLine1Ref.current.setStyle({
-                    color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null,
-                  });
-                  routeLine1Ref.current.bringToFront();
-                  const d1 = pathKm(pts);
-                  setLegStats((prev) => ({ ...prev, d1: d1.toFixed(1), m1: approxMins(d1) }));
-                  fitBounds(true);
-                }
-              } catch {}
-              finally { route1FetchingRef.current = false; }
-            })();
-          }
-        } else {
-          // ── Subsequent: smooth ambulance position update ──────────────────
-          try {
-            const lls = routeLine1Ref.current.getLatLngs();
-            if (lls?.length >= 2) {
-              // Replace only start point — rest of road route stays intact
-              const tail = lls.slice(1).map(p => [p.lat ?? p[0], p.lng ?? p[1]]);
-              routeLine1Ref.current.setLatLngs([[loc.lat, loc.lng], ...tail]);
+        const movedEnough = !lastAmbOriginRef.current || haversineKm(lastAmbOriginRef.current, loc) > 0.2;
+        if (movedEnough && !route1FetchingRef.current) {
+          route1FetchingRef.current = true;
+          lastAmbOriginRef.current = { ...loc };
+          setRouteState((previous) => ({ ...previous, leg1: "loading", error: "" }));
+          ;(async () => {
+            try {
+              const pts = await fetchRoadRoute([loc, pLL], { retries: 2 });
+              if (!pts || pts.length < 2) throw new Error("No road route returned");
+              if (routeLine1Ref.current) routeLine1Ref.current.setLatLngs(pts);
+              else routeLine1Ref.current = L.polyline(pts, { color: "#126f1e", weight: 6, opacity: 0.95 }).addTo(map);
+              routeLine1Ref.current.bringToFront();
+              const d1 = pathKm(pts);
+              setLegStats((previous) => ({ ...previous, d1: d1.toFixed(1), m1: approxMins(d1) }));
+              setRouteState((previous) => ({ ...previous, leg1: "ready" }));
+              fitBounds(true);
+            } catch (error) {
+              console.warn("Route 1 fetch failed:", error);
+              // Make the next polling cycle a deliberate retry even when the
+              // ambulance has not moved far enough to normally recalculate.
+              lastAmbOriginRef.current = null;
+              setRouteState((previous) => ({ ...previous, leg1: "error", error: "Ambulance road route could not be loaded. Waiting to retry." }));
+            } finally {
+              route1FetchingRef.current = false;
             }
-          } catch {}
-          setLegStats((prev) => ({ ...prev, d1: d1Crow.toFixed(1), m1: approxMins(d1Crow) }));
-
-          // OSRM refresh only if moved >200m AND no fetch in progress
-          const movedEnough = !lastAmbOriginRef.current ||
-            haversineKm(lastAmbOriginRef.current, loc) > 0.2;
-          if (movedEnough && !route1FetchingRef.current) {
-            route1FetchingRef.current = true;
-            lastAmbOriginRef.current  = { ...loc };
-            const capturedLoc = { ...loc };
-            const capturedPLL = { ...pLL };
-            ;(async () => {
-              try {
-                const [sA, sP] = await Promise.all([
-                  fetchNearestRoadPoint(capturedLoc),
-                  fetchNearestRoadPoint(capturedPLL),
-                ]);
-                const pts = await fetchRoadRoute(
-                  [sA || capturedLoc, sP || capturedPLL],
-                  { allowStraightFallback: true }
-                );
-                if (routeLine1Ref.current && pts?.length > 2) {
-                  routeLine1Ref.current.setLatLngs(pts);
-                  routeLine1Ref.current.setStyle({
-                    color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null,
-                  });
-                  routeLine1Ref.current.bringToFront();
-                  const d1 = pathKm(pts);
-                  setLegStats((prev) => ({ ...prev, d1: d1.toFixed(1), m1: approxMins(d1) }));
-                }
-              } catch {}
-              finally { route1FetchingRef.current = false; }
-            })();
-          }
+          })();
         }
       }
     } catch (e) {
@@ -626,7 +495,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
           {/* Leg 1: Ambulance → Pickup */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#ffffff", fontWeight: 900, fontSize: 20, lineHeight: 1 }}>
+            <div style={{ color: "#126f1e", fontWeight: 900, fontSize: 20, lineHeight: 1 }}>
               {legStats.d1 != null ? `${legStats.d1} km · ~${legStats.m1} min` : "Locating…"}
             </div>
             <div style={{ fontSize: 10, color: "rgba(17,17,17,0.5)", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>
@@ -638,7 +507,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
           {/* Leg 2: Pickup → Hospital */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#2563eb", fontWeight: 900, fontSize: 20, lineHeight: 1 }}>
+            <div style={{ color: "#f59a23", fontWeight: 900, fontSize: 20, lineHeight: 1 }}>
               {legStats.d2 != null
                 ? `${legStats.d2} km · ~${legStats.m2} min`
                 : hospLL ? "Calculating…" : "Locating hospital…"}
@@ -662,19 +531,8 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          {/* GPS accuracy badge */}
-          {gpsAccuracy != null && (
-            <div style={{
-              background: gpsAccuracy < 50 ? "rgba(0,200,83,0.12)" : "rgba(255,170,0,0.15)",
-              border: `1px solid ${gpsAccuracy < 50 ? "rgba(0,200,83,0.4)" : "rgba(255,170,0,0.5)"}`,
-              borderRadius: 10, padding: "4px 10px", fontSize: 10, fontWeight: 700,
-              color: gpsAccuracy < 50 ? "#00c853" : "#ff6d00",
-            }}>
-              📡 GPS ±{gpsAccuracy}m
-            </div>
-          )}
           <div style={{
-            background: "rgba(255, 255, 255, 0.15)", border: "1px solid rgba(255, 255, 255, 0.15)",
+            background: "#fff3df", border: "1px solid #f59a23",
             borderRadius: 10, padding: "5px 10px", fontSize: 11, fontWeight: 700,
             maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
@@ -697,22 +555,38 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         padding: "6px 20px", display: "flex", alignItems: "center", gap: 16,
         flexShrink: 0, fontSize: 11, flexWrap: "wrap",
       }}>
-        <span style={{ color: "#ffffff", fontWeight: 700 }}>🚑 Booking #{booking?.id}</span>
+        <span style={{ color: "#111", fontWeight: 700 }}>🚑 Booking #{booking?.id}</span>
         <span style={{ color: "rgba(17,17,17,0.6)" }}>·</span>
         <span style={{ color: "rgba(17,17,17,0.7)" }}>📍 {booking?.pickup_location || "—"}</span>
         <span style={{ color: "rgba(17,17,17,0.6)" }}>·</span>
         <span style={{ color: "rgba(17,17,17,0.7)" }}>{booking?.ambulance_number || "AMB-0000"}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <span style={{ width: 10, height: 4, borderRadius: 2, background: "#ffffff", display: "inline-block" }} />
+            <span style={{ width: 10, height: 4, borderRadius: 2, background: "#126f1e", display: "inline-block" }} />
             <span style={{ fontSize: 10, color: "rgba(17,17,17,0.65)" }}>Amb → Pickup</span>
           </span>
           <span style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <span style={{ width: 10, height: 4, borderRadius: 2, background: "#2563eb", display: "inline-block" }} />
+            <span style={{ width: 10, height: 4, borderRadius: 2, background: "#f59a23", display: "inline-block" }} />
             <span style={{ fontSize: 10, color: "rgba(17,17,17,0.65)" }}>Pickup → Hospital</span>
           </span>
         </div>
       </div>
+
+      {routeState.error && (
+        <div role="status" style={{ padding: "8px 20px", fontSize: 12, fontWeight: 700, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <span>Route update: {routeState.error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              lastAmbOriginRef.current = null;
+              setRouteRetry((value) => value + 1);
+              void pollAmbulance();
+            }}
+          >
+            Retry route
+          </button>
+        </div>
+      )}
 
       {/* ── Map ────────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
@@ -728,7 +602,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             <div style={{
               width: 36, height: 36,
               border: "3px solid rgba(17,17,17,0.1)",
-              borderTop: "3px solid #ffffff",
+              borderTop: "3px solid #f59a23",
               borderRadius: "50%",
               animation: "ubm-spin 0.8s linear infinite",
             }} />
@@ -749,17 +623,6 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           </div>
         )}
 
-        {/* GPS accuracy warning if poor */}
-        {gpsAccuracy != null && gpsAccuracy > 150 && (
-          <div style={{
-            position: "absolute", bottom: 60, left: "50%", transform: "translateX(-50%)",
-            background: "rgba(255,170,0,0.95)", borderRadius: 10, padding: "6px 14px",
-            fontSize: 11, fontWeight: 700, color: "#111", zIndex: 999,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)", whiteSpace: "nowrap",
-          }}>
-            ⚠️ GPS accuracy low (±{gpsAccuracy}m) — Move to open area
-          </div>
-        )}
       </div>
 
       <style>{`

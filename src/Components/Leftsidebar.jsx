@@ -69,8 +69,8 @@ const Leftsidebar = () => {
     } catch { return 0; }
   })();
 
-  // Driver dashboard ke internal tabs remove kar diye gaye hain,
-  // isliye mobile par bhi common sidebar bottom nav show hoga.
+  // Driver dashboard internal tabs were removed, so the shared sidebar
+  // bottom navigation is also visible on mobile.
   const hideBottomNav = false;
 
   return (
@@ -242,6 +242,151 @@ const Leftsidebar = () => {
           .lsb-bottom { display: flex !important; }
           .lsb-bottom.hidden { display: none !important; }
         }
+
+        /* Keep the navigation visible against the white workspace. */
+        .lsb-root {
+          background: #ffffff !important;
+          border-right-color: #dedede !important;
+        }
+        .lsb-logo {
+          color: #e50914 !important;
+          border-bottom-color: #dedede !important;
+        }
+        .lsb-logo:hover { color: #b20710 !important; background: #fff1f2 !important; }
+        .lsb-item {
+          color: #c8102e !important;
+          border-color: transparent !important;
+          background: transparent !important;
+        }
+        .lsb-item:hover { color: #b20710 !important; background: #fff1f2 !important; border-color: #f0c5c8 !important; }
+        .lsb-item.active { color: #ffffff !important; background: #e50914 !important; border-color: #e50914 !important; }
+        .lsb-tooltip { background: #191919 !important; color: #ffffff !important; border-color: #191919 !important; padding: 7px 10px; border-radius: 4px; }
+        .lsb-dot,
+        .lsb-dot-red { background: #e50914 !important; color: #ffffff !important; }
+        .lsb-divider { background: #dedede !important; }
+        .lsb-bottom { background: #ffffff !important; border-top-color: #dedede !important; }
+        .lsb-bottom-toggle,
+        .lsb-bottom-item.active { background: #e50914 !important; border-color: #e50914 !important; color: #ffffff !important; }
+        .lsb-bottom-item { color: #c8102e !important; }
+        .lsb-bottom-item:hover { background: #fff1f2 !important; color: #b20710 !important; }
+
+        /* The sidebar uses visible neutral icons outside the login-only blue theme. */
+        .lsb-logo,
+        .lsb-logo:hover { color: #202124 !important; background: transparent !important; }
+        .lsb-item {
+          color: #202124 !important;
+          border-color: transparent !important;
+          background: transparent !important;
+        }
+        .lsb-item :is(svg, path),
+        .lsb-bottom-item :is(svg, path) { fill: none !important; stroke: currentColor !important; }
+        .lsb-item:hover {
+          color: #202124 !important;
+          background: #f1f3f4 !important;
+          border-color: #dadce0 !important;
+        }
+        .lsb-item.active {
+          color: #ffffff !important;
+          background: #202124 !important;
+          border-color: #202124 !important;
+        }
+        .lsb-dot,
+        .lsb-dot-red { background: #202124 !important; color: #ffffff !important; }
+        .lsb-bottom-toggle,
+        .lsb-bottom-item.active { background: #202124 !important; border-color: #202124 !important; color: #ffffff !important; }
+        .lsb-bottom-item { color: #202124 !important; }
+        .lsb-bottom-item:hover { background: #f1f3f4 !important; color: #202124 !important; }
+
+        /* Match the black, white, and emergency-red header system. */
+        html body #root .lsb-root.lsb-root {
+          background: #0b0b0b !important;
+          border-right-color: #252525 !important;
+        }
+        html body #root .lsb-logo,
+        html body #root .lsb-logo:hover {
+          background: transparent !important;
+          border-bottom-color: #252525 !important;
+          color: #e50914 !important;
+        }
+        html body #root .lsb-logo :is(svg, path) { fill: none !important; stroke: #e50914 !important; }
+        html body #root .lsb-item {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #f5f5f5 !important;
+          border-radius: 8px !important;
+        }
+        html body #root .lsb-item :is(svg, path) {
+          fill: none !important;
+          stroke: currentColor !important;
+        }
+        html body #root .lsb-root.lsb-root .lsb-item :is(svg, path) { stroke: #f5f5f5 !important; }
+        html body #root .lsb-root.lsb-root .lsb-item:hover :is(svg, path) { stroke: #e50914 !important; }
+        html body #root .lsb-root.lsb-root .lsb-item.active :is(svg, path) { stroke: #ffffff !important; }
+        html body #root .lsb-item:hover {
+          background: transparent !important;
+          border-color: #e50914 !important;
+          color: #e50914 !important;
+        }
+        html body #root .lsb-item.active {
+          background: #e50914 !important;
+          border-color: #e50914 !important;
+          color: #ffffff !important;
+        }
+        html body #root :is(.lsb-dot, .lsb-dot-red) { background: #e50914 !important; color: #ffffff !important; }
+        html body #root .lsb-divider { background: #303030 !important; }
+        html body #root .lsb-bottom { background: #0b0b0b !important; border-top-color: #252525 !important; }
+        html body #root .lsb-bottom-item { background: transparent !important; color: #f5f5f5 !important; border-radius: 0 !important; }
+        html body #root .lsb-bottom-item:hover { background: transparent !important; color: #e50914 !important; }
+        html body #root .lsb-bottom-item.active,
+        html body #root .lsb-bottom-toggle { background: #e50914 !important; border-color: #e50914 !important; color: #ffffff !important; }
+        html body #root .lsb-bottom-item :is(svg, path) { fill: none !important; stroke: #f5f5f5 !important; }
+        html body #root .lsb-bottom-item:hover :is(svg, path) { stroke: #e50914 !important; }
+        html body #root .lsb-bottom-item.active :is(svg, path) { stroke: #ffffff !important; }
+
+        /* White and soft-gray sidebar: active icons are black with no filled tile. */
+        html body #root .lsb-root.lsb-root {
+          background: #ffffff !important;
+          border-right-color: #dedede !important;
+        }
+        html body #root .lsb-logo,
+        html body #root .lsb-logo:hover {
+          background: transparent !important;
+          border-bottom-color: #dedede !important;
+          color: #111111 !important;
+        }
+        html body #root .lsb-logo :is(svg, path) { fill: none !important; stroke: #111111 !important; }
+        html body #root .lsb-root.lsb-root .lsb-item {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #111111 !important;
+          box-shadow: none !important;
+        }
+        html body #root .lsb-root.lsb-root .lsb-item :is(svg, path) { fill: none !important; stroke: #111111 !important; }
+        html body #root .lsb-root.lsb-root .lsb-item:hover {
+          background: #f0f0f0 !important;
+          border-color: #f0f0f0 !important;
+          color: #111111 !important;
+        }
+        html body #root .lsb-root.lsb-root .lsb-item:hover :is(svg, path),
+        html body #root .lsb-root.lsb-root .lsb-item.active :is(svg, path) { stroke: #111111 !important; }
+        html body #root .lsb-root.lsb-root .lsb-item.active {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #111111 !important;
+          box-shadow: none !important;
+        }
+        html body #root .lsb-bottom { background: #ffffff !important; border-top-color: #dedede !important; }
+        html body #root .lsb-bottom-item,
+        html body #root .lsb-bottom-item.active {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #111111 !important;
+        }
+        html body #root .lsb-bottom-item :is(svg, path),
+        html body #root .lsb-bottom-item.active :is(svg, path) { fill: none !important; stroke: #111111 !important; }
+        html body #root .lsb-bottom-item:hover { background: #f0f0f0 !important; color: #111111 !important; }
+        html body #root .lsb-bottom-item:hover :is(svg, path) { stroke: #111111 !important; }
+        html body #root .lsb-bottom-toggle { background: #f0f0f0 !important; border-color: #dedede !important; color: #111111 !important; }
       `}</style>
 
       {/* Desktop Sidebar */}
@@ -271,7 +416,7 @@ const Leftsidebar = () => {
         </div>
       </div>
 
-      {/* Mobile Bottom Nav — Driver role pe hamesha hide (unka apna nav hai) */}
+      {/* Hide the shared mobile navigation for drivers, who have their own navigation. */}
       <div className={`lsb-bottom ${hideBottomNav ? "hidden" : ""} ${mobileNavExpanded ? "expanded" : ""}`}>
         <div className="lsb-bottom-inner">
           {navItems.map((item) => {

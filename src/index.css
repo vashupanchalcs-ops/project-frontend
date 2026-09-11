@@ -55,20 +55,21 @@
 
 :root {
   --sr-bg: #ffffff;
-  --sr-surface: #000000;
-  --sr-card-bg: #000000;
-  --sr-accent: #ffffff;
-  --sr-accent-hover: #e0e0e0;
-  --sr-border: rgba(255, 255, 255, 0.08);
-  --sr-text: #ffffff;
-  --sr-text-sub: #bbbbbb;
-  --sr-nav-bg: #000000;
-  --sr-nav-border: #111111;
-  --sr-nav-text: #ffffff;
-  --sr-sidebar-bg: #000000;
-  --sr-sidebar-border: #111111;
-  --font-display: font3, "Trebuchet MS", "Segoe UI", sans-serif;
-  --font-body: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+  --sr-surface: #ffffff;
+  --sr-card-bg: #ffffff;
+  --sr-accent: #111111;
+  --sr-accent-hover: #252827;
+  --sr-accent-soft: #f4f4f4;
+  --sr-border: #e3e3e3;
+  --sr-text: #111111;
+  --sr-text-sub: #666666;
+  --sr-nav-bg: #151515;
+  --sr-nav-border: #2a2d2c;
+  --sr-nav-text: #f6f6f6;
+  --sr-sidebar-bg: #151515;
+  --sr-sidebar-border: #2a2d2c;
+  --font-display: "Google Sans", Roboto, "Segoe UI", sans-serif;
+  --font-body: Roboto, "Segoe UI", Tahoma, sans-serif;
 }
 
 #root, body {
@@ -77,76 +78,140 @@
   overflow-x: hidden;
   background-color: #ffffff !important;
   background: #ffffff !important;
-  color: #000000 !important;
+  color: #111111 !important;
   margin: 0;
   padding: 0;
   font-family: var(--font-body);
   position: relative;
 }
 
-/* Remove all background gradients */
+/* Remove all other backgrounds & gradients */
 body::before, body::after {
   display: none !important;
 }
 
-/* ── Squarespace Style Top Navbar & Sidebar (Solid Black) ── */
-:is(.nf-nav-root, .lsb-root, .lsb-bottom) {
-  background: #000000 !important;
-  background-color: #000000 !important;
-  border-color: #111111 !important;
-  color: #ffffff !important;
+/* ── YiCare white/red shell ── */
+.nf-nav-root {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #dadce0 !important;
+  color: #202124 !important;
 }
-:is(.nf-nav-root, .lsb-root, .lsb-bottom) :is(span, div, a, svg, button) {
-  color: #ffffff !important;
-  fill: #ffffff !important;
+.nf-nav-root :is(span, div, a, svg, button) {
+  color: #202124 !important;
+  fill: #202124 !important;
+}
+.nf-nav-root .nf-search-inner {
+  background: #ffffff !important;
+  border: 1px solid #dedede !important;
+  border-radius: 8px !important;
+}
+.nf-nav-root .nf-search-inner input {
+  color: #202124 !important;
+}
+.nf-nav-root .nf-brand {
+  color: #e50914 !important;
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
 }
 
-/* ── Left Sidebar Item Visibility Fix ── */
+/* ── YiCare navigation ── */
+.lsb-root {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important;
+  height: 100vh !important;
+  width: 64px !important;
+  background: #ffffff !important;
+  border-right: 1px solid #dadce0 !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  z-index: 9999 !important;
+  padding: 0 0 16px;
+}
+.lsb-logo {
+  height: 64px; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border-bottom: 1px solid #dadce0 !important;
+  color: #e50914 !important; cursor: pointer; transition: background 0.2s;
+  text-decoration: none; flex-shrink: 0;
+}
+.lsb-logo:hover { background: #fff1f2 !important; }
+.lsb-logo svg { color: #e50914 !important; stroke: #e50914 !important; }
+
 .lsb-item {
-  background: #111111 !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff !important;
+  position: relative; width: 44px; height: 44px;
+  border-radius: 8px !important; display: flex; align-items: center;
+  justify-content: center; color: #5f6368 !important;
+  border: none !important;
+  background: transparent !important;
+  transition: background 0.2s; cursor: pointer; text-decoration: none; flex-shrink: 0;
 }
 .lsb-item svg {
+  color: #5f6368 !important;
+  stroke: #5f6368 !important;
+}
+.lsb-item:hover {
+  background: #fff1f2 !important;
+  color: #b20710 !important;
+}
+.lsb-item:hover svg {
+  color: #202124 !important;
+  stroke: #202124 !important;
+}
+.lsb-item.active {
+  background: #e50914 !important;
+  color: #ffffff !important;
+}
+.lsb-item.active svg {
   color: #ffffff !important;
   stroke: #ffffff !important;
 }
-.lsb-item:hover, .lsb-item.active {
+
+.lsb-bottom {
   background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #ffffff !important;
+  border-top: 1px solid #dadce0 !important;
+  color: #202124 !important;
 }
-.lsb-item:hover svg, .lsb-item.active svg {
-  color: #000000 !important;
-  stroke: #000000 !important;
+.lsb-bottom :is(span, div, a, svg, button) {
+  color: #202124 !important;
+}
+.lsb-bottom-toggle {
+  background: #fff1f2 !important;
+  border: 1px solid #dadce0 !important;
+  color: #202124 !important;
 }
 
-/* ── Premium Pure White Page Background for all Page Roots (Squarespace Style) ── */
+/* ── Google Clean Page Backgrounds ── */
 :is(
   .ad-root, .amb2-root, .h2-root, .rep-root, .req-root, .dd-root, .dv-root,
   .uh-root, .ahd-root, .hr-root, .ci-root, .cd-root, .arm-root, .dh-root,
   .dg-root, .dcr-root, .ip-root, .lt-root, .lm-root, .st-root,
   .ac-root, .rtm-root, .page-root, .hosp-root, .amb-root, .req-root,
-  .hp-root, [class*="-root"]:not(.nf-nav-root):not(.lsb-root)
+  .hp-root, [class*="-root"]
 ) {
   background-image: none !important;
   background: #ffffff !important;
   background-color: #ffffff !important;
-  color: #000000 !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #191919 !important;
+  border-color: #dadce0 !important;
 }
 
-/* ── Page Titles & Text directly on the Pure White background ── */
-:is(.uh-wrap, .page-root, .uh-root, .h2-root, .amb2-root, .rep-root, .req-root, .hp-root) > :not(div[class*="card"]):not(section[class*="card"]) :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b
+/* ── Legible Typography Globally ── */
+:is(h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font, code, svg) {
+  color: #202124 !important;
+}
+
+/* Muted / Secondary Descriptions */
+:is(
+  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg,
+  .h2-desc, .amb2-desc, .uh-stat-lbl, .uh-trending-sub, .uh-trend-card p, .uh-card-desc,
+  .uh-card-meta, .uh-foot-col p, .uh-foot-col li, .uh-foot-link, .uh-how-sub, .req-label
 ) {
-  color: #000000 !important;
-}
-:is(.uh-title, .uh-sub, .uh-trending-title, .uh-trending-sub, .uh-footer-title, .uh-how-title, .uh-how-sub, .rep-title, .rep-sub, .req-title, .req-sub, .ad-title, .hp-hero-h1, .hp-title, .amb2-title, .h2-title) {
-  color: #000000 !important;
+  color: #666666 !important;
 }
 
-/* ── Solid Black Premium Cards (Second Image Style) ── */
+/* ── Google-like White Cards (With Subtle Border) ── */
 :is(
   .amb2-card, .amb-card, .h2-card, .hosp-card, .uh-card, .uh-stat, .uh-trend-card,
   .uh-how-step, .uh-hero, .uh-footer, .ad-cell, .ad-card, .rep-sum-card, .rep-chart-card,
@@ -156,109 +221,259 @@ body::before, body::after {
   .an-card, .an-graph, .dl-card, .req-cell
 ) {
   background-image: none !important;
-  background: #000000 !important;
-  background-color: #000000 !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Ensure all text inside Black Cards is White */
-:is(
-  .amb2-card, .amb-card, .h2-card, .hosp-card, .uh-card, .uh-stat, .uh-trend-card,
-  .uh-how-step, .uh-hero, .uh-footer, .ad-cell, .ad-card, .rep-sum-card, .rep-chart-card,
-  .rep-table-card, .req-card, .hp-card, .hp-case-modal, .ci-card, .cd-card, .arm-card,
-  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card,
-  .rtm-card, .mb-card, .an-card, .an-graph, .dl-card, .req-cell
-) :is(
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th, label, a, strong, small, li, b, font, code, svg
-) {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-}
-
-/* Muted/Description text inside Black Cards is soft gray */
-:is(
-  .amb2-card, .amb-card, .h2-card, .hosp-card, .uh-card, .uh-stat, .uh-trend-card,
-  .uh-how-step, .uh-hero, .uh-footer, .ad-cell, .ad-card, .rep-sum-card, .rep-chart-card,
-  .rep-table-card, .req-card, .hp-card, .hp-case-modal, .ci-card, .cd-card, .arm-card,
-  .dh-card, .dg-card, .dcr-card, .ip-card, .lt-card, .lm-card, .st-card, .ac-card,
-  .rtm-card, .mb-card, .an-card, .an-graph, .dl-card, .req-cell
-) :is(
-  .muted, .sub, .desc, .meta, .req-driver, .rep-header p, .req-header p, .dn-card-msg,
-  .h2-desc, .amb2-desc, .uh-stat-lbl, .uh-trending-sub, .uh-trend-card p, .uh-card-desc,
-  .uh-card-meta, .uh-foot-col p, .uh-foot-col li, .uh-foot-link, .uh-how-sub, .req-label
-) {
-  color: #bbbbbb !important;
-}
-
-/* ── Absolute Ban on Reddish / Red Effects & Yellow Glows ── */
-*[style*="background: #e50914"],
-*[style*="background:#e50914"],
-*[style*="background-color: #e50914"],
-*[style*="background-color:#e50914"] {
   background: #ffffff !important;
-  color: #000000 !important;
-  border-color: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #202124 !important;
+  border: 1px solid #f0c5c8 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
 }
 
-/* ── Buttons: Primary White (Squarespace GET STARTED Style) ── */
+/* ── Primary Actions ── */
 :is(
   .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
   .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn,
   button[type="submit"], .auth-btn
 ) {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #ffffff !important;
+  background: #e50914 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 5px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
   box-shadow: none !important;
-  font-weight: 800 !important;
+}
+:is(
+  .ad-btn.pri, .amb2-btn.main, .h2-btn.main, .hp-btn-primary, .nf-search-btn,
+  .dcr-btn-approve, .uh-btn.primary, .uh-card-cta, .uh-footer-btn, .chat-btn,
+  button[type="submit"], .auth-btn
+):hover {
+  background: #b20710 !important;
 }
 
-/* Secondary Buttons */
+/* ── Secondary actions ── */
 :is(
   .ad-btn.sec, .amb2-btn.sec, .h2-btn.sec, .hp-btn-secondary,
-  .uh-btn.secondary, .auth-google, .dcr-refresh
+  .uh-btn.secondary, .auth-google, .dcr-refresh, .hp-refresh-btn, .hp-cases-count, button[class*="refresh"]
 ) {
-  background: #1c1c1c !important;
-  color: #ffffff !important;
-  border: 1px solid #333333 !important;
+  background: #ffffff !important;
+  color: #c8102e !important;
+  border: 1px solid #e50914 !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
 }
+:is(
+  .ad-btn.sec, .amb2-btn.sec, .h2-btn.sec, .hp-btn-secondary,
+  .uh-btn.secondary, .auth-google, .dcr-refresh, .hp-refresh-btn, .hp-cases-count, button[class*="refresh"]
+):hover {
+  background: #fff1f2 !important;
+  border-color: #b20710 !important;
+}
 
-/* ── Inputs / Textareas / Selects (Squarespace Search Bar Style) ── */
-:is(input, select, textarea, .nf-search-inner) {
-  background-color: #1a1a1a !important;
-  background: #1a1a1a !important;
-  color: #ffffff !important;
-  border: 1px solid #333333 !important;
+/* ── Standard Inputs (Google Style) ── */
+:is(input, select, textarea) {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #191919 !important;
+  border: 1px solid #bdbdbd !important;
+  border-radius: 4px !important;
 }
 
 :is(input, textarea)::placeholder {
-  color: #888888 !important;
+  color: #757575 !important;
 }
 
 :is(input, select, textarea):focus {
   outline: none !important;
-  border-color: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
+  border-color: #e50914 !important;
+  box-shadow: 0 0 0 2px rgba(229,9,20,0.14) !important;
 }
 
-/* ── Universal Zero Hover Animations / Scale / Glow Rule ── */
+/* ── Legacy blue/yellow inline accents use the YiCare red ── */
+*[style*="background: #e50914"],
+*[style*="background:#e50914"],
+*[style*="background-color: #e50914"],
+*[style*="background-color:#e50914"] {
+  background: #e50914 !important;
+  color: #ffffff !important;
+  border-color: #e50914 !important;
+}
+
+/* ── Universal Hover Reset ── */
 * {
   transition: none !important;
-  animation-play-state: running;
 }
-
 *:hover {
   transform: none !important;
   box-shadow: none !important;
-  filter: none !important;
 }
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #000000; }
-::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #ffffff; }
+::-webkit-scrollbar-track { background: #ffffff; }
+::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #e50914; }
+
+/* ── Shared white/red visual language ── */
+:is(h1, h2, h3, h4, h5, h6, .page-title, [class*="-title"], [class*="-heading"]) {
+  color: #c8102e !important;
+}
+
+:is(a, .ad-c-link, .ad-link-btn, .nf-logout-link, .nf-login-link) {
+  color: #c8102e !important;
+}
+
+:is(
+  .ad-hero, .ad-contact-band, .ad-contact-grid, .ad-cell, .ad-insights, .ad-insight,
+  .chat-root, .chat-head, .chat-ctrl, .chat-voice-row, .chat-msg, .chat-stream,
+  .arm-panel, .arm-box, .arm-item, .arm-route-card, .ahd-list, .ahd-main,
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip
+) {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #191919 !important;
+  border-color: #f0c5c8 !important;
+  box-shadow: none !important;
+}
+
+:is([class*="-card"], [class$="card"], [class*="-panel"], [class*="-modal"], .card) {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #191919 !important;
+  border-color: #f0c5c8 !important;
+}
+
+:is(
+  .ad-kicker, .ad-pill, .ad-insight-no, .cd-kicker, .cd-status,
+  .nf-role-badge, .nf-badge, .lsb-dot, .lsb-dot-red, .ac-tab.on
+) {
+  background: #e50914 !important;
+  border-color: #e50914 !important;
+  color: #ffffff !important;
+}
+
+:is(
+  .ad-btn, .auth-mode, .auth-role, .nf-bell, .nf-mobile-search-btn,
+  .nf-call-indicator, .arm-find-btn, .arm-push-btn, .chat-chip,
+  .cd-back, .ahd-map-open
+) {
+  color: #c8102e !important;
+  border-color: #e50914 !important;
+  background: #ffffff !important;
+}
+
+:is(
+  .ad-btn.pri, .auth-mode.on, .auth-role.on, .arm-find-btn, .arm-push-btn,
+  .chat-chip.on, .cd-status, .nf-search-btn
+) {
+  background: #e50914 !important;
+  color: #ffffff !important;
+  border-color: #e50914 !important;
+}
+
+:is(.ad-sub, .ad-c-text, .ad-insights-head p, .ad-insight p, [class*="-desc"], [class*="-sub"], [class*="-meta"]) {
+  color: #666666 !important;
+}
+
+button:not(:disabled):hover,
+:is(a, button):focus-visible {
+  color: #b20710 !important;
+  outline-color: #e50914 !important;
+}
+
+/* Final operational palette: yellow is the action color and green is the live state. */
+html body #root#root#root {
+  --app-yellow: #f59a23;
+  --app-yellow-soft: #fff3df;
+  --app-green: #126f1e;
+  --app-green-soft: #e8f5e9;
+}
+
+html body #root#root#root :is(h1, h2, h3, h4, h5, h6, .page-title, [class*="-title"], [class*="-heading"]) {
+  color: #111 !important;
+}
+
+html body #root#root#root :is(a, .ad-c-link, .ad-link-btn, .nf-logout-link, .nf-login-link) {
+  color: #126f1e !important;
+}
+
+html body #root#root#root :is(
+  .nf-brand, .lsb-logo, .lsb-logo *, .app-brand, .brand-name
+) {
+  color: #126f1e !important;
+  fill: #126f1e !important;
+  stroke: #126f1e !important;
+}
+
+html body #root#root#root :is(
+  [class*="-card"], [class$="card"], [class*="-panel"], .card,
+  .ad-hero, .ad-contact-band, .ad-contact-grid, .ad-cell, .ad-insights,
+  .ad-insight, .chat-root, .chat-head, .chat-ctrl, .chat-voice-row,
+  .chat-msg, .chat-stream, .arm-panel, .arm-box, .arm-item, .arm-route-card
+) {
+  border-color: rgba(18, 111, 30, 0.32) !important;
+}
+
+html body #root#root#root :is(
+  .ad-kicker, .ad-pill, .ad-insight-no, .cd-kicker, .cd-status,
+  .nf-role-badge, .nf-badge, .lsb-dot, .lsb-dot-red, .ac-tab.on,
+  .chat-booking.active, .chat-booking.selected, [aria-selected="true"]
+) {
+  background: #f59a23 !important;
+  border-color: #f59a23 !important;
+  color: #111 !important;
+}
+
+html body #root#root#root :is(
+  .auth-mode.on, .auth-role.on, .ad-btn.pri, .arm-find-btn, .arm-push-btn,
+  .chat-chip.on, .nf-search-btn, .mb-track-btn, .amb2-btn.main,
+  .amb2-btn.main.alt, .ahd-track-btn
+) {
+  background: #f59a23 !important;
+  border-color: #f59a23 !important;
+  color: #111 !important;
+}
+
+html body #root#root#root :is(
+  .auth-mode.on, .auth-role.on, .ad-btn.pri, .arm-find-btn, .arm-push-btn,
+  .chat-chip.on, .nf-search-btn, .mb-track-btn, .amb2-btn.main,
+  .amb2-btn.main.alt, .ahd-track-btn
+):hover:not(:disabled) {
+  background: #126f1e !important;
+  border-color: #126f1e !important;
+  color: #fff !important;
+}
+
+html body #root#root#root :is(.lsb-item.active, .nav-item.active, .sidebar-item.active) {
+  background: #126f1e !important;
+  border-color: #126f1e !important;
+  color: #fff !important;
+}
+
+html body #root#root#root :is(.lsb-item:hover, .nav-item:hover, .sidebar-item:hover) {
+  background: #e8f5e9 !important;
+  border-color: #126f1e !important;
+  color: #126f1e !important;
+}
+
+html body #root#root#root :is(.amb2-card, .hosp-card, .hospital-card, .req-card-item):hover {
+  background: #fff3df !important;
+  border-color: #f59a23 !important;
+}
+
+html body #root#root#root :is(
+  [style*="#e50914"], [style*="#c8102e"], [style*="#b20710"],
+  [style*="#e53935"], [style*="#c92828"], [style*="#d01935"],
+  [style*="#ff1f5a"]
+) {
+  background-color: #f59a23 !important;
+  border-color: #f59a23 !important;
+  color: #111 !important;
+  fill: #f59a23 !important;
+  stroke: #f59a23 !important;
+}
+
+html body #root#root#root button:not(:disabled):hover,
+html body #root#root#root :is(a, button):focus-visible {
+  outline-color: #126f1e !important;
+}

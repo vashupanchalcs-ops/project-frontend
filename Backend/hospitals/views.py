@@ -1,6 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
+from django.conf import settings
 from hospitals.models import Hospital, HospitalStaff
 from bookings.models import Booking
 from ambulance.models import Ambulance
@@ -63,6 +64,16 @@ def staff_to_dict(s):
         "created_at": s.created_at.isoformat(),
         "updated_at": s.updated_at.isoformat(),
     }
+
+
+def resolve_hospital_by_email(email):
+    hospital = Hospital.objects.filter(email__iexact=email, is_active=True).first()
+    if hospital or not getattr(settings, "DEBUG", False):
+        return hospital
+    active_hospitals = list(Hospital.objects.filter(is_active=True)[:2])
+    if len(active_hospitals) == 1:
+        return active_hospitals[0]
+    return None
 
 
 @csrf_exempt
@@ -183,7 +194,7 @@ def hospital_by_email(request):
     email = (request.GET.get("email", "") or "").strip().lower()
     if not email:
         return JsonResponse({"error": "email required"}, status=400)
-    h = Hospital.objects.filter(email__iexact=email, is_active=True).first()
+    h = resolve_hospital_by_email(email)
     if not h:
         return JsonResponse({"error": "Hospital profile not found"}, status=404)
     return JsonResponse(hospital_to_dict(h))

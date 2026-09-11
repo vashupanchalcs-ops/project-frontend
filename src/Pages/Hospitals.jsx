@@ -29,6 +29,24 @@ const images = [
 
 const getImage = (idx) => images[idx % images.length];
 
+const DEFAULT_HOSPITALS = [
+  {
+    id: "default-saharda",
+    name: "Saharda Hospital",
+    address: "Delhi",
+    latitude: "28.6139",
+    longitude: "77.2090",
+    contact_number: "8882128534",
+    hospital_type: "government",
+    total_beds: 40,
+    available_beds: 10,
+    icu_beds: 4,
+    emergency_services: true,
+    status: "active",
+    is_active: true,
+  },
+];
+
 export default function Hospitals() {
   const [hospitals, setHospitals] = useState([]);
   const [assignBooking, setAssignBooking] = useState(null);
@@ -40,9 +58,9 @@ export default function Hospitals() {
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/hospitals/")
-      .then((r) => r.json())
-      .then(setHospitals)
-      .catch(() => {});
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => setHospitals(Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS))
+      .catch(() => setHospitals(DEFAULT_HOSPITALS));
   }, []);
 
   useEffect(() => {
@@ -623,6 +641,154 @@ export default function Hospitals() {
             grid-template-columns: 1fr 1fr 1fr;
           }
         }
+
+        /* Two-up horizontal hospital cards keep bed data scannable at a glance. */
+        html body #root .h2-grid.h2-grid,
+        html body #root .h2-root.admin-cut .h2-grid.h2-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+        html body #root .h2-card.h2-card,
+        html body #root .h2-root.admin-cut .h2-card.h2-card {
+          display: grid;
+          grid-template-columns: minmax(168px, 38%) minmax(0, 1fr);
+          min-height: 232px;
+          background: #ffffff !important;
+          border: 1px solid #ead6d7 !important;
+          border-radius: 18px !important;
+          box-shadow: 0 10px 24px rgba(29, 16, 17, .10) !important;
+        }
+        html body #root .h2-card.h2-card:hover {
+          background: #ffffff !important;
+          border-color: #e50914 !important;
+          box-shadow: 0 14px 30px rgba(229, 9, 20, .18) !important;
+          transform: translateY(-4px);
+        }
+        html body #root .h2-top,
+        html body #root .h2-root.admin-cut .h2-top {
+          height: 100% !important;
+          min-height: 232px;
+          border: 0 !important;
+          border-right: 1px solid #f0d7d9 !important;
+          background: #b20710 !important;
+        }
+        html body #root .h2-top::after { background: linear-gradient(135deg, rgba(229, 9, 20, .58), rgba(0, 0, 0, .12)) !important; }
+        html body #root .h2-top img { filter: saturate(.88) contrast(1.05) !important; }
+        html body #root .h2-status,
+        html body #root .h2-root.admin-cut .h2-status {
+          top: 10px !important;
+          right: 10px !important;
+          bottom: auto !important;
+          background: #ffffff !important;
+          border-color: #ffffff !important;
+          color: #b20710 !important;
+          border-radius: 999px !important;
+        }
+        html body #root .h2-body,
+        html body #root .h2-root.admin-cut .h2-body {
+          display: grid;
+          align-content: start;
+          gap: 7px;
+          padding: 16px 18px !important;
+        }
+        html body #root .h2-pill { background: #fff6f6 !important; border-color: #f2c7ca !important; color: #a70a12 !important; }
+        html body #root .h2-name { margin-top: 1px !important; color: #202124 !important; font-size: 22px !important; font-weight: 700 !important; }
+        html body #root :is(.h2-address, .h2-desc) { color: #5d5d5d !important; }
+        html body #root .h2-desc { min-height: 0 !important; }
+        html body #root .h2-stats-mini { margin-top: 1px; gap: 5px; }
+        html body #root .h2-mini { background: #fff8f8 !important; border-color: #f2dbdc !important; border-radius: 8px !important; }
+        html body #root .h2-mini :is(.v, .l) { color: #202124 !important; }
+        html body #root .h2-actions { margin-top: 2px; }
+        html body #root .h2-btn.main,
+        html body #root .h2-btn.assign {
+          background: #e50914 !important;
+          border-color: #e50914 !important;
+          border-radius: 8px !important;
+          color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        html body #root .h2-btn:not(.main):not(.assign) {
+          background: #fff6f6 !important;
+          border-color: #e50914 !important;
+          border-radius: 8px !important;
+          color: #b20710 !important;
+        }
+        html body #root .h2-btn:hover { background: #b20710 !important; border-color: #b20710 !important; color: #ffffff !important; }
+
+        @media (max-width: 1100px) {
+          html body #root .h2-grid.h2-grid,
+          html body #root .h2-root.admin-cut .h2-grid.h2-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 620px) {
+          html body #root .h2-card.h2-card,
+          html body #root .h2-root.admin-cut .h2-card.h2-card { grid-template-columns: 1fr; }
+          html body #root .h2-top,
+          html body #root .h2-root.admin-cut .h2-top {
+            min-height: 154px;
+            height: 154px !important;
+            border-right: 0 !important;
+            border-bottom: 1px solid #f0d7d9 !important;
+          }
+        }
+
+        /* Keep the hospital view inside the white and #f0f0f0 application system. */
+        html body #root .h2-card.h2-card,
+        html body #root .h2-root.admin-cut .h2-card.h2-card {
+          background: #ffffff !important;
+          border-color: #dedede !important;
+          box-shadow: none !important;
+        }
+        html body #root .h2-card.h2-card:hover { background: #ffffff !important; border-color: #bdbdbd !important; box-shadow: none !important; }
+        html body #root :is(.h2-top, .h2-root.admin-cut .h2-top) { background: #f0f0f0 !important; border-color: #dedede !important; }
+        html body #root .h2-top::after { background: linear-gradient(135deg, rgba(0, 0, 0, .10), transparent 68%) !important; }
+        html body #root :is(.h2-status, .h2-root.admin-cut .h2-status) { background: #ffffff !important; border-color: #dedede !important; color: #111111 !important; }
+        html body #root :is(.h2-pill, .h2-mini) { background: #f0f0f0 !important; border-color: #dedede !important; color: #111111 !important; }
+        html body #root .h2-mini :is(.v, .l) { color: #111111 !important; }
+        html body #root :is(.h2-btn, .h2-btn.main, .h2-btn.assign) {
+          background: #111111 !important;
+          border-color: #111111 !important;
+          color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        html body #root :is(.h2-btn, .h2-btn.main, .h2-btn.assign):hover { background: #2d2d2d !important; border-color: #2d2d2d !important; color: #ffffff !important; }
+
+        /* Hospital cards use the same stable green and yellow treatment as fleet cards. */
+        html body #root .h2-card.h2-card,
+        html body #root .h2-card.h2-card:hover { background: #ffffff !important; border-color: rgba(18, 111, 30, .22) !important; box-shadow: none !important; transform: none !important; }
+        html body #root .h2-card.h2-card:hover :is(.h2-mini, .h2-btn) { border-color: #f59a23 !important; }
+        html body #root :is(.h2-pill, .h2-mini) { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        html body #root .h2-mini :is(.v, .l) { color: #111111 !important; }
+        html body #root :is(.h2-btn, .h2-btn.main, .h2-btn.assign),
+        html body #root :is(.h2-btn, .h2-btn.main, .h2-btn.assign):hover { background: #126f1e !important; border-color: #126f1e !important; color: #ffffff !important; box-shadow: none !important; transform: none !important; }
+        html body #root .h2-btn.icon,
+        html body #root .h2-btn.icon:hover { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        html body #root .h2-mini.tone-red,
+        html body #root .h2-mini.tone-red:hover { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
+        html body #root .h2-mini.tone-red :is(.v, .l) { color: #111111 !important; }
+        /* Hospital cards keep green borders, yellow actions, and even spacing. */
+        html body #root#root .h2-card.h2-card,
+        html body #root#root .h2-card.h2-card:hover {
+          background: #ffffff !important;
+          border-color: #126f1e !important;
+          box-shadow: none !important;
+          transform: none !important;
+        }
+        html body #root#root .h2-card.h2-card:hover { background: #f4fbf4 !important; }
+        html body #root#root .h2-top::after { background: linear-gradient(180deg, rgba(245, 154, 35, .48), rgba(245, 154, 35, .08)) !important; }
+        html body #root#root .h2-top img { filter: sepia(.24) saturate(.92) !important; }
+        html body #root#root .h2-body { padding: 18px !important; gap: 10px !important; }
+        html body #root#root .h2-desc { margin: 0 !important; line-height: 1.5 !important; }
+        html body #root#root .h2-stats-mini { gap: 8px !important; }
+        html body #root#root :is(.h2-btn, .h2-btn.main, .h2-btn.assign),
+        html body #root#root :is(.h2-btn, .h2-btn.main, .h2-btn.assign):hover:not(:disabled) {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+          box-shadow: none !important;
+          transform: none !important;
+        }
+        html body #root#root .h2-btn:not(.main):not(.assign),
+        html body #root#root .h2-btn:not(.main):not(.assign):hover { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
       `}</style>
 
       <div className={`h2-root ${isAdmin ? "admin-cut" : ""}`} ref={rootRef}>
@@ -682,7 +848,7 @@ export default function Hospitals() {
               const pickupDistanceKm = getDistanceToPickup(h);
 
               return (
-                <motion.article className="h2-card h2-anim" key={h.id || i} whileHover={{ y: -4 }}>
+                <motion.article className="h2-card h2-anim" key={h.id || i}>
                   <div className="h2-top">
                     <img src={getImage(i)} alt={h.name || "Hospital"} />
                     <div className="h2-status" style={{ color: sc.color, borderColor: sc.border, background: sc.bg }}>{sc.label}</div>

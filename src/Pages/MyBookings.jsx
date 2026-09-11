@@ -18,7 +18,7 @@ const Icons = {
 const getStatusConfig = (status) => {
   switch (status?.toLowerCase()) {
     case "confirmed": return { color:"#00d4aa", bg:"rgba(0,212,170,0.12)", border:"rgba(0,212,170,0.3)",    dot:"#00d4aa", pulse:true,  label:"Confirmed" };
-    case "pending":   return { color:"#f7c948", bg:"rgba(247,201,72,0.12)", border:"rgba(247,201,72,0.3)",  dot:"#f7c948", pulse:false, label:"Pending"   };
+    case "pending":   return { color:"#111111", bg:"#fff3df", border:"#f59a23", dot:"#f59a23", pulse:false, label:"Pending" };
     case "completed": return { color:"rgba(17,17,17,0.58)", bg:"rgba(20,20,20,0.06)", border:"rgba(20,20,20,0.14)", dot:"rgba(17,17,17,0.45)", pulse:false, label:"Completed" };
     case "cancelled":
     case "rejected":  return { color:"#ffffff", bg:"rgba(255, 255, 255, 0.15)", border:"rgba(255, 255, 255, 0.15)", dot:"#ffffff", pulse:false, label:status.charAt(0).toUpperCase()+status.slice(1) };
@@ -150,7 +150,7 @@ export function MyBookings() {
         .mb-banner:hover { background:rgba(0,212,170,0.13); }
 
         /* Cards — 2 col desktop, 1 col below 1024px */
-        .mb-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:20px; width:100%; }
+        .mb-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin:28px auto 0; width:100%; max-width:1240px; }
 
         .mb-card {
           background:#ffffff;
@@ -238,6 +238,29 @@ export function MyBookings() {
           .mb-stats { grid-template-columns:repeat(2,1fr); gap:8px; }
           .mb-filter-btn { padding:5px 12px; font-size:11px; }
         }
+
+        /* Booking cards use stable spacing and a yellow pending state. */
+        .mb-filters { gap: 10px; }
+        .mb-filter-btn,
+        .mb-filter-btn:hover { background: #ffffff; border-color: #f59a23; color: #111111; box-shadow: none; transform: none; }
+        .mb-filter-btn.active { background: #f59a23; border-color: #f59a23; color: #111111; box-shadow: none; }
+        .mb-card { background: #f4fbf4; border-color: #126f1e; box-shadow: none; transform: none; }
+        .mb-card:hover { background: #fff3df; border-color: #f59a23; box-shadow: none; transform: none; }
+        .mb-card.pending-card { border-color: #126f1e; }
+        .mb-card-header, .mb-card.pending-card .mb-card-header { background: #f4fbf4; }
+        .mb-card:hover .mb-card-header { background: #fff3df; }
+        .mb-card-body { padding: 20px; }
+        .mb-detail-grid { gap: 12px; }
+        .mb-detail-item { min-width: 0; padding: 10px; border: 1px solid #f59a23; border-radius: 10px; background: #ffffff; }
+        .mb-detail-label { margin-bottom: 5px; color: #666666; }
+        .mb-detail-value { line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
+        .mb-track-btn,
+        .mb-track-btn:hover { background: #f59a23; color: #111111; box-shadow: none; transform: none; }
+        html body #root#root .mb-grid { max-width: 1240px !important; margin-left: auto !important; margin-right: auto !important; }
+        html body #root#root .mb-card.completed-card { background: #e8f5e9 !important; border-color: #126f1e !important; border-radius: 20px !important; }
+        html body #root#root .mb-card.completed-card:hover { background: #fff3df !important; border-color: #f59a23 !important; }
+        html body #root#root .mb-track-btn,
+        html body #root#root .mb-track-btn:hover { background: #f59a23 !important; border-color: #f59a23 !important; color: #111111 !important; }
       `}</style>
 
       <div className="page-root" ref={rootRef}>
@@ -278,7 +301,7 @@ export function MyBookings() {
                 <span style={{ width:8, height:8, borderRadius:"50%", background:"#00d4aa", display:"inline-block", animation:"mb-pulse 1.6s infinite", boxShadow:"0 0 8px rgba(0,212,170,0.6)" }}/>
                 <div>
                   <div style={{ fontSize:13, fontWeight:800, color:"#00d4aa" }}>Booking Confirmed — #{confirmedBooking.id}</div>
-                  <div style={{ fontSize:11, color:"rgba(17,17,17,0.58)", marginTop:3 }}>Driver aapki taraf aa raha hai — Live tracking ke liye click karo</div>
+                  <div style={{ fontSize:11, color:"rgba(17,17,17,0.58)", marginTop:3 }}>Your driver is on the way. Select this card for live tracking.</div>
                 </div>
               </div>
               <div style={{ fontSize:12, fontWeight:700, color:"#00d4aa", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}>🗺 Track Now →</div>
@@ -298,7 +321,7 @@ export function MyBookings() {
             <div className="mb-empty">
               <div style={{ fontSize:48, marginBottom:12, opacity:0.25 }}>📋</div>
               <h3 style={{ fontSize:17, fontWeight:700, color:"rgba(17,17,17,0.7)", marginBottom:6 }}>
-                {filter==="all" ? "No bookings available" : `Koi ${filter} booking nahi`}
+                {filter==="all" ? "No bookings available" : `No ${filter} bookings available`}
               </h3>
               <p style={{ fontSize:12, color:"rgba(17,17,17,0.52)" }}>
                 {filter==="all" ? "Book via the Ambulances page." : "Adjust filters to view more results."}
@@ -312,8 +335,10 @@ export function MyBookings() {
               {filtered.map(b=>{
                 const sc          = getStatusConfig(b.status);
                 const isConfirmed = b.status==="confirmed";
+                const isPending = b.status==="pending";
+                const isCompleted = b.status==="completed";
                 return (
-                  <div key={b.id} className={`mb-card ${isConfirmed?"confirmed-card":""}`}>
+                  <div key={b.id} className={`mb-card ${isConfirmed?"confirmed-card":""} ${isPending?"pending-card":""} ${isCompleted?"completed-card":""}`}>
                     <div className="mb-card-header">
                       <div style={{ display:"flex", alignItems:"center", gap:9 }}>
                         {isConfirmed && <span style={{ width:7, height:7, borderRadius:"50%", background:"#00d4aa", display:"inline-block", animation:"mb-pulse 1.6s infinite", boxShadow:"0 0 7px rgba(0,212,170,0.8)" }}/>}
@@ -361,7 +386,7 @@ export function MyBookings() {
                     {isConfirmed && (
                       <div className="mb-card-footer">
                         <button className="mb-track-btn" onClick={()=>goToTracking(b)}>
-                          <Icons.Play/> Live Track Karo <span className="live-badge">LIVE</span>
+                          <Icons.Play/> Live Tracking <span className="live-badge">LIVE</span>
                         </button>
                       </div>
                     )}
@@ -385,7 +410,7 @@ export function MyBookings() {
 }
 
 const DetailItem = ({ icon, iconColor, label, value }) => (
-  <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+  <div className="mb-detail-item" style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
     <div style={{ marginTop:1, color:iconColor, flexShrink:0 }}>{icon}</div>
     <div style={{ flex:1, overflow:"hidden" }}>
       <div className="mb-detail-label">{label}</div>

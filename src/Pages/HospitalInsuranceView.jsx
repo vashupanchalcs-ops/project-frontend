@@ -33,7 +33,7 @@ export default function HospitalInsuranceView() {
   const review = async (status) => {
     if (!booking) return;
     if (!hasInsurancePayload) {
-      setError("Insurance form submit nahi hua hai. Ambulance team se form bhijwaye.");
+      setError("The insurance form has not been submitted. Ask the ambulance team to send it.");
       return;
     }
     setLoading(true);
@@ -94,7 +94,7 @@ export default function HospitalInsuranceView() {
   }, [booking]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f6f8ef", padding: "84px 16px 30px 80px", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+    <div className="night-page" style={{ minHeight: "100vh", background: "#f6f8ef", padding: "84px 16px 30px 80px", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <div style={{ border: "1px solid rgba(17,17,17,0.14)", borderRadius: 16, background: "#fff", padding: 16, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div>
@@ -168,7 +168,7 @@ export default function HospitalInsuranceView() {
                   ? `Submitted: ${new Date(booking.insurance_submitted_at).toLocaleString("en-IN")}`
                   : hasInsurancePayload
                     ? "Insurance details received (timestamp missing on old record)."
-                    : "Insurance form abhi submit nahi hua."}
+                    : "The insurance form has not been submitted yet."}
               </span>
             </div>
           </div>

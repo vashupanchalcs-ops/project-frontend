@@ -139,7 +139,7 @@ export default function DriverInsuranceForm() {
   const sendInsurance = async (booking) => {
     const draft = drafts[booking.id] || emptyDraft();
     if (!draft.full_name || !draft.insurance_provider || !draft.policy_member_id) {
-      setMsg("Full Name, Insurance Provider, aur Policy/Member ID required hai.");
+      setMsg("Full Name, Insurance Provider, and Policy/Member ID are required.");
       return;
     }
     setSavingId(booking.id);
@@ -157,7 +157,7 @@ export default function DriverInsuranceForm() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Insurance form send failed");
-      setMsg(`Booking #${booking.id} insurance details hospital ko send ho gayi.`);
+      setMsg(`Insurance details for Booking #${booking.id} were sent to the hospital.`);
       await loadBookings();
     } catch (e) {
       setMsg(e.message || "Insurance details send failed.");
@@ -167,7 +167,7 @@ export default function DriverInsuranceForm() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f6f8ef", padding: isMobile ? "84px 16px 90px 16px" : "84px 18px 30px 78px", fontFamily: "'Helvetica Neue', Arial, sans-serif", overflowX: "hidden" }}>
+    <div className="night-page" style={{ minHeight: "100vh", background: "#f6f8ef", padding: isMobile ? "84px 16px 90px 16px" : "84px 18px 30px 78px", fontFamily: "'Helvetica Neue', Arial, sans-serif", overflowX: "hidden" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <section style={{ border: "1px solid rgba(17,17,17,0.14)", borderRadius: 18, padding: 18, background: "#fff" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
@@ -175,7 +175,7 @@ export default function DriverInsuranceForm() {
               <div style={{ fontSize: 12, letterSpacing: 1, fontWeight: 800, color: "rgba(17,17,17,0.62)" }}>DRIVER INSURANCE DESK</div>
               <h1 style={{ margin: "6px 0 0", fontSize: 42, lineHeight: 1 }}>Medical Insurance Form</h1>
               <div style={{ marginTop: 8, color: "rgba(17,17,17,0.68)", fontSize: 14 }}>
-                Booking card se insurance details fill karo aur hospital verification ke liye send karo.
+                Complete the insurance details from the booking card and send them for hospital verification.
               </div>
             </div>
             <button

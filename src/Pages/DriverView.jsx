@@ -4,7 +4,6 @@ import gsap from "gsap";
 import useLeaflet, {
   DARK_TILE, DELHI, makePinIcon,
   geocodeInIndia, fetchRoadRoute,
-  fetchNearestRoadPoint,
   SATELLITE_TILE, isIndiaCoord,
 } from "../hooks/useLeaflet";
 
@@ -74,8 +73,8 @@ export default function DriverView() {
   const mapObj           = useRef(null);
   const driverMarker     = useRef(null);
   // FIX: polyline refs (removed routingRef control — was causing route not showing)
-  const routeLine1Ref    = useRef(null); // Driver → Pickup  (red polyline)
-  const routeLine2Ref    = useRef(null); // Pickup → Hospital (purple polyline)
+  const routeLine1Ref    = useRef(null); // Driver → Pickup (green polyline)
+  const routeLine2Ref    = useRef(null); // Pickup → Hospital (yellow polyline)
   const pickupMarkerRef  = useRef(null);
   const destMarkerRef    = useRef(null);
   const tileLayerRef     = useRef(null);
@@ -151,7 +150,7 @@ export default function DriverView() {
     if (pickupMarkerRef.current) { try { map.removeLayer(pickupMarkerRef.current); } catch {} pickupMarkerRef.current = null; }
     if (destMarkerRef.current)   { try { map.removeLayer(destMarkerRef.current);   } catch {} destMarkerRef.current   = null; }
 
-    addLog("🗺 Route calculate ho raha hai…", "info");
+    addLog("🗺 Calculating route…", "info");
 
     try {
       // Resolve pickup coords
@@ -173,19 +172,6 @@ export default function DriverView() {
       // Driver origin
       const origin = latestLoc.current || DELHI;
 
-      // ── Draw preview straight lines immediately ──────────────────────────
-      routeLine1Ref.current = L.polyline(
-        [[origin.lat, origin.lng], [pickupLL.lat, pickupLL.lng]],
-        { color: "#ffffff", weight: 5, opacity: 0.45, dashArray: "10,10" }
-      ).addTo(map);
-
-      if (destLL) {
-        routeLine2Ref.current = L.polyline(
-          [[pickupLL.lat, pickupLL.lng], [destLL.lat, destLL.lng]],
-          { color: "#7b61ff", weight: 5, opacity: 0.45, dashArray: "10,10" }
-        ).addTo(map);
-      }
-
       // Markers
       pickupMarkerRef.current = L.marker([pickupLL.lat, pickupLL.lng], {
         icon: makePinIcon("#f7c948", "📍"), zIndexOffset: 3000,
@@ -205,39 +191,22 @@ export default function DriverView() {
       ]);
       map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
 
-      // ── Fetch real OSRM road routes async ───────────────────────────────
-      const [snapOrigin, snapPickup, snapDest] = await Promise.all([
-        fetchNearestRoadPoint(origin),
-        fetchNearestRoadPoint(pickupLL),
-        destLL ? fetchNearestRoadPoint(destLL) : Promise.resolve(null),
-      ]);
+      // The confirmed booking pin is the route origin for the hospital leg.
+      // Render only Directions API paths; never pre-draw a straight-line guess.
+      const pts1 = await fetchRoadRoute([origin, pickupLL], { retries: 2 });
+      if (pts1?.length < 2) throw new Error("Road route to pickup is unavailable. Please retry.");
+      routeLine1Ref.current = L.polyline(pts1, {
+        color: "#126f1e", weight: 6, opacity: 0.95,
+      }).addTo(map);
 
-      // Route 1: Driver → Pickup (RED solid)
-      const pts1 = await fetchRoadRoute(
-        [snapOrigin || origin, snapPickup || pickupLL],
-        { allowStraightFallback: true }
-      );
-      if (routeLine1Ref.current && pts1?.length > 1) {
-        routeLine1Ref.current.setLatLngs(pts1);
-        routeLine1Ref.current.setStyle({ color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null });
-        routeLine1Ref.current.bringToFront();
-      }
-
-      // Route 2: Pickup → Hospital (PURPLE solid)
-      // fetchRoadRoute skips OSRM for hospital campuses (returns straight line)
       if (destLL) {
-        const pts2 = await fetchRoadRoute(
-          [snapPickup || pickupLL, snapDest || destLL],
-          { allowStraightFallback: true }
-        );
-        if (routeLine2Ref.current && pts2?.length >= 2) {
-          routeLine2Ref.current.setLatLngs(pts2);
-          const isSolid = pts2.length > 2;
-          routeLine2Ref.current.setStyle({
-            color: "#7b61ff", weight: 6, opacity: isSolid ? 0.95 : 0.7,
-            dashArray: isSolid ? null : "10,8",
-          });
-          routeLine2Ref.current.bringToFront();
+        const pts2 = await fetchRoadRoute([pickupLL, destLL], { retries: 2 });
+        if (pts2?.length >= 2) {
+          routeLine2Ref.current = L.polyline(pts2, {
+            color: "#f59a23", weight: 6, opacity: 0.95,
+          }).addTo(map);
+        } else {
+          addLog("Hospital route unavailable. Retry after the routing service recovers.", "error");
         }
       }
 
@@ -260,7 +229,7 @@ export default function DriverView() {
         }
         return total;
       };
-      const km1 = pts1?.length > 2 ? pathKmFn(pts1) : haversineKm(origin, pickupLL) * 1.22;
+      const km1 = pathKmFn(pts1);
       addLog(`✅ Route ready — Driver→Pickup: ${km1.toFixed(1)} km`, "success");
 
       lastRoute1OriginRef.current = { ...origin };
@@ -292,18 +261,10 @@ export default function DriverView() {
     const pickupPt = { lat: pickupLatLng.lat, lng: pickupLatLng.lng };
 
     try {
-      const [snapOrigin, snapPickup] = await Promise.all([
-        fetchNearestRoadPoint(newLoc),
-        fetchNearestRoadPoint(pickupPt),
-      ]);
-      const pts = await fetchRoadRoute(
-        [snapOrigin || newLoc, snapPickup || pickupPt],
-        { allowStraightFallback: true }
-      );
-      // Only update if we got a real road route (>2 points = not straight line)
-      if (routeLine1Ref.current && pts?.length > 2) {
+      const pts = await fetchRoadRoute([newLoc, pickupPt], { retries: 2 });
+      if (routeLine1Ref.current && pts?.length > 1) {
         routeLine1Ref.current.setLatLngs(pts);
-        routeLine1Ref.current.setStyle({ color: "#ffffff", weight: 6, opacity: 0.95, dashArray: null });
+        routeLine1Ref.current.setStyle({ color: "#126f1e", weight: 6, opacity: 0.95, dashArray: null });
         routeLine1Ref.current.bringToFront();
       }
     } catch {} finally {
@@ -314,7 +275,7 @@ export default function DriverView() {
 
   // ── Start Tracking ────────────────────────────────────────────────────────
   const startTracking = () => {
-    if (!email.trim() || !ambId) { addLog("Email aur Ambulance ID dono chahiye.", "error"); return; }
+    if (!email.trim() || !ambId) { addLog("Email and ambulance ID are required.", "error"); return; }
     if (!navigator.geolocation)  { addLog("GPS unsupported.", "error"); return; }
 
     localStorage.setItem("dr_email",  email);
@@ -322,7 +283,7 @@ export default function DriverView() {
     setIsOnline(true);
     setPanelOpen(false);
     setMobileTab("map");
-    addLog("📍 GPS started. Route update ka intezaar hai…", "success");
+    addLog("📍 GPS started. Waiting for route updates…", "success");
 
     requestNotifPermission().then(ok => {
       setNotifAllowed(ok);
@@ -337,12 +298,12 @@ export default function DriverView() {
         setSpeed(Math.round((pos.coords.speed || 0) * 3.6));
 
         if (mapObj.current && window.L) {
-          // panTo hata diya — route draw ke waqt map jump nahi karega
+          // Avoid panning here so the map does not jump while routes redraw.
           if (driverMarker.current) {
             driverMarker.current.setLatLng([loc.lat, loc.lng]);
             driverMarker.current.setZIndexOffset(9000);
           } else {
-            // SVG ambulance badge — pinIcon rotation se icon nahi dikhta tha
+            // SVG ambulance badge avoids the rotated pin icon rendering issue.
             const ambIcon = window.L.divIcon({
               className: "",
               html: `<div style="width:42px;height:42px;border-radius:50%;background:#ffffff;border:3px solid #fff;box-shadow:0 0 0 6px rgba(255, 255, 255, 0.15),0 8px 18px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
@@ -359,7 +320,7 @@ export default function DriverView() {
             driverMarker.current = window.L
               .marker([loc.lat, loc.lng], { icon: ambIcon, zIndexOffset: 9000 })
               .addTo(mapObj.current)
-              .bindPopup(`<div style="font-weight:700;padding:6px 10px">🚑 Aap yahan hain</div>`);
+              .bindPopup(`<div style="font-weight:700;padding:6px 10px">🚑 Your current location</div>`);
           }
           // Update route 1 as driver moves
           updateRoute1(loc);
@@ -408,8 +369,8 @@ export default function DriverView() {
           setRoute(prev => {
             const isNew = !prev || prev.id !== nr.id || prev.status !== nr.status;
             if (isNew && nr.status === "pending") {
-              addLog("🗺 Admin ne naya route assign kiya!", "success");
-              sendPushNotif("🚨 Naya Route Mila!", `Pickup: ${nr.pickup_location}`, `route-${nr.id}`);
+              addLog("🗺 A new route was assigned by the admin.", "success");
+              sendPushNotif("🚨 New Route Assigned", `Pickup: ${nr.pickup_location}`, `route-${nr.id}`);
               if (leafletReady && nr.pickup_location) drawLeafletRoute(nr);
             }
             return nr;
@@ -536,7 +497,7 @@ export default function DriverView() {
         <motion.div className={`dv-anim ${route.status === "pending" ? "route-pulse" : ""}`}
           style={{ ...card, border: `2px solid ${routeBorder}`, background: "#0f0f0f" }}>
           <div style={{ ...cardTitle, color: routeBorder, fontSize: 13 }}>
-            {route.status === "pending"  ? "🚨 Route Assign Hua!" :
+            {route.status === "pending"  ? "🚨 New Route Assigned" :
              route.status === "accepted" ? "🧭 Route Active"       :
                                            "🏁 Trip Complete"}
           </div>
@@ -645,7 +606,7 @@ export default function DriverView() {
             <span style={{ fontSize: 20, flexShrink: 0 }}>🚑</span>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>Driver Dashboard</div>
-              <div style={{ fontSize: 10, color: "var(--sr-text-muted, rgba(255,246,242,0.55))" }}>YiCare GPS · Live Tracking</div>
+              <div style={{ fontSize: 10, color: "var(--sr-text-muted, rgba(255,246,242,0.55))" }}>Aarogya GPS · Live Tracking</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>

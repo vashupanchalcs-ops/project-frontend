@@ -317,7 +317,7 @@ export default function BookingChatPanel({
     } catch {}
     const prefix =
       latest.sender_role === "system"
-        ? "YiCare update."
+        ? "Aarogya update."
         : latest.sender_role === "admin"
         ? "Admin message."
         : latest.sender_role === "driver"
@@ -668,6 +668,40 @@ export default function BookingChatPanel({
           font-weight:700;
           color:${isSpeaking ? "#7d8f00" : "#667"};
         }
+
+        /* Keep every chat surface readable in the shared light workspace. */
+        .chat-panel,
+        .chat-head,
+        .chat-list,
+        .chat-ctrl,
+        .chat-voice-row {
+          background: #ffffff !important;
+          color: #202124 !important;
+          border-color: #e0e3e3 !important;
+        }
+        .chat-panel { border-radius: 12px; }
+        .chat-head h3,
+        .chat-pres,
+        .chat-head-id,
+        .chat-meta,
+        .voice-mini { color: #5f6368 !important; }
+        .chat-head h3 { color: #202124 !important; font-size: 15px; font-weight: 600; }
+        .chat-msg.other { background: #ffffff !important; border-color: #e0e3e3 !important; color: #202124 !important; }
+        .chat-msg.mine { background: #f1f3f4 !important; border-color: #e0e3e3 !important; color: #202124 !important; }
+        .chat-chip,
+        .chat-ctrl textarea {
+          background: #ffffff !important;
+          color: #202124 !important;
+          border-color: #c7cacf !important;
+        }
+        .chat-chip.on,
+        .chat-btn {
+          background: #202124 !important;
+          border-color: #202124 !important;
+          color: #ffffff !important;
+        }
+        .chat-chip:hover,
+        .chat-btn:hover { background: #000000 !important; color: #ffffff !important; }
       `}</style>
       <div className="chat-head">
         <h3>{title}</h3>

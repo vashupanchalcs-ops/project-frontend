@@ -412,7 +412,7 @@ def get_route_by_booking(request, booking_id):
     if not hospital:
         hospital = Hospital.objects.filter(is_active=True, status="active").first()
     if not hospital:
-        return JsonResponse({"error": "Koi active hospital nahi mila"}, status=404)
+        return JsonResponse({"error": "No active hospital found"}, status=404)
 
     amb_latlon = None
     if amb.latitude and amb.longitude:
@@ -455,7 +455,7 @@ def get_route_by_booking(request, booking_id):
         pickup_latlon = f"{pickup_from_booking['lat']},{pickup_from_booking['lng']}"
 
     if not pickup_latlon:
-        return JsonResponse({"error": "Pickup geocode nahi hua"}, status=400)
+        return JsonResponse({"error": "Pickup location could not be geocoded"}, status=400)
 
     try:
         hosp_lat = float(hospital.latitude)
@@ -471,7 +471,7 @@ def get_route_by_booking(request, booking_id):
             force_api=True,
         )
         if not hosp_geo:
-            return JsonResponse({"error": "Hospital location resolve nahi hua"}, status=400)
+            return JsonResponse({"error": "Hospital location could not be resolved"}, status=400)
         hosp_latlon = f"{hosp_geo['lat']},{hosp_geo['lng']}"
 
     origin, waypoints, destination = (amb_latlon, [pickup_latlon], hosp_latlon) if amb_latlon else (pickup_latlon, None, hosp_latlon)

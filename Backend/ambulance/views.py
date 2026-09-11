@@ -119,7 +119,7 @@ def verify_otp(request):
             cache.delete(f"otp_{email}")
             return JsonResponse({"status": "success", "email": email})
         else:
-            return JsonResponse({"status": "invalid", "message": "Galat OTP hai"})
+            return JsonResponse({"status": "invalid", "message": "OTP is invalid or expired"})
     return JsonResponse({"status": "error"})
 
 
@@ -137,7 +137,7 @@ def send_phone_otp(request):
     phone = data.get("phone", "").strip().replace(" ", "").replace("+91", "").replace("+", "")
 
     if not phone or len(phone) != 10:
-        return JsonResponse({"status": "error", "message": "Valid 10-digit phone number daalo"}, status=400)
+        return JsonResponse({"status": "error", "message": "Enter a valid 10-digit phone number"}, status=400)
 
     otp = str(random.randint(100000, 999999))
     cache.set(f"phone_otp_{phone}", otp, timeout=300)
@@ -147,7 +147,7 @@ def send_phone_otp(request):
     print(f"[PHONE OTP] Code   : {otp}", flush=True)
     print(f"{'='*40}\n", flush=True)
 
-    return JsonResponse({"status": "otp_sent", "message": f"OTP +91{phone} pe bheja gaya"})
+    return JsonResponse({"status": "otp_sent", "message": f"OTP sent to +91{phone}"})
 
 
 @csrf_exempt
@@ -169,7 +169,7 @@ def verify_phone_otp(request):
         cache.delete(f"phone_otp_{phone}")
         return JsonResponse({"status": "success", "phone": phone})
     else:
-        return JsonResponse({"status": "invalid", "message": "Galat OTP hai ya expire ho gaya"})
+        return JsonResponse({"status": "invalid", "message": "OTP is invalid or expired"})
 
 
 def logout_view(request):

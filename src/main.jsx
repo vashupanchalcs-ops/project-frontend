@@ -10,10 +10,12 @@ import { loadGoogleMapsScript } from "./utils/googleMaps";
 loadGoogleMapsScript().catch(() => {});
 
 // Keep legacy API calls working in production while individual screens are
-// migrated away from their old localhost URLs. Vercel injects the backend
-// origin through VITE_API_BASE_URL; local development keeps using Django on
-// port 8000.
-const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
+// migrated away from their old localhost URLs. Local Vite must stay connected
+// to local Django so development OTPs print in the Django terminal.
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const nativeFetch = window.fetch.bind(window);
 window.fetch = (input, init) => {
   if (typeof input === "string") {

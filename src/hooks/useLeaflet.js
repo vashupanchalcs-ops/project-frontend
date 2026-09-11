@@ -2,7 +2,7 @@
 //
 // FIX: LOCAL_HINTS mein Shiv Vihar Delhi ka correct coords (28.7419, 77.3158)
 // Images se verify kiya gaya — Shiv Vihar, Delhi (Karawal Nagar ke paas)
-// Ghaziabad wala wrong coord tha (28.72604, 77.28324)
+// The previous Ghaziabad coordinate was incorrect (28.72604, 77.28324).
 
 import { useState, useEffect } from "react";
 
@@ -164,7 +164,6 @@ const sanitizeRoutePath = (path, points) => {
   // 3. Loop/backtrack check — scan for any point that goes far from direct path
   if (cleaned.length > 6 && crowKm > 0.5) {
     // Max allowed detour = 60% of crow-flies distance from the start-end line
-    const maxDetour = crowKm * 0.6;
     for (let i = 1; i < cleaned.length - 1; i++) {
       const pt = { lat: Number(cleaned[i][0]), lng: Number(cleaned[i][1]) };
       // Simple check: point should be making progress toward end, not looping back
@@ -191,6 +190,9 @@ const fetchRouteFromEndpoint = async (base, coordStr) => {
     const res = await fetch(`${base}/${coordStr}?overview=full&geometries=geojson`, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data        = await res.json();
+    // OSRM receives longitude,latitude and returns GeoJSON longitude,latitude.
+    // Keeping this provider-native format avoids custom encoded-polyline decoding.
+    if (import.meta.env.DEV) console.info("[routing] OSRM response", { base, data });
     const routeCoords = data?.routes?.[0]?.geometry?.coordinates;
     if (!Array.isArray(routeCoords) || routeCoords.length < 2) return null;
     return routeCoords.map((c) => [c[1], c[0]]); // GeoJSON [lng,lat] → Leaflet [lat,lng]
@@ -218,7 +220,7 @@ export const fetchNearestRoadPoint = async (point) => {
       const lat = Number(loc[1]);
       const lng = Number(loc[0]);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      // FIX: tight snap — >80m se zyada snap hua to original use karo
+      // Keep the original point when road snapping would move it more than 80m.
       const snapDist = haversineKm(point, { lat, lng });
       if (snapDist > 0.08) return point; // campus loop fix
       return { lat, lng };
@@ -229,87 +231,65 @@ export const fetchNearestRoadPoint = async (point) => {
   return null;
 };
 
-// Main road route fetcher — always returns at least straight-line
+// Main road route fetcher. It never returns a point-to-point fallback: callers
+// must show a retry/error state instead of misrepresenting a straight line as a road route.
 export const fetchRoadRoute = async (points, options = {}) => {
-  const { allowStraightFallback = true } = options;
+  const { retries = 1 } = options;
   if (!points || points.length < 2) return [];
 
-  const crowKm = haversineKm(points[0], points[points.length - 1]);
-  // Short distance — straight line is fine
-  if (crowKm < 0.3) return points.map((p) => [p.lat, p.lng]);
+  const validPoints = points.every((point) =>
+    point && Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng))
+  );
+  if (!validPoints) return [];
+
   const dest = points[points.length - 1];
-  const destGate = getHospitalGate(dest.lat, dest.lng);
-  const straightLine = points.map((p) => [p.lat, p.lng]);
 
-  // Campus hospital — route to gate (public road), NOT to internal campus pin
-  // Gate coords are on main roads outside campus — no OSRM loop possible
-  if (destGate) {
-    const gateCoordStr = [...points.slice(0, -1), destGate]
-      .map(p => `${p.lng},${p.lat}`).join(";");
-    const gateCrowKm = haversineKm(points[0], destGate);
-    for (const ep of ROUTE_ENDPOINTS) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    // Do not snap or substitute booking coordinates. The payload, marker, and
+    // Directions request must use the same confirmed latitude/longitude.
+    const requestPoints = points;
+    const requestDest = requestPoints[requestPoints.length - 1];
+    const requestCrowKm = haversineKm(requestPoints[0], requestDest);
+    const coordStr = requestPoints.map((point) => `${point.lng},${point.lat}`).join(";");
+
+    for (const endpoint of ROUTE_ENDPOINTS) {
       try {
-        const path = await fetchRouteFromEndpoint(ep, gateCoordStr);
-        if (!path || path.length < 2) continue;
-        const routeKm = pathDistanceKm(path);
-        // Reject if loopy: routeKm > 2x crow OR endpoint far from gate
-        if (gateCrowKm > 0.3 && routeKm > gateCrowKm * 2.2) continue;
-        const lastPt = path[path.length - 1];
-        const gap = haversineKm(destGate, { lat: +lastPt[0], lng: +lastPt[1] });
-        if (gap > 0.3) continue;
-        // Valid road route to gate — append short line to actual pin
-        return [...path, [dest.lat, dest.lng]];
-      } catch {}
-    }
-    // All endpoints failed/looped — fallback straight
-    return straightLine;
-  }
-
-  // Non-campus: normal OSRM routing
-  const coordStr = points.map((p) => `${p.lng},${p.lat}`).join(";");
-
-  for (const endpoint of ROUTE_ENDPOINTS) {
-    try {
-      const path     = await fetchRouteFromEndpoint(endpoint, coordStr);
-      const safePath = sanitizeRoutePath(path, points);
-      if (safePath && safePath.length > 1) {
+        const path = await fetchRouteFromEndpoint(endpoint, coordStr);
+        const safePath = sanitizeRoutePath(path, requestPoints);
+        if (!safePath || safePath.length < 2) continue;
         const lastPt = safePath[safePath.length - 1];
-        const gap    = haversineKm(dest, { lat: Number(lastPt[0]), lng: Number(lastPt[1]) });
-        if (gap > Math.max(crowKm * 0.2, 0.15)) {
-          console.warn("Route gap too large:", gap.toFixed(2), "km — skipping");
-          continue;
-        }
+        const gap = haversineKm(requestDest, { lat: Number(lastPt[0]), lng: Number(lastPt[1]) });
+        if (gap > Math.max(requestCrowKm * 0.2, 0.15)) continue;
         return safePath;
+      } catch (error) {
+        console.warn(`[routing] OSRM attempt ${attempt + 1} failed (${endpoint})`, error?.message || error);
       }
-    } catch (e) {
-      console.warn(`OSRM failed (${endpoint}):`, e?.message || e);
     }
-  }
 
-  // BRouter fallback
-  try {
-    const brouterCoords = points.map((p) => `${p.lng},${p.lat}`).join("|");
-    const controller    = new AbortController();
-    const timeout       = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(
-      `https://brouter.de/brouter?lonlats=${brouterCoords}&profile=car-fast&alternativeidx=0&format=geojson`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeout);
-    if (res.ok) {
-      const data   = await res.json();
+    try {
+      const brouterCoords = requestPoints.map((point) => `${point.lng},${point.lat}`).join("|");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(
+        `https://brouter.de/brouter?lonlats=${brouterCoords}&profile=car-fast&alternativeidx=0&format=geojson`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (import.meta.env.DEV) console.info("[routing] BRouter response", data);
       const coords = data?.features?.[0]?.geometry?.coordinates;
-      if (Array.isArray(coords) && coords.length > 1) {
-        const mapped   = coords.map((c) => [c[1], c[0]]);
-        const safePath = sanitizeRoutePath(mapped, points);
-        if (safePath && safePath.length > 1) return safePath;
-      }
+      const mapped = Array.isArray(coords) ? coords.map((coord) => [coord[1], coord[0]]) : null;
+      const safePath = sanitizeRoutePath(mapped, requestPoints);
+      if (safePath?.length > 1) return safePath;
+    } catch (error) {
+      console.warn(`[routing] BRouter attempt ${attempt + 1} failed`, error?.message || error);
     }
-  } catch (e) {
-    console.warn("BRouter failed:", e?.message || e);
+
+    if (attempt < retries) await new Promise((resolve) => setTimeout(resolve, 650 * (attempt + 1)));
   }
 
-  if (allowStraightFallback) return straightLine;
+  console.error("[routing] No road polyline returned", { origin: points[0], destination: dest, retries });
   return [];
 };
 
@@ -357,8 +337,8 @@ const LOCAL_HINTS = [
   { keys: ["sonia vihar"],                                                          lat: 28.7252, lng: 77.2605 },
 ];
 
-// Hospital campuses — when destination is inside campus, replace with nearest
-// PUBLIC ROAD point so OSRM doesn't route through internal one-way roads
+// Hospital campuses used only by the legacy nearest-road helper. The shared
+// route client itself never substitutes a confirmed coordinate with a gate.
 const HOSPITAL_GATES = [
   // AIIMS Delhi: Gate No.1 on Sri Aurobindo Marg — exact entry point from image
   { center: { lat: 28.5672, lng: 77.2090 }, radius: 0.6,

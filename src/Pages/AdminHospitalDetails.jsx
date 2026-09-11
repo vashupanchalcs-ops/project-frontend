@@ -3,6 +3,25 @@ import { useLocation } from "react-router-dom";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 
+// Keep the partner screen useful while the API is unavailable or has no seeded rows.
+const DEFAULT_HOSPITALS = [
+  {
+    id: "default-saharda",
+    name: "Saharda Hospital",
+    address: "Delhi",
+    latitude: "28.6139",
+    longitude: "77.2090",
+    contact_number: "8882128534",
+    hospital_type: "government",
+    total_beds: 40,
+    available_beds: 10,
+    icu_beds: 4,
+    emergency_services: true,
+    status: "active",
+    is_active: true,
+  },
+];
+
 export default function AdminHospitalDetails() {
   const location = useLocation();
   const [hospitals, setHospitals] = useState([]);
@@ -14,14 +33,21 @@ export default function AdminHospitalDetails() {
     fetch(`${BASE}/api/hospitals/`)
       .then((r) => r.json())
       .then((data) => {
-        const list = Array.isArray(data) ? data : [];
+        const rows = Array.isArray(data) ? data : [];
+        const list = rows.length ? rows : DEFAULT_HOSPITALS;
         setHospitals(list);
         if (list.length && !selectedHospitalId) {
           setSelectedHospitalId(list[0].id);
           setSelectedDashboard({ hospital: list[0], summary: {}, staff: [] });
         }
       })
-      .catch(() => setHospitals([]));
+      .catch(() => {
+        setHospitals(DEFAULT_HOSPITALS);
+        if (!selectedHospitalId) {
+          setSelectedHospitalId(DEFAULT_HOSPITALS[0].id);
+          setSelectedDashboard({ hospital: DEFAULT_HOSPITALS[0], summary: {}, staff: [] });
+        }
+      });
   }, []);
 
   useEffect(() => {
@@ -110,7 +136,7 @@ export default function AdminHospitalDetails() {
         .ahd-track-btn {
           margin-top: 8px;
           border: 1px solid #9fb000;
-          background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+          background: #f59a23;
           color: #111;
           border-radius: 999px;
           font-size: 11px;
@@ -118,7 +144,7 @@ export default function AdminHospitalDetails() {
           padding: 6px 10px;
           cursor: pointer;
         }
-        .ahd-track-btn:hover { filter: brightness(0.98); }
+        .ahd-track-btn:hover { background: #126f1e; border-color: #126f1e; color: #fff; }
         .ahd-map-wrap {
           margin-top: 12px;
           border: 1px solid rgba(17,17,17,0.14);

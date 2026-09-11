@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import useLeaflet, { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRouteWithManeuvers, fetchNearestRoadPoint, LIGHT_TILE, SATELLITE_TILE } from "../hooks/useLeaflet";
+import useLeaflet, { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRouteWithManeuvers, LIGHT_TILE, SATELLITE_TILE } from "../hooks/useLeaflet";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 
@@ -453,7 +453,7 @@ export default function DriverDashboard() {
             const icon = makePinIcon("#ffffff", "🚑");
             if (icon) driverMarker.current = window.L.marker([loc.lat, loc.lng], { icon })
               .addTo(mapObj.current)
-              .bindPopup(`<div style="background:var(--sr-surface,#171420);color:var(--sr-text,#fff6f2);padding:8px 12px;border-radius:8px;border:1px solid var(--sr-border,rgba(255,255,255,0.12));font-weight:700">📍 ${driverName} yahan hai</div>`, { className: "sr-dark-popup" });
+              .bindPopup(`<div style="background:var(--sr-surface,#171420);color:var(--sr-text,#fff6f2);padding:8px 12px;border-radius:8px;border:1px solid var(--sr-border,rgba(255,255,255,0.12));font-weight:700">📍 ${driverName} is here</div>`, { className: "sr-dark-popup" });
           }
           refreshRouteFromDriver(loc);
         }
@@ -704,7 +704,7 @@ export default function DriverDashboard() {
     }
   };
 
-  const drawFallbackRoute = async (origin, pickupLL, destLL, pickupRoadLL = null, destRoadLL = null) => {
+  const drawRoadRoute = async (origin, pickupLL, destLL) => {
     if (!mapObj.current || !window.L) return;
     const L = window.L;
     if (routeLineRef.current) {
@@ -721,8 +721,8 @@ export default function DriverDashboard() {
     }
     let bounds = L.latLngBounds();
 
-    const routePickup = pickupRoadLL || pickupLL;
-    const routeDest = destRoadLL || destLL;
+    const routePickup = pickupLL;
+    const routeDest = destLL;
     routeLeg1PathRef.current = [];
     routeLeg2PathRef.current = [];
     routeLeg1ProgressRef.current = 0;
@@ -736,24 +736,17 @@ export default function DriverDashboard() {
     if (origin && routePickup) {
       const road1 = await fetchRouteWithManeuvers(
         [{ lat: origin.lat, lng: origin.lng }, { lat: routePickup.lat, lng: routePickup.lng }],
-        { allowStraightFallback: true }
+        { retries: 2 }
       );
-      const straightGapKm = haversineKm(
-        { lat: origin.lat, lng: origin.lng },
-        { lat: routePickup.lat, lng: routePickup.lng }
-      );
-      const safeRoad1 = road1.path?.length > 1
-        ? road1.path
-        : [[origin.lat, origin.lng], [routePickup.lat, routePickup.lng]];
+      const safeRoad1 = road1.path?.length > 1 ? road1.path : [];
       routeLeg1PathRef.current = safeRoad1;
       routeLeg1ManeuversRef.current = road1.maneuvers || [];
       if (routeLineRef.current) { try { mapObj.current.removeLayer(routeLineRef.current); } catch {} }
       if (safeRoad1.length > 1) {
         routeLineRef.current = L.polyline(safeRoad1, {
-          color: "#ffffff", // Red for Ambulance -> Pickup
+          color: "#126f1e", // Green for Ambulance -> Pickup
           weight: 6,
-          opacity: road1.path?.length > 1 ? 0.92 : 0.7,
-          dashArray: road1.path?.length > 1 ? null : "12,10",
+          opacity: 0.92,
         }).addTo(mapObj.current);
         bounds.extend(routeLineRef.current.getBounds());
       } else {
@@ -764,24 +757,17 @@ export default function DriverDashboard() {
     if (routePickup && routeDest) {
         const road2 = await fetchRouteWithManeuvers(
           [{ lat: routePickup.lat, lng: routePickup.lng }, { lat: routeDest.lat, lng: routeDest.lng }],
-          { allowStraightFallback: true }
+          { retries: 2 }
         );
-        const straightGapKm2 = haversineKm(
-          { lat: routePickup.lat, lng: routePickup.lng },
-          { lat: routeDest.lat, lng: routeDest.lng }
-        );
-        const safeRoad2 = road2.path?.length > 1
-          ? road2.path
-          : [[routePickup.lat, routePickup.lng], [routeDest.lat, routeDest.lng]];
+        const safeRoad2 = road2.path?.length > 1 ? road2.path : [];
         routeLeg2PathRef.current = safeRoad2;
         routeLeg2ManeuversRef.current = road2.maneuvers || [];
         if (routeLine2Ref.current) { try { mapObj.current.removeLayer(routeLine2Ref.current); } catch {} }
         if (safeRoad2.length > 1) {
           routeLine2Ref.current = L.polyline(safeRoad2, {
-            color: "#7b61ff", // Blueish for Pickup -> Hospital
+            color: "#f59a23", // Yellow for Pickup -> Hospital
             weight: 6,
-            opacity: road2.path?.length > 1 ? 0.92 : 0.7,
-            dashArray: road2.path?.length > 1 ? null : "12,10",
+            opacity: 0.92,
           }).addTo(mapObj.current);
           bounds.extend(routeLine2Ref.current.getBounds());
         } else {
@@ -789,28 +775,10 @@ export default function DriverDashboard() {
         }
     }
 
-    // Dashed connector from snapped road end to exact destination marker (if different)
-    if (destLL && routeDest) {
-      const gapKm = haversineKm(
-        { lat: destLL.lat, lng: destLL.lng },
-        { lat: routeDest.lat, lng: routeDest.lng }
-      );
-      if (gapKm > 0.02) {
-        if (connectorLineRef.current) { try { mapObj.current.removeLayer(connectorLineRef.current); } catch {} }
-        connectorLineRef.current = L.polyline(
-          [[routeDest.lat, routeDest.lng], [destLL.lat, destLL.lng]],
-          {
-            color: "#7b61ff",
-            weight: 3,
-            opacity: 0.7,
-            dashArray: "6,8",
-          }
-        ).addTo(mapObj.current);
-        bounds.extend(connectorLineRef.current.getBounds());
-      }
+    if (!routeLineRef.current && !routeLine2Ref.current) {
+      setRouteAlert("Road route unavailable. Retry when the routing service recovers.");
+      return;
     }
-
-    if (!routeLineRef.current && !routeLine2Ref.current) return;
     if (!hasAutoFittedRef.current && !userMovedMapRef.current && bounds.isValid()) {
       mapObj.current.fitBounds(bounds, { padding: [100, 100] }); // Increased padding to zoom out more
       hasAutoFittedRef.current = true;
@@ -926,7 +894,7 @@ export default function DriverDashboard() {
     const L = window.L;
     const origin = L.latLng(loc.lat, loc.lng);
     if (!routeLineRef.current && !routeLine2Ref.current) {
-      void drawFallbackRoute(origin, pickupLLRef.current, destLLRef.current);
+      void drawRoadRoute(origin, pickupLLRef.current, destLLRef.current);
     } else {
       const progress = updateRouteProgressFromOrigin(origin);
       if (progress?.rerouteNeeded) {
@@ -934,7 +902,7 @@ export default function DriverDashboard() {
         if (now - routeRecalcGateRef.current > 20000) {
           routeRecalcGateRef.current = now;
           setRouteAlert("Route recalibrating from current GPS position...");
-          void drawFallbackRoute(origin, pickupLLRef.current, destLLRef.current);
+          void drawRoadRoute(origin, pickupLLRef.current, destLLRef.current);
         }
       }
     }
@@ -1065,38 +1033,16 @@ export default function DriverDashboard() {
       }
       const origin = getBestOriginLatLng();
 
-      const snapPoint = async (p) => {
-        if (!p) return null;
-        try {
-          const snapped = await fetchNearestRoadPoint({ lat: p.lat, lng: p.lng });
-          if (!snapped) return p;
-          const gapKm = haversineKm(
-            { lat: p.lat, lng: p.lng },
-            { lat: snapped.lat, lng: snapped.lng }
-          );
-          if (!Number.isFinite(gapKm) || gapKm > 0.25) return p;
-          return L.latLng(snapped.lat, snapped.lng);
-        } catch {
-          return p;
-        }
-      };
-
-      const originRoad = await snapPoint(origin);
-      const pickupRoad = await snapPoint(pickupLL);
-      const destRoad = await snapPoint(destLL);
-
-      ensureAmbulanceMarker(originRoad || origin);
+      ensureAmbulanceMarker(origin);
       pickupLLRef.current = pickupLL;
       destLLRef.current = destLL;
       syncRouteMarkers(pickupLLRef.current, destLLRef.current);
-      await drawFallbackRoute(
-        originRoad || origin,
+      await drawRoadRoute(
+        origin,
         pickupLLRef.current,
-        destLLRef.current,
-        pickupRoad || pickupLLRef.current,
-        destRoad || destLLRef.current
+        destLLRef.current
       );
-      updateRouteProgressFromOrigin(originRoad || origin);
+      updateRouteProgressFromOrigin(origin);
       if (!routeLineRef.current && !routeLine2Ref.current) {
         throw new Error("Road route service unavailable for this path");
       }
@@ -1349,7 +1295,7 @@ export default function DriverDashboard() {
             #f4f5ee;
           color: var(--dd-ink);
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          /* Desktop: Topnavbar (64px) + Left sidebar (64px) ke liye space */
+          /* Desktop space for the 64px top navigation and left sidebar. */
           padding-top: 64px;
           padding-left: 64px;
         }
@@ -1631,15 +1577,13 @@ export default function DriverDashboard() {
 
         /* ══════════════════════════════════════
            MOBILE RESPONSIVE
-           FIX 1: padding-top: 64px (Topnavbar ke liye)
-           FIX 2: padding-left: 0 (left sidebar mobile pe nahi hota)
-           FIX 3: padding-bottom: 60px (apna bottom nav ke liye)
+           Mobile layout: reserve space for the top navigation and bottom navigation.
         ══════════════════════════════════════ */
         @media (max-width: 767px) {
           .dd-root {
-            padding-top: 64px !important;   /* Topnavbar hamesha dikhta hai */
-            padding-left: 0 !important;     /* Left sidebar mobile pe hide hota hai */
-            padding-bottom: 60px !important; /* Apna bottom nav ke liye space */
+            padding-top: 64px !important;   /* Reserve space for the top navigation. */
+            padding-left: 0 !important;     /* The left sidebar is hidden on mobile. */
+            padding-bottom: 60px !important; /* Reserve space for the bottom navigation. */
           }
 
           /* Hide desktop tabs, show bottom nav */
@@ -1698,7 +1642,7 @@ export default function DriverDashboard() {
                 <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:140 }}>{driverEmail}</span>
                 {driverPhone
                   ? <span className="dd-meta-pill">📱 +91 {driverPhone}</span>
-                  : <span className="dd-meta-pill" style={{ color:"#e53935" }}>📱 Phone nahi</span>
+                  : <span className="dd-meta-pill" style={{ color:"#f59a23" }}>📱 Phone unavailable</span>
                 }
                 <span className="dd-meta-pill">{ambNumber}</span>
               </div>
@@ -2123,7 +2067,7 @@ export default function DriverDashboard() {
             <div className="dd-amb-card dd-anim">
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
                   <div>
-                  <div style={{ fontSize:11, color:"rgba(255,241,247,0.56)", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Meri Ambulance</div>
+                  <div style={{ fontSize:11, color:"rgba(255,241,247,0.56)", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>My Ambulance</div>
                   <div className="dd-amb-number">{ambNumber}</div>
                 </div>
                 {ambulance && (
@@ -2203,7 +2147,7 @@ export default function DriverDashboard() {
         {tab === "ambulances" && (
           <div className="dd-content">
             <div style={{ fontSize:16, fontWeight:800, marginBottom:14 }}>
-              🚒 Sabhi Ambulances
+              🚒 All Ambulances
               <span style={{ fontSize:12, fontWeight:500, color:"rgba(255,241,247,0.56)", marginLeft:8 }}>({allAmbs.length})</span>
             </div>
             {allAmbs.length === 0
@@ -2219,7 +2163,7 @@ export default function DriverDashboard() {
                     <div className="dd-booking-top">
                       <div className="dd-booking-amb">
                         🚑 {a.ambulance_number}
-                        {isMe && <span style={{ marginLeft:8, fontSize:9, fontWeight:700, background:"rgba(255, 255, 255, 0.15)", color:"#ffffff", border:"1px solid rgba(255, 255, 255, 0.15)", borderRadius:6, padding:"2px 7px" }}>MERI</span>}
+                        {isMe && <span style={{ marginLeft:8, fontSize:9, fontWeight:700, background:"rgba(255, 255, 255, 0.15)", color:"#ffffff", border:"1px solid rgba(255, 255, 255, 0.15)", borderRadius:6, padding:"2px 7px" }}>MINE</span>}
                       </div>
                       <span className="dd-booking-pill" style={{ color:as.c, background:as.bg, borderColor:as.b }}>{a.status?.replace("_"," ")}</span>
                     </div>
@@ -2245,7 +2189,7 @@ export default function DriverDashboard() {
             {allHospitals.length === 0
               ? <div style={{ textAlign:"center", padding:"50px 0", color:"rgba(255,241,247,0.52)", fontSize:14 }}>
                   <div style={{ fontSize:44, marginBottom:10 }}>🏥</div>
-                  Koi hospital nahi mila
+                  No hospitals found
                 </div>
               : allHospitals.map(h => {
                 const hsc = {

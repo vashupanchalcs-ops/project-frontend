@@ -253,6 +253,21 @@ export default function DriverChangeRequests() {
           .dcr-chat-wrap{padding:10px;min-height:72vh;}
           .dcr-thread-list{max-height:180px;}
         }
+
+        /* Selected driver request/chat cards use yellow instead of the legacy red. */
+        html body #root#root .dcr-thread-item.active,
+        html body #root#root .dcr-thread-item.active:hover {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          border-top-color: #f59a23 !important;
+        }
+        html body #root#root .dcr-thread-item:hover { background: #fff3df !important; border-color: #f59a23 !important; }
+        html body #root#root .dcr-btn-approve,
+        html body #root#root .dcr-btn-approve:hover {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+        }
       `}</style>
 
       {toast&&<div className={`dcr-toast dcr-toast-${toast.type}`}>{toast.msg}</div>}

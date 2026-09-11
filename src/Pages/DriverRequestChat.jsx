@@ -99,6 +99,7 @@ export default function DriverRequestChat() {
 
   return (
     <div
+      className="night-page"
       style={{
         paddingLeft: isMobile ? 0 : 64,
         paddingTop: 64,

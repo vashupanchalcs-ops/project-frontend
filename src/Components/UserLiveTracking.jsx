@@ -1,7 +1,7 @@
 /**
  * UserLiveTracking.jsx
- * Sirf background polling — koi floating card/UI nahi.
- * Confirmed booking MyBookings page ke card mein dikhti hai.
+ * Background polling only; it does not render a floating card or UI.
+ * Confirmed bookings appear in the My Bookings page card.
  */
 import { useEffect } from "react";
 

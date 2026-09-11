@@ -3,12 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 
 const PAGE_DATA = {
   about: {
-    title: "About YiCare",
+    title: "About Aarogya",
     subtitle: "Emergency response network built for real-time city coordination",
     blocks: [
       {
         h: "Who We Are",
-        p: "YiCare is a dispatch-first emergency platform that connects users, ambulances, hospitals, and control teams in one operational command flow.",
+        p: "Aarogya is a dispatch-first emergency platform that connects users, ambulances, hospitals, and control teams in one operational command flow.",
       },
       {
         h: "What We Solve",
@@ -25,7 +25,7 @@ const PAGE_DATA = {
     subtitle: "Rapid support channels for dispatch, driver, and hospital teams",
     blocks: [
       { h: "24x7 Support Desk", p: "For urgent workflow issues, contact operations immediately." },
-      { h: "Email", p: "support@yicare.in" },
+      { h: "Email", p: "support@aarogya.in" },
       { h: "Emergency Hotline", p: "+91 99998 70751" },
       { h: "SLA", p: "Critical operational tickets are prioritized with fast-response escalation." },
     ],
@@ -42,7 +42,7 @@ const PAGE_DATA = {
   },
   privacy: {
     title: "Privacy Policy",
-    subtitle: "How YiCare handles operational and emergency data",
+    subtitle: "How Aarogya handles operational and emergency data",
     blocks: [
       { h: "Data Collected", p: "Booking details, route telemetry, hospital response status, and operational logs." },
       { h: "Usage", p: "Data is used only for emergency coordination, dispatch efficiency, and audit traceability." },
@@ -60,11 +60,11 @@ const PAGE_DATA = {
   },
   contact: {
     title: "Contact Us",
-    subtitle: "Reach YiCare command and integration teams",
+    subtitle: "Reach Aarogya command and integration teams",
     blocks: [
-      { h: "Control Room", p: "ops@yicare.in" },
-      { h: "Hospital Integration", p: "hospitals@yicare.in" },
-      { h: "Business Partnerships", p: "partners@yicare.in" },
+      { h: "Control Room", p: "ops@aarogya.in" },
+      { h: "Hospital Integration", p: "hospitals@aarogya.in" },
+      { h: "Business Partnerships", p: "partners@aarogya.in" },
       { h: "Phone", p: "+91 99998 70751" },
     ],
   },
@@ -176,7 +176,7 @@ export default function InfoPage() {
       <div className="ip-root">
         <div className="ip-wrap">
           <section className="ip-hero">
-            <div className="ip-kicker">YiCare Information</div>
+            <div className="ip-kicker">Aarogya Information</div>
             <h1 className="ip-title">{data.title}</h1>
             <p className="ip-sub">{data.subtitle}</p>
           </section>

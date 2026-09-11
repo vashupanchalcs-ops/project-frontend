@@ -75,9 +75,9 @@ export default function LiveMap() {
         .lm-header-sub   { font-size: 11px; color: rgba(17,17,17,0.58); margin-top: 1px; }
         .lm-live-badge {
           display: flex; align-items: center; gap: 6px;
-          background: rgba(0,200,83,0.13); border: 1px solid rgba(0,200,83,0.27);
+          background: #fff3df; border: 1px solid #f59a23;
           border-radius: 20px; padding: 5px 12px;
-          color: #00c853; font-weight: 700; font-size: 11px; flex-shrink: 0;
+          color: #111; font-weight: 700; font-size: 11px; flex-shrink: 0;
         }
         .lm-tabs {
           background: #ffffff; border-bottom: 1px solid rgba(17,17,17,0.12);
@@ -91,7 +91,8 @@ export default function LiveMap() {
           cursor: pointer; display: flex; align-items: center; gap: 6px;
           white-space: nowrap; flex-shrink: 0; transition: color 0.15s;
         }
-        .lm-tab-btn.active { border-bottom-color: #ffffff; color: #ffffff; font-weight: 800; background: #ffffff; border-radius: 6px; }
+        .lm-tab-btn.active { border-bottom-color: #f59a23; color: #111; font-weight: 800; background: #f59a23; border-radius: 6px; }
+        .lm-tab-btn:hover { background: #f4fbf4; color: #126f1e; }
         .lm-selected-info {
           margin-left: auto; display: flex; align-items: center;
           gap: 6px; flex-shrink: 0; padding-left: 8px;
@@ -129,7 +130,7 @@ export default function LiveMap() {
             overflow-y: auto;
           }
 
-          /* RealTimeMap ke andar ka panel aur map — mobile layout */
+          /* Mobile layout for the RealTimeMap panel and map. */
           .lm-pane > * {
             width: 100% !important;
             min-width: unset !important;
@@ -139,6 +140,14 @@ export default function LiveMap() {
         @media (max-width: 480px) {
           .lm-header-title { font-size: 12px; }
           .lm-tab-btn { font-size: 11px; padding: 8px 8px; }
+        }
+
+        /* Active live-map controls use the shared yellow state, not red. */
+        html body #root#root .lm-tab-btn.active,
+        html body #root#root .lm-tab-btn.active:hover {
+          background: #f59a23 !important;
+          border-bottom-color: #f59a23 !important;
+          color: #111111 !important;
         }
       `}</style>
 
@@ -154,7 +163,7 @@ export default function LiveMap() {
             </div>
           </div>
           <div className="lm-live-badge">
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00c853", boxShadow: "0 0 8px #00c853" }} />
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#f59a23", boxShadow: "0 0 8px #f59a23" }} />
             LIVE
           </div>
         </div>
@@ -171,8 +180,8 @@ export default function LiveMap() {
               {t.label}
               {t.id === "route" && selectedDriver && (
                 <span style={{
-                  background: "#ffffff22", color: "#ffffff",
-                  border: "1px solid #ffffff44",
+                  background: "#fff3df", color: "#111",
+                  border: "1px solid #f59a23",
                   borderRadius: 10, padding: "1px 7px",
                   fontSize: 10, fontWeight: 700,
                 }}>
@@ -186,8 +195,8 @@ export default function LiveMap() {
             <div className="lm-selected-info">
               <span className="lm-sel-label" style={{ color: "rgba(17,17,17,0.58)", fontSize: 11 }}>Selected:</span>
               <span style={{
-                background: "#00c85322", color: "#00c853",
-                border: "1px solid #00c85344",
+                background: "#fff3df", color: "#111",
+                border: "1px solid #f59a23",
                 borderRadius: 10, padding: "2px 9px",
                 fontSize: 11, fontWeight: 700,
               }}>

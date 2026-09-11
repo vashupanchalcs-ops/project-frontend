@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapPin, AlertCircle, Loader } from 'lucide-react';
 
 const DriverLocationTracker = ({ ambulanceId, driverEmail, bookingId }) => {
@@ -8,6 +8,8 @@ const DriverLocationTracker = ({ ambulanceId, driverEmail, bookingId }) => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [updateCount, setUpdateCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const watchRef = useRef(null);
+  const lastSentRef = useRef({ at: 0, latitude: null, longitude: null });
 
   const themeConfig = {
     colors: {
@@ -79,39 +81,31 @@ const DriverLocationTracker = ({ ambulanceId, driverEmail, bookingId }) => {
         .finally(() => setIsLoading(false));
     };
 
-    // Get location immediately
-    navigator.geolocation.getCurrentPosition(
+    // A continuous device stream avoids repeated permission prompts and stale
+    // one-shot locations. Throttle backend writes without stopping the watch.
+    watchRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        sendLocation(latitude, longitude, accuracy, 0);
+        const { latitude, longitude, accuracy, speed } = position.coords;
+        const now = Date.now();
+        const previous = lastSentRef.current;
+        const moved = previous.latitude === null ||
+          Math.abs(previous.latitude - latitude) > 0.00005 ||
+          Math.abs(previous.longitude - longitude) > 0.00005;
+        if (!moved && now - previous.at < 10000) return;
+        lastSentRef.current = { at: now, latitude, longitude };
+        sendLocation(latitude, longitude, accuracy, Number.isFinite(speed) ? speed : 0);
       },
-      (error) => {
-        setError(`Initial location failed: ${error.message}`);
-      }
+      (geoError) => {
+        console.error('Location error:', geoError);
+        setError(`Location error: ${geoError.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
-
-    // Set interval to send location every 10 seconds
-    const locationInterval = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude, accuracy } = position.coords;
-          sendLocation(latitude, longitude, accuracy, 0);
-        },
-        (error) => {
-          console.error('Location error:', error);
-          setError(`Location error: ${error.message}`);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0,
-        }
-      );
-    }, 10000); // Every 10 seconds
 
     // Cleanup
     return () => {
-      clearInterval(locationInterval);
+      if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current);
+      watchRef.current = null;
       setTracking(false);
     };
   }, [ambulanceId, driverEmail, bookingId]);

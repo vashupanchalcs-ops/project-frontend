@@ -125,7 +125,7 @@ export default function LiveTracking() {
                 <div className="lt-title">🚑 Live Tracking</div>
               </div>
               <div className="lt-sub">
-                {booking ? `Booking #${booking.id} · ${booking.ambulance_number||"—"}` : "Koi active booking nahi"}
+                {booking ? `Booking #${booking.id} · ${booking.ambulance_number||"—"}` : "No active booking"}
               </div>
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function LiveTracking() {
               onClick={()=>navigate("/Ambulances")}
               style={{ marginTop:8, background:"#ffffff", color:"#fff", border:"none", borderRadius:12, padding:"11px 24px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(255, 255, 255, 0.15)" }}
             >
-              🚑 Ambulance Book Karo
+              🚑 Book an Ambulance
             </button>
           </div>
         )}
