@@ -2643,38 +2643,8 @@ export default function HospitalPortal() {
                         ))}
                       </aside>
                       <section className="hp-map-panel">
-                        <div className="hp-map-panel-head">
-                          <div style={{ fontSize: 13, fontWeight: 800 }}>
-                            {selectedMapBooking?.ambulance_number || "-"} • Booking #{selectedMapBooking?.booking_id || "-"}
-                          </div>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                            <button
-                              className="hp-btn"
-                              style={{ background: !isFullRouteView ? "#00c853" : "#ffffff", color: !isFullRouteView ? "#ffffff" : "#111111", border: "1px solid rgba(17,17,17,0.2)" }}
-                              onClick={() => setIsFullRouteView(false)}
-                            >
-                              ▶ Start Route
-                            </button>
-                            <button
-                              className="hp-btn"
-                              style={{ background: isFullRouteView ? "#111111" : "#ffffff", color: isFullRouteView ? "#ffffff" : "#111111", border: "1px solid rgba(17,17,17,0.2)" }}
-                              onClick={() => setIsFullRouteView(true)}
-                            >
-                              🗺 View Full Route
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(17,17,17,0.12)", background: "rgba(255,255,255,0.72)", fontSize: 11, color: "rgba(17,17,17,0.7)" }}>
-                          Route: Ambulance live location → {selectedMapBooking?.pickup_location || "Pickup"} → {selectedMapBooking?.destination || selectedMapBooking?.assigned_hospital_name || hospital?.name || "Assigned Hospital"}
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 8, padding: "10px 12px", borderBottom: "1px solid rgba(17,17,17,0.12)", background: "rgba(255,255,255,0.72)" }}>
-                          <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Speed</span><span>{selectedMapBooking?.ambulance_live?.speed || 0} km/h</span></div>
-                          <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Battery</span><span>{selectedMapBooking?.ambulance_live?.battery_percentage ?? "-"}%</span></div>
-                          <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Ambulance</span><span>{coordText(selectedMapBooking?.ambulance_live?.latitude, selectedMapBooking?.ambulance_live?.longitude)}</span></div>
-                          <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Patient Pickup</span><span>{coordText(selectedMapBooking?.pickup_latitude, selectedMapBooking?.pickup_longitude)}</span></div>
-                        </div>
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
-                          <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480 }}>
+                          <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 520 }}>
                             <iframe
                               className="hp-map-frame"
                               src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}

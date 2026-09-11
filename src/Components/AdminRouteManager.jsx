@@ -262,8 +262,8 @@ export default function AdminRouteManager({
   return (
     <>
       <style>{`
-        .arm-root { display:flex; width:100%; min-height:calc(100vh - 140px); background:#f4f4ef; font-family:'Segoe UI',sans-serif; }
-        .arm-panel { width:290px; min-width:290px; background:#fff; border-right:1px solid rgba(17,17,17,0.12); display:flex; flex-direction:column; }
+        .arm-root { display:flex; width:100%; height:calc(100vh - 140px); min-height:550px; background:#f4f4ef; font-family:'Segoe UI',sans-serif; }
+        .arm-panel { width:380px; min-width:340px; background:#fff; border-right:1px solid rgba(17,17,17,0.12); display:flex; flex-direction:column; }
         .arm-panel-header { padding:12px 14px; border-bottom:1px solid rgba(17,17,17,0.08); }
         .arm-panel-inner { flex:1; overflow-y:auto; padding:10px 10px 80px; display:flex; flex-direction:column; gap:8px; }
         .arm-box { background:#f9f9f5; border:1px solid rgba(17,17,17,0.12); border-radius:10px; padding:10px; }
@@ -312,28 +312,10 @@ export default function AdminRouteManager({
         }
       `}</style>
 
-      <div className="arm-root" style={{ flexDirection: "column" }}>
+      <div className="arm-root">
         {toast && <div className={`arm-toast ${toast.type}`}>{toast.msg}</div>}
 
-        {selAmb && (
-          <UnifiedMapHeader
-            ambulanceNumber={selAmb?.ambulance_number || "AMB-0000"}
-            bookingId={selBook?.id}
-            driverName={selAmb?.driver || "-"}
-            speed={selAmb?.speed || 0}
-            battery={selAmb?.battery_percentage ?? "-"}
-            pickupLocation={selBook?.pickup_location || "Pickup"}
-            destination={selBook?.assigned_hospital_name || selBook?.destination || "Assigned Hospital"}
-            ambLat={selAmb?.latitude}
-            ambLng={selAmb?.longitude}
-            pickupLat={selBook?.pickup_latitude}
-            pickupLng={selBook?.pickup_longitude}
-            routeMode={routeMode}
-            onSetRouteMode={(mode) => setRouteMode(mode)}
-          />
-        )}
-
-        <div style={{ display: "flex", flex: 1, minHeight: 0, width: "100%" }}>
+        <div style={{ display: "flex", flex: 1, height: "100%", width: "100%" }}>
           <div className="arm-panel">
             <div className="arm-panel-header">
               <div style={{ fontWeight: 800, fontSize: 14 }}>Route Manager</div>
@@ -341,6 +323,23 @@ export default function AdminRouteManager({
             </div>
 
             <div className="arm-panel-inner">
+              {selAmb && (
+                <UnifiedMapHeader
+                  ambulanceNumber={selAmb?.ambulance_number || "AMB-0000"}
+                  bookingId={selBook?.id}
+                  driverName={selAmb?.driver || "-"}
+                  speed={selAmb?.speed || 0}
+                  battery={selAmb?.battery_percentage ?? "-"}
+                  pickupLocation={selBook?.pickup_location || "Pickup"}
+                  destination={selBook?.assigned_hospital_name || selBook?.destination || "Assigned Hospital"}
+                  ambLat={selAmb?.latitude}
+                  ambLng={selAmb?.longitude}
+                  pickupLat={selBook?.pickup_latitude}
+                  pickupLng={selBook?.pickup_longitude}
+                  routeMode={routeMode}
+                  onSetRouteMode={(mode) => setRouteMode(mode)}
+                />
+              )}
               {/* Ambulance selector */}
               <div className="arm-box">
                 <div className="arm-box-label">Select Ambulance</div>
