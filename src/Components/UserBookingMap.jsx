@@ -16,6 +16,9 @@ import useLeaflet, {
   makePinIcon,
   fetchRoadRoute,
 } from "../hooks/useLeaflet";
+import { sliceRemainingPath } from "../utils/routeUtils";
+import UnifiedMapHeader from "./UnifiedMapHeader";
+import GoogleNavOverlay from "./GoogleNavOverlay";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -440,8 +443,9 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             try {
               const pts = await fetchRoadRoute([loc, pLL], { retries: 2 });
               if (!pts || pts.length < 2) throw new Error("No road route returned");
-              if (routeLine1Ref.current) routeLine1Ref.current.setLatLngs(pts);
-              else routeLine1Ref.current = L.polyline(pts, { color: "#126f1e", weight: 6, opacity: 0.95 }).addTo(map);
+              const slicedPts = sliceRemainingPath(pts, loc);
+              if (routeLine1Ref.current) routeLine1Ref.current.setLatLngs(slicedPts);
+              else routeLine1Ref.current = L.polyline(slicedPts, { color: "#126f1e", weight: 6, opacity: 0.95 }).addTo(map);
               routeLine1Ref.current.bringToFront();
               const d1 = pathKm(pts);
               setLegStats((previous) => ({ ...previous, d1: d1.toFixed(1), m1: approxMins(d1) }));

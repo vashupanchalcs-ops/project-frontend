@@ -17,6 +17,9 @@ import useLeaflet, {
   LIGHT_TILE,
   SATELLITE_TILE,
 } from "../hooks/useLeaflet";
+import { sliceRemainingPath } from "../utils/routeUtils";
+import UnifiedMapHeader from "./UnifiedMapHeader";
+import GoogleNavOverlay from "./GoogleNavOverlay";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -265,13 +268,13 @@ export default function AdminRouteManager({
 
     // Markers
     layerRef.current.amb = L.marker([ambCoord.lat, ambCoord.lng], {
-      icon: makePinIcon("#111111", "🚑"),
+      icon: makePinIcon("#ff6d00", "🚑"),
     }).addTo(mapRef.current)
       .bindPopup(`<div style="font-weight:700">🚑 ${selAmb?.ambulance_number || "Ambulance"}</div>`);
 
     if (pickupCoord) {
       layerRef.current.pickup = L.marker([pickupCoord.lat, pickupCoord.lng], {
-        icon: makePinIcon("#f7c948", "📍"),
+        icon: makePinIcon("#d93025", "📍"),
       }).addTo(mapRef.current)
         .bindPopup(`<div style="font-weight:700">📍 Pickup</div>
           <div style="font-size:11px;color:#666">${selBook?.pickup_location || ""}</div>`);
@@ -279,17 +282,21 @@ export default function AdminRouteManager({
 
     if (destCoord) {
       layerRef.current.hospital = L.marker([destCoord.lat, destCoord.lng], {
-        icon: makePinIcon("#00d4aa", "🏥"),
+        icon: makePinIcon("#00c853", "🏥"),
       }).addTo(mapRef.current)
         .bindPopup(`<div style="font-weight:700">🏥 ${selBook?.assigned_hospital_name || "Hospital"}</div>`);
     }
+
+    // Progressive Route Erasing: Slice path from current position to end
+    const activeLeg1 = sliceRemainingPath(routeLeg1, ambCoord);
+    const activeLeg2 = sliceRemainingPath(routeLeg2, ambCoord);
 
     const bounds = L.latLngBounds();
     const allRoutePoints = [[ambCoord.lat, ambCoord.lng]];
     if (pickupCoord) allRoutePoints.push([pickupCoord.lat, pickupCoord.lng]);
     if (destCoord)   allRoutePoints.push([destCoord.lat,   destCoord.lng]);
-    if (Array.isArray(routeLeg1) && routeLeg1.length) allRoutePoints.push(...routeLeg1);
-    if (Array.isArray(routeLeg2) && routeLeg2.length) allRoutePoints.push(...routeLeg2);
+    if (Array.isArray(activeLeg1) && activeLeg1.length) allRoutePoints.push(...activeLeg1);
+    if (Array.isArray(activeLeg2) && activeLeg2.length) allRoutePoints.push(...activeLeg2);
 
     allRoutePoints.forEach((pt) => {
       if (Array.isArray(pt) && Number.isFinite(Number(pt[0])) && Number.isFinite(Number(pt[1])))
@@ -297,24 +304,24 @@ export default function AdminRouteManager({
     });
 
     // Route 1: Ambulance → Pickup (Indigo)
-    if (routeLeg1.length > 1) {
-      layerRef.current.route1Glow = L.polyline(routeLeg1, {
-        color: "#4f46e5", weight: 12, opacity: 0.16,
+    if (activeLeg1.length > 1) {
+      layerRef.current.route1Glow = L.polyline(activeLeg1, {
+        color: "#1a73e8", weight: 12, opacity: 0.18,
       }).addTo(mapRef.current);
-      layerRef.current.route1 = L.polyline(routeLeg1, {
-        color: "#6366f1", weight: 6, opacity: 0.96,
+      layerRef.current.route1 = L.polyline(activeLeg1, {
+        color: "#1a73e8", weight: 6, opacity: 0.96,
       }).addTo(mapRef.current);
       bounds.extend(layerRef.current.route1.getBounds());
       layerRef.current.route1.bringToFront();
     }
 
-    // Route 2: Pickup → Hospital (Cyan)
-    if (routeLeg2.length > 1) {
-      layerRef.current.route2Glow = L.polyline(routeLeg2, {
-        color: "#06b6d4", weight: 12, opacity: 0.16,
+    // Route 2: Pickup → Hospital (Cyan/Blue)
+    if (activeLeg2.length > 1) {
+      layerRef.current.route2Glow = L.polyline(activeLeg2, {
+        color: "#00b0ff", weight: 12, opacity: 0.18,
       }).addTo(mapRef.current);
-      layerRef.current.route2 = L.polyline(routeLeg2, {
-        color: "#06b6d4", weight: 6, opacity: 0.96,
+      layerRef.current.route2 = L.polyline(activeLeg2, {
+        color: "#00b0ff", weight: 6, opacity: 0.96,
       }).addTo(mapRef.current);
       bounds.extend(layerRef.current.route2.getBounds());
       layerRef.current.route2.bringToFront();
@@ -537,9 +544,28 @@ export default function AdminRouteManager({
         }
       `}</style>
 
-      <div className="arm-root">
+      <div className="arm-root" style={{ flexDirection: "column" }}>
         {toast && <div className={`arm-toast ${toast.type}`}>{toast.msg}</div>}
 
+        {selAmb && (
+          <UnifiedMapHeader
+            ambulanceNumber={selAmb?.ambulance_number || "AMB-0000"}
+            bookingId={selBook?.id}
+            driverName={selAmb?.driver || "-"}
+            speed={selAmb?.speed || 0}
+            battery={selAmb?.battery_percentage ?? "-"}
+            pickupLocation={selBook?.pickup_location || "Pickup"}
+            destination={selBook?.assigned_hospital_name || selBook?.destination || "Assigned Hospital"}
+            ambLat={selAmb?.latitude}
+            ambLng={selAmb?.longitude}
+            pickupLat={selBook?.pickup_latitude}
+            pickupLng={selBook?.pickup_longitude}
+            isFullRouteView={isFullRouteView}
+            onToggleFullRoute={fullRouteEmbedSrc ? () => setIsFullRouteView((v) => !v) : null}
+          />
+        )}
+
+        <div style={{ display: "flex", flex: 1, minHeight: 0, width: "100%" }}>
         <div className="arm-panel">
           <div className="arm-panel-header">
             <div style={{ fontWeight: 800, fontSize: 14 }}>Route Manager</div>
@@ -623,15 +649,25 @@ export default function AdminRouteManager({
             </button>
           </div>
           {isFullRouteView && fullRouteEmbedSrc ? (
-            <iframe
-              src={fullRouteEmbedSrc}
-              style={{ width: "100%", height: "100%", minHeight: 540, border: "none", background: "#fff" }}
-              title="Google Maps Full Route View"
-              loading="lazy"
-            />
+            <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 540 }}>
+              <GoogleNavOverlay
+                currentPos={{ lat: selAmb?.latitude, lng: selAmb?.longitude }}
+                routePath={routeLeg1.concat(routeLeg2)}
+                speed={selAmb?.speed || 0}
+                etaStr={routeStats ? `${routeStats.distKm} km (${routeStats.mins} min)` : "En Route"}
+                driverName={selAmb?.driver || ""}
+              />
+              <iframe
+                src={fullRouteEmbedSrc}
+                style={{ width: "100%", height: "100%", minHeight: 540, border: "none", background: "#fff" }}
+                title="Google Maps Full Route View"
+                loading="lazy"
+              />
+            </div>
           ) : (
             <div ref={mapElRef} className="arm-map-el" />
           )}
+        </div>
         </div>
       </div>
     </>

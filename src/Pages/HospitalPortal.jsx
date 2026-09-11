@@ -1,3 +1,4 @@
+import GoogleNavOverlay from "../Components/GoogleNavOverlay";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
@@ -2665,6 +2666,15 @@ export default function HospitalPortal() {
                           <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Patient Pickup</span><span>{coordText(selectedMapBooking?.pickup_latitude, selectedMapBooking?.pickup_longitude)}</span></div>
                         </div>
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
+                          <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480 }}>
+                            {isFullRouteView && (
+                              <GoogleNavOverlay
+                                currentPos={{ lat: selectedMapBooking?.ambulance_live?.latitude, lng: selectedMapBooking?.ambulance_live?.longitude }}
+                                speed={selectedMapBooking?.ambulance_live?.speed || 0}
+                                etaStr="En Route"
+                                driverName={selectedMapBooking?.driver_name || ""}
+                              />
+                            )}
                           <iframe
                             className="hp-map-frame"
                             src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
@@ -2672,6 +2682,7 @@ export default function HospitalPortal() {
                             loading="lazy"
                             referrerPolicy="no-referrer-when-downgrade"
                           />
+                          </div>
                         ) : (
                           <div className="hp-empty">Map coordinates unavailable for selected booking.</div>
                         )}
