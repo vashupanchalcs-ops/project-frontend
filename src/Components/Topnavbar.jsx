@@ -1,3 +1,5 @@
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 import { Bell, Search, X, Camera, PhoneCall } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -109,7 +111,7 @@ const Topnavbar = () => {
     if (role !== "user" && role !== null && role !== "") return;
     // role "user" ya logged-in non-admin non-driver
     const userEmail = email;
-    fetch("http://127.0.0.1:8000/api/bookings/")
+    fetch("${BASE}/api/bookings/")
       .then(r => r.json())
       .then(data => {
         // Sirf is user ki bookings
@@ -175,7 +177,8 @@ const Topnavbar = () => {
           return list;
         }).slice(0, 12);
 
-        setNotifs(notifs);
+        const dedupe = (list) => { const s = new Set(); return list.filter(n => { const k = `${n.id}-${n.title}-${n.message}`; if (s.has(k)) return false; s.add(k); return true; }); };
+        setNotifs(dedupe(notifs));
         // Unread means a confirmed or rejected booking the user has not viewed.
         const notifKey = `user_notif_read_${userEmail}`;
         const readIds  = JSON.parse(localStorage.getItem(notifKey) || "[]");
@@ -200,7 +203,7 @@ const Topnavbar = () => {
   // ── DRIVER notifications ──
   const fetchDriverNotifications = () => {
     if (role !== "driver") return;
-    fetch("http://127.0.0.1:8000/api/bookings/")
+    fetch("${BASE}/api/bookings/")
       .then(r => r.json())
       .then(data => {
         const mine = data.filter(b =>
@@ -219,7 +222,7 @@ const Topnavbar = () => {
             read: b.status === "completed", status: b.status,
           })),
         ].slice(0, 8);
-        setNotifs(allNotifs);
+        setNotifs(dedupe(allNotifs));
         setUnread(allNotifs.filter(n => !n.read).length);
       })
       .catch(() => {
@@ -233,10 +236,10 @@ const Topnavbar = () => {
   // ── ADMIN notifications ──
   const fetchAdminNotifications = () => {
     if (role !== "admin") return;
-    fetch("http://127.0.0.1:8000/api/bookings/")
+    fetch("${BASE}/api/bookings/")
       .then(r => r.json())
       .then(data => {
-        setNotifs(data.slice(0, 8));
+        setNotifs(dedupe(data.slice(0, 8)));
         setUnread(data.filter(b => !b.is_read).length);
       })
       .catch(() => {});
@@ -245,7 +248,7 @@ const Topnavbar = () => {
   const fetchHospitalNotifications = () => {
     if (role !== "hospital") return;
     const hospitalEmail = (email || "").toLowerCase();
-    fetch("http://127.0.0.1:8000/api/bookings/")
+    fetch("${BASE}/api/bookings/")
       .then((r) => r.json())
       .then((data) => {
         const mine = (Array.isArray(data) ? data : [])
@@ -278,7 +281,7 @@ const Topnavbar = () => {
 
   const fetchCallAlert = () => {
     if (role !== "admin") return;
-    fetch("http://127.0.0.1:8000/api/bookings/voice/call-alert/")
+    fetch("${BASE}/api/bookings/voice/call-alert/")
       .then((r) => r.json())
       .then((d) =>
         setCallAlert({
@@ -346,7 +349,7 @@ const Topnavbar = () => {
         const [ambRes, hospRes, bookingRes] = await Promise.all([
           fetch("http://127.0.0.1:8000/api/ambulances/"),
           fetch("http://127.0.0.1:8000/api/hospitals/"),
-          fetch("http://127.0.0.1:8000/api/bookings/"),
+          fetch("${BASE}/api/bookings/"),
         ]);
         const [ambData, hospData, bookingData] = await Promise.all([ambRes.json(), hospRes.json(), bookingRes.json()]);
         next.ambulances = (Array.isArray(ambData) ? ambData : []).filter((a) => match(a.ambulance_number, a.driver, a.location, a.model, a.status)).slice(0, 6);
@@ -355,7 +358,7 @@ const Topnavbar = () => {
       } else if (roleKey === "driver") {
         const [ambRes, bookingRes] = await Promise.all([
           fetch("http://127.0.0.1:8000/api/ambulances/"),
-          fetch("http://127.0.0.1:8000/api/bookings/"),
+          fetch("${BASE}/api/bookings/"),
         ]);
         const [ambData, bookingData] = await Promise.all([ambRes.json(), bookingRes.json()]);
         next.ambulances = (Array.isArray(ambData) ? ambData : [])
@@ -382,7 +385,7 @@ const Topnavbar = () => {
         const [ambRes, hospRes, bookingRes] = await Promise.all([
           fetch("http://127.0.0.1:8000/api/ambulances/"),
           fetch("http://127.0.0.1:8000/api/hospitals/"),
-          fetch("http://127.0.0.1:8000/api/bookings/"),
+          fetch("${BASE}/api/bookings/"),
         ]);
         const [ambData, hospData, bookingData] = await Promise.all([ambRes.json(), hospRes.json(), bookingRes.json()]);
         next.ambulances = (Array.isArray(ambData) ? ambData : []).filter((a) => match(a.ambulance_number, a.driver, a.location, a.status)).slice(0, 5);
@@ -407,7 +410,7 @@ const Topnavbar = () => {
     setShowDrop(d => !d);
     if (!showDrop) {
       if (role === "admin") {
-        fetch("http://127.0.0.1:8000/api/bookings/mark-read/", { method:"POST" }).then(() => setUnread(0)).catch(()=>{});
+        fetch("${BASE}/api/bookings/mark-read/", { method:"POST" }).then(() => setUnread(0)).catch(()=>{});
       } else if (role === "driver") {
         const notifKey = `dr_notif_${email}`;
         const stored   = JSON.parse(localStorage.getItem(notifKey) || "[]");

@@ -74,7 +74,8 @@ export const sliceRemainingPath = (path = [], currentPos) => {
 
   // Prepend current live location to closest remaining points
   const remaining = path.slice(closestIdx);
-  return [[cLat, cLng], ...remaining];
+  const validPts = remaining.filter(pt => Array.isArray(pt) && pt.length >= 2 && Number.isFinite(Number(pt[0])) && Number.isFinite(Number(pt[1])) && Number(pt[0]) >= 6 && Number(pt[0]) <= 38 && Number(pt[1]) >= 68 && Number(pt[1]) <= 98);
+  return [[cLat, cLng], ...validPts];
 };
 
 /**

@@ -258,6 +258,7 @@ export default function AdminRouteManager({
   // ── Draw layers whenever route data changes ─────────────────────────────────
   useEffect(() => {
     if (!leafletReady || !window.L || !mapRef.current) return;
+    if (isFullRouteView) { clearDrawnLayers(); return; }
     mapRef.current.invalidateSize();
     clearDrawnLayers();
     const L        = window.L;
@@ -527,8 +528,8 @@ export default function AdminRouteManager({
         .arm-find-btn:disabled,.arm-push-btn:disabled { background:#d7d7cd; color:rgba(17,17,17,0.45); cursor:not-allowed; }
         .arm-route-card { background:#ffffff; border:1px solid rgba(255, 255, 255, 0.15); border-radius:10px; padding:10px; margin-top:4px; position:sticky; bottom:8px; z-index:5; box-shadow:0 10px 24px rgba(17,17,17,0.16); }
         .arm-push-btn { background:#111; color:#fff; padding:10px 0; margin-top:6px; font-size:13px; border:1px solid rgba(255,255,255,0.1); }
-        .arm-map { flex:1; min-width:0; position:relative; }
-        .arm-map-el { width:100%; height:100%; min-height:540px; position:relative; z-index:1; }
+        .arm-map { flex:1; min-width:0; position:relative; overflow:hidden !important; contain:paint; }
+        .arm-map-el { width:100%; height:100%; min-height:540px; position:relative; z-index:1; overflow:hidden !important; }
         .arm-toast { position:fixed; top:68px; right:16px; z-index:9999; padding:11px 16px; border-radius:8px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,0.22); }
         .arm-toast.success { background:#ffffff; color:#111; }
         .arm-toast.error { background:#373737; color:#fff; }
