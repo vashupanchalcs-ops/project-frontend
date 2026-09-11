@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import gsap from "gsap";
-import RealTimeMap from "../Components/RealTimeMap";
+// import RealTimeMap from "../Components/RealTimeMap";
 import AdminRouteManager from "../Components/AdminRouteManager";
 
 const TABS = [
@@ -218,7 +218,12 @@ export default function LiveMap() {
             display: activeTab === "map" ? "flex" : "none",
             zIndex: activeTab === "map" ? 1 : 0,
           }}>
-            <RealTimeMap onSelectDriver={handleDriverSelect} />
+            <AdminRouteManager
+              preSelectedDriver={selectedDriver}
+              preSelectedBookingId={preBookingId}
+              preSelectedAmbulanceId={preAmbId}
+              isActive={true}
+            />
           </div>
           <div className="lm-pane" style={{
             display: activeTab === "route" ? "flex" : "none",
