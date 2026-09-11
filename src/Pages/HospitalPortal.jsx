@@ -321,40 +321,40 @@ export default function HospitalPortal() {
     [visibleTrackingRows, selectedMapBookingId]
   );
 
-  const mapEmbedSrc = useMemo(() => {
-    const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
-    const ambLng = Number(selectedMapBooking?.ambulance_live?.longitude);
-    const pickupLat = Number(selectedMapBooking?.pickup_latitude);
-    const pickupLng = Number(selectedMapBooking?.pickup_longitude);
-    const lat = hasCoordPair(ambLat, ambLng) ? ambLat : pickupLat;
-    const lng = hasCoordPair(ambLat, ambLng) ? ambLng : pickupLng;
-    if (!hasCoordPair(lat, lng)) return "";
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
-  }, [selectedMapBooking]);
-
   const fullRouteEmbedSrc = useMemo(() => {
     const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
     const ambLng = Number(selectedMapBooking?.ambulance_live?.longitude);
     const ambCoord = hasCoordPair(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
+
+    const pickupLat = Number(selectedMapBooking?.pickup_latitude);
+    const pickupLng = Number(selectedMapBooking?.pickup_longitude);
+    const pickupCoordStr = hasCoordPair(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
+    const pickupText = String(selectedMapBooking?.pickup_location || "").trim();
+
     const hospitalLat = Number(hospital?.latitude);
     const hospitalLng = Number(hospital?.longitude);
     const hospitalCoord = hasCoordPair(hospitalLat, hospitalLng) ? `${hospitalLat},${hospitalLng}` : "";
-    const pickupLat = Number(selectedMapBooking?.pickup_latitude);
-    const pickupLng = Number(selectedMapBooking?.pickup_longitude);
-    const pickupCoord = hasCoordPair(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
-    const pickup = String(selectedMapBooking?.pickup_location || "").trim();
-    const destination =
+    const destText =
       hospitalCoord ||
       String(selectedMapBooking?.assigned_hospital_address || "").trim() ||
       String(selectedMapBooking?.assigned_hospital_name || "").trim() ||
       String(hospital?.address || "").trim() ||
-      String(selectedMapBooking?.destination || "").trim() ||
-      pickup;
-    const start = ambCoord || pickupCoord || pickup || destination;
-    const end = destination || pickupCoord || pickup || ambCoord;
-    if (!start || !end) return "";
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+      String(hospital?.name || "").trim() ||
+      String(selectedMapBooking?.destination || "").trim();
+
+    const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
+    const viaPt = pickupCoordStr || pickupText;
+    const endPt = destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+
+    let daddrStr = encodeURIComponent(endPt);
+    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
+      daddrStr = `${encodeURIComponent(viaPt)}+to:${encodeURIComponent(endPt)}`;
+    }
+
+    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [selectedMapBooking, hospital]);
+
+  const mapEmbedSrc = fullRouteEmbedSrc;
 
   const dismissMapBooking = (bookingId) => {
     const id = Number(bookingId || 0);
@@ -2675,21 +2675,6 @@ export default function HospitalPortal() {
                         </div>
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480 }}>
-                            {/* Blocker overlay for "More options" external link */}
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "250px",
-                                height: "100px",
-                                zIndex: 10,
-                                background: "transparent",
-                                cursor: "default",
-                                pointerEvents: "auto",
-                              }}
-                              title="Google Maps Navigation"
-                            />
                             <iframe
                               className="hp-map-frame"
                               src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}

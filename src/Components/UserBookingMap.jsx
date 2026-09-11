@@ -101,19 +101,18 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     const pickupLng = Number(booking?.pickup_longitude);
     const pickupCoordStr = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
     const pickupText = String(booking?.pickup_location || "").trim();
-    const destText = String(booking?.assigned_hospital_name || booking?.destination || "Hospital").trim();
+    const destText = String(booking?.assigned_hospital_name || booking?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
 
-    if (routeMode === "start") {
-      // Start Route: Ambulance live location -> Pickup
-      const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
-      const end = pickupCoordStr || pickupText || destText || "Hospital, Delhi, India";
-      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
+    const viaPt = pickupCoordStr || pickupText;
+    const endPt = destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+
+    let daddrStr = encodeURIComponent(endPt);
+    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
+      daddrStr = `${encodeURIComponent(viaPt)}+to:${encodeURIComponent(endPt)}`;
     }
 
-    // View Full Route: Ambulance -> User Pickup -> Hospital
-    const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
-    const end = destText || pickupCoordStr || pickupText || "Hospital, Delhi, India";
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [ambLoc, booking, routeMode]);
 
   const rootStyle = embedded
@@ -242,21 +241,6 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
       {/* ── Map Frame ──────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-        {/* Blocker overlay for "More options" external link */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "250px",
-            height: "100px",
-            zIndex: 10,
-            background: "transparent",
-            cursor: "default",
-            pointerEvents: "auto",
-          }}
-          title="Google Maps Navigation"
-        />
 
         {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
         {routeMode === "start" && (

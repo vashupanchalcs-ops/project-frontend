@@ -4,7 +4,10 @@
  * Unified header card bar matching Hospital Portal for
  * Admin, User, Driver, and Hospital map views.
  *
- * Provides two clean buttons: "Start Route" & "View Full Route"
+ * Distinct icons:
+ * 🚑 Ambulance Live Location
+ * 👤 User Patient Pickup Location
+ * 🏥 Hospital Destination Location
  */
 
 const coordText = (lat, lng) => {
@@ -33,8 +36,9 @@ export default function UnifiedMapHeader({
     <div style={{ background: "#ffffff", border: "1px solid rgba(17,17,17,0.12)", borderRadius: 10, marginBottom: 8, overflow: "hidden", fontFamily: "Segoe UI, sans-serif" }}>
       {/* Top Title Bar */}
       <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(17,17,17,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "rgba(255,255,255,0.92)" }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: "#111" }}>
-          {ambulanceNumber} {bookingId ? `• Booking #${bookingId}` : ""}
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+          <span>🚑</span>
+          <span>{ambulanceNumber} {bookingId ? `• Booking #${bookingId}` : ""}</span>
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
           <div style={{ fontSize: 11, color: "rgba(17,17,17,0.66)", fontWeight: 600 }}>{driverName}</div>
@@ -43,7 +47,7 @@ export default function UnifiedMapHeader({
               <button
                 onClick={() => onSetRouteMode("start")}
                 style={{
-                  background: routeMode === "start" ? "#00c853" : "#f5f5f5",
+                  background: routeMode === "start" ? "#00c853" : "#ffffff",
                   color: routeMode === "start" ? "#ffffff" : "#111111",
                   border: "1px solid rgba(0,0,0,0.15)",
                   borderRadius: 6,
@@ -59,7 +63,7 @@ export default function UnifiedMapHeader({
               <button
                 onClick={() => onSetRouteMode("full")}
                 style={{
-                  background: routeMode === "full" ? "#111111" : "#f5f5f5",
+                  background: routeMode === "full" ? "#111111" : "#ffffff",
                   color: routeMode === "full" ? "#ffffff" : "#111111",
                   border: "1px solid rgba(0,0,0,0.15)",
                   borderRadius: 6,
@@ -79,7 +83,7 @@ export default function UnifiedMapHeader({
 
       {/* Route Text Line */}
       <div style={{ padding: "8px 14px", borderBottom: "1px solid rgba(17,17,17,0.12)", background: "rgba(255,255,255,0.72)", fontSize: 11, color: "rgba(17,17,17,0.75)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        Route: Ambulance live location → {pickupLocation} → {destination}
+        Route: 🚑 Ambulance live location → 👤 User: {pickupLocation} → 🏥 Hospital: {destination}
       </div>
 
       {/* Metrics Row */}
@@ -93,11 +97,11 @@ export default function UnifiedMapHeader({
           <span style={{ fontWeight: 700, color: "#111" }}>{battery !== null && battery !== undefined ? `${battery}%` : "-%"}</span>
         </div>
         <div>
-          <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>Ambulance</span>
+          <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>🚑 Ambulance</span>
           <span style={{ fontWeight: 700, color: "#111" }}>{coordText(ambLat, ambLng)}</span>
         </div>
         <div>
-          <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>Patient Pickup</span>
+          <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>👤 User Pickup</span>
           <span style={{ fontWeight: 700, color: "#111" }}>{coordText(pickupLat, pickupLng)}</span>
         </div>
       </div>

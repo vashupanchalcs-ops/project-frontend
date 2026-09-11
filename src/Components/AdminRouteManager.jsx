@@ -1,10 +1,10 @@
 /**
  * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
  *
- * Clean Google Maps Embedded Map Engine (Matching Image 3 & Image 4):
+ * Clean Google Maps Embedded Map Engine (Matching Image 3 style):
  * - Fixed yellow Best Route card bottom truncation issue.
- * - Blocked "More options" external Google redirect link overlay.
- * - Clean Image 3 route rendering with "Start Route" (following Ambulance live location) and "View Full Route".
+ * - Blocked "More options" external Google redirect link overlay completely.
+ * - Full 3-point route chain: Ambulance Live Location -> User Pickup -> Hospital.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -123,7 +123,7 @@ export default function AdminRouteManager({
     setTimeout(() => setToast(null), 2500);
   };
 
-  // ── Route Embed URLs (Pure Google Maps Image 3 Style) ──────────────────────
+  // ── Route Embed URL (3-Point Chain: Ambulance -> User Pickup -> Hospital) ───
   const embedSrc = useMemo(() => {
     const ambLat = Number(selAmb?.latitude);
     const ambLng = Number(selAmb?.longitude);
@@ -139,17 +139,16 @@ export default function AdminRouteManager({
     const destCoordStr = isIndiaCoord(destLat, destLng) ? `${destLat},${destLng}` : "";
     const destText = String(selBook?.assigned_hospital_address || selBook?.assigned_hospital_name || selBook?.destination || "").trim();
 
-    if (routeMode === "start") {
-      // Start Route: Navigation starting from Ambulance live location -> Pickup
-      const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
-      const end = pickupCoordStr || pickupText || destText || "Hospital, Delhi, India";
-      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
+    const viaPt = pickupCoordStr || pickupText;
+    const endPt = destCoordStr || destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+
+    let daddrStr = encodeURIComponent(endPt);
+    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
+      daddrStr = `${encodeURIComponent(viaPt)}+to:${encodeURIComponent(endPt)}`;
     }
 
-    // View Full Route: Complete route connecting Ambulance -> User Pickup -> Hospital
-    const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
-    const end = destCoordStr || destText || pickupCoordStr || pickupText || "Hospital, Delhi, India";
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [selAmb, selBook, destCoord, routeMode]);
 
   // ── Resolve coordinates ─────────────────────────────────────────────────────
@@ -266,7 +265,7 @@ export default function AdminRouteManager({
         .arm-root { display:flex; width:100%; min-height:calc(100vh - 140px); background:#f4f4ef; font-family:'Segoe UI',sans-serif; }
         .arm-panel { width:290px; min-width:290px; background:#fff; border-right:1px solid rgba(17,17,17,0.12); display:flex; flex-direction:column; }
         .arm-panel-header { padding:12px 14px; border-bottom:1px solid rgba(17,17,17,0.08); }
-        .arm-panel-inner { flex:1; overflow-y:auto; padding:10px 10px 60px; display:flex; flex-direction:column; gap:8px; }
+        .arm-panel-inner { flex:1; overflow-y:auto; padding:10px 10px 80px; display:flex; flex-direction:column; gap:8px; }
         .arm-box { background:#f9f9f5; border:1px solid rgba(17,17,17,0.12); border-radius:10px; padding:10px; }
         .arm-box-label { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(17,17,17,0.56); margin-bottom:8px; }
         .arm-list { max-height:170px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
@@ -277,7 +276,7 @@ export default function AdminRouteManager({
         .arm-find-btn,.arm-push-btn { width:100%; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; }
         .arm-find-btn { background:#ffffff; color:#111; padding:10px 0; margin-bottom:8px; font-size:13px; border:1px solid rgba(17,17,17,0.2); }
         .arm-find-btn:disabled,.arm-push-btn:disabled { background:#d7d7cd; color:rgba(17,17,17,0.45); cursor:not-allowed; }
-        .arm-route-card { background:#fff8e1; border:1.5px solid #ffa000; border-radius:12px; padding:12px; margin-top:10px; margin-bottom:20px; box-shadow:0 6px 20px rgba(255,160,0,0.22); flex-shrink:0; }
+        .arm-route-card { background:#fff8e1; border:1.5px solid #ffa000; border-radius:12px; padding:12px; margin-top:10px; margin-bottom:24px; box-shadow:0 6px 20px rgba(255,160,0,0.22); flex-shrink:0; }
         .arm-push-btn { background:#111; color:#fff; padding:10px 0; margin-top:8px; font-size:13px; border:1px solid rgba(255,255,255,0.1); }
         .arm-map { flex:1; min-width:0; position:relative; overflow:hidden !important; }
         .arm-toast { position:fixed; top:68px; right:16px; z-index:9999; padding:11px 16px; border-radius:8px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,0.22); }
@@ -285,45 +284,24 @@ export default function AdminRouteManager({
         .arm-toast.error { background:#373737; color:#fff; }
         .arm-map-frame { width:100%; height:100%; min-height:540px; border:none; background:#e5e3df; }
         
-        /* Blocker to cover Google Maps "More options" link in top-left */
-        .arm-map-overlay-blocker {
+        /* Opaque cover card hiding Google's top-left white card & "More options" link 100% */
+        .arm-map-header-cover {
           position: absolute;
           top: 0;
           left: 0;
-          width: 250px;
-          height: 100px;
+          width: 360px;
+          height: 110px;
           z-index: 10;
-          background: transparent;
-          cursor: default;
+          background: #ffffff;
+          border-right: 1px solid rgba(17,17,17,0.12);
+          border-bottom: 1px solid rgba(17,17,17,0.12);
+          border-bottom-right-radius: 12px;
+          padding: 10px 14px;
           pointer-events: auto;
-        }
-
-        /* Image 4 Live Navigation Icon Beacon Overlay */
-        .arm-nav-beacon {
-          position: absolute;
-          top: 14px;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 20;
-          background: rgba(0, 200, 83, 0.95);
-          color: #ffffff;
-          padding: 6px 14px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 800;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.08);
           display: flex;
-          align-items: center;
-          gap: 8px;
-          box-shadow: 0 6px 18px rgba(0, 200, 83, 0.35);
-          pointer-events: none;
-        }
-        .arm-nav-arrow {
-          width: 0;
-          height: 0;
-          border-left: 6px solid transparent;
-          border-right: 6px solid transparent;
-          border-bottom: 12px solid #ffffff;
-          transform: rotate(45deg);
+          flex-direction: column;
+          justify-content: center;
         }
 
         @media (max-width:767px) {
@@ -416,7 +394,7 @@ export default function AdminRouteManager({
                     {routeStats.distKm} km · ~{routeStats.mins} min
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)", marginTop: 2 }}>
-                    Shortest driving path selected
+                    Ambulance ➔ User Pickup ➔ Hospital
                   </div>
                   <button className="arm-push-btn" onClick={pushRoute} disabled={pushing}>
                     {pushing ? "Sending…" : "Send To Driver"}
@@ -427,17 +405,6 @@ export default function AdminRouteManager({
           </div>
 
           <div className="arm-map">
-            {/* Blocker overlay for "More options" external link */}
-            <div className="arm-map-overlay-blocker" title="Google Maps Navigation" />
-
-            {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
-            {routeMode === "start" && (
-              <div className="arm-nav-beacon">
-                <div className="arm-nav-arrow" />
-                <span>Following Ambulance Live Location</span>
-              </div>
-            )}
-
             <iframe
               className="arm-map-frame"
               src={embedSrc}

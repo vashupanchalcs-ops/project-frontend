@@ -115,17 +115,18 @@ export default function DriverDashboard() {
     const startCoord = inIndia(dLat, dLng) ? `${dLat},${dLng}` : "";
     
     const pickupText = String(route?.pickup_location || "").trim();
-    const destText = String(route?.destination || "Hospital").trim();
+    const destText = String(route?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
 
-    if (routeMode === "start") {
-      const start = startCoord || pickupText || "Delhi, India";
-      const end = pickupText || destText || "Hospital, Delhi, India";
-      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    const startPt = startCoord || pickupText || "28.73724,77.30666";
+    const viaPt = pickupText;
+    const endPt = destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+
+    let daddrStr = encodeURIComponent(endPt);
+    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
+      daddrStr = `${encodeURIComponent(viaPt)}+to:${encodeURIComponent(endPt)}`;
     }
 
-    const start = startCoord || pickupText || "Delhi, India";
-    const end = destText || pickupText || "Hospital, Delhi, India";
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [location, ambulance, route, routeMode]);
 
   const mapDivRef    = useRef(null);
@@ -1801,21 +1802,6 @@ export default function DriverDashboard() {
               </motion.div>
             </div>
             <div ref={mapWrapRef} className="dd-map-wrap" style={{ overflow: "hidden", position: "relative" }}>
-              {/* Blocker overlay for "More options" external link */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "250px",
-                  height: "100px",
-                  zIndex: 10,
-                  background: "transparent",
-                  cursor: "default",
-                  pointerEvents: "auto",
-                }}
-                title="Google Maps Navigation"
-              />
 
               {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
               {routeMode === "start" && (
