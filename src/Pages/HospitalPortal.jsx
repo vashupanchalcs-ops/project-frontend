@@ -2647,12 +2647,20 @@ export default function HospitalPortal() {
                           <div style={{ fontSize: 13, fontWeight: 800 }}>
                             {selectedMapBooking?.ambulance_number || "-"} • Booking #{selectedMapBooking?.booking_id || "-"}
                           </div>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ fontSize: 11, color: "rgba(17,17,17,0.66)" }}>
-                              {selectedMapBooking?.driver_name || "-"}
-                            </div>
-                            <button className="hp-btn primary" onClick={() => setIsFullRouteView((v) => !v)}>
-                              {isFullRouteView ? "Close Full Route" : "Open Full Route"}
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <button
+                              className="hp-btn"
+                              style={{ background: !isFullRouteView ? "#00c853" : "#ffffff", color: !isFullRouteView ? "#ffffff" : "#111111", border: "1px solid rgba(17,17,17,0.2)" }}
+                              onClick={() => setIsFullRouteView(false)}
+                            >
+                              ▶ Start Route
+                            </button>
+                            <button
+                              className="hp-btn"
+                              style={{ background: isFullRouteView ? "#111111" : "#ffffff", color: isFullRouteView ? "#ffffff" : "#111111", border: "1px solid rgba(17,17,17,0.2)" }}
+                              onClick={() => setIsFullRouteView(true)}
+                            >
+                              🗺 View Full Route
                             </button>
                           </div>
                         </div>
@@ -2667,21 +2675,13 @@ export default function HospitalPortal() {
                         </div>
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480 }}>
-                            {isFullRouteView && (
-                              <GoogleNavOverlay
-                                currentPos={{ lat: selectedMapBooking?.ambulance_live?.latitude, lng: selectedMapBooking?.ambulance_live?.longitude }}
-                                speed={selectedMapBooking?.ambulance_live?.speed || 0}
-                                etaStr="En Route"
-                                driverName={selectedMapBooking?.driver_name || ""}
-                              />
-                            )}
-                          <iframe
-                            className="hp-map-frame"
-                            src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
-                            title="Hospital Live Tracking Map"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                          />
+                            <iframe
+                              className="hp-map-frame"
+                              src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
+                              title="Hospital Live Tracking Map"
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                            />
                           </div>
                         ) : (
                           <div className="hp-empty">Map coordinates unavailable for selected booking.</div>

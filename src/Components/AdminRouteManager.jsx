@@ -1,15 +1,15 @@
 /**
  * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
  *
- * Clean Google Maps Embedded Map Engine (Matching HospitalPortal):
- * - Standardized Google Maps iframe engine for 100% stability across all roles.
- * - Single blue road route with native direction markers (saddr -> daddr).
- * - Zero double routes, zero SVG polyline shooting, zero repeating world tiles.
+ * Clean Google Maps Embedded Map Engine (Matching Image 3):
+ * - Clean Google Maps iframe engine for 100% stability across all roles.
+ * - Single shortest road route with native Google direction callouts.
+ * - Zero green overlay banners, zero extra icons, zero Leaflet polylines.
+ * - Supports "Start Route" (Ambulance -> Pickup) and "View Full Route" (Ambulance -> User -> Hospital).
  */
 
 import { useEffect, useMemo, useState } from "react";
 import UnifiedMapHeader from "./UnifiedMapHeader";
-import GoogleNavOverlay from "./GoogleNavOverlay";
 import { geocodeInIndia, isIndiaCoord, normalizePlace } from "../hooks/useLeaflet";
 
 const defaultApiBase = import.meta.env.DEV
@@ -18,19 +18,6 @@ const defaultApiBase = import.meta.env.DEV
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const statusColor = { available: "#126f1e", en_route: "#f59a23", busy: "#666666", offline: "#999999" };
-
-const uniqueTextList = (values) => {
-  const out = [], seen = new Set();
-  for (const raw of values) {
-    const v = String(raw || "").trim();
-    if (!v) continue;
-    const key = normalizePlace(v);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(v);
-  }
-  return out;
-};
 
 const haversineKm = (a, b) => {
   const R = 6371;
@@ -60,7 +47,7 @@ export default function AdminRouteManager({
   const [loading, setLoading] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [toast, setToast] = useState(null);
-  const [isFullRouteView, setIsFullRouteView] = useState(false);
+  const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
 
   const clearRoutePreview = () => {
     setPickupCoord(null);
@@ -137,24 +124,15 @@ export default function AdminRouteManager({
     setTimeout(() => setToast(null), 2500);
   };
 
-  // ── Standard Google Maps Embed URLs (Exact match to HospitalPortal) ─────────
-  const mapEmbedSrc = useMemo(() => {
-    const ambLat = Number(selAmb?.latitude);
-    const ambLng = Number(selAmb?.longitude);
-    const pickupLat = Number(selBook?.pickup_latitude);
-    const pickupLng = Number(selBook?.pickup_longitude);
-    const lat = isIndiaCoord(ambLat, ambLng) ? ambLat : isIndiaCoord(pickupLat, pickupLng) ? pickupLat : 28.6139;
-    const lng = isIndiaCoord(ambLat, ambLng) ? ambLng : isIndiaCoord(pickupLat, pickupLng) ? pickupLng : 77.2090;
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
-  }, [selAmb, selBook]);
-
-  const fullRouteEmbedSrc = useMemo(() => {
+  // ── Route Embed URLs (Pure Google Maps Image 3 Style) ──────────────────────
+  const embedSrc = useMemo(() => {
     const ambLat = Number(selAmb?.latitude);
     const ambLng = Number(selAmb?.longitude);
     const ambCoord = isIndiaCoord(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
+    
     const pickupLat = Number(selBook?.pickup_latitude);
     const pickupLng = Number(selBook?.pickup_longitude);
-    const pickupCoord = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
+    const pickupCoordStr = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
     const pickupText = String(selBook?.pickup_location || "").trim();
 
     const destLat = Number(destCoord?.lat);
@@ -162,10 +140,18 @@ export default function AdminRouteManager({
     const destCoordStr = isIndiaCoord(destLat, destLng) ? `${destLat},${destLng}` : "";
     const destText = String(selBook?.assigned_hospital_address || selBook?.assigned_hospital_name || selBook?.destination || "").trim();
 
-    const start = ambCoord || pickupCoord || pickupText || "Delhi, India";
-    const end = destCoordStr || destText || pickupCoord || pickupText || "Hospital, Delhi, India";
+    if (routeMode === "start") {
+      // Start Route: Navigation from Ambulance live location -> Pickup
+      const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
+      const end = pickupCoordStr || pickupText || destText || "Hospital, Delhi, India";
+      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    }
+
+    // View Full Route: Complete route connecting Ambulance -> User Pickup -> Hospital
+    const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
+    const end = destCoordStr || destText || pickupCoordStr || pickupText || "Hospital, Delhi, India";
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
-  }, [selAmb, selBook, destCoord]);
+  }, [selAmb, selBook, destCoord, routeMode]);
 
   // ── Resolve coordinates ─────────────────────────────────────────────────────
   const resolveCoords = async (booking) => {
@@ -234,7 +220,7 @@ export default function AdminRouteManager({
 
       const stats = { distKm: totalKm, mins };
       setRouteStats(stats);
-      setIsFullRouteView(true);
+      setRouteMode("full");
       showToast(`Route calculated: ${stats.distKm} km · ~${stats.mins} min`);
     } catch (e) {
       showToast(e.message || "Route calculation error", "error");
@@ -323,8 +309,8 @@ export default function AdminRouteManager({
             ambLng={selAmb?.longitude}
             pickupLat={selBook?.pickup_latitude}
             pickupLng={selBook?.pickup_longitude}
-            isFullRouteView={isFullRouteView}
-            onToggleFullRoute={() => setIsFullRouteView((v) => !v)}
+            routeMode={routeMode}
+            onSetRouteMode={(mode) => setRouteMode(mode)}
           />
         )}
 
@@ -397,23 +383,13 @@ export default function AdminRouteManager({
           </div>
 
           <div className="arm-map">
-            <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 540 }}>
-              {isFullRouteView && (
-                <GoogleNavOverlay
-                  currentPos={{ lat: selAmb?.latitude, lng: selAmb?.longitude }}
-                  speed={selAmb?.speed || 0}
-                  etaStr={routeStats ? `${routeStats.distKm} km (${routeStats.mins} min)` : "En Route"}
-                  driverName={selAmb?.driver || ""}
-                />
-              )}
-              <iframe
-                className="arm-map-frame"
-                src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
-                title="Admin Route Manager Map"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
+            <iframe
+              className="arm-map-frame"
+              src={embedSrc}
+              title="Admin Route Manager Map"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
         </div>
       </div>

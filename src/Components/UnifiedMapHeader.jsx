@@ -1,8 +1,10 @@
 /**
  * UnifiedMapHeader.jsx — src/Components/UnifiedMapHeader.jsx
  *
- * Unified header card bar matching Hospital Portal (Image 2 style) for
+ * Unified header card bar matching Hospital Portal for
  * Admin, User, Driver, and Hospital map views.
+ *
+ * Provides two clean buttons: "Start Route" & "View Full Route"
  */
 
 const coordText = (lat, lng) => {
@@ -24,8 +26,8 @@ export default function UnifiedMapHeader({
   ambLng = null,
   pickupLat = null,
   pickupLng = null,
-  isFullRouteView = false,
-  onToggleFullRoute = null,
+  routeMode = "full", // "start" | "full"
+  onSetRouteMode = null,
 }) {
   return (
     <div style={{ background: "#ffffff", border: "1px solid rgba(17,17,17,0.12)", borderRadius: 10, marginBottom: 8, overflow: "hidden", fontFamily: "Segoe UI, sans-serif" }}>
@@ -36,23 +38,41 @@ export default function UnifiedMapHeader({
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
           <div style={{ fontSize: 11, color: "rgba(17,17,17,0.66)", fontWeight: 600 }}>{driverName}</div>
-          {onToggleFullRoute && (
-            <button
-              onClick={onToggleFullRoute}
-              style={{
-                background: isFullRouteView ? "#111111" : "#f59a23",
-                color: isFullRouteView ? "#ffffff" : "#111111",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 12px",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              {isFullRouteView ? "Close Full Route" : "Open Full Route"}
-            </button>
+          {onSetRouteMode && (
+            <div style={{ display: "inline-flex", gap: 6 }}>
+              <button
+                onClick={() => onSetRouteMode("start")}
+                style={{
+                  background: routeMode === "start" ? "#00c853" : "#f5f5f5",
+                  color: routeMode === "start" ? "#ffffff" : "#111111",
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  borderRadius: 6,
+                  padding: "6px 12px",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                ▶ Start Route
+              </button>
+              <button
+                onClick={() => onSetRouteMode("full")}
+                style={{
+                  background: routeMode === "full" ? "#111111" : "#f5f5f5",
+                  color: routeMode === "full" ? "#ffffff" : "#111111",
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  borderRadius: 6,
+                  padding: "6px 12px",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                🗺 View Full Route
+              </button>
+            </div>
           )}
         </div>
       </div>

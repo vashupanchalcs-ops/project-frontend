@@ -1,15 +1,15 @@
 /**
  * UserBookingMap.jsx — src/Components/UserBookingMap.jsx
  *
- * Clean Google Maps Embedded Map Engine (Matching HospitalPortal):
- * - Standardized Google Maps iframe engine for 100% stability across all roles.
- * - Single blue road route with native direction markers (saddr -> daddr).
- * - Zero double routes, zero SVG polyline shooting, zero repeating world tiles.
+ * Clean Google Maps Embedded Map Engine (Matching Image 3):
+ * - Clean Google Maps iframe engine for 100% stability across all roles.
+ * - Single shortest road route with native Google direction callouts.
+ * - Zero green overlay banners, zero extra icons, zero Leaflet polylines.
+ * - Supports "Start Route" (Ambulance -> Pickup) and "View Full Route" (Ambulance -> User -> Hospital).
  */
 
 import { useEffect, useMemo, useState } from "react";
 import UnifiedMapHeader from "./UnifiedMapHeader";
-import GoogleNavOverlay from "./GoogleNavOverlay";
 import { isIndiaCoord } from "../hooks/useLeaflet";
 
 const defaultApiBase = import.meta.env.DEV
@@ -39,7 +39,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   const [ambBattery, setAmbBattery] = useState(null);
   const [ambDriver, setAmbDriver] = useState("");
   const [elapsed, setElapsed] = useState(0);
-  const [isFullRouteView, setIsFullRouteView] = useState(true);
+  const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
 
   // ── Timer ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -91,31 +91,30 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return { d1, m1, d2: "12.4", m2: 25 };
   }, [ambLoc, booking]);
 
-  // ── Standard Google Maps Embed URLs (Matching HospitalPortal) ───────────────
-  const mapEmbedSrc = useMemo(() => {
-    const ambLat = ambLoc?.lat ?? Number(booking?.pickup_latitude);
-    const ambLng = ambLoc?.lng ?? Number(booking?.pickup_longitude);
-    const pickupLat = Number(booking?.pickup_latitude);
-    const pickupLng = Number(booking?.pickup_longitude);
-    const lat = isIndiaCoord(ambLat, ambLng) ? ambLat : isIndiaCoord(pickupLat, pickupLng) ? pickupLat : 28.6139;
-    const lng = isIndiaCoord(ambLat, ambLng) ? ambLng : isIndiaCoord(pickupLat, pickupLng) ? pickupLng : 77.2090;
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
-  }, [ambLoc, booking]);
-
-  const fullRouteEmbedSrc = useMemo(() => {
+  // ── Route Embed URL (Matching Image 3) ──────────────────────────────────────
+  const embedSrc = useMemo(() => {
     const ambLat = ambLoc?.lat;
     const ambLng = ambLoc?.lng;
     const ambCoord = isIndiaCoord(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
+    
     const pickupLat = Number(booking?.pickup_latitude);
     const pickupLng = Number(booking?.pickup_longitude);
-    const pickupCoord = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
+    const pickupCoordStr = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
     const pickupText = String(booking?.pickup_location || "").trim();
     const destText = String(booking?.assigned_hospital_name || booking?.destination || "Hospital").trim();
 
-    const start = ambCoord || pickupCoord || pickupText || "Delhi, India";
-    const end = destText || pickupCoord || pickupText || "Hospital, Delhi, India";
+    if (routeMode === "start") {
+      // Start Route: Ambulance live location -> Pickup
+      const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
+      const end = pickupCoordStr || pickupText || destText || "Hospital, Delhi, India";
+      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    }
+
+    // View Full Route: Ambulance -> User Pickup -> Hospital
+    const start = ambCoord || pickupCoordStr || pickupText || "Delhi, India";
+    const end = destText || pickupCoordStr || pickupText || "Hospital, Delhi, India";
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
-  }, [ambLoc, booking]);
+  }, [ambLoc, booking, routeMode]);
 
   const rootStyle = embedded
     ? { position: "absolute", inset: 0, display: "flex", flexDirection: "column", background: "#ffffff" }
@@ -146,8 +145,8 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         ambLng={ambLoc?.lng}
         pickupLat={booking?.pickup_latitude}
         pickupLng={booking?.pickup_longitude}
-        isFullRouteView={isFullRouteView}
-        onToggleFullRoute={() => setIsFullRouteView((v) => !v)}
+        routeMode={routeMode}
+        onSetRouteMode={(mode) => setRouteMode(mode)}
       />
 
       {/* ── Top Stats Strip ────────────────────────────────────────────────── */}
@@ -243,23 +242,13 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
       {/* ── Map Frame ──────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-        <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480 }}>
-          {isFullRouteView && (
-            <GoogleNavOverlay
-              currentPos={{ lat: ambLoc?.lat, lng: ambLoc?.lng }}
-              speed={ambSpeed}
-              etaStr={legStats.d1 ? `${legStats.d1} km (${legStats.m1} min)` : "En Route"}
-              driverName={ambDriver || booking?.driver || ""}
-            />
-          )}
-          <iframe
-            style={{ width: "100%", height: "100%", border: "none", background: "#e5e3df" }}
-            src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
-            title="User Live Booking Map"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
+        <iframe
+          style={{ width: "100%", height: "100%", border: "none", background: "#e5e3df" }}
+          src={embedSrc}
+          title="User Live Booking Map"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
       </div>
     </div>
   );

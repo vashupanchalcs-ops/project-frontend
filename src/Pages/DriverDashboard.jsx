@@ -107,25 +107,26 @@ export default function DriverDashboard() {
   const [reportDrafts,  setReportDrafts]  = useState({});
   const [bookingMenuOpenId, setBookingMenuOpenId] = useState(null);
   const [deletingBookingId, setDeletingBookingId] = useState(null);
-  const [is3D, setIs3D] = useState(false);
-  const [isFullRouteView, setIsFullRouteView] = useState(true);
+  const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
 
-  const driverMapEmbedSrc = useMemo(() => {
-    const dLat = location?.lat ?? Number(ambulance?.latitude);
-    const dLng = location?.lng ?? Number(ambulance?.longitude);
-    const lat = inIndia(dLat, dLng) ? dLat : 28.6139;
-    const lng = inIndia(dLat, dLng) ? dLng : 77.2090;
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
-  }, [location, ambulance]);
-
-  const driverFullRouteEmbedSrc = useMemo(() => {
+  const driverEmbedSrc = useMemo(() => {
     const dLat = location?.lat ?? Number(ambulance?.latitude);
     const dLng = location?.lng ?? Number(ambulance?.longitude);
     const startCoord = inIndia(dLat, dLng) ? `${dLat},${dLng}` : "";
-    const start = startCoord || route?.pickup_location || "Delhi, India";
-    const end = route?.destination || "Hospital, Delhi, India";
+    
+    const pickupText = String(route?.pickup_location || "").trim();
+    const destText = String(route?.destination || "Hospital").trim();
+
+    if (routeMode === "start") {
+      const start = startCoord || pickupText || "Delhi, India";
+      const end = pickupText || destText || "Hospital, Delhi, India";
+      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+    }
+
+    const start = startCoord || pickupText || "Delhi, India";
+    const end = destText || pickupText || "Hospital, Delhi, India";
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
-  }, [location, ambulance, route]);
+  }, [location, ambulance, route, routeMode]);
 
   const mapDivRef    = useRef(null);
   const mapWrapRef   = useRef(null);
@@ -1800,28 +1801,12 @@ export default function DriverDashboard() {
               </motion.div>
             </div>
             <div ref={mapWrapRef} className="dd-map-wrap" style={{ overflow: "hidden", position: "relative" }}>
-              <div style={{ position: "absolute", top: 10, right: 10, zIndex: 5000, display: "flex", gap: "8px" }}>
+              <div style={{ position: "absolute", top: 10, right: 10, zIndex: 5000, display: "flex", gap: "6px" }}>
                 <button
-                  onClick={() => setIsFullRouteView((v) => !v)}
+                  onClick={() => setRouteMode("start")}
                   style={{
-                    background: isFullRouteView ? "#111" : "#f59a23",
-                    color: isFullRouteView ? "#fff" : "#111",
-                    border: "none",
-                    padding: "6px 12px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  {isFullRouteView ? "Close Full Route Map" : "Open Full Route Map"}
-                </button>
-                <button
-                  onClick={() => setVoiceEnabled(!voiceEnabled)}
-                  style={{
-                    background: voiceEnabled ? "#ffffff" : "#fff",
-                    color: "#111",
+                    background: routeMode === "start" ? "#00c853" : "#ffffff",
+                    color: routeMode === "start" ? "#ffffff" : "#111111",
                     border: "1px solid rgba(17,17,17,0.2)",
                     padding: "6px 12px",
                     borderRadius: 8,
@@ -1831,7 +1816,23 @@ export default function DriverDashboard() {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
                   }}
                 >
-                  {voiceEnabled ? "🔊 Voice Navi: ON" : "🔇 Voice Navi: OFF"}
+                  ▶ Start Route
+                </button>
+                <button
+                  onClick={() => setRouteMode("full")}
+                  style={{
+                    background: routeMode === "full" ? "#111111" : "#ffffff",
+                    color: routeMode === "full" ? "#ffffff" : "#111111",
+                    border: "1px solid rgba(17,17,17,0.2)",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  🗺 View Full Route
                 </button>
               </div>
               {routeAlert && (
@@ -1855,17 +1856,9 @@ export default function DriverDashboard() {
                   ⚠ {routeAlert}
                 </div>
               )}
-              {isFullRouteView && (
-                <GoogleNavOverlay
-                  currentPos={{ lat: location?.lat ?? ambulance?.latitude, lng: location?.lng ?? ambulance?.longitude }}
-                  speed={speed || ambulance?.speed || 0}
-                  etaStr={route?.duration || "En Route"}
-                  driverName={driverName || ""}
-                />
-              )}
               <iframe
                 style={{ width: "100%", height: "100%", minHeight: 480, border: "none", background: "#e5e3df" }}
-                src={isFullRouteView ? driverFullRouteEmbedSrc : driverMapEmbedSrc}
+                src={driverEmbedSrc}
                 title="Driver Live Tracking Map"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
