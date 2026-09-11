@@ -1,10 +1,10 @@
 /**
  * UserBookingMap.jsx — src/Components/UserBookingMap.jsx
  *
- * Clean Google Maps Embedded Map Engine (Matching Image 3):
+ * Clean Google Maps Embedded Map Engine (Matching Image 3 & Image 4):
  * - Clean Google Maps iframe engine for 100% stability across all roles.
  * - Single shortest road route with native Google direction callouts.
- * - Zero green overlay banners, zero extra icons, zero Leaflet polylines.
+ * - Blocked "More options" external Google redirect link overlay.
  * - Supports "Start Route" (Ambulance -> Pickup) and "View Full Route" (Ambulance -> User -> Hospital).
  */
 
@@ -242,6 +242,58 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
       {/* ── Map Frame ──────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+        {/* Blocker overlay for "More options" external link */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "250px",
+            height: "100px",
+            zIndex: 10,
+            background: "transparent",
+            cursor: "default",
+            pointerEvents: "auto",
+          }}
+          title="Google Maps Navigation"
+        />
+
+        {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
+        {routeMode === "start" && (
+          <div
+            style={{
+              position: "absolute",
+              top: 14,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 20,
+              background: "rgba(0, 200, 83, 0.95)",
+              color: "#ffffff",
+              padding: "6px 14px",
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 6px 18px rgba(0, 200, 83, 0.35)",
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderBottom: "12px solid #ffffff",
+                transform: "rotate(45deg)",
+              }}
+            />
+            <span>Following Ambulance Live Location</span>
+          </div>
+        )}
+
         <iframe
           style={{ width: "100%", height: "100%", border: "none", background: "#e5e3df" }}
           src={embedSrc}

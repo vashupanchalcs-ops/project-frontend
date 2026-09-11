@@ -1801,6 +1801,58 @@ export default function DriverDashboard() {
               </motion.div>
             </div>
             <div ref={mapWrapRef} className="dd-map-wrap" style={{ overflow: "hidden", position: "relative" }}>
+              {/* Blocker overlay for "More options" external link */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "250px",
+                  height: "100px",
+                  zIndex: 10,
+                  background: "transparent",
+                  cursor: "default",
+                  pointerEvents: "auto",
+                }}
+                title="Google Maps Navigation"
+              />
+
+              {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
+              {routeMode === "start" && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 14,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 20,
+                    background: "rgba(0, 200, 83, 0.95)",
+                    color: "#ffffff",
+                    padding: "6px 14px",
+                    borderRadius: 20,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    boxShadow: "0 6px 18px rgba(0, 200, 83, 0.35)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: "6px solid transparent",
+                      borderRight: "6px solid transparent",
+                      borderBottom: "12px solid #ffffff",
+                      transform: "rotate(45deg)",
+                    }}
+                  />
+                  <span>Following Ambulance Live Location</span>
+                </div>
+              )}
+
               <div style={{ position: "absolute", top: 10, right: 10, zIndex: 5000, display: "flex", gap: "6px" }}>
                 <button
                   onClick={() => setRouteMode("start")}

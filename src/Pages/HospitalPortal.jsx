@@ -2675,6 +2675,21 @@ export default function HospitalPortal() {
                         </div>
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 480 }}>
+                            {/* Blocker overlay for "More options" external link */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "250px",
+                                height: "100px",
+                                zIndex: 10,
+                                background: "transparent",
+                                cursor: "default",
+                                pointerEvents: "auto",
+                              }}
+                              title="Google Maps Navigation"
+                            />
                             <iframe
                               className="hp-map-frame"
                               src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
