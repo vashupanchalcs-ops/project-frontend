@@ -119,7 +119,7 @@
   .dd-tabs-desktop { display: none !important; }
   .dd-bottom-nav { display: flex !important; }
   .dd-map-layout { flex-direction: column; height: calc(100vh - 56px - 58px); }
-  .dd-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); max-height: 220px; }
-  .dd-map-wrap { flex: 1; min-height: 180px; }
+  .dd-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); max-height: 200px; }
+  .dd-map-wrap { flex: 1; min-height: 360px; height: calc(100vh - 56px - 58px - 200px); }
   .dd-content { padding: 12px 12px 80px; }
 }

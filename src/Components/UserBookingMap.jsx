@@ -131,160 +131,236 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
   return (
     <div style={rootStyle}>
-      {/* ── Top Header Bar ─────────────────────────────────────────────────── */}
-      <UnifiedMapHeader
-        ambulanceNumber={booking?.ambulance_number || "AMB-0000"}
-        bookingId={booking?.id}
-        driverName={ambDriver || booking?.driver || "-"}
-        speed={ambSpeed}
-        battery={ambBattery}
-        pickupLocation={booking?.pickup_location || "Pickup"}
-        destination={hospName}
-        ambLat={ambLoc?.lat}
-        ambLng={ambLoc?.lng}
-        pickupLat={booking?.pickup_latitude}
-        pickupLng={booking?.pickup_longitude}
-        routeMode={routeMode}
-        onSetRouteMode={(mode) => setRouteMode(mode)}
-      />
+      <style>{`
+        .ubm-root {
+          display: flex;
+          width: 100%;
+          height: 100%;
+          background: #f4f4ef;
+          font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        .ubm-panel {
+          width: 360px;
+          min-width: 320px;
+          background: #ffffff;
+          border-right: 1px solid rgba(17,17,17,0.12);
+          display: flex;
+          flex-direction: column;
+          padding: 12px;
+          gap: 10px;
+          overflow-y: auto;
+          box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+          z-index: 5;
+        }
+        .ubm-map-wrap {
+          flex: 1;
+          min-width: 0;
+          height: 100%;
+          position: relative;
+          background: #e5e3df;
+        }
+        .ubm-box {
+          background: #f9f9f5;
+          border: 1px solid rgba(17,17,17,0.12);
+          border-radius: 10px;
+          padding: 10px 12px;
+        }
+        .ubm-box-label {
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          color: rgba(17,17,17,0.55);
+          margin-bottom: 6px;
+        }
+        .ubm-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 8px;
+        }
+        .ubm-stat-card {
+          background: #ffffff;
+          border: 1px solid rgba(17,17,17,0.1);
+          border-radius: 8px;
+          padding: 8px;
+          text-align: center;
+        }
+        .ubm-btn {
+          flex: 1;
+          border: 1px solid rgba(17,17,17,0.18);
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .ubm-btn-green {
+          background: #00c853;
+          color: #ffffff;
+          border-color: #00c853;
+        }
+        .ubm-btn-dark {
+          background: #111111;
+          color: #ffffff;
+          border-color: #111111;
+        }
+        .ubm-btn-light {
+          background: #ffffff;
+          color: #111111;
+        }
 
-      {/* ── Top Stats Strip ────────────────────────────────────────────────── */}
-      <div
-        style={{
-          background: "#fffef6",
-          borderBottom: "1px solid rgba(20,20,20,0.12)",
-          padding: "8px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          {/* Leg 1 */}
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#126f1e", fontWeight: 900, fontSize: 18, lineHeight: 1 }}>
-              {legStats.d1 != null ? `${legStats.d1} km · ~${legStats.m1} min` : "En Route"}
+        @media (max-width: 767px) {
+          .ubm-root {
+            flex-direction: column;
+          }
+          .ubm-panel {
+            width: 100%;
+            min-width: 100%;
+            max-height: 260px;
+            border-right: none;
+            border-bottom: 1px solid rgba(17,17,17,0.12);
+            padding: 8px;
+            gap: 6px;
+          }
+          .ubm-map-wrap {
+            flex: 1;
+            height: calc(100vh - 260px);
+            min-height: 320px;
+          }
+        }
+      `}</style>
+
+      <div className="ubm-root">
+        {/* ── Left Data & Control Sidebar ───────────────────────────────────── */}
+        <div className="ubm-panel">
+          <UnifiedMapHeader
+            ambulanceNumber={booking?.ambulance_number || "AMB-0000"}
+            bookingId={booking?.id}
+            driverName={ambDriver || booking?.driver || "-"}
+            speed={ambSpeed}
+            battery={ambBattery}
+            pickupLocation={booking?.pickup_location || "Pickup"}
+            destination={hospName}
+            ambLat={ambLoc?.lat}
+            ambLng={ambLoc?.lng}
+            pickupLat={booking?.pickup_latitude}
+            pickupLng={booking?.pickup_longitude}
+            routeMode={routeMode}
+            onSetRouteMode={(mode) => setRouteMode(mode)}
+          />
+
+          {/* Leg Stats Box */}
+          <div className="ubm-box">
+            <div className="ubm-box-label">Live Journey Summary</div>
+            <div className="ubm-stats-grid">
+              <div className="ubm-stat-card">
+                <div style={{ color: "#126f1e", fontWeight: 900, fontSize: 16 }}>
+                  {legStats.d1 != null ? `${legStats.d1} km · ~${legStats.m1}m` : "En Route"}
+                </div>
+                <div style={{ fontSize: 9, color: "rgba(17,17,17,0.55)", marginTop: 2, textTransform: "uppercase" }}>
+                  Ambulance ➔ Pickup
+                </div>
+              </div>
+
+              <div className="ubm-stat-card">
+                <div style={{ color: "#f59a23", fontWeight: 900, fontSize: 16 }}>
+                  ~{legStats.m2} min
+                </div>
+                <div style={{ fontSize: 9, color: "rgba(17,17,17,0.55)", marginTop: 2, textTransform: "uppercase" }}>
+                  Pickup ➔ Hospital
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: 9, color: "rgba(17,17,17,0.5)", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
-              Ambulance → Pickup
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(17,17,17,0.1)" }}>
+              <span style={{ fontSize: 11, color: "rgba(17,17,17,0.6)", fontWeight: 600 }}>Elapsed Time</span>
+              <span style={{ fontSize: 13, fontWeight: 900, color: "#111", fontVariantNumeric: "tabular-nums" }}>
+                {fmtSecs(elapsed)}
+              </span>
             </div>
           </div>
 
-          <div style={{ width: 1, height: 32, background: "rgba(17,17,17,0.1)" }} />
-
-          {/* Leg 2 */}
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#f59a23", fontWeight: 900, fontSize: 18, lineHeight: 1 }}>
-              ~{legStats.m2} min to Hospital
-            </div>
-            <div style={{ fontSize: 9, color: "rgba(17,17,17,0.5)", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
-              Pickup → Hospital
+          {/* Destination Hospital Card */}
+          <div className="ubm-box" style={{ background: "#fffef6", borderColor: "#f59a23" }}>
+            <div className="ubm-box-label" style={{ color: "#b78103" }}>Assigned Hospital</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              🏥 {hospName}
             </div>
           </div>
 
-          <div style={{ width: 1, height: 32, background: "rgba(17,17,17,0.1)" }} />
-
-          {/* Elapsed */}
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#111", fontWeight: 900, fontSize: 18, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
-              {fmtSecs(elapsed)}
-            </div>
-            <div style={{ fontSize: 9, color: "rgba(17,17,17,0.5)", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
-              Elapsed Time
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              background: "#fff3df",
-              border: "1px solid #f59a23",
-              borderRadius: 8,
-              padding: "4px 10px",
-              fontSize: 11,
-              fontWeight: 700,
-              maxWidth: 200,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            🏥 {hospName}
-          </div>
-          {onClose && (
+          {/* Action Buttons */}
+          <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
             <button
-              onClick={onClose}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                background: "#111111",
-                color: "#ffffff",
-                border: "none",
-                fontSize: 16,
-                cursor: "pointer",
-                fontWeight: 900,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              className={routeMode === "start" ? "ubm-btn ubm-btn-green" : "ubm-btn ubm-btn-light"}
+              onClick={() => setRouteMode("start")}
             >
-              ×
+              ▶ Start Route
             </button>
-          )}
+            <button
+              className={routeMode === "full" ? "ubm-btn ubm-btn-dark" : "ubm-btn ubm-btn-light"}
+              onClick={() => setRouteMode("full")}
+            >
+              🗺 View Full Route
+            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="ubm-btn ubm-btn-light"
+                style={{ flex: "0 0 36px", padding: 0, fontSize: 18, fontWeight: 900 }}
+                title="Close"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ── Map Frame ──────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-
-        {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
-        {routeMode === "start" && (
-          <div
-            style={{
-              position: "absolute",
-              top: 14,
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 20,
-              background: "rgba(0, 200, 83, 0.95)",
-              color: "#ffffff",
-              padding: "6px 14px",
-              borderRadius: 20,
-              fontSize: 11,
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              boxShadow: "0 6px 18px rgba(0, 200, 83, 0.35)",
-              pointerEvents: "none",
-            }}
-          >
+        {/* ── Right Map Frame ────────────────────────────────────────────────── */}
+        <div className="ubm-map-wrap">
+          {routeMode === "start" && (
             <div
               style={{
-                width: 0,
-                height: 0,
-                borderLeft: "6px solid transparent",
-                borderRight: "6px solid transparent",
-                borderBottom: "12px solid #ffffff",
-                transform: "rotate(45deg)",
+                position: "absolute",
+                top: 14,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 20,
+                background: "rgba(0, 200, 83, 0.95)",
+                color: "#ffffff",
+                padding: "6px 14px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                boxShadow: "0 6px 18px rgba(0, 200, 83, 0.35)",
+                pointerEvents: "none",
               }}
-            />
-            <span>Following Ambulance Live Location</span>
-          </div>
-        )}
+            >
+              <div
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: "6px solid transparent",
+                  borderRight: "6px solid transparent",
+                  borderBottom: "12px solid #ffffff",
+                  transform: "rotate(45deg)",
+                }}
+              />
+              <span>Following Ambulance Live Location</span>
+            </div>
+          )}
 
-        <iframe
-          style={{ width: "100%", height: "100%", border: "none", background: "#e5e3df" }}
-          src={embedSrc}
-          title="User Live Booking Map"
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
+          <iframe
+            style={{ width: "100%", height: "100%", border: "none", background: "#e5e3df" }}
+            src={embedSrc}
+            title="User Live Booking Map"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
       </div>
     </div>
   );
