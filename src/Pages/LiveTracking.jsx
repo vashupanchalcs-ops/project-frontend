@@ -1,34 +1,45 @@
 /**
- * LiveTracking.jsx  →  src/Pages/LiveTracking.jsx
+ * LiveTracking.jsx → src/Pages/LiveTracking.jsx
  * Dedicated fullscreen live tracking page (sidebar 4th item for users).
  */
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import UserBookingMap from "../Components/UserBookingMap";
 
-const BASE = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function LiveTracking() {
-  const [booking,  setBooking]  = useState(null);
-  const [loading,  setLoading]  = useState(true);
+  const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [noActive, setNoActive] = useState(false);
 
   const navigate = useNavigate();
-  const email    = localStorage.getItem("user") || "";
-  const name     = localStorage.getItem("name") || "";
+  const email = localStorage.getItem("user") || "";
+  const name = localStorage.getItem("name") || "";
 
   const fetchConfirmed = useCallback(async () => {
     try {
-      const res  = await fetch(`${BASE}/api/bookings/`);
+      const res = await fetch(`${BASE}/api/bookings/`);
       const data = await res.json();
-      const confirmed = data.find(b =>
-        (b.booked_by_email===email || b.user_email===email || b.booked_by===name) &&
-        b.status==="confirmed" &&
-        b.sent_to_driver
+      const confirmed = data.find(
+        (b) =>
+          (b.booked_by_email === email || b.user_email === email || b.booked_by === name) &&
+          b.status === "confirmed" &&
+          b.sent_to_driver
       );
-      if (confirmed) { setBooking(confirmed); setNoActive(false); }
-      else           { setBooking(null); setNoActive(true); }
-    } catch { setNoActive(true); }
+      if (confirmed) {
+        setBooking(confirmed);
+        setNoActive(false);
+      } else {
+        setBooking(null);
+        setNoActive(true);
+      }
+    } catch {
+      setNoActive(true);
+    }
     setLoading(false);
   }, [email, name]);
 
@@ -41,21 +52,19 @@ export default function LiveTracking() {
   return (
     <>
       <style>{`
-        /* page-root lt-fixed — fills screen after sidebar + topbar */
         .lt-root {
           position: fixed;
-          top:    64px;
-          left:   64px;
-          right:  0;
+          top: 64px;
+          left: 64px;
+          right: 0;
           bottom: 0;
-          background: #f7f7f2;
+          background: #ffffff;
           display: flex;
           flex-direction: column;
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-family: 'Segoe UI', Roboto, sans-serif;
           overflow: hidden;
         }
 
-        /* Top bar */
         .lt-topbar {
           display: flex;
           align-items: center;
@@ -67,105 +76,91 @@ export default function LiveTracking() {
           gap: 12px;
           flex-wrap: wrap;
         }
-        .lt-topbar-left  { display:flex; align-items:center; gap:12px; }
+        .lt-topbar-left { display: flex; align-items: center; gap: 12px; }
         .lt-back-btn {
-          width:34px; height:34px;
-          background:rgba(255, 255, 255, 0.15);
-          border:1px solid rgba(20,20,20,0.12);
-          border-radius:50%; color:rgba(17,17,17,0.7);
-          cursor:pointer; font-family:inherit;
-          display:flex; align-items:center; justify-content:center;
-          transition:all 0.15s; flex-shrink:0;
+          width: 34px; height: 34px;
+          background: rgba(17,17,17,0.05);
+          border: 1px solid rgba(20,20,20,0.12);
+          border-radius: 50%; color: rgba(17,17,17,0.7);
+          cursor: pointer; font-family: inherit;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.15s; flex-shrink: 0;
         }
-        .lt-back-btn:hover { background:rgba(255, 255, 255, 0.15); color:#111; }
-        .lt-title { font-size:16px; font-weight:800; color:#111; }
-        .lt-sub   { font-size:11px; color:rgba(17,17,17,0.58); margin-top:2px; }
-
-        @keyframes lt-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
-        .lt-live-dot { width:8px; height:8px; border-radius:50%; background:#00d4aa; flex-shrink:0; animation:lt-pulse 1.5s infinite; box-shadow:0 0 8px rgba(0,212,170,0.7); }
+        .lt-back-btn:hover { background: rgba(17,17,17,0.1); color: #111; }
+        .lt-title { font-size: 16px; font-weight: 800; color: #111; }
+        .lt-sub { font-size: 11px; color: rgba(17,17,17,0.58); margin-top: 2px; }
 
         .lt-mybookings-btn {
-          background:rgba(255, 255, 255, 0.15); border:1px solid rgba(20,20,20,0.12); color:#111;
-          border-radius:10px; padding:7px 16px; font-size:11px; font-weight:700;
-          cursor:pointer; font-family:inherit; transition:background 0.15s; white-space:nowrap;
+          background: rgba(17,17,17,0.05); border: 1px solid rgba(20,20,20,0.12); color: #111;
+          border-radius: 10px; padding: 7px 16px; font-size: 11px; font-weight: 700;
+          cursor: pointer; font-family: inherit; transition: background 0.15s; white-space: nowrap;
         }
-        .lt-mybookings-btn:hover { background:rgba(255, 255, 255, 0.15); }
+        .lt-mybookings-btn:hover { background: rgba(17,17,17,0.1); }
 
-        /* Map fills all remaining space */
-        .lt-map-wrap { flex:1; position:relative; overflow:hidden; min-height:0; }
+        .lt-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px; text-align: center; }
+        @keyframes lt-spin { to { transform: rotate(360deg); } }
 
-        /* Center state */
-        .lt-center { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:40px; text-align:center; }
-        @keyframes lt-spin { to { transform:rotate(360deg); } }
-
-        /* Mobile */
-        @media (max-width:767px) {
-          .lt-root   { top:64px; left:0; bottom:60px; }
-          .lt-topbar { padding:10px 14px; }
-          .lt-title  { font-size:14px; }
-        }
-        @media (max-width:479px) {
-          .lt-topbar { padding:8px 12px; }
+        @media (max-width: 767px) {
+          .lt-root { top: 64px; left: 0; bottom: 60px; }
+          .lt-topbar { padding: 10px 14px; }
+          .lt-title { font-size: 14px; }
         }
       `}</style>
 
       <div className="lt-root">
-
-        {/* Top Bar */}
-        <div className="lt-topbar">
-          <div className="lt-topbar-left">
-            <button className="lt-back-btn" onClick={()=>navigate("/MyBookings")}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 12H5M12 5l-7 7 7 7"/>
-              </svg>
-            </button>
-            <div>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                {booking && <span className="lt-live-dot"/>}
-                <div className="lt-title">🚑 Live Tracking</div>
-              </div>
-              <div className="lt-sub">
-                {booking ? `Booking #${booking.id} · ${booking.ambulance_number||"—"}` : "No active booking"}
+        {/* Top Bar (Shown only when loading or no active booking) */}
+        {(!booking || loading) && (
+          <div className="lt-topbar">
+            <div className="lt-topbar-left">
+              <button className="lt-back-btn" onClick={() => navigate("/MyBookings")}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+              </button>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div className="lt-title">🚑 Live Tracking</div>
+                </div>
+                <div className="lt-sub">
+                  No active booking
+                </div>
               </div>
             </div>
+            <button className="lt-mybookings-btn" onClick={() => navigate("/MyBookings")}>
+              📋 My Bookings
+            </button>
           </div>
-          <button className="lt-mybookings-btn" onClick={()=>navigate("/MyBookings")}>
-            📋 My Bookings
-          </button>
-        </div>
+        )}
 
         {/* Loading */}
         {loading && (
           <div className="lt-center">
-            <div style={{ width:40, height:40, border:"3px solid rgba(255,255,255,0.08)", borderTop:"3px solid #ffffff", borderRadius:"50%", animation:"lt-spin 0.8s linear infinite" }}/>
-            <p style={{ color:"rgba(255,255,255,0.35)", fontSize:13 }}>Finding your booking...</p>
+            <div style={{ width: 40, height: 40, border: "3px solid rgba(17,17,17,0.1)", borderTop: "3px solid #00c853", borderRadius: "50%", animation: "lt-spin 0.8s linear infinite" }} />
+            <p style={{ color: "rgba(17,17,17,0.6)", fontSize: 13, fontWeight: 700 }}>Finding your booking...</p>
           </div>
         )}
 
         {/* No active booking */}
         {!loading && noActive && (
           <div className="lt-center">
-            <div style={{ fontSize:64, opacity:0.2 }}>🚑</div>
-            <div style={{ fontSize:18, fontWeight:800, color:"rgba(255,255,255,0.45)" }}>You have no active bookings at the moment</div>
-            <div style={{ fontSize:13, color:"rgba(255,255,255,0.22)", maxWidth:300 }}>
+            <div style={{ fontSize: 64, opacity: 0.3 }}>🚑</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#111" }}>You have no active bookings at the moment</div>
+            <div style={{ fontSize: 13, color: "rgba(17,17,17,0.6)", maxWidth: 300 }}>
               Track your ambulance in real-time once the booking is confirmed
             </div>
             <button
-              onClick={()=>navigate("/Ambulances")}
-              style={{ marginTop:8, background:"#ffffff", color:"#fff", border:"none", borderRadius:12, padding:"11px 24px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(255, 255, 255, 0.15)" }}
+              onClick={() => navigate("/Ambulances")}
+              style={{ marginTop: 8, background: "#111111", color: "#ffffff", border: "none", borderRadius: 12, padding: "11px 24px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
             >
               🚑 Book an Ambulance
             </button>
           </div>
         )}
 
-        {/* Map */}
+        {/* Fullscreen User Booking Map */}
         {!loading && booking && (
-          <div className="lt-map-wrap">
-            <UserBookingMap booking={booking} onClose={()=>navigate("/MyBookings")} embedded />
-          </div>
+          <UserBookingMap booking={booking} onClose={() => navigate("/MyBookings")} embedded />
         )}
-
       </div>
     </>
   );

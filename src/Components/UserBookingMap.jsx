@@ -1,15 +1,12 @@
 /**
  * UserBookingMap.jsx — src/Components/UserBookingMap.jsx
  *
- * Clean Google Maps Embedded Map Engine (Matching Image 3 & Image 4):
- * - Clean Google Maps iframe engine for 100% stability across all roles.
- * - Single shortest road route with native Google direction callouts.
- * - Blocked "More options" external Google redirect link overlay.
- * - Supports "Start Route" (Ambulance -> Pickup) and "View Full Route" (Ambulance -> User -> Hospital).
+ * Clean Google Maps Embedded Map Engine & Dispatch Layout (Matching Image 2):
+ * - Left 380px Sidebar Panel: Complete trip info, timeline, speed, battery, ETA, and route controls.
+ * - Right Side Full-Height Map: Expansive Google Maps iframe showing the full driving route.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import UnifiedMapHeader from "./UnifiedMapHeader";
 import { isIndiaCoord } from "../hooks/useLeaflet";
 
 const defaultApiBase = import.meta.env.DEV
@@ -32,6 +29,13 @@ const haversineKm = (a, b) => {
 const approxMins = (km) => Math.max(1, Math.round((km / 28) * 60));
 const fmtSecs = (s) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+const coordText = (lat, lng) => {
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  if (!Number.isFinite(nLat) || !Number.isFinite(nLng) || (nLat === 0 && nLng === 0)) return "Unavailable";
+  return `${nLat.toFixed(5)}, ${nLng.toFixed(5)}`;
+};
 
 export default function UserBookingMap({ booking, onClose, embedded = false }) {
   const [ambLoc, setAmbLoc] = useState(null);
@@ -91,7 +95,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return { d1, m1, d2: "12.4", m2: 25 };
   }, [ambLoc, booking]);
 
-  // ── Route Embed URL (Matching Image 3) ──────────────────────────────────────
+  // ── Route Embed URL ─────────────────────────────────────────────────────────
   const embedSrc = useMemo(() => {
     const ambLat = ambLoc?.lat;
     const ambLng = ambLoc?.lng;
@@ -116,13 +120,12 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   }, [ambLoc, booking, routeMode]);
 
   const rootStyle = embedded
-    ? { position: "absolute", inset: 0, display: "flex", flexDirection: "column", background: "#ffffff" }
+    ? { position: "absolute", inset: 0, display: "flex", background: "#ffffff" }
     : {
         position: "fixed",
         inset: 0,
         zIndex: 9000,
         display: "flex",
-        flexDirection: "column",
         background: "#ffffff",
         fontFamily: "'Segoe UI', Roboto, sans-serif",
       };
@@ -133,191 +136,275 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     <div style={rootStyle}>
       <style>{`
         .ubm-root {
-          display: flex;
           width: 100%;
           height: 100%;
-          background: #f4f4ef;
+          display: flex;
+          background: #ffffff;
           font-family: 'Segoe UI', Roboto, sans-serif;
+          overflow: hidden;
+          position: relative;
         }
-        .ubm-panel {
-          width: 360px;
-          min-width: 320px;
+        .ubm-sidebar {
+          width: 380px;
+          min-width: 340px;
           background: #ffffff;
           border-right: 1px solid rgba(17,17,17,0.12);
           display: flex;
           flex-direction: column;
-          padding: 12px;
-          gap: 10px;
+          padding: 16px;
+          gap: 12px;
           overflow-y: auto;
-          box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+          box-shadow: 4px 0 16px rgba(0,0,0,0.06);
           z-index: 5;
         }
-        .ubm-map-wrap {
+        .ubm-map-area {
           flex: 1;
           min-width: 0;
           height: 100%;
           position: relative;
           background: #e5e3df;
         }
-        .ubm-box {
-          background: #f9f9f5;
-          border: 1px solid rgba(17,17,17,0.12);
-          border-radius: 10px;
-          padding: 10px 12px;
+        
+        /* Selected Card Style (Matching Image 2) */
+        .ubm-active-card {
+          background: #ffffff;
+          border: 2px solid #00c853;
+          border-radius: 14px;
+          padding: 14px;
+          box-shadow: 0 4px 18px rgba(0, 200, 83, 0.12);
         }
-        .ubm-box-label {
+        
+        .ubm-pill-status {
+          background: #e8f5e9;
+          color: #2e7d32;
+          border: 1px solid #a5d6a7;
+          border-radius: 20px;
+          padding: 3px 10px;
           font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.8px;
-          color: rgba(17,17,17,0.55);
-          margin-bottom: 6px;
         }
-        .ubm-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0,1fr));
-          gap: 8px;
+
+        /* Timeline (Matching Image 2) */
+        .ubm-timeline {
+          position: relative;
+          padding-left: 28px;
+          margin: 14px 0;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
-        .ubm-stat-card {
+        .ubm-timeline-line {
+          position: absolute;
+          left: 9px;
+          top: 10px;
+          bottom: 14px;
+          width: 2px;
+          background: #00c853;
+        }
+        .ubm-timeline-item {
+          position: relative;
+          font-size: 12px;
+        }
+        .ubm-timeline-dot {
+          position: absolute;
+          left: -28px;
+          top: 2px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
           background: #ffffff;
-          border: 1px solid rgba(17,17,17,0.1);
-          border-radius: 8px;
-          padding: 8px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .ubm-timeline-dot.amb { border: 2px solid #00c853; }
+        .ubm-timeline-dot.user { border: 2px solid #1976d2; }
+        .ubm-timeline-dot.hosp { border: 2px solid #d32f2f; }
+
+        .ubm-stats-row {
+          display: flex;
+          gap: 8px;
+          background: #f9f9f6;
+          border: 1px solid rgba(17,17,17,0.08);
+          border-radius: 10px;
+          padding: 10px;
+          margin-top: 6px;
+        }
+        .ubm-stat-cell {
+          flex: 1;
           text-align: center;
         }
-        .ubm-btn {
-          flex: 1;
-          border: 1px solid rgba(17,17,17,0.18);
-          border-radius: 8px;
-          padding: 8px 12px;
-          font-size: 11px;
+        .ubm-stat-val {
+          font-weight: 900;
+          font-size: 15px;
+          color: #111;
+        }
+        .ubm-stat-lbl {
+          font-size: 9px;
           font-weight: 700;
+          color: rgba(17,17,17,0.55);
+          text-transform: uppercase;
+          margin-top: 2px;
+        }
+
+        .ubm-btn-group {
+          display: flex;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .ubm-action-btn {
+          flex: 1;
+          padding: 10px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 800;
           cursor: pointer;
+          border: 1px solid transparent;
           transition: all 0.15s ease;
         }
-        .ubm-btn-green {
+        .ubm-btn-start {
           background: #00c853;
           color: #ffffff;
-          border-color: #00c853;
+          box-shadow: 0 4px 12px rgba(0,200,83,0.3);
         }
-        .ubm-btn-dark {
+        .ubm-btn-full {
           background: #111111;
           color: #ffffff;
-          border-color: #111111;
-        }
-        .ubm-btn-light {
-          background: #ffffff;
-          color: #111111;
         }
 
         @media (max-width: 767px) {
           .ubm-root {
             flex-direction: column;
           }
-          .ubm-panel {
+          .ubm-sidebar {
             width: 100%;
             min-width: 100%;
-            max-height: 260px;
+            max-height: 280px;
             border-right: none;
             border-bottom: 1px solid rgba(17,17,17,0.12);
-            padding: 8px;
-            gap: 6px;
+            padding: 10px;
+            gap: 8px;
           }
-          .ubm-map-wrap {
+          .ubm-map-area {
             flex: 1;
-            height: calc(100vh - 260px);
+            height: calc(100vh - 280px);
             min-height: 320px;
           }
         }
       `}</style>
 
       <div className="ubm-root">
-        {/* ── Left Data & Control Sidebar ───────────────────────────────────── */}
-        <div className="ubm-panel">
-          <UnifiedMapHeader
-            ambulanceNumber={booking?.ambulance_number || "AMB-0000"}
-            bookingId={booking?.id}
-            driverName={ambDriver || booking?.driver || "-"}
-            speed={ambSpeed}
-            battery={ambBattery}
-            pickupLocation={booking?.pickup_location || "Pickup"}
-            destination={hospName}
-            ambLat={ambLoc?.lat}
-            ambLng={ambLoc?.lng}
-            pickupLat={booking?.pickup_latitude}
-            pickupLng={booking?.pickup_longitude}
-            routeMode={routeMode}
-            onSetRouteMode={(mode) => setRouteMode(mode)}
-          />
-
-          {/* Leg Stats Box */}
-          <div className="ubm-box">
-            <div className="ubm-box-label">Live Journey Summary</div>
-            <div className="ubm-stats-grid">
-              <div className="ubm-stat-card">
-                <div style={{ color: "#126f1e", fontWeight: 900, fontSize: 16 }}>
-                  {legStats.d1 != null ? `${legStats.d1} km · ~${legStats.m1}m` : "En Route"}
-                </div>
-                <div style={{ fontSize: 9, color: "rgba(17,17,17,0.55)", marginTop: 2, textTransform: "uppercase" }}>
-                  Ambulance ➔ Pickup
-                </div>
+        {/* Left Sidebar Panel (Image 2 Dispatch Style) */}
+        <div className="ubm-sidebar">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+                <span>🚑</span> Live Trip Tracking
               </div>
-
-              <div className="ubm-stat-card">
-                <div style={{ color: "#f59a23", fontWeight: 900, fontSize: 16 }}>
-                  ~{legStats.m2} min
-                </div>
-                <div style={{ fontSize: 9, color: "rgba(17,17,17,0.55)", marginTop: 2, textTransform: "uppercase" }}>
-                  Pickup ➔ Hospital
-                </div>
+              <div style={{ fontSize: 11, color: "rgba(17,17,17,0.6)", marginTop: 2 }}>
+                Booking #{booking?.id} • {booking?.ambulance_number || "AMB-0000"}
               </div>
             </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px dashed rgba(17,17,17,0.1)" }}>
-              <span style={{ fontSize: 11, color: "rgba(17,17,17,0.6)", fontWeight: 600 }}>Elapsed Time</span>
-              <span style={{ fontSize: 13, fontWeight: 900, color: "#111", fontVariantNumeric: "tabular-nums" }}>
-                {fmtSecs(elapsed)}
-              </span>
-            </div>
-          </div>
-
-          {/* Destination Hospital Card */}
-          <div className="ubm-box" style={{ background: "#fffef6", borderColor: "#f59a23" }}>
-            <div className="ubm-box-label" style={{ color: "#b78103" }}>Assigned Hospital</div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              🏥 {hospName}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
-            <button
-              className={routeMode === "start" ? "ubm-btn ubm-btn-green" : "ubm-btn ubm-btn-light"}
-              onClick={() => setRouteMode("start")}
-            >
-              ▶ Start Route
-            </button>
-            <button
-              className={routeMode === "full" ? "ubm-btn ubm-btn-dark" : "ubm-btn ubm-btn-light"}
-              onClick={() => setRouteMode("full")}
-            >
-              🗺 View Full Route
-            </button>
             {onClose && (
               <button
                 onClick={onClose}
-                className="ubm-btn ubm-btn-light"
-                style={{ flex: "0 0 36px", padding: 0, fontSize: 18, fontWeight: 900 }}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "#f0f0eb",
+                  border: "none",
+                  fontSize: 18,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
                 title="Close"
               >
                 ×
               </button>
             )}
           </div>
+
+          {/* Trip Card matching Image 2 */}
+          <div className="ubm-active-card">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span className="ubm-pill-status">Confirmed • En Route</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#111" }}>{ambDriver || booking?.driver || "Driver Assigned"}</span>
+            </div>
+
+            {/* Timeline matching Image 2 */}
+            <div className="ubm-timeline">
+              <div className="ubm-timeline-line" />
+              
+              <div className="ubm-timeline-item">
+                <div className="ubm-timeline-dot amb">🚑</div>
+                <div style={{ fontWeight: 800, color: "#111" }}>Ambulance Live Location</div>
+                <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>
+                  {coordText(ambLoc?.lat, ambLoc?.lng)} • Speed: {ambSpeed} km/h
+                </div>
+              </div>
+
+              <div className="ubm-timeline-item">
+                <div className="ubm-timeline-dot user">👤</div>
+                <div style={{ fontWeight: 800, color: "#111" }}>Patient Pickup (User)</div>
+                <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>{booking?.pickup_location || "Pickup Location"}</div>
+              </div>
+
+              <div className="ubm-timeline-item">
+                <div className="ubm-timeline-dot hosp">🏥</div>
+                <div style={{ fontWeight: 800, color: "#111" }}>Destination Hospital</div>
+                <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>{hospName}</div>
+              </div>
+            </div>
+
+            {/* Stats Summary */}
+            <div className="ubm-stats-row">
+              <div className="ubm-stat-cell">
+                <div className="ubm-stat-val" style={{ color: "#00c853" }}>
+                  {legStats.d1 != null ? `${legStats.d1} km` : "En Route"}
+                </div>
+                <div className="ubm-stat-lbl">To Pickup</div>
+              </div>
+              <div className="ubm-stat-cell">
+                <div className="ubm-stat-val" style={{ color: "#f59a23" }}>
+                  ~{legStats.m2} m
+                </div>
+                <div className="ubm-stat-lbl">To Hospital</div>
+              </div>
+              <div className="ubm-stat-cell">
+                <div className="ubm-stat-val">
+                  {fmtSecs(elapsed)}
+                </div>
+                <div className="ubm-stat-lbl">Elapsed</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="ubm-btn-group" style={{ marginTop: "auto" }}>
+            <button
+              className={`ubm-action-btn ${routeMode === "start" ? "ubm-btn-start" : "ubm-btn-full"}`}
+              onClick={() => setRouteMode("start")}
+            >
+              ▶ Start Route
+            </button>
+            <button
+              className={`ubm-action-btn ${routeMode === "full" ? "ubm-btn-start" : "ubm-btn-full"}`}
+              onClick={() => setRouteMode("full")}
+            >
+              🗺 View Full Route
+            </button>
+          </div>
         </div>
 
-        {/* ── Right Map Frame ────────────────────────────────────────────────── */}
-        <div className="ubm-map-wrap">
+        {/* Right Side Map View (Full Height 100%) */}
+        <div className="ubm-map-area">
           {routeMode === "start" && (
             <div
               style={{
