@@ -1,9 +1,8 @@
 /**
  * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
  *
- * FIX: resolveCoords uses geocodeInIndia with LOCAL_HINTS to
- * Shiv Vihar ka correct coord (28.7419, 77.3158) return karega.
- * The prior Ghaziabad coordinate was incorrect because LOCAL_HINTS was wrong.
+ * resolveCoords uses geocodeInIndia with local hints so common NCR pickup and
+ * hospital addresses stay pinned to verified coordinates before remote geocoding.
  *
  * The remaining route display behavior is unchanged.
  */
@@ -19,9 +18,12 @@ import useLeaflet, {
   SATELLITE_TILE,
 } from "../hooks/useLeaflet";
 
-const BASE = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
-const statusColor = { available: "#ffffff", en_route: "#222222", busy: "#666666", offline: "#999999" };;
+const statusColor = { available: "#126f1e", en_route: "#f59a23", busy: "#666666", offline: "#999999" };
 
 const uniqueTextList = (values) => {
   const out = [], seen = new Set();
@@ -104,6 +106,29 @@ export default function AdminRouteManager({
   const [pushing,    setPushing]    = useState(false);
   const [toast,      setToast]      = useState(null);
   const [is3D,       setIs3D]       = useState(false);
+
+  const clearRoutePreview = () => {
+    setPickupCoord(null);
+    setDestCoord(null);
+    setRouteLeg1([]);
+    setRouteLeg2([]);
+    setRouteStats(null);
+  };
+
+  const selectAmbulance = (ambulance) => {
+    const nextId = Number(ambulance?.id || ambulance?.ambulance_id || 0);
+    const currentId = Number(selAmb?.id || selAmb?.ambulance_id || 0);
+    setSelAmb(ambulance);
+    if (nextId !== currentId) {
+      setSelBook(null);
+      clearRoutePreview();
+    }
+  };
+
+  const selectBooking = (booking) => {
+    setSelBook(booking);
+    clearRoutePreview();
+  };
 
   // ── Load data ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -320,6 +345,27 @@ export default function AdminRouteManager({
     const dbLat        = Number(matchedHospital?.latitude);
     const dbLng        = Number(matchedHospital?.longitude);
     const hospitalFromDb = isIndiaCoord(dbLat, dbLng) ? { lat: dbLat, lng: dbLng } : null;
+    const canUseShardaFallback = /s[ah]h?arda|sharda/.test(
+      normalizePlace([matchedHospital?.name, destName, booking.destination].filter(Boolean).join(" "))
+    );
+    const hospitalCandidates = uniqueTextList([
+      matchedHospital?.name,
+      matchedHospital?.address,
+      [matchedHospital?.name, matchedHospital?.address].filter(Boolean).join(", "),
+      destName,
+      booking.destination,
+      canUseShardaFallback ? "Sharda Hospital, Greater Noida" : "",
+    ]);
+    let hospitalFromText = null;
+    for (const candidate of hospitalCandidates) {
+      // eslint-disable-next-line no-await-in-loop
+      hospitalFromText = await geocodeInIndia(candidate, {
+        city: matchedHospital?.city || booking.pickup_city || "",
+        district: booking.pickup_district || "",
+        state: "",
+      });
+      if (hospitalFromText) break;
+    }
 
     // Pickup: try multiple text combos through geocodeInIndia (uses LOCAL_HINTS first)
     const pickupCandidates = uniqueTextList([
@@ -352,13 +398,12 @@ export default function AdminRouteManager({
       if (pickupFromText) break;
     }
 
-    const pickup = pickupFromBooking || pickupFromText || null;
-
-    if (booking.assigned_hospital_id && !hospitalFromDb) {
-      throw new Error("Hospital latitude/longitude missing in backend. Update hospital coordinates.");
+    let pickup = pickupFromBooking || pickupFromText || null;
+    if (pickupFromBooking && pickupFromText && haversineKm(pickupFromBooking, pickupFromText) > 1.2) {
+      pickup = pickupFromText;
     }
 
-    const destination = hospitalFromDb;
+    const destination = hospitalFromDb || hospitalFromText || null;
     return { pickup, destination };
   };
 
@@ -448,9 +493,10 @@ export default function AdminRouteManager({
         .arm-box { background:#f9f9f5; border:1px solid rgba(17,17,17,0.12); border-radius:10px; padding:10px; }
         .arm-box-label { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(17,17,17,0.56); margin-bottom:8px; }
         .arm-list { max-height:190px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
-        .arm-item { background:#fff; border:1px solid rgba(17,17,17,0.14); border-radius:8px; padding:8px 10px; cursor:pointer; transition:background 0.12s; }
-        .arm-item:hover { background:#ffffff; }
-        .arm-item.sel { background:#ffffff; border-color:#ffffff; }
+        .arm-item { background:#fff; border:1px solid rgba(18,111,30,0.32); border-radius:8px; padding:8px 10px; cursor:pointer; transition:background 0.12s, border-color 0.12s, color 0.12s; }
+        .arm-item:hover { background:#fff3df; border-color:#f59a23; }
+        .arm-item.sel { background:#f59a23; border-color:#f59a23; color:#111; }
+        .arm-item.sel :is(div, span, b) { color:#111 !important; }
         .arm-find-btn,.arm-push-btn { width:100%; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; }
         .arm-find-btn { background:#ffffff; color:#111; padding:10px 0; margin-bottom:8px; font-size:13px; }
         .arm-find-btn:disabled,.arm-push-btn:disabled { background:#d7d7cd; color:rgba(17,17,17,0.45); cursor:not-allowed; }
@@ -491,7 +537,7 @@ export default function AdminRouteManager({
                   const selected = Number(selAmb?.id || selAmb?.ambulance_id) === Number(a.id);
                   const color    = statusColor[a.status] || statusColor.offline;
                   return (
-                    <div key={a.id} className={`arm-item ${selected ? "sel" : ""}`} onClick={() => setSelAmb(a)}>
+                    <div key={a.id} className={`arm-item ${selected ? "sel" : ""}`} onClick={() => selectAmbulance(a)}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                         <b>{a.ambulance_number}</b>
                         <span style={{ fontSize: 11, fontWeight: 700, color }}>{String(a.status || "").replace("_", " ")}</span>
@@ -512,7 +558,7 @@ export default function AdminRouteManager({
                   <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>Select ambulance first</div>
                 )}
                 {selectedAmbId && assignableBookings.map((b) => (
-                  <div key={b.id} className={`arm-item ${selBook?.id === b.id ? "sel" : ""}`} onClick={() => setSelBook(b)}>
+                  <div key={b.id} className={`arm-item ${selBook?.id === b.id ? "sel" : ""}`} onClick={() => selectBooking(b)}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                       <b>#{b.id}</b>
                       <span style={{ fontSize: 11, color: "#00c853", fontWeight: 700 }}>{b.status}</span>

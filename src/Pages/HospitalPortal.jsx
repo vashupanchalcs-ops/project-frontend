@@ -44,6 +44,14 @@ const saveResourceCache = (hospitalId, values) => {
   }
 };
 
+const hasCoordPair = (lat, lng) => {
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  return Number.isFinite(nLat) && Number.isFinite(nLng) && nLat >= 6 && nLat <= 38 && nLng >= 68 && nLng <= 98;
+};
+
+const coordText = (lat, lng) => (hasCoordPair(lat, lng) ? `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : "-");
+
 const getTabFromPath = (pathname) => {
   const p = String(pathname || "").toLowerCase();
   if (p.includes("/hospital/queue")) return "queue";
@@ -179,7 +187,14 @@ export default function HospitalPortal() {
 
   useEffect(() => {
     fetchHospitalDashboard({ silent: false });
-    const pollMs = activeTab === "tracking" || activeTab === "map" || activeTab === "queue" || activeTab === "responses" ? 7000 : 18000;
+    const pollMs =
+      activeTab === "tracking" ||
+      activeTab === "map" ||
+      activeTab === "queue" ||
+      activeTab === "responses" ||
+      activeTab === "reports"
+        ? 7000
+        : 18000;
     const t = setInterval(() => {
       if (document.visibilityState === "visible") fetchHospitalDashboard({ silent: true });
     }, pollMs);
@@ -258,7 +273,12 @@ export default function HospitalPortal() {
   };
 
   const trackingRows = useMemo(
-    () => queue.filter((q) => q.ambulance_live?.latitude && q.ambulance_live?.longitude),
+    () =>
+      queue.filter(
+        (q) =>
+          hasCoordPair(q.ambulance_live?.latitude, q.ambulance_live?.longitude) ||
+          hasCoordPair(q.pickup_latitude, q.pickup_longitude)
+      ),
     [queue]
   );
   const selectedTrackingBookingId = useMemo(
@@ -301,35 +321,27 @@ export default function HospitalPortal() {
   );
 
   const mapEmbedSrc = useMemo(() => {
-    const lat = Number(selectedMapBooking?.ambulance_live?.latitude);
-    const lng = Number(selectedMapBooking?.ambulance_live?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "";
+    const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
+    const ambLng = Number(selectedMapBooking?.ambulance_live?.longitude);
+    const pickupLat = Number(selectedMapBooking?.pickup_latitude);
+    const pickupLng = Number(selectedMapBooking?.pickup_longitude);
+    const lat = hasCoordPair(ambLat, ambLng) ? ambLat : pickupLat;
+    const lng = hasCoordPair(ambLat, ambLng) ? ambLng : pickupLng;
+    if (!hasCoordPair(lat, lng)) return "";
     return `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
   }, [selectedMapBooking]);
 
   const fullRouteEmbedSrc = useMemo(() => {
-    const lat = Number(selectedMapBooking?.ambulance_live?.latitude);
-    const lng = Number(selectedMapBooking?.ambulance_live?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "";
+    const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
+    const ambLng = Number(selectedMapBooking?.ambulance_live?.longitude);
+    const ambCoord = hasCoordPair(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
     const hospitalLat = Number(hospital?.latitude);
     const hospitalLng = Number(hospital?.longitude);
-    const hospitalCoord =
-      Number.isFinite(hospitalLat) && Number.isFinite(hospitalLng)
-        ? `${hospitalLat},${hospitalLng}`
-        : "";
+    const hospitalCoord = hasCoordPair(hospitalLat, hospitalLng) ? `${hospitalLat},${hospitalLng}` : "";
     const pickupLat = Number(selectedMapBooking?.pickup_latitude);
     const pickupLng = Number(selectedMapBooking?.pickup_longitude);
-    const pickupCoord =
-      Number.isFinite(pickupLat) && Number.isFinite(pickupLng)
-        ? `${pickupLat},${pickupLng}`
-        : "";
+    const pickupCoord = hasCoordPair(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
     const pickup = String(selectedMapBooking?.pickup_location || "").trim();
-    const hospitalNameNorm = String(
-      selectedMapBooking?.assigned_hospital_name || hospital?.name || selectedMapBooking?.destination || ""
-    )
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
     const destination =
       hospitalCoord ||
       String(selectedMapBooking?.assigned_hospital_address || "").trim() ||
@@ -337,8 +349,9 @@ export default function HospitalPortal() {
       String(hospital?.address || "").trim() ||
       String(selectedMapBooking?.destination || "").trim() ||
       pickup;
-    const start = pickupCoord || pickup || `${lat},${lng}`;
-    const end = destination || pickupCoord || pickup || `${lat},${lng}`;
+    const start = ambCoord || pickupCoord || pickup || destination;
+    const end = destination || pickupCoord || pickup || ambCoord;
+    if (!start || !end) return "";
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
   }, [selectedMapBooking, hospital]);
 
@@ -389,6 +402,10 @@ export default function HospitalPortal() {
     () =>
       responseCards.filter(
         (q) =>
+          q.report_sent_to_hospital ||
+          q.report_submitted_at ||
+          q.vitals_summary ||
+          q.driver_modified_report ||
           q.digital_handover?.report_sent_to_hospital ||
           q.digital_handover?.report_submitted_at ||
           q.digital_handover?.vitals_summary ||
@@ -1694,9 +1711,12 @@ export default function HospitalPortal() {
           transform: translateY(-1px);
         }
         .hp-map-list-item.active {
-          border-color: rgba(156,171,0,0.9);
-          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+          background: #f59a23;
+          border-color: #f59a23;
+          color: #111;
+          box-shadow: 0 0 0 2px rgba(245,154,35,0.18);
         }
+        .hp-map-list-item.active :is(div, span, b) { color: #111 !important; }
         .hp-map-menu-wrap { position: relative; display: inline-flex; }
         .hp-map-menu-btn {
           width: 28px;
@@ -2183,6 +2203,17 @@ export default function HospitalPortal() {
           border-color: #126f1e !important;
           color: #ffffff !important;
         }
+        html body #root#root#root .hp-root .hp-map-list-item.active,
+        html body #root#root#root .hp-root .hp-map-list-item.active:hover {
+          background: #f59a23 !important;
+          border-color: #f59a23 !important;
+          color: #111111 !important;
+          box-shadow: none !important;
+          transform: none !important;
+        }
+        html body #root#root#root .hp-root .hp-map-list-item.active :is(div, span, b) {
+          color: #111111 !important;
+        }
         html body #root#root#root .hp-root :is(
           .hp-availability.yes, .hp-response-status.ready, .hp-an-status,
           .hp-live-pill, .hp-live-status
@@ -2482,13 +2513,13 @@ export default function HospitalPortal() {
                           <div className="hp-report-line"><b>Patient:</b> {q.patient_name || "-"}</div>
                           <div className="hp-report-line"><b>Pickup:</b> {q.pickup_location || "-"}</div>
                           <div className="hp-report-line"><b>Ambulance:</b> {q.ambulance_number || "-"}</div>
-                          <div className="hp-report-line"><b>Submitted:</b> {q.digital_handover?.report_submitted_at ? new Date(q.digital_handover.report_submitted_at).toLocaleString("en-IN") : "-"}</div>
+                          <div className="hp-report-line"><b>Submitted:</b> {(q.report_submitted_at || q.digital_handover?.report_submitted_at) ? new Date(q.report_submitted_at || q.digital_handover.report_submitted_at).toLocaleString("en-IN") : "-"}</div>
                         </div>
                         <div className="hp-report-side">
                           <span className="hp-report-tag">Case {idx + 1}</span>
-                          <span className="hp-report-status">{q.digital_handover?.report_sent_to_hospital ? "Sent to Hospital" : "Shared"}</span>
+                          <span className="hp-report-status">{q.report_sent_to_hospital || q.digital_handover?.report_sent_to_hospital ? "Sent to Hospital" : "Shared"}</span>
                           <div className="hp-report-summary">
-                            {q.digital_handover?.driver_modified_report || q.digital_handover?.vitals_summary || q.pre_diagnosis_note || "Detailed report not available yet."}
+                            {q.driver_modified_report || q.digital_handover?.driver_modified_report || q.vitals_summary || q.digital_handover?.vitals_summary || q.pre_diagnosis_note || "Detailed report not available yet."}
                           </div>
                           <button
                             className="hp-btn primary"
@@ -2523,11 +2554,14 @@ export default function HospitalPortal() {
                           <span className="hp-pill">Booking #{r.booking_id}</span>
                         </div>
                         <div className="hp-row"><span className="hp-label">Driver</span><span>{r.driver_name || "-"}</span></div>
-                        <div className="hp-row"><span className="hp-label">Live Location</span><span>{Number(r.ambulance_live.latitude).toFixed(5)}, {Number(r.ambulance_live.longitude).toFixed(5)}</span></div>
-                        <div className="hp-row"><span className="hp-label">Speed</span><span>{r.ambulance_live.speed || 0} km/h</span></div>
-                        <div className="hp-row"><span className="hp-label">Battery</span><span>{r.ambulance_live.battery_percentage ?? "-"}%</span></div>
+                        <div className="hp-row"><span className="hp-label">Ambulance Location</span><span>{coordText(r.ambulance_live?.latitude, r.ambulance_live?.longitude)}</span></div>
+                        <div className="hp-row"><span className="hp-label">Patient Pickup</span><span>{coordText(r.pickup_latitude, r.pickup_longitude)}</span></div>
+                        <div className="hp-row"><span className="hp-label">Pickup Address</span><span>{r.pickup_location || "-"}</span></div>
+                        <div className="hp-row"><span className="hp-label">Speed</span><span>{r.ambulance_live?.speed || 0} km/h</span></div>
+                        <div className="hp-row"><span className="hp-label">Battery</span><span>{r.ambulance_live?.battery_percentage ?? "-"}%</span></div>
                         <div className="hp-actions">
                           <button className="hp-btn primary" onClick={() => goToLiveTrack(r)}>Live Track</button>
+                          <button className="hp-btn primary" onClick={() => navigate(`/hospital/reports/${r.booking_id}/view`)}>Manage Report</button>
                         </div>
                       </article>
                     ))}
@@ -2588,7 +2622,9 @@ export default function HospitalPortal() {
                             </div>
                             <div style={{ fontSize: 12, color: "rgba(17,17,17,0.72)", marginTop: 6 }}>{r.driver_name || "-"}</div>
                             <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)", marginTop: 3 }}>
-                              {Number(r.ambulance_live.latitude).toFixed(5)}, {Number(r.ambulance_live.longitude).toFixed(5)}
+                              Ambulance: {coordText(r.ambulance_live?.latitude, r.ambulance_live?.longitude)}
+                              <br />
+                              Pickup: {coordText(r.pickup_latitude, r.pickup_longitude)}
                             </div>
                             <div className="hp-actions" style={{ marginTop: 8 }}>
                               <button
@@ -2620,11 +2656,13 @@ export default function HospitalPortal() {
                           </div>
                         </div>
                         <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(17,17,17,0.12)", background: "rgba(255,255,255,0.72)", fontSize: 11, color: "rgba(17,17,17,0.7)" }}>
-                          Route: Ambulance Live Location → {selectedMapBooking?.pickup_location || "Pickup"} → {selectedMapBooking?.destination || selectedMapBooking?.assigned_hospital_name || hospital?.name || "Assigned Hospital"}
+                          Route: Ambulance live location → {selectedMapBooking?.pickup_location || "Pickup"} → {selectedMapBooking?.destination || selectedMapBooking?.assigned_hospital_name || hospital?.name || "Assigned Hospital"}
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 8, padding: "10px 12px", borderBottom: "1px solid rgba(17,17,17,0.12)", background: "rgba(255,255,255,0.72)" }}>
                           <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Speed</span><span>{selectedMapBooking?.ambulance_live?.speed || 0} km/h</span></div>
                           <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Battery</span><span>{selectedMapBooking?.ambulance_live?.battery_percentage ?? "-"}%</span></div>
+                          <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Ambulance</span><span>{coordText(selectedMapBooking?.ambulance_live?.latitude, selectedMapBooking?.ambulance_live?.longitude)}</span></div>
+                          <div className="hp-row" style={{ marginTop: 0 }}><span className="hp-label">Patient Pickup</span><span>{coordText(selectedMapBooking?.pickup_latitude, selectedMapBooking?.pickup_longitude)}</span></div>
                         </div>
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
                           <iframe

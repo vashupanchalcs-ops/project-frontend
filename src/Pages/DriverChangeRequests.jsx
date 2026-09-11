@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import BookingChatPanel from "../Components/BookingChatPanel";
 
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
+
 export default function DriverChangeRequests() {
   const [requests, setRequests] = useState([]);
   const [toast,    setToast]    = useState(null);
@@ -9,7 +14,7 @@ export default function DriverChangeRequests() {
   const [chatMessages, setChatMessages] = useState([]);
 
   const load = useCallback(()=>{
-    fetch("http://127.0.0.1:8000/api/ambulances/change-request/")
+    fetch(`${BASE}/api/ambulances/change-request/`)
       .then(r=>r.json()).then(data=>{
         setRequests(Array.isArray(data)?data:[]);
         localStorage.setItem("all_change_requests",JSON.stringify(Array.isArray(data)?data:[]));
@@ -23,7 +28,7 @@ export default function DriverChangeRequests() {
 
   const loadThreads = useCallback(async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/bookings/chat/threads/?role=admin");
+      const res = await fetch(`${BASE}/api/bookings/chat/threads/?role=admin`);
       const data = await res.json();
       const rows = Array.isArray(data) ? data : [];
       const driverScoped = rows.filter((t) => (t?.driver_name || t?.booking?.driver_name || "").trim().length > 0);
@@ -42,7 +47,7 @@ export default function DriverChangeRequests() {
 
   const respond = async (req, status) => {
     try{
-      const res = await fetch(`http://127.0.0.1:8000/api/ambulances/change-request/${req.id||req.driverEmail}/`, {
+      const res = await fetch(`${BASE}/api/ambulances/change-request/${req.id||req.driverEmail}/`, {
         method:"PATCH", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({status}),
       });
@@ -76,7 +81,7 @@ export default function DriverChangeRequests() {
 
   const quickSendDriverUpdate = async (text) => {
     if (!selectedThread?.id) return;
-    await fetch(`http://127.0.0.1:8000/api/bookings/chat/threads/${selectedThread.id}/messages/`, {
+    await fetch(`${BASE}/api/bookings/chat/threads/${selectedThread.id}/messages/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

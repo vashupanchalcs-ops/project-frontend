@@ -7,6 +7,7 @@ from ambulance.models import Ambulance, SuggestedRoute
 from hospitals.models import Hospital
 import json
 import re
+import threading
 
 
 def _to_bool(val):
@@ -33,6 +34,26 @@ def _to_int(val, default=0):
         return int(val)
     except (TypeError, ValueError):
         return default
+
+
+def _send_mail_background(subject, message, recipient_list, label="email"):
+    recipients = [str(item).strip() for item in (recipient_list or []) if str(item or "").strip()]
+    if not recipients:
+        return
+
+    def _deliver():
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email="vashupanchal.cs@gmail.com",
+                recipient_list=recipients,
+                fail_silently=True,
+            )
+        except Exception as exc:
+            print(f"{label} error:", exc)
+
+    threading.Thread(target=_deliver, daemon=True).start()
 
 
 def _safe_json_load(raw):
@@ -415,10 +436,10 @@ def booking_detail(request, id):
             if b.booked_by_email:
                 try:
                     send_mail(
-                        subject=f"🏥 Hospital Assigned — Booking #{b.id}",
-                        message=f"""Namaskar {b.booked_by},
+                    subject=f"Hospital Assigned - Booking #{b.id}",
+                    message=f"""Hello {b.booked_by},
 
-Aapki booking #{b.id} ke liye hospital assign kar diya gaya hai.
+A hospital has been assigned for your booking #{b.id}.
 
 Hospital: {hosp.name}
 Address: {hosp.address or '-'}
@@ -427,7 +448,7 @@ Contact: {hosp.contact_number or '-'}
 Pickup: {b.pickup_location}
 Ambulance: {b.ambulance_number}
 
-— SwiftRescue Dispatch Team
+SwiftRescue Dispatch Team
 """,
                         from_email="vashupanchal.cs@gmail.com",
                         recipient_list=[b.booked_by_email],
@@ -511,10 +532,10 @@ Please confirm readiness from hospital desk.
             if is_reassign and notify_user_reassigned and b.booked_by_email:
                 try:
                     send_mail(
-                        subject=f"🚑 Ambulance Reassigned — Booking #{b.id}",
-                        message=f"""Namaskar {b.booked_by},
+                        subject=f"Ambulance Reassigned - Booking #{b.id}",
+                        message=f"""Hello {b.booked_by},
 
-Driver unavailability ki wajah se aapki booking ke liye dusri ambulance assign ki gayi hai.
+A different ambulance has been assigned because the previous driver is unavailable.
 
 Booking ID: #{b.id}
 Previous Ambulance: {old_amb_no} ({old_driver})
@@ -523,9 +544,9 @@ Contact: {b.driver_contact or '-'}
 Pickup: {b.pickup_location}
 Hospital: {b.assigned_hospital_name or b.destination or '-'}
 
-Hum aapki service bina delay continue kar rahe hain.
+Your service is continuing without interruption.
 
-— SwiftRescue Dispatch Team
+SwiftRescue Dispatch Team
 """,
                         from_email="vashupanchal.cs@gmail.com",
                         recipient_list=[b.booked_by_email],
@@ -543,10 +564,10 @@ Hum aapki service bina delay continue kar rahe hain.
                 if b.booked_by_email:
                     try:
                         send_mail(
-                            subject=f"🚑 Ambulance Assigned — Booking #{b.id}",
-                            message=f"""Namaskar {b.booked_by},
+                            subject=f"Ambulance Assigned - Booking #{b.id}",
+                            message=f"""Hello {b.booked_by},
 
-Booking #{b.id} ke liye ambulance assign ho gayi hai.
+An ambulance has been assigned for booking #{b.id}.
 
 Ambulance: {b.ambulance_number}
 Driver: {b.driver}
@@ -554,7 +575,7 @@ Contact: {b.driver_contact or '-'}
 Pickup: {b.pickup_location}
 Hospital: {b.assigned_hospital_name or b.destination or 'Admin will assign'}
 
-— SwiftRescue Dispatch Team
+SwiftRescue Dispatch Team
 """,
                             from_email="vashupanchal.cs@gmail.com",
                             recipient_list=[b.booked_by_email],
@@ -579,18 +600,18 @@ Hospital: {b.assigned_hospital_name or b.destination or 'Admin will assign'}
                 return JsonResponse({"error": "User email missing"}, status=400)
             try:
                 send_mail(
-                    subject=f"✅ Hospital Ready — Booking #{b.id}",
-                    message=f"""Namaskar {b.booked_by},
+                    subject=f"Hospital Ready - Booking #{b.id}",
+                    message=f"""Hello {b.booked_by},
 
-Hospital ne confirm kiya hai ki team ready hai.
+The hospital has confirmed that its intake team is ready.
 
 Hospital: {b.assigned_hospital_name or b.destination or '-'}
 Address: {b.assigned_hospital_address or '-'}
 Contact: {b.assigned_hospital_contact or '-'}
 
-Ambulance aapko pickup karke hospital le ja rahi hai.
+The ambulance will pick you up and take you to the assigned hospital.
 
-— SwiftRescue Dispatch Team
+SwiftRescue Dispatch Team
 """,
                     from_email="vashupanchal.cs@gmail.com",
                     recipient_list=[b.booked_by_email],
@@ -609,11 +630,17 @@ Ambulance aapko pickup karke hospital le ja rahi hai.
             b.vitals_summary = str(patient_report.get("vitals_summary", "")).strip()
             b.report_submitted_by = str(patient_report.get("submitted_by", "")).strip() or b.driver or "Driver Team"
             b.report_submitted_at = timezone.now()
+            forward_patient_report = _to_bool(patient_report.get("send_to_hospital")) or _to_bool(
+                patient_report.get("forward_to_hospital")
+            )
+            if forward_patient_report and b.assigned_hospital_email:
+                b.report_sent_to_hospital = True
+                b.report_sent_to_hospital_at = timezone.now()
+                b.driver_report_sent_at = timezone.now()
 
-            try:
-                send_mail(
-                    subject=f"📝 Patient Condition Report — Booking #{b.id}",
-                    message=f"""Patient report submitted by driver.
+            _send_mail_background(
+                subject=f"Patient Condition Report - Booking #{b.id}",
+                message=f"""Patient report submitted by driver.
 
 Booking ID: #{b.id}
 Patient: {b.patient_name or b.booked_by}
@@ -626,29 +653,12 @@ Vitals: {b.vitals_summary or '-'}
 Pickup: {b.pickup_location}
 Hospital: {b.assigned_hospital_name or b.destination or '-'}
 """,
-                    from_email="vashupanchal.cs@gmail.com",
-                    recipient_list=["vashupanchal.cs@gmail.com"],
-                    fail_silently=True,
-                )
-            except Exception as e:
-                print("Admin patient report email error:", e)
-            _push_system_chat(
-                b,
-                f"Driver submitted patient condition form for Booking #{b.id}. Admin review pending.",
-                "update",
+                recipient_list=["vashupanchal.cs@gmail.com"],
+                label="Admin patient report email",
             )
-
-            # Hospital report is now sent manually by admin action:
-            # PATCH { send_report_to_hospital: true }
-
-        if send_report_to_hospital:
-            if not b.assigned_hospital_email:
-                return JsonResponse({"error": "Assigned hospital email missing"}, status=400)
-            if not b.report_submitted_at:
-                return JsonResponse({"error": "Patient report not submitted yet"}, status=400)
-            try:
-                send_mail(
-                    subject=f"🧾 Patient Clinical Report — Booking #{b.id}",
+            if forward_patient_report and b.assigned_hospital_email:
+                _send_mail_background(
+                    subject=f"Patient Clinical Report - Booking #{b.id}",
                     message=f"""Incoming patient report.
 
 Booking ID: #{b.id}
@@ -663,14 +673,50 @@ Pickup: {b.pickup_location}
 Ambulance: {b.ambulance_number}
 Driver: {b.driver} ({b.driver_contact or '-'})
 """,
-                    from_email="vashupanchal.cs@gmail.com",
                     recipient_list=[b.assigned_hospital_email],
-                    fail_silently=True,
+                    label="Driver patient report hospital email",
                 )
-                b.report_sent_to_hospital = True
-                b.report_sent_to_hospital_at = timezone.now()
-            except Exception as e:
-                print("Hospital report email error:", e)
+            _push_system_chat(
+                b,
+                (
+                    f"Driver submitted patient condition form for Booking #{b.id}. "
+                    "Hospital intake received the report."
+                    if b.report_sent_to_hospital
+                    else f"Driver submitted patient condition form for Booking #{b.id}. Admin review pending."
+                ),
+                "update",
+            )
+
+            # Hospital report is now sent manually by admin action:
+            # PATCH { send_report_to_hospital: true }
+
+        if send_report_to_hospital:
+            if not b.assigned_hospital_email:
+                return JsonResponse({"error": "Assigned hospital email missing"}, status=400)
+            if not b.report_submitted_at:
+                return JsonResponse({"error": "Patient report not submitted yet"}, status=400)
+            b.report_sent_to_hospital = True
+            b.report_sent_to_hospital_at = timezone.now()
+            b.driver_report_sent_at = b.driver_report_sent_at or timezone.now()
+            _send_mail_background(
+                subject=f"Patient Clinical Report - Booking #{b.id}",
+                message=f"""Incoming patient report.
+
+Booking ID: #{b.id}
+Patient: {b.patient_name or b.booked_by}
+Age: {b.patient_age or '-'}
+Gender: {b.patient_gender or '-'}
+Attendant: {b.attendant_name or '-'} ({b.attendant_contact or '-'})
+Condition: {b.patient_condition or '-'}
+Vitals: {b.vitals_summary or '-'}
+
+Pickup: {b.pickup_location}
+Ambulance: {b.ambulance_number}
+Driver: {b.driver} ({b.driver_contact or '-'})
+""",
+                recipient_list=[b.assigned_hospital_email],
+                label="Hospital report email",
+            )
             if b.report_sent_to_hospital:
                 _push_system_chat(
                     b,
@@ -762,10 +808,10 @@ Driver: {b.driver} ({b.driver_contact or '-'})
                 if driver_email:
                     try:
                         send_mail(
-                            subject=f"🚑 Dispatch Assigned — Booking #{b.id}",
-                            message=f"""Namaskar {b.driver},
+                            subject=f"Dispatch Assigned - Booking #{b.id}",
+                            message=f"""Hello {b.driver},
 
-Admin ne aapko booking dispatch kar di hai.
+Admin has dispatched this booking to you.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 📋 Booking ID    : #{b.id}
@@ -778,9 +824,9 @@ Admin ne aapko booking dispatch kar di hai.
 🚑 Ambulance     : {b.ambulance_number}
 ━━━━━━━━━━━━━━━━━━━━━━
 
-Driver dashboard me live route open karke mission start karein.
+Open the live route in the driver dashboard to start the trip.
 
-— SwiftRescue Dispatch Team
+SwiftRescue Dispatch Team
 """,
                             from_email="vashupanchal.cs@gmail.com",
                             recipient_list=[driver_email],
@@ -1026,16 +1072,12 @@ def booking_driver_voice_report(request, id):
         b.report_sent_to_hospital_at = timezone.now()
         b.driver_report_sent_at = timezone.now()
         if b.assigned_hospital_email:
-            try:
-                send_mail(
-                    subject=f"🧾 Driver Voice Report — Booking #{b.id}",
-                    message=b.driver_modified_report,
-                    from_email="vashupanchal.cs@gmail.com",
-                    recipient_list=[b.assigned_hospital_email],
-                    fail_silently=True,
-                )
-            except Exception as exc:
-                print("Driver voice report hospital email error:", exc)
+            _send_mail_background(
+                subject=f"Driver Voice Report - Booking #{b.id}",
+                message=b.driver_modified_report,
+                recipient_list=[b.assigned_hospital_email],
+                label="Driver voice report hospital email",
+            )
 
     b.save(
         update_fields=[

@@ -417,7 +417,10 @@ def get_route_by_booking(request, booking_id):
     amb_latlon = None
     if amb.latitude and amb.longitude:
         try:
-            amb_latlon = f"{float(amb.latitude)},{float(amb.longitude)}"
+            amb_lat = float(amb.latitude)
+            amb_lng = float(amb.longitude)
+            if _is_india_coord(amb_lat, amb_lng):
+                amb_latlon = f"{amb_lat},{amb_lng}"
         except (ValueError, TypeError):
             pass
 

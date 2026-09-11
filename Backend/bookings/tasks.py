@@ -66,8 +66,8 @@ def process_voice_booking_task(payload):
     try:
         booking = create_booking_from_text("voice", from_number, transcript)
     except Exception as exc:
-        place_voice_callback(from_number, "Maaf kijiye, location samajh nahi aayi. Kripya dubara call karein.")
-        send_sms_confirmation(from_number, "SwiftRescue: Location samajh nahi aayi. Kripya fir se call/SMS karein.")
+        place_voice_callback(from_number, "Sorry, we could not understand the location. Please call again.")
+        send_sms_confirmation(from_number, "SwiftRescue: We could not understand the location. Please call or send SMS again.")
         return {"ok": False, "error": str(exc)}
 
     confirmation = (
@@ -76,7 +76,7 @@ def process_voice_booking_task(payload):
     send_sms_confirmation(from_number, f"SwiftRescue: {confirmation}")
     place_voice_callback(
         from_number,
-        f"Aapki booking {booking.id} confirm ho gayi hai. Ambulance jaldi pahunch rahi hai.",
+        f"Your booking {booking.id} is confirmed. The ambulance is on the way.",
     )
     return {"ok": True, "booking_id": booking.id}
 
@@ -94,7 +94,7 @@ def process_sms_booking_task(payload):
     except Exception as exc:
         send_sms_confirmation(
             from_number,
-            "SwiftRescue: SMS parse nahi ho paya. Format bhejein: AMBULANCE Loni Delhi",
+            "SwiftRescue: We could not understand the SMS. Send format: AMBULANCE Loni Delhi",
         )
         return {"ok": False, "error": str(exc)}
 

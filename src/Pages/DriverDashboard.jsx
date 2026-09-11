@@ -4,7 +4,10 @@ import useLeaflet, { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRo
 import { motion } from "framer-motion";
 import gsap from "gsap";
 
-const BASE          = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE          = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const PING_INTERVAL = 5000;
 const POLL_INTERVAL = 8000;
 const LOW_BATTERY_THRESHOLD = 15;
@@ -361,14 +364,15 @@ export default function DriverDashboard() {
           patient_report: {
             ...draft,
             submitted_by: driverName || "Driver Team",
+            send_to_hospital: true,
           },
         }),
       });
       if (!res.ok) throw new Error("Report submit failed");
-      addLog(`📝 Patient report sent for booking #${bookingId}`, "success");
+      addLog(`Patient report sent for booking #${bookingId}`, "success");
       fetchBookings();
     } catch {
-      addLog("❌ Patient report send failed", "error");
+      addLog("Patient report send failed", "error");
     }
   };
 
@@ -435,7 +439,7 @@ export default function DriverDashboard() {
     if (!navigator.geolocation) { addLog("Unsupported GPS", "error"); return; }
     setIsTracking(true);
     firstPan.current = true;
-    addLog("📍 GPS tracking shuru", "success");
+    addLog("GPS tracking started", "success");
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -1593,7 +1597,7 @@ export default function DriverDashboard() {
           /* Map layout stacks vertically */
           .dd-map-layout {
             flex-direction: column;
-            /* FIX: 64px topnav + 60px bottom nav = 124px, baki sab map */
+            /* 64px top nav + 60px bottom nav leaves the rest for the map. */
             height: calc(100vh - 64px - 60px);
           }
           .dd-sidebar {
@@ -1969,7 +1973,7 @@ export default function DriverDashboard() {
                     )}
                     {b.report_submitted_at && (
                       <div className="dd-report-note">
-                        Report sent to admin: {new Date(b.report_submitted_at).toLocaleString("en-IN")}
+                        Report sent to admin and hospital: {new Date(b.report_submitted_at).toLocaleString("en-IN")}
                       </div>
                     )}
                     {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && (
@@ -1986,14 +1990,14 @@ export default function DriverDashboard() {
                             style={{ background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7", cursor: "default" }}
                             disabled
                           >
-                            📝 Report Sended
+                            Report Sent
                           </button>
                         ) : (
                           <button
                             className="dd-btn dd-btn-green"
                             onClick={() => submitPatientReport(b.id)}
                           >
-                            📝 Send Report To Admin
+                            Send Report To Admin & Hospital
                           </button>
                         )}
                         <button className="dd-btn dd-btn-green" onClick={() => openLiveTrackForBooking(b)}>

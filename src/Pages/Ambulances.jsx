@@ -56,12 +56,17 @@ const fallbackSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
   </svg>`
 )}`;
 const OPENCAGE_API_KEY = (import.meta?.env?.VITE_OPENCAGE_API_KEY || "").trim();
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const PICKUP_LOCATION_FALLBACKS = [
-  { terms: ["shiv vihar"], lat: 28.7217, lng: 77.2784 },
-  { terms: ["loni", "ghaziabad"], lat: 28.7519, lng: 77.2872 },
-  { terms: ["noida"], lat: 28.5355, lng: 77.3910 },
+  { terms: ["shiv vihar"], lat: 28.72587, lng: 77.27944 },
+  { terms: ["loni"], lat: 28.7510, lng: 77.2890 },
+  { terms: ["bhopura"], lat: 28.7059, lng: 77.3274 },
   { terms: ["greater noida"], lat: 28.4744, lng: 77.5030 },
+  { terms: ["noida"], lat: 28.5355, lng: 77.3910 },
   { terms: ["delhi", "new delhi"], lat: 28.6139, lng: 77.2090 },
 ];
 
@@ -72,6 +77,9 @@ const fallbackPickupLocation = (address) => {
   const normalized = normalizeAddress(address);
   return PICKUP_LOCATION_FALLBACKS.find(({ terms }) => terms.some((term) => normalized.includes(term))) || null;
 };
+
+const isIndiaLatLng = (lat, lng) =>
+  Number.isFinite(lat) && Number.isFinite(lng) && lat >= 6 && lat <= 38 && lng >= 68 && lng <= 98;
 
 const reverseGeocodePickup = async (lat, lng) => {
   try {
@@ -183,12 +191,12 @@ export default function Ambulances() {
   }, [form.booking_for_other, form.pickup_address, locationMode, locationPermission]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/ambulances/")
+    fetch(`${BASE}/api/ambulances/`)
       .then((r) => r.json())
       .then(setAmbulances)
       .catch(() => {});
 
-    fetch("http://127.0.0.1:8000/api/bookings/")
+    fetch(`${BASE}/api/bookings/`)
       .then((r) => r.json())
       .then(setBookings)
       .catch(() => {});
@@ -280,11 +288,18 @@ export default function Ambulances() {
       async (position) => {
         const lat = Number(position.coords.latitude);
         const lng = Number(position.coords.longitude);
+        const accuracy = Number(position.coords.accuracy);
         clearPickupWatch();
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-          setLocationPermission("denied");
+        if (!isIndiaLatLng(lat, lng)) {
+          setLocationPermission("unavailable");
           setLocationMode("manual");
           setLocationMessage("Enter your pickup address.");
+          return;
+        }
+        if (Number.isFinite(accuracy) && accuracy > 2000) {
+          setLocationPermission("unavailable");
+          setLocationMode("manual");
+          setLocationMessage("Your device returned a low-accuracy location. Enter and confirm the pickup address.");
           return;
         }
         // The map and booking always use the browser's exact permissioned pin.
@@ -293,7 +308,7 @@ export default function Ambulances() {
         setConfirmedPickup({
           lat,
           lng,
-          accuracy: Number(position.coords.accuracy) || null,
+          accuracy: Number.isFinite(accuracy) ? accuracy : null,
           source: "gps",
           label: place.label,
         });
@@ -328,8 +343,8 @@ export default function Ambulances() {
     setLocationMessage("Confirming address...");
     try {
       const chosenSuggestion = manualSuggestions.find((item) => item.label === address);
-      let resolved = chosenSuggestion ? { lat: chosenSuggestion.lat, lng: chosenSuggestion.lng } : null;
-      if (OPENCAGE_API_KEY) {
+      let resolved = chosenSuggestion ? { lat: chosenSuggestion.lat, lng: chosenSuggestion.lng } : fallbackPickupLocation(address);
+      if (!resolved && OPENCAGE_API_KEY) {
         const params = new URLSearchParams({
           q: `${address}, India`, key: OPENCAGE_API_KEY, language: "en",
           countrycode: "in", limit: "1", no_annotations: "1",
@@ -338,7 +353,7 @@ export default function Ambulances() {
         const first = response.ok ? (await response.json())?.results?.[0] : null;
         const lat = Number(first?.geometry?.lat);
         const lng = Number(first?.geometry?.lng);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) resolved = { lat, lng };
+        if (isIndiaLatLng(lat, lng)) resolved = { lat, lng };
       }
       if (!resolved) {
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${address}, India`)}&format=json&limit=1&countrycodes=in`;
@@ -346,7 +361,7 @@ export default function Ambulances() {
         const first = response.ok ? (await response.json())?.[0] : null;
         const lat = Number(first?.lat);
         const lng = Number(first?.lon);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) resolved = { lat, lng };
+        if (isIndiaLatLng(lat, lng)) resolved = { lat, lng };
       }
       // Keep common service areas usable when a public geocoder is rate-limited
       // or unavailable. The browser GPS action still provides the exact pin.
@@ -389,7 +404,12 @@ export default function Ambulances() {
       (position) => {
         const lat = Number(position.coords.latitude);
         const lng = Number(position.coords.longitude);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        const accuracy = Number(position.coords.accuracy);
+        if (!isIndiaLatLng(lat, lng)) {
+          setMapLocationStatus("unavailable");
+          return;
+        }
+        if (Number.isFinite(accuracy) && accuracy > 3000) {
           setMapLocationStatus("unavailable");
           return;
         }
@@ -570,7 +590,11 @@ export default function Ambulances() {
     let landmark = form.pickup_landmark.trim();
     let city = form.pickup_city.trim();
     let district = form.pickup_district.trim();
-    const requiresManualAddress = form.booking_for_other || locationMode === "manual" || locationPermission === "denied";
+    const requiresManualAddress =
+      form.booking_for_other ||
+      locationMode === "manual" ||
+      locationPermission === "denied" ||
+      locationPermission === "unavailable";
 
     if (!form.patient_contact_number.trim()) {
       showToast("Contact number is required.", "err");
@@ -597,7 +621,7 @@ export default function Ambulances() {
         ? form.pickup_address.trim()
         : confirmedPickup.label || "Current device location";
 
-      const res = await fetch("http://127.0.0.1:8000/api/bookings/", {
+      const res = await fetch(`${BASE}/api/bookings/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -643,7 +667,7 @@ export default function Ambulances() {
       const payload = reassignBookingId
         ? { reassign_ambulance_id: amb.id, notify_user_reassigned: true }
         : { assign_ambulance_id: amb.id };
-      const res = await fetch(`http://127.0.0.1:8000/api/bookings/${bookingId}/`, {
+      const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

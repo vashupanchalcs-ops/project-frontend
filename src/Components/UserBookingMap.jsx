@@ -17,7 +17,10 @@ import useLeaflet, {
   fetchRoadRoute,
 } from "../hooks/useLeaflet";
 
-const BASE = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const GOOGLE_TILE = "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
 const OPENCAGE_API_KEY = (import.meta?.env?.VITE_OPENCAGE_API_KEY || "").trim();
 
@@ -305,7 +308,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return () => { cancelled = true; };
   }, [booking, hospitals, hospitalsLoaded]);
 
-  // ── fitBounds — sirf PEHLI baar auto-fit, no deps to avoid re-render loop ──
+  // Auto-fit only once unless a user action explicitly requests it.
   const fitBounds = useCallback((force = false) => {
     if (!mapRef.current || !window.L) return;
     if (hasFittedRef.current && !force) return;

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const BASE = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const wsBaseFromHttpBase = () => {
   try {
     const u = new URL(BASE);
@@ -306,7 +309,7 @@ export default function BookingChatPanel({
     if (!voiceOn || messages.length === 0) return;
     const latest = messages[messages.length - 1];
     if (!latest) return;
-    // Admin ke case me own messages bhi announce honge (control room announcement style)
+    // Admin messages are also announced for control-room style updates.
     if (role !== "admin" && latest.sender_role === role) return;
     if (spokenIdsRef.current.has(latest.id)) return;
     spokenIdsRef.current.add(latest.id);

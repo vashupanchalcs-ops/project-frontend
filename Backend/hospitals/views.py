@@ -2,6 +2,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
 from django.conf import settings
+from django.db.models import Q
 from hospitals.models import Hospital, HospitalStaff
 from bookings.models import Booking
 from ambulance.models import Ambulance
@@ -210,10 +211,21 @@ def hospital_dashboard(request, id):
     except Hospital.DoesNotExist:
         return JsonResponse({"error": "Hospital not found"}, status=404)
 
-    active_cases = Booking.objects.filter(
-        assigned_hospital_id=hospital.id,
-        status__in=["confirmed", "pending"],
-    ).order_by("-id")[:100]
+    hospital_filter = Q(assigned_hospital_id=hospital.id)
+    if hospital.email:
+        hospital_filter |= Q(assigned_hospital_email__iexact=hospital.email)
+    if hospital.name:
+        hospital_filter |= Q(assigned_hospital_name__iexact=hospital.name) | Q(destination__iexact=hospital.name)
+
+    active_cases = (
+        Booking.objects.filter(hospital_filter)
+        .filter(
+            Q(status__in=["confirmed", "pending"])
+            | Q(report_sent_to_hospital=True)
+            | Q(report_submitted_at__isnull=False)
+        )
+        .order_by("-id")[:100]
+    )
 
     queue = []
     for b in active_cases:
@@ -225,13 +237,27 @@ def hospital_dashboard(request, id):
             "patient_gender": b.patient_gender or "",
             "contact_number": b.patient_contact_number or b.attendant_contact or "",
             "pickup_location": b.pickup_location,
+            "pickup_latitude": b.pickup_latitude,
+            "pickup_longitude": b.pickup_longitude,
             "destination": b.destination or b.assigned_hospital_name or "",
+            "assigned_hospital_id": b.assigned_hospital_id,
+            "assigned_hospital_name": b.assigned_hospital_name,
+            "assigned_hospital_address": b.assigned_hospital_address,
+            "assigned_hospital_contact": b.assigned_hospital_contact,
+            "assigned_hospital_email": b.assigned_hospital_email,
             "status": b.status,
             "hospital_response": b.hospital_response,
             "hospital_response_note": b.hospital_response_note,
             "created_at": b.created_at.isoformat() if b.created_at else None,
             "hospital_assigned_at": b.hospital_assigned_at.isoformat() if b.hospital_assigned_at else None,
             "hospital_responded_at": b.hospital_responded_at.isoformat() if b.hospital_responded_at else None,
+            "report_sent_to_hospital": b.report_sent_to_hospital,
+            "report_sent_to_hospital_at": b.report_sent_to_hospital_at.isoformat() if b.report_sent_to_hospital_at else None,
+            "report_submitted_by": b.report_submitted_by or "",
+            "report_submitted_at": b.report_submitted_at.isoformat() if b.report_submitted_at else None,
+            "patient_condition": b.patient_condition or "",
+            "vitals_summary": b.vitals_summary or "",
+            "driver_modified_report": b.driver_modified_report or "",
             "ambulance_id": b.ambulance_id,
             "ambulance_number": b.ambulance_number,
             "driver_name": b.driver,

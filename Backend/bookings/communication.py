@@ -68,7 +68,7 @@ def extract_booking_intent(raw_text: str) -> Dict[str, str]:
             pickup = _normalize_text(match.group(1))
             break
 
-    # Hindi fillers remove
+    # Remove filler words from mixed voice/SMS input.
     pickup = re.sub(r"\b(chahiye|jaldi|please|kripya|urgent|emergency)\b", "", pickup, flags=re.IGNORECASE)
     pickup = _normalize_text(pickup.strip(" ,.-"))
 
@@ -211,7 +211,7 @@ def create_booking_from_call_fields(
     caller_email: str = "",
 ) -> Booking:
     pickup_text = _normalize_text(", ".join([landmark or "", city or "", district or ""]).strip(", "))
-    transcript = f"Mujhe ambulance chahiye, main {pickup_text} mein hoon"
+    transcript = f"ambulance pickup {pickup_text}"
     booking = create_booking_from_text("voice", contact_number, transcript)
     # Always prefer exact caller-provided fields over inferred geocode fields
     caller_name_clean = _normalize_text(caller_name)[:100]

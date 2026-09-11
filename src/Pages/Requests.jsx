@@ -7,6 +7,11 @@ import { calculateBookingBill, formatMoney } from "../utils/billing";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
+
 const statusColors = {
   pending: { color: "#111", bg: "#ffffff", border: "#ffffff" },
   confirmed: { color: "#111", bg: "#ffffff", border: "#ffffff" },
@@ -44,7 +49,7 @@ const Requests = () => {
   const rootRef = useRef(null);
 
   const fetchBookings = () => {
-    fetch("http://127.0.0.1:8000/api/bookings/")
+    fetch(`${BASE}/api/bookings/`)
       .then((r) => r.json())
       .then((rows) => {
         const list = Array.isArray(rows) ? rows : [];
@@ -120,15 +125,38 @@ const Requests = () => {
     }
   }, [location.state?.flashMsg, location.pathname, navigate]);
 
-  const updateBooking = (id, payload) => {
-    fetch(`http://127.0.0.1:8000/api/bookings/${id}/`, {
+  const updateBooking = async (id, payload) => {
+    const res = await fetch(`${BASE}/api/bookings/${id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    }).then(fetchBookings);
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || "Booking update failed");
+    setBookings((prev) => prev.map((row) => (Number(row.id) === Number(id) ? { ...row, ...data } : row)));
+    fetchBookings();
+    return data;
   };
 
   const updateStatus = (id, status) => updateBooking(id, { status });
+
+  const forwardReportToHospital = async (booking) => {
+    const id = Number(booking?.id || 0);
+    if (!id || !booking?.assigned_hospital_name) return;
+    const sentAt = new Date().toISOString();
+    setBookings((prev) =>
+      prev.map((row) =>
+        Number(row.id) === id
+          ? { ...row, report_sent_to_hospital: true, report_sent_to_hospital_at: sentAt }
+          : row
+      )
+    );
+    try {
+      await updateBooking(id, { send_report_to_hospital: true });
+    } catch {
+      fetchBookings();
+    }
+  };
 
   const openHospitalAssign = (bookingId) => {
     navigate("/Hospitals", { state: { assignBookingId: bookingId } });
@@ -141,7 +169,7 @@ const Requests = () => {
   };
 
   const deleteBooking = (id) => {
-    fetch(`http://127.0.0.1:8000/api/bookings/${id}/`, { method: "DELETE" }).then(fetchBookings);
+    fetch(`${BASE}/api/bookings/${id}/`, { method: "DELETE" }).then(fetchBookings);
   };
 
   const ActionButtons = ({ b }) => {
@@ -229,7 +257,7 @@ const Requests = () => {
               cursor: b.assigned_hospital_name ? "pointer" : "not-allowed",
             }}
             disabled={!b.assigned_hospital_name}
-            onClick={() => updateBooking(b.id, { send_report_to_hospital: true })}
+            onClick={() => forwardReportToHospital(b)}
           >
             Send Report To Hospital
           </button>

@@ -14,11 +14,11 @@ from bookings.tasks import process_sms_booking_task, process_voice_booking_task
 
 STEP_SEQUENCE = ["name", "city", "district", "landmark", "confirm"]
 STEP_PROMPTS = {
-    "name": "Kripya apna naam batayein.",
-    "city": "Aap kis city mein hain? Kripya city ka naam boliye.",
-    "district": "Kripya district ka naam boliye.",
-    "landmark": "Kripya najdeeki landmark batayein.",
-    "confirm": "Booking confirm karne ke liye 2 dabaiye. Cancel karne ke liye 1 dabaiye.",
+    "name": "Please tell us your name.",
+    "city": "Which city are you in? Please say the city name.",
+    "district": "Please say the district name.",
+    "landmark": "Please tell us the nearest landmark.",
+    "confirm": "Press 2 to confirm the booking. Press 1 to cancel.",
 }
 
 
@@ -50,9 +50,9 @@ def _say_gather(prompt, action, input_mode="speech dtmf", num_digits=None):
     return f"""<?xml version='1.0' encoding='UTF-8'?>
 <Response>
   <Gather input='{input_mode}'{digits_part} action='{action}' method='POST' timeout='6' speechTimeout='auto'>
-    <Say language='hi-IN'>{prompt}</Say>
+    <Say language='en-IN'>{prompt}</Say>
   </Gather>
-  <Say language='hi-IN'>Mujhe response nahi mila. Kripya dobara call karein.</Say>
+  <Say language='en-IN'>We did not receive a response. Please call again.</Say>
 </Response>"""
 
 
@@ -212,7 +212,7 @@ def voice_ivr_entry(request):
     call.attempts = 0
     call.ended_at = None
     call.save(update_fields=["call_status", "current_step", "attempts", "ended_at", "updated_at"])
-    prompt = "SwiftRescue mein aapka swagat hai. Ambulance booking ke liye hum aapse kuch details lenge. " + STEP_PROMPTS["name"]
+    prompt = "Welcome to SwiftRescue. We will collect a few details for your ambulance booking. " + STEP_PROMPTS["name"]
     return _xml(_say_gather(prompt, "/api/bookings/voice/step/"))
 
 
@@ -224,7 +224,7 @@ def voice_ivr_step(request):
     call_sid = str(payload.get("CallSid", "")).strip()
     from_number = str(payload.get("From", "")).strip()
     if not call_sid:
-        return _xml(_say_gather("Call session missing. Kripya dobara call karein.", "/api/bookings/voice/incoming/"))
+        return _xml(_say_gather("Call session missing. Please call again.", "/api/bookings/voice/incoming/"))
 
     call = _ensure_call_session(call_sid, from_number)
     call.call_status = "in_progress"
@@ -236,11 +236,11 @@ def voice_ivr_step(request):
     if current == "confirm":
         if digit_value == "2":
             if call.booking_id:
-                msg = f"Aapki booking number {call.booking_id} pehle hi confirm ho chuki hai."
+                msg = f"Your booking number {call.booking_id} is already confirmed."
                 call.call_status = "completed"
                 call.ended_at = timezone.now()
                 call.save(update_fields=["call_status", "ended_at", "updated_at"])
-                return _xml(f"<?xml version='1.0' encoding='UTF-8'?><Response><Say language='hi-IN'>{msg}</Say></Response>")
+                return _xml(f"<?xml version='1.0' encoding='UTF-8'?><Response><Say language='en-IN'>{msg}</Say></Response>")
 
             try:
                 booking = create_booking_from_call_fields(
@@ -255,7 +255,7 @@ def voice_ivr_step(request):
                 call.ended_at = timezone.now()
                 call.save(update_fields=["call_status", "ended_at", "updated_at"])
                 return _xml(
-                    "<?xml version='1.0' encoding='UTF-8'?><Response><Say language='hi-IN'>Maaf kijiye, booking create nahi ho payi. Kripya dobara call karein.</Say></Response>"
+                    "<?xml version='1.0' encoding='UTF-8'?><Response><Say language='en-IN'>Sorry, we could not create the booking. Please call again.</Say></Response>"
                 )
 
             call.is_confirmed = True
@@ -263,20 +263,20 @@ def voice_ivr_step(request):
             call.call_status = "completed"
             call.ended_at = timezone.now()
             call.save(update_fields=["is_confirmed", "booking", "call_status", "ended_at", "updated_at"])
-            msg = f"Dhanyavaad {call.caller_name or ''}. Aapki booking confirm ho gayi hai. Booking number {booking.id}. Admin dispatch team isse turant process karegi."
-            return _xml(f"<?xml version='1.0' encoding='UTF-8'?><Response><Say language='hi-IN'>{msg}</Say></Response>")
+            msg = f"Thank you {call.caller_name or ''}. Your booking is confirmed. Booking number {booking.id}. The admin dispatch team will process it immediately."
+            return _xml(f"<?xml version='1.0' encoding='UTF-8'?><Response><Say language='en-IN'>{msg}</Say></Response>")
 
         if digit_value == "1":
             call.call_status = "ended"
             call.ended_at = timezone.now()
             call.save(update_fields=["call_status", "ended_at", "updated_at"])
             return _xml(
-                "<?xml version='1.0' encoding='UTF-8'?><Response><Say language='hi-IN'>Aapki booking request cancel kar di gayi hai. Dhanyavaad.</Say></Response>"
+                "<?xml version='1.0' encoding='UTF-8'?><Response><Say language='en-IN'>Your booking request has been cancelled. Thank you.</Say></Response>"
             )
 
         return _xml(
             _say_gather(
-                "Booking confirm karne ke liye 2 dabaiye. Cancel karne ke liye 1 dabaiye.",
+                "Press 2 to confirm the booking. Press 1 to cancel.",
                 "/api/bookings/voice/step/",
                 input_mode="dtmf",
                 num_digits=1,
@@ -292,7 +292,7 @@ def voice_ivr_step(request):
             call.ended_at = timezone.now()
             call.save(update_fields=["attempts", "call_status", "ended_at", "updated_at"])
             return _xml(
-                "<?xml version='1.0' encoding='UTF-8'?><Response><Say language='hi-IN'>Response receive nahi hua. Kripya dubara call karein.</Say></Response>"
+                "<?xml version='1.0' encoding='UTF-8'?><Response><Say language='en-IN'>We did not receive a response. Please call again.</Say></Response>"
             )
         call.save(update_fields=["attempts", "updated_at"])
         return _xml(_say_gather(STEP_PROMPTS[current], "/api/bookings/voice/step/"))
@@ -314,7 +314,7 @@ def voice_ivr_step(request):
 
     if next_step == "confirm":
         summary = (
-            f"Kripya details confirm karein. Naam {call.caller_name}, city {call.city}, district {call.district}, landmark {call.landmark}. "
+            f"Please confirm the details. Name {call.caller_name}, city {call.city}, district {call.district}, landmark {call.landmark}. "
             + STEP_PROMPTS["confirm"]
         )
         return _xml(_say_gather(summary, "/api/bookings/voice/step/", input_mode="dtmf", num_digits=1))
@@ -387,7 +387,7 @@ def voice_booking_webhook(request):
         "from_number": payload.get("From") or payload.get("from") or payload.get("caller") or "",
         "transcript": payload.get("SpeechResult") or payload.get("speech_text") or payload.get("transcript") or "",
         "audio_base64": payload.get("audio_base64") or "",
-        "language": payload.get("language") or "hi-IN",
+        "language": payload.get("language") or "en-IN",
         "raw": payload,
     }
     try:
@@ -397,7 +397,7 @@ def voice_booking_webhook(request):
 
     xml = """<?xml version='1.0' encoding='UTF-8'?>
 <Response>
-  <Say language='hi-IN'>Dhanyavaad. Aapki booking request receive ho gayi hai.</Say>
+  <Say language='en-IN'>Thank you. Your booking request has been received.</Say>
 </Response>
 """
     return _xml(xml)

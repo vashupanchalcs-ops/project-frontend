@@ -430,10 +430,10 @@ def ambulance_change_request(request):
             for r in all_reqs
         )
         if already:
-            return JsonResponse({"status": "already_pending", "message": "Aapki request pehle se pending hai"})
+            return JsonResponse({"status": "already_pending", "message": "Your request is already pending."})
         all_reqs.insert(0, data)
         cache.set(CHANGE_REQ_CACHE_KEY, all_reqs, timeout=CHANGE_REQ_TIMEOUT)
-        return JsonResponse({"status": "saved", "message": "Request admin ko bhej di gayi"})
+        return JsonResponse({"status": "saved", "message": "Request sent to admin."})
 
     if request.method == "PATCH":
         data      = json.loads(request.body)
@@ -468,9 +468,9 @@ def ambulance_change_request(request):
             "type":      action,
             "title":     "✅ Request Approved!" if action == "approved" else "❌ Request Rejected",
             "message":   (
-                f"Admin ne aapki {updated_req.get('newAmbNumber')} ambulance change request approve kar di!"
+                f"Admin approved your ambulance change request for {updated_req.get('newAmbNumber')}."
                 if action == "approved"
-                else f"Admin ne aapki {updated_req.get('newAmbNumber')} ambulance change request reject kar di."
+                else f"Admin rejected your ambulance change request for {updated_req.get('newAmbNumber')}."
             ),
             "ambNumber": updated_req.get("newAmbNumber"),
             "timestamp": timezone.now().isoformat(),
@@ -613,8 +613,8 @@ def get_location_history(request, ambulance_id):
 def get_driver_location_by_ambulance(request):
     """
     GET /api/driver/location/?ambulance_id=<id>
-    Driver ki latest location return karta hai.
-    UserBookingMap.jsx is API se live tracking karta hai.
+    Return the driver's latest location for user live tracking.
+    UserBookingMap.jsx consumes this endpoint.
     """
     if request.method != "GET":
         return JsonResponse({"error": "GET only"}, status=405)
@@ -630,7 +630,7 @@ def get_driver_location_by_ambulance(request):
         ).order_by("-timestamp").first()
 
         if not dl:
-            # Fallback: Ambulance table mein directly latitude/longitude check karo
+            # Fallback: read the latest latitude/longitude directly from the Ambulance table.
             try:
                 amb = Ambulance.objects.get(id=ambulance_id)
                 if amb.latitude and amb.longitude:
@@ -662,7 +662,7 @@ def get_driver_location_by_ambulance(request):
                 "message":          "No location found for this ambulance",
             })
 
-        # Ambulance se driver name fetch karo
+        # Resolve the driver name from the ambulance record.
         try:
             amb              = Ambulance.objects.get(id=ambulance_id)
             driver_name      = amb.driver or ""

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const BASE = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const supportsSpeechApi = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -52,8 +55,8 @@ export default function DriverVoiceReports() {
         filtered.forEach((b) => {
           const bid = Number(b.id || 0);
           if (!bid) return;
-          // Local sent-state ko backend state ke saath sync rakho,
-          // taaki false-positive "Report Sended" na dikhe.
+          // Keep local sent-state synchronized with the backend response so
+          // the page does not show a false "Report Sent" state.
           synced[bid] = Boolean(
             b.report_sent_to_hospital ||
             b.driver_report_sent_at ||

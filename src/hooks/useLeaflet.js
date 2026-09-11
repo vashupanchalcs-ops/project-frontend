@@ -1,7 +1,6 @@
 // useLeaflet.js — src/hooks/useLeaflet.js
 //
-// FIX: LOCAL_HINTS mein Shiv Vihar Delhi ka correct coords (28.7419, 77.3158)
-// Images se verify kiya gaya — Shiv Vihar, Delhi (Karawal Nagar ke paas)
+// Local hints keep common NCR places pinned before remote geocoding.
 // The previous Ghaziabad coordinate was incorrect (28.72604, 77.28324).
 
 import { useState, useEffect } from "react";
