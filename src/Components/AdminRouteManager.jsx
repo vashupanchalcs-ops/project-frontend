@@ -106,6 +106,28 @@ export default function AdminRouteManager({
   const [pushing,    setPushing]    = useState(false);
   const [toast,      setToast]      = useState(null);
   const [is3D,       setIs3D]       = useState(false);
+  const [isFullRouteView, setIsFullRouteView] = useState(false);
+
+  const fullRouteEmbedSrc = useMemo(() => {
+    if (!selBook) return "";
+    const ambLat = Number(selAmb?.latitude);
+    const ambLng = Number(selAmb?.longitude);
+    const ambCoord = isIndiaCoord(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
+    const pickupLat = Number(selBook?.pickup_latitude);
+    const pickupLng = Number(selBook?.pickup_longitude);
+    const pickupCoord = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
+    const pickupText = String(selBook?.pickup_location || "").trim();
+
+    const destLat = Number(destCoord?.lat);
+    const destLng = Number(destCoord?.lng);
+    const destCoordStr = isIndiaCoord(destLat, destLng) ? `${destLat},${destLng}` : "";
+    const destText = String(selBook?.assigned_hospital_address || selBook?.assigned_hospital_name || selBook?.destination || "").trim();
+
+    const start = ambCoord || pickupCoord || pickupText;
+    const end = destCoordStr || destText || pickupCoord || pickupText;
+    if (!start || !end) return "";
+    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(start)}&daddr=${encodeURIComponent(end)}&dirflg=d`;
+  }, [selAmb, selBook, destCoord]);
 
   const clearRoutePreview = () => {
     setPickupCoord(null);
@@ -398,11 +420,7 @@ export default function AdminRouteManager({
       if (pickupFromText) break;
     }
 
-    let pickup = pickupFromBooking || pickupFromText || null;
-    if (pickupFromBooking && pickupFromText && haversineKm(pickupFromBooking, pickupFromText) > 1.2) {
-      pickup = pickupFromText;
-    }
-
+    const pickup = pickupFromBooking || pickupFromText || null;
     const destination = hospitalFromDb || hospitalFromText || null;
     return { pickup, destination };
   };
@@ -590,10 +608,30 @@ export default function AdminRouteManager({
         </div>
 
         <div className="arm-map">
-          <button className="arm-3d-btn" onClick={() => setIs3D((v) => !v)}>
-            {is3D ? "Disable 3D View" : "Enable 3D View"}
-          </button>
-          <div ref={mapElRef} className="arm-map-el" />
+          <div style={{ position: "absolute", top: 10, right: 10, zIndex: 5000, display: "flex", gap: 8 }}>
+            {fullRouteEmbedSrc && (
+              <button
+                className="arm-3d-btn"
+                style={{ position: "static" }}
+                onClick={() => setIsFullRouteView((v) => !v)}
+              >
+                {isFullRouteView ? "Close Full Route Map" : "Open Full Route Map"}
+              </button>
+            )}
+            <button className="arm-3d-btn" style={{ position: "static" }} onClick={() => setIs3D((v) => !v)}>
+              {is3D ? "Disable 3D View" : "Enable 3D View"}
+            </button>
+          </div>
+          {isFullRouteView && fullRouteEmbedSrc ? (
+            <iframe
+              src={fullRouteEmbedSrc}
+              style={{ width: "100%", height: "100%", minHeight: 540, border: "none", background: "#fff" }}
+              title="Google Maps Full Route View"
+              loading="lazy"
+            />
+          ) : (
+            <div ref={mapElRef} className="arm-map-el" />
+          )}
         </div>
       </div>
     </>
