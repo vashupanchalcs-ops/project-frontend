@@ -130,6 +130,26 @@ export default function DriverDashboard() {
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [location, ambulance, route, routeMode]);
 
+  const googleMapsAppUrl = useMemo(() => {
+    const dLat = location?.lat ?? Number(ambulance?.latitude);
+    const dLng = location?.lng ?? Number(ambulance?.longitude);
+    const startCoord = inIndia(dLat, dLng) ? `${dLat},${dLng}` : "";
+    
+    const pickupText = String(route?.pickup_location || "").trim();
+    const destText = String(route?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
+
+    const startPt = startCoord || pickupText || "28.73724,77.30666";
+    const viaPt = pickupText;
+    const endPt = destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startPt)}&destination=${encodeURIComponent(endPt)}`;
+    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
+      url += `&waypoints=${encodeURIComponent(viaPt)}`;
+    }
+    url += `&travelmode=driving`;
+    return url;
+  }, [location, ambulance, route]);
+
   const mapDivRef    = useRef(null);
   const mapWrapRef   = useRef(null);
   const rootRef      = useRef(null);
@@ -1802,9 +1822,9 @@ export default function DriverDashboard() {
                 </div>
               </motion.div>
             </div>
-            <div ref={mapWrapRef} className="dd-map-wrap" style={{ overflow: "hidden", position: "relative" }}>
+            <div ref={mapWrapRef} className="dd-map-wrap" style={{ overflow: "hidden", position: "relative", minHeight: 520, borderRadius: 16 }}>
 
-              {/* Navigation beacon icon overlay for Start Route mode (Matching Image 4) */}
+              {/* Navigation beacon icon overlay for Start Route mode */}
               {routeMode === "start" && (
                 <div
                   style={{
@@ -1815,9 +1835,9 @@ export default function DriverDashboard() {
                     zIndex: 20,
                     background: "rgba(0, 200, 83, 0.95)",
                     color: "#ffffff",
-                    padding: "6px 14px",
+                    padding: "6px 16px",
                     borderRadius: 20,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 800,
                     display: "flex",
                     alignItems: "center",
@@ -1840,14 +1860,18 @@ export default function DriverDashboard() {
                 </div>
               )}
 
-              <div style={{ position: "absolute", top: 10, right: 10, zIndex: 5000, display: "flex", gap: "6px" }}>
+              {/* Top right quick view buttons */}
+              <div style={{ position: "absolute", top: 12, right: 12, zIndex: 5000, display: "flex", gap: "6px" }}>
                 <button
-                  onClick={() => setRouteMode("start")}
+                  onClick={() => {
+                    setRouteMode("start");
+                    if (!isTracking) startTracking();
+                  }}
                   style={{
                     background: routeMode === "start" ? "#00c853" : "#ffffff",
                     color: routeMode === "start" ? "#ffffff" : "#111111",
                     border: "1px solid rgba(17,17,17,0.2)",
-                    padding: "6px 12px",
+                    padding: "7px 14px",
                     borderRadius: 8,
                     cursor: "pointer",
                     fontWeight: 700,
@@ -1855,7 +1879,7 @@ export default function DriverDashboard() {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
                   }}
                 >
-                  ▶ Start Route
+                  ▲ Start Route
                 </button>
                 <button
                   onClick={() => setRouteMode("full")}
@@ -1863,7 +1887,7 @@ export default function DriverDashboard() {
                     background: routeMode === "full" ? "#111111" : "#ffffff",
                     color: routeMode === "full" ? "#ffffff" : "#111111",
                     border: "1px solid rgba(17,17,17,0.2)",
-                    padding: "6px 12px",
+                    padding: "7px 14px",
                     borderRadius: 8,
                     cursor: "pointer",
                     fontWeight: 700,
@@ -1874,6 +1898,7 @@ export default function DriverDashboard() {
                   🗺 View Full Route
                 </button>
               </div>
+
               {routeAlert && (
                 <div
                   style={{
@@ -1895,19 +1920,125 @@ export default function DriverDashboard() {
                   ⚠ {routeAlert}
                 </div>
               )}
+
+              {/* Bottom Google Maps style navigation action bar matching reference image */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 14,
+                  left: 14,
+                  right: 14,
+                  zIndex: 5000,
+                  background: "rgba(255, 255, 255, 0.96)",
+                  backdropFilter: "blur(8px)",
+                  color: "#1f1f1f",
+                  borderRadius: 18,
+                  padding: "12px 18px",
+                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.28)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #00c853, #00a896)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      color: "#ffffff",
+                      boxShadow: "0 4px 12px rgba(0, 200, 83, 0.35)",
+                    }}
+                  >
+                    🚑
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#111111", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>Ambulance Route</span>
+                      {(liveLegStats.toPickupMins != null || liveLegStats.toHospitalMins != null) && (
+                        <span
+                          style={{
+                            background: "#00a896",
+                            color: "#ffffff",
+                            padding: "2px 8px",
+                            borderRadius: 12,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {(liveLegStats.toPickupMins || 0) + (liveLegStats.toHospitalMins || 0)} min
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#5f6368", marginTop: 2, fontWeight: 500 }}>
+                      {route?.pickup_location
+                        ? `Pickup: ${route.pickup_location} ➔ Hospital: ${route.destination || "Hospital"}`
+                        : "Full route from your live location"}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      setRouteMode("start");
+                      if (!isTracking) startTracking();
+                    }}
+                    style={{
+                      background: "linear-gradient(135deg, #00a896, #0288d1)",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "10px 22px",
+                      borderRadius: 24,
+                      fontWeight: 800,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      boxShadow: "0 4px 14px rgba(0, 168, 150, 0.45)",
+                      transition: "transform 0.15s ease",
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>▲</span> Start
+                  </button>
+                  <a
+                    href={googleMapsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      background: "#f1f3f4",
+                      color: "#1a73e8",
+                      border: "1px solid #dadce0",
+                      padding: "10px 16px",
+                      borderRadius: 24,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>🌐</span> Open App
+                  </a>
+                </div>
+              </div>
+
               <iframe
-                style={{ width: "100%", height: "100%", minHeight: 480, border: "none", background: "#e5e3df" }}
+                style={{ width: "100%", height: "100%", minHeight: 520, border: "none", background: "#e5e3df", borderRadius: 16 }}
                 src={driverEmbedSrc}
                 title="Driver Live Tracking Map"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
-              {!isTracking && (
-                <div style={{ position:"absolute", inset:0, background:"rgba(12,8,20,0.78)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", pointerEvents:"none", zIndex:2 }}>
-                  <div style={{ fontSize:48 }}>🚑</div>
-                  <div style={{ color:"var(--sr-text-muted, rgba(255,246,242,0.55))", marginTop:12, fontSize:13, textAlign:"center", padding:"0 16px" }}>Start tracking for map access</div>
-                </div>
-              )}
             </div>
           </div>
         )}
