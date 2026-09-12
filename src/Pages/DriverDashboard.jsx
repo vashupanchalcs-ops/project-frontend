@@ -108,6 +108,7 @@ export default function DriverDashboard() {
   const [bookingMenuOpenId, setBookingMenuOpenId] = useState(null);
   const [deletingBookingId, setDeletingBookingId] = useState(null);
   const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
+  const [is3D, setIs3D] = useState(false);
 
   const driverEmbedSrc = useMemo(() => {
     const dLat = location?.lat ?? Number(ambulance?.latitude);
