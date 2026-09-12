@@ -405,9 +405,7 @@ const App = () => {
           border-color: #303532 !important;
         }
 
-        #root :is(.recharts-wrapper, .recharts-wrapper *) {
-          color: #b7bcb7 !important;
-        }
+        #root :is(.recharts-wrapper) { background: transparent !important; }
 
         #root :is(.recharts-text, .recharts-label, .recharts-legend-item-text) {
           fill: #b7bcb7 !important;

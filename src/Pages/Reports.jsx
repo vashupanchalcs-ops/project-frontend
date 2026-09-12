@@ -5,8 +5,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 gsap.registerPlugin(ScrollTrigger);
-const COLORS = ["#ffffff", "#222222", "#666666", "#999999"];;
-const statusColor = { available: "#ffffff", en_route: "#222222", busy: "#666666", offline: "#999999" };;
+const COLORS = ["#22c55e", "#ef4444", "#f59a23", "#3b82f6"];
+const statusColor = { available: "#22c55e", en_route: "#f59a23", busy: "#ef4444", offline: "#6b7280" };
 
 const Reports = () => {
   const [bookings,   setBookings]   = useState([]);
@@ -311,7 +311,15 @@ const Reports = () => {
                           );
                         }}
                       >
-                        {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        {pieData.map((entry, i) => {
+                        const colorMap = {
+                          Completed: "#22c55e",
+                          Cancelled: "#ef4444",
+                          Confirmed: "#f59a23",
+                          Pending: "#3b82f6"
+                        };
+                        return <Cell key={i} fill={colorMap[entry.name] || COLORS[i % COLORS.length]} />;
+                      })}
                       </Pie>
                       <Tooltip contentStyle={ttStyle} />
                     </PieChart>
@@ -342,9 +350,9 @@ const Reports = () => {
                       <YAxis tick={chartTick} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={ttStyle} />
                       <Legend wrapperStyle={{ color: "#111111", fontSize: 11, fontWeight: 600 }} />
-                      <Bar dataKey="total"     name="Total"     fill="#ffffff" radius={[4,4,0,0]} />
-                      <Bar dataKey="available" name="Available" fill="#ffffff"                radius={[4,4,0,0]} />
-                      <Bar dataKey="icu"       name="ICU"       fill="#ffffff"                radius={[4,4,0,0]} />
+                      <Bar dataKey="total"     name="Total Beds" fill="#3b82f6" radius={[4,4,0,0]} />
+                      <Bar dataKey="available" name="Available"  fill="#22c55e" radius={[4,4,0,0]} />
+                      <Bar dataKey="icu"       name="ICU Beds"   fill="#ef4444" radius={[4,4,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="rep-chart-empty">No hospitals yet</div>}
@@ -358,7 +366,7 @@ const Reports = () => {
                       <XAxis dataKey="name" tick={{ fill: "#111111", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
                       <YAxis tick={chartTick} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={ttStyle} />
-                      <Bar dataKey="bookings" fill="#ffffff" radius={[6,6,0,0]} />
+                      <Bar dataKey="bookings" fill="#f59a23" radius={[6,6,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="rep-chart-empty">No data yet</div>}
