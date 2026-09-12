@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -421,11 +421,39 @@ export default function Ambulances() {
     );
   };
 
+  const embedSrc = useMemo(() => {
+    if (!selectedAmb) return "https://maps.google.com/maps?output=embed&q=28.7059,77.3274&z=13";
+    
+    const alat = Number(selectedAmb.latitude);
+    const alng = Number(selectedAmb.longitude);
+    const hasAmbCoord = isIndiaLatLng(alat, alng);
+    const ambCoord = hasAmbCoord ? `${alat},${alng}` : "";
+    const ambLocText = String(selectedAmb.location || "").trim();
+
+    const activeBooking = bookings.find(
+      (b) => Number(b.ambulance_id) === Number(selectedAmb.id) && String(b.status).toLowerCase() === "confirmed"
+    );
+
+    if (activeBooking) {
+      const plat = Number(activeBooking.pickup_latitude);
+      const plng = Number(activeBooking.pickup_longitude);
+      const hasPickupCoord = isIndiaLatLng(plat, plng);
+      const pickupPt = hasPickupCoord ? `${plat},${plng}` : String(activeBooking.pickup_location || "").trim();
+      const ambPt = ambCoord || ambLocText || "28.7059,77.3274";
+
+      return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(ambPt)}&daddr=${encodeURIComponent(pickupPt)}&dirflg=d`;
+    }
+
+    const qStr = ambCoord || ambLocText || "Delhi, India";
+    return `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(qStr)}&z=14&t=m`;
+  }, [selectedAmb, bookings]);
+
   const openMapDirections = () => {
     const lat = Number(selectedAmb?.latitude);
     const lng = Number(selectedAmb?.longitude);
-    if (!mapLocation || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${mapLocation.lat},${mapLocation.lng}&destination=${lat},${lng}&travelmode=driving`;
+    const ambLocText = String(selectedAmb?.location || "").trim();
+    const dest = isIndiaLatLng(lat, lng) ? `${lat},${lng}` : encodeURIComponent(ambLocText || "Delhi");
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -1647,7 +1675,32 @@ export default function Ambulances() {
             </div>
           )}
 
-          {!isUser && !isSplitView && <div className="amb2-sec">Fleet Overview</div>}
+          {!isUser && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, marginBottom: 12 }}>
+              <div className="amb2-sec" style={{ margin: 0 }}>Fleet Overview</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  className={`amb2-btn ${!isSplitView ? "main" : ""}`}
+                  onClick={() => setIsSplitView(false)}
+                  style={{ padding: "6px 14px", fontSize: 12, borderRadius: 8, cursor: "pointer" }}
+                >
+                  📱 Grid View
+                </button>
+                <button
+                  type="button"
+                  className={`amb2-btn ${isSplitView ? "main" : ""}`}
+                  onClick={() => {
+                    if (!selectedAmb && ambulances.length) setSelectedAmb(ambulances[0]);
+                    setIsSplitView(true);
+                  }}
+                  style={{ padding: "6px 14px", fontSize: 12, borderRadius: 8, cursor: "pointer" }}
+                >
+                  🗺 Split Map View
+                </button>
+              </div>
+            </div>
+          )}
 
           {!isUser && !isSplitView && (
             <div className="amb2-grid">
@@ -1799,7 +1852,13 @@ export default function Ambulances() {
                   })()}
                  
                  <div className="amb-map-box">
-                    <div ref={mapElRef} style={{ width: "100%", height: "100%" }} />
+                    <iframe
+                      src={embedSrc}
+                      title={`Live Map for ${selectedAmb?.ambulance_number || "Ambulance"}`}
+                      style={{ width: "100%", height: "100%", border: "none" }}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
                  </div>
                  <div className="amb-map-status">
                    <span>
