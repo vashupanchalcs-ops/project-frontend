@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
+// Deployment v1.0.4 - Pin selected hospital to top and enable full page scrolling
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 
 // Keep the partner screen useful while the API is unavailable or has no seeded rows.
