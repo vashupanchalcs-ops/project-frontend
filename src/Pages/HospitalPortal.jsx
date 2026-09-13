@@ -1688,7 +1688,9 @@ export default function HospitalPortal() {
           display: grid;
           grid-template-columns: 280px minmax(0, 1fr);
           gap: 10px;
-          min-height: calc(100vh - 250px);
+          flex: 1 1 auto;
+          min-height: calc(100vh - 220px);
+          height: calc(100vh - 220px);
         }
         .hp-map-list {
           border: 1px solid rgba(156,171,0,0.35);
@@ -1777,7 +1779,7 @@ export default function HospitalPortal() {
           border-radius: 12px;
           background: linear-gradient(165deg, #fbffff 0%, #edf8ff 100%);
           overflow: hidden;
-          min-height: 340px;
+          min-height: 0;
           height: 100%;
           display: flex;
           flex-direction: column;
@@ -1792,8 +1794,9 @@ export default function HospitalPortal() {
         }
         .hp-map-frame {
           width: 100%;
+          height: 100%;
           flex: 1 1 auto;
-          min-height: 300px;
+          min-height: 0;
           border: 0;
           display: block;
         }
@@ -2575,7 +2578,7 @@ export default function HospitalPortal() {
               )}
 
               {activeTab === "map" && (
-                <section className="hp-card">
+                <section className="hp-card" style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 180px)", padding: "12px" }}>
                   <div className="hp-card-head">
                     <div className="hp-card-title" style={{ marginBottom: 0 }}>Live Command Center</div>
                     {hiddenMapBookingIds.length > 0 && (
@@ -2584,7 +2587,7 @@ export default function HospitalPortal() {
                   </div>
                   {visibleTrackingRows.length === 0 && <div className="hp-empty">No live ambulance coordinates available yet.</div>}
                   {visibleTrackingRows.length > 0 && (
-                    <div className="hp-map-layout">
+                    <div className="hp-map-layout" style={{ flex: "1 1 auto" }}>
                       <aside className="hp-map-list">
                         {visibleTrackingRows.map((r) => (
                           <article
@@ -2648,9 +2651,10 @@ export default function HospitalPortal() {
                       </aside>
                       <section className="hp-map-panel">
                         {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
-                          <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 520 }}>
+                          <div style={{ position: "relative", width: "100%", height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
                             <iframe
                               className="hp-map-frame"
+                              style={{ flex: "1 1 auto", width: "100%", height: "100%", border: 0, display: "block" }}
                               src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
                               title="Hospital Live Tracking Map"
                               loading="lazy"
