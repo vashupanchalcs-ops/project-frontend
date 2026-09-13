@@ -328,6 +328,21 @@ export default function HospitalPortal() {
     [visibleTrackingRows, selectedMapBookingId]
   );
 
+  const [activeRoute, setActiveRoute] = useState(null);
+
+  useEffect(() => {
+    const bid = selectedMapBooking?.booking_id || selectedMapBooking?.id;
+    if (!bid) { setActiveRoute(null); return; }
+    let cancel = false;
+    fetch(`${BASE_URL}/api/route/active/${bid}/`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancel && data?.id) setActiveRoute(data);
+      })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [selectedMapBooking]);
+
   const fullRouteEmbedSrc = useMemo(() => {
     const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
     const ambLng = Number(selectedMapBooking?.ambulance_live?.longitude);
@@ -335,14 +350,24 @@ export default function HospitalPortal() {
 
     const pickupLat = Number(selectedMapBooking?.pickup_latitude);
     const pickupLng = Number(selectedMapBooking?.pickup_longitude);
-    const pickupCoordStr = hasCoordPair(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
-    const pickupText = String(selectedMapBooking?.pickup_location || "").trim();
+
+    const routePickupCoord = hasCoordPair(activeRoute?.pickup_lat, activeRoute?.pickup_lng)
+      ? `${activeRoute.pickup_lat},${activeRoute.pickup_lng}`
+      : "";
+    const routeDestCoord = hasCoordPair(activeRoute?.dest_lat, activeRoute?.dest_lng)
+      ? `${activeRoute.dest_lat},${activeRoute.dest_lng}`
+      : "";
+
+    const pickupCoordStr = routePickupCoord || (hasCoordPair(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "");
+    const pickupText = activeRoute?.pickup_location || String(selectedMapBooking?.pickup_location || "").trim();
 
     const hospitalLat = Number(hospital?.latitude);
     const hospitalLng = Number(hospital?.longitude);
     const hospitalCoord = hasCoordPair(hospitalLat, hospitalLng) ? `${hospitalLat},${hospitalLng}` : "";
     const destText =
+      routeDestCoord ||
       hospitalCoord ||
+      activeRoute?.destination ||
       String(selectedMapBooking?.assigned_hospital_address || "").trim() ||
       String(selectedMapBooking?.assigned_hospital_name || "").trim() ||
       String(hospital?.address || "").trim() ||
@@ -359,7 +384,7 @@ export default function HospitalPortal() {
     }
 
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
-  }, [selectedMapBooking, hospital]);
+  }, [selectedMapBooking, hospital, activeRoute]);
 
   const mapEmbedSrc = fullRouteEmbedSrc;
 
@@ -397,7 +422,7 @@ export default function HospitalPortal() {
   }, []);
 
   const featuredDoctors = useMemo(
-    () => staff.filter((s) => s.role === "doctor").slice(0, 6),
+    () => staff.filter((s) => s.role === "doctor" && s.is_active !== false).slice(0, 6),
     [staff]
   );
 
@@ -424,7 +449,7 @@ export default function HospitalPortal() {
   );
 
   const caseCards = useMemo(() => {
-    const doctors = staff.filter((s) => String(s.role || "").toLowerCase() === "doctor");
+    const doctors = staff.filter((s) => String(s.role || "").toLowerCase() === "doctor" && s.is_active !== false);
     const now = Date.now();
     return responseCards.map((q, index) => {
       const admittedRaw =
@@ -499,6 +524,21 @@ export default function HospitalPortal() {
     });
     return groups;
   }, [staff]);
+
+  const toggleStaffActive = async (staffMember) => {
+    if (!hospital?.id || !staffMember?.id) return;
+    try {
+      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/${staffMember.id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !staffMember.is_active }),
+      });
+      if (!res.ok) throw new Error("Unable to update staff status");
+      await fetchHospitalDashboard({ silent: true });
+    } catch {
+      setErr("Unable to update staff status");
+    }
+  };
 
   const handleStaffImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -2863,16 +2903,22 @@ export default function HospitalPortal() {
                   ].map((section) => {
                     const members = groupedStaff[section.key] || [];
                     if (members.length === 0) return null;
+                    const activeCount = members.filter((m) => m.is_active !== false).length;
                     return (
                       <section className="hp-card hp-staff-role-card" key={section.key}>
                         <div className="hp-role-head">
                           <div className="hp-role-title">{section.title}</div>
-                          <span className="hp-role-count">{members.length}</span>
+                          <span className="hp-role-count">
+                            <span style={{ color: "#166534" }}>🟢 {activeCount} Active</span>
+                            {members.length - activeCount > 0 && (
+                              <span style={{ color: "#991b1b", marginLeft: 6 }}>🔴 {members.length - activeCount} Off</span>
+                            )}
+                          </span>
                         </div>
                         <div className="hp-role-grid">
                           {members.map((s) => (
-                            <div key={s.id}>
-                              <article className="hp-role-card">
+                            <div key={s.id} style={!s.is_active ? { opacity: 0.65, filter: "grayscale(0.4)" } : undefined}>
+                              <article className="hp-role-card" style={!s.is_active ? { border: "1.5px solid #fca5a5" } : undefined}>
                                 <div
                                   className="hp-role-cover"
                                   style={
@@ -2910,6 +2956,13 @@ export default function HospitalPortal() {
                                     <span className={`hp-availability ${s.is_active ? "yes" : "no"}`}>{s.is_active ? "Available" : "Unavailable"}</span>
                                     <span className="hp-role-mini-btn">{s.is_on_call ? "On Call" : "Off Duty"}</span>
                                   </div>
+                                  <button
+                                    className={`hp-btn ${s.is_active ? "no" : "ok"}`}
+                                    style={{ marginTop: 8, width: "100%", fontSize: 11, padding: "5px 0" }}
+                                    onClick={() => toggleStaffActive(s)}
+                                  >
+                                    {s.is_active ? "🔴 Mark Off Duty" : "🟢 Mark Active"}
+                                  </button>
                                 </div>
                               </article>
                               {editingStaffId === s.id && (

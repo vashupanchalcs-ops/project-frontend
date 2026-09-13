@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
@@ -25,9 +25,19 @@ const DEFAULT_HOSPITALS = [
 export default function AdminHospitalDetails() {
   const location = useLocation();
   const [hospitals, setHospitals] = useState([]);
-  const [selectedHospitalId, setSelectedHospitalId] = useState(location.state?.hospitalId || null);
+  const [selectedHospitalId, setSelectedHospitalId] = useState(
+    location.state?.hospitalId != null ? Number(location.state.hospitalId) : null
+  );
   const [selectedDashboard, setSelectedDashboard] = useState(null);
   const [pulseTime, setPulseTime] = useState(Date.now());
+  const selectedItemRef = useRef(null);
+
+  // Auto-scroll sidebar to selected hospital
+  useEffect(() => {
+    if (selectedItemRef.current) {
+      selectedItemRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedHospitalId, hospitals.length]);
 
   useEffect(() => {
     fetch(`${BASE}/api/hospitals/`)
@@ -37,14 +47,15 @@ export default function AdminHospitalDetails() {
         const list = rows.length ? rows : DEFAULT_HOSPITALS;
         setHospitals(list);
         if (list.length && !selectedHospitalId) {
-          setSelectedHospitalId(list[0].id);
-          setSelectedDashboard({ hospital: list[0], summary: {}, staff: [] });
+          const first = list[0];
+          setSelectedHospitalId(Number(first.id));
+          setSelectedDashboard({ hospital: first, summary: {}, staff: [] });
         }
       })
       .catch(() => {
         setHospitals(DEFAULT_HOSPITALS);
         if (!selectedHospitalId) {
-          setSelectedHospitalId(DEFAULT_HOSPITALS[0].id);
+          setSelectedHospitalId(Number(DEFAULT_HOSPITALS[0].id));
           setSelectedDashboard({ hospital: DEFAULT_HOSPITALS[0], summary: {}, staff: [] });
         }
       });
@@ -250,9 +261,10 @@ export default function AdminHospitalDetails() {
                 {hospitals.map((h) => (
                   <div
                     key={h.id}
-                    className={`ahd-item ${selectedHospitalId === h.id ? "active" : ""}`}
+                    ref={Number(selectedHospitalId) === Number(h.id) ? selectedItemRef : null}
+                    className={`ahd-item ${Number(selectedHospitalId) === Number(h.id) ? "active" : ""}`}
                     onClick={() => {
-                      setSelectedHospitalId(h.id);
+                      setSelectedHospitalId(Number(h.id));
                       setSelectedDashboard({ hospital: h, summary: {}, staff: [] });
                     }}
                   >
@@ -265,7 +277,7 @@ export default function AdminHospitalDetails() {
                       className="ahd-track-btn"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedHospitalId(h.id);
+                        setSelectedHospitalId(Number(h.id));
                         setSelectedDashboard({ hospital: h, summary: {}, staff: [] });
                       }}
                     >

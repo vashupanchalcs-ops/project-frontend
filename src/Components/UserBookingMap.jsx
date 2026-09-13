@@ -95,6 +95,22 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return { d1, m1, d2: "12.4", m2: 25 };
   }, [ambLoc, booking]);
 
+  const [activeRoute, setActiveRoute] = useState(null);
+
+  useEffect(() => {
+    if (!booking?.id) return;
+    let cancel = false;
+    fetch(`${BASE}/api/route/active/${booking.id}/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancel && data?.id) {
+          setActiveRoute(data);
+        }
+      })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [booking?.id]);
+
   // ── Route Embed URL ─────────────────────────────────────────────────────────
   const embedSrc = useMemo(() => {
     const ambLat = ambLoc?.lat;
@@ -103,9 +119,17 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     
     const pickupLat = Number(booking?.pickup_latitude);
     const pickupLng = Number(booking?.pickup_longitude);
-    const pickupCoordStr = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
-    const pickupText = String(booking?.pickup_location || "").trim();
-    const destText = String(booking?.assigned_hospital_name || booking?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
+
+    const routePickupCoord = isIndiaCoord(activeRoute?.pickup_lat, activeRoute?.pickup_lng)
+      ? `${activeRoute.pickup_lat},${activeRoute.pickup_lng}`
+      : "";
+    const routeDestCoord = isIndiaCoord(activeRoute?.dest_lat, activeRoute?.dest_lng)
+      ? `${activeRoute.dest_lat},${activeRoute.dest_lng}`
+      : "";
+
+    const pickupCoordStr = routePickupCoord || (isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "");
+    const pickupText = activeRoute?.pickup_location || String(booking?.pickup_location || "").trim();
+    const destText = routeDestCoord || activeRoute?.destination || String(booking?.assigned_hospital_name || booking?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
 
     const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
     const viaPt = pickupCoordStr || pickupText;
@@ -117,7 +141,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     }
 
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
-  }, [ambLoc, booking, routeMode]);
+  }, [ambLoc, booking, activeRoute, routeMode]);
 
   const rootStyle = embedded
     ? { position: "absolute", inset: 0, display: "flex", background: "#ffffff" }
