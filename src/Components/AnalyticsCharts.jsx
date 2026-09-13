@@ -12,10 +12,10 @@ export default function AnalyticsCharts() {
   const [activeTab,  setActiveTab]  = useState("trends");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/bookings/").then(r=>r.json()).then(setBookings).catch(()=>{});
-    fetch("http://127.0.0.1:8000/api/ambulances/").then(r=>r.json()).then(setAmbulances).catch(()=>{});
+    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/bookings/`).then(r=>r.json()).then(setBookings).catch(()=>{});
+    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`).then(r=>r.json()).then(setAmbulances).catch(()=>{});
     const t = setInterval(()=>{
-      fetch("http://127.0.0.1:8000/api/bookings/").then(r=>r.json()).then(setBookings).catch(()=>{});
+      fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/bookings/`).then(r=>r.json()).then(setBookings).catch(()=>{});
     }, 15000);
     return () => clearInterval(t);
   }, []);

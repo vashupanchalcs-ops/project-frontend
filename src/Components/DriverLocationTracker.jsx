@@ -61,7 +61,7 @@ const DriverLocationTracker = ({ ambulanceId, driverEmail, bookingId }) => {
       setUpdateCount(prev => prev + 1);
 
       // Send to backend
-      fetch('http://127.0.0.1:8000/api/driver-location/', {
+      fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/driver-location/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(locationData),

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Ambulance, Building2, FileText, IndianRupee, MapPin, ShieldCheck, UserRound } from "lucide-react";
 import { calculateBookingBill, formatDateTime, formatMoney } from "../utils/billing";
 
-const BASE = "http://127.0.0.1:8000";
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const safe = (value, fallback = "-") => {
   if (value === null || value === undefined || value === "") return fallback;

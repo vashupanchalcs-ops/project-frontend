@@ -81,8 +81,9 @@ export default function HospitalPortal() {
   const [err, setErr] = useState("");
   const [resourceEditMode, setResourceEditMode] = useState(false);
   const [resourceForm, setResourceForm] = useState({
-    available_beds: 0,
-    icu_beds: 0,
+    total_beds: 40,
+    available_beds: 10,
+    icu_beds: 4,
     available_ventilators: 0,
     status: "active",
     specializations: "",
@@ -166,6 +167,7 @@ export default function HospitalPortal() {
       setRedirectSuggestion(dashboard.redirect_suggestion || null);
 
       const serverResources = {
+        total_beds: dashboard.hospital?.total_beds ?? 40,
         available_beds: dashboard.hospital?.available_beds ?? 0,
         icu_beds: dashboard.hospital?.icu_beds ?? 0,
         available_ventilators: dashboard.hospital?.available_ventilators ?? 0,
@@ -2720,25 +2722,54 @@ export default function HospitalPortal() {
                   </div>
 
                   {resourceEditMode && (
-                    <>
-                      <div className="hp-form-grid" style={{ marginTop: 10 }}>
-                        <input className="hp-input" type="number" value={resourceForm.available_beds} onChange={(e) => setResourceForm((f) => ({ ...f, available_beds: Number(e.target.value) }))} placeholder="Available beds" />
-                        <input className="hp-input" type="number" value={resourceForm.icu_beds} onChange={(e) => setResourceForm((f) => ({ ...f, icu_beds: Number(e.target.value) }))} placeholder="ICU beds" />
-                        <input className="hp-input" type="number" value={resourceForm.available_ventilators} onChange={(e) => setResourceForm((f) => ({ ...f, available_ventilators: Number(e.target.value) }))} placeholder="Available ventilators" />
-                        <select className="hp-select" value={resourceForm.status} onChange={(e) => setResourceForm((f) => ({ ...f, status: e.target.value }))}>
-                          <option value="active">Active</option>
-                          <option value="critical">Critical</option>
-                          <option value="full">Full</option>
-                          <option value="closed">Closed</option>
-                        </select>
+                    <div style={{ marginTop: 14, padding: "16px", background: "#fcfcfd", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12, color: "#1e293b" }}>Edit Hospital Capacity & Beds</div>
+                      <div className="hp-form-grid" style={{ gap: 12 }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#475569" }}>Total Beds</label>
+                          <input className="hp-input" type="number" value={resourceForm.total_beds ?? 40} onChange={(e) => setResourceForm((f) => ({ ...f, total_beds: Math.max(0, Number(e.target.value)) }))} placeholder="Total beds" />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#15803d" }}>Available Beds</label>
+                          <input className="hp-input" type="number" value={resourceForm.available_beds ?? 0} onChange={(e) => setResourceForm((f) => ({ ...f, available_beds: Math.max(0, Number(e.target.value)) }))} placeholder="Available beds" />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#b45309" }}>Booked Beds (Calculated)</label>
+                          <div className="hp-input" style={{ background: "#fff59d", color: "#78350f", fontWeight: 800, display: "flex", alignItems: "center" }}>
+                            {Math.max(0, (resourceForm.total_beds ?? 40) - (resourceForm.available_beds ?? 0))}
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#475569" }}>ICU Beds</label>
+                          <input className="hp-input" type="number" value={resourceForm.icu_beds ?? 0} onChange={(e) => setResourceForm((f) => ({ ...f, icu_beds: Math.max(0, Number(e.target.value)) }))} placeholder="ICU beds" />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#475569" }}>Available Ventilators</label>
+                          <input className="hp-input" type="number" value={resourceForm.available_ventilators ?? 0} onChange={(e) => setResourceForm((f) => ({ ...f, available_ventilators: Math.max(0, Number(e.target.value)) }))} placeholder="Available ventilators" />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#475569" }}>Hospital Status</label>
+                          <select className="hp-select" value={resourceForm.status || "active"} onChange={(e) => setResourceForm((f) => ({ ...f, status: e.target.value }))}>
+                            <option value="active">Active</option>
+                            <option value="critical">Critical</option>
+                            <option value="full">Full</option>
+                            <option value="closed">Closed</option>
+                          </select>
+                        </div>
                       </div>
-                      <textarea className="hp-textarea" value={resourceForm.specializations} onChange={(e) => setResourceForm((f) => ({ ...f, specializations: e.target.value }))} placeholder="Specializations" />
-                      <textarea className="hp-textarea" value={resourceForm.facilities} onChange={(e) => setResourceForm((f) => ({ ...f, facilities: e.target.value }))} placeholder="Facilities" />
-                      <div className="hp-actions">
+                      <div style={{ marginTop: 10 }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#475569" }}>Specializations</label>
+                        <textarea className="hp-textarea" value={resourceForm.specializations} onChange={(e) => setResourceForm((f) => ({ ...f, specializations: e.target.value }))} placeholder="Specializations (e.g., Cardiology, Trauma, ICU)" />
+                      </div>
+                      <div style={{ marginTop: 10 }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 4, color: "#475569" }}>Facilities</label>
+                        <textarea className="hp-textarea" value={resourceForm.facilities} onChange={(e) => setResourceForm((f) => ({ ...f, facilities: e.target.value }))} placeholder="Facilities (e.g., Blood Bank, 24/7 Pharmacy, Oxygen Plant)" />
+                      </div>
+                      <div className="hp-actions" style={{ marginTop: 14 }}>
                         <button className="hp-btn ok" onClick={updateResources}>Save Resource Update</button>
                         <button className="hp-btn" onClick={() => setResourceEditMode(false)}>Cancel</button>
                       </div>
-                    </>
+                    </div>
                   )}
 
                   <div className="hp-card hp-oncall-box">

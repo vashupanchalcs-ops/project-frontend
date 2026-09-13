@@ -442,7 +442,7 @@ export const Dashboard = () => {
   const [ambulances, setAmbulances] = useState([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/ambulances/")
+    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`)
       .then((res) => res.json())
       .then((data) => setAmbulances(data))
       .catch((err) => console.log(err));

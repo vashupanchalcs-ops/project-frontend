@@ -55,6 +55,9 @@ const DEFAULT_HOSPITALS = [
   },
 ];
 
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
+
 export default function Hospitals() {
   const [hospitals, setHospitals] = useState([]);
   const [assignBooking, setAssignBooking] = useState(null);
@@ -66,7 +69,7 @@ export default function Hospitals() {
 
   useEffect(() => {
     const loadHospitals = () => {
-      fetch("http://127.0.0.1:8000/api/hospitals/")
+      fetch(`${BASE}/api/hospitals/`)
         .then((r) => (r.ok ? r.json() : []))
         .then((rows) => setHospitals(Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS))
         .catch(() => setHospitals(DEFAULT_HOSPITALS));
@@ -81,7 +84,7 @@ export default function Hospitals() {
       setAssignBooking(null);
       return;
     }
-    fetch(`http://127.0.0.1:8000/api/bookings/${assignBookingId}/`)
+    fetch(`${BASE}/api/bookings/${assignBookingId}/`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setAssignBooking(data || null))
       .catch(() => setAssignBooking(null));
@@ -154,7 +157,7 @@ export default function Hospitals() {
     if (!assignBookingId) return;
     if (!(hospital?.is_active && hospital?.status !== "closed" && Number(hospital?.available_beds || 0) > 0)) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/bookings/${assignBookingId}/`, {
+      const res = await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

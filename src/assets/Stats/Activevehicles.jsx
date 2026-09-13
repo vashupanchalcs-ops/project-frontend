@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 const Activevehicles = () => {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    const f = () => fetch("http://127.0.0.1:8000/api/ambulances/")
+    const f = () => fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`)
       .then(r => r.json())
       .then(d => setCount(d.filter(a => a.status === "available" || a.status === "en_route").length));
     f(); const i = setInterval(f, 10000); return () => clearInterval(i);
