@@ -2283,11 +2283,13 @@ export default function HospitalPortal() {
                         <span><b>Emergency Queue</b>{queue.length} case{queue.length === 1 ? "" : "s"} awaiting review</span>
                       </button>
                     </header>
-                    <div className="hp-command-stats">
-                      <article className="hp-command-stat"><div className="k">Active Cases</div><div className="v">{summary?.active_cases ?? 0}</div><div className="s">Current hospital workflow</div></article>
-                      <article className="hp-command-stat"><div className="k">Available Beds</div><div className="v">{hospital.available_beds ?? 0}</div><div className="s">Ready for emergency intake</div></article>
-                      <article className="hp-command-stat"><div className="k">ICU Beds</div><div className="v">{hospital.icu_beds ?? 0}</div><div className="s">Critical care capacity</div></article>
-                      <article className="hp-command-stat"><div className="k">On-call Staff</div><div className="v">{onCallSpecialists.length}</div><div className="s">Specialists currently active</div></article>
+                    <div className="hp-command-stats" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "8px" }}>
+                      <article className="hp-command-stat"><div className="k">Total Beds</div><div className="v">{hospital.total_beds ?? 40}</div><div className="s">Total registered capacity</div></article>
+                      <article className="hp-command-stat"><div className="k">Booked Beds</div><div className="v" style={{ color: "#d97706" }}>{hospital.booked_beds ?? Math.max(0, (hospital.total_beds || 40) - (hospital.available_beds || 0))}</div><div className="s">Currently occupied</div></article>
+                      <article className="hp-command-stat"><div className="k">Khali (Free) Beds</div><div className="v" style={{ color: "#166534" }}>{hospital.available_beds ?? 10}</div><div className="s">Ready for intake</div></article>
+                      <article className="hp-command-stat"><div className="k">Active Doctors</div><div className="v">{hospital.doctors_active ?? 3}</div><div className="s">Out of {hospital.doctors_count ?? 4} total</div></article>
+                      <article className="hp-command-stat"><div className="k">Active Nurses</div><div className="v">{hospital.nurses_active ?? 3}</div><div className="s">Out of {hospital.nurses_count ?? 4} total</div></article>
+                      <article className="hp-command-stat"><div className="k">Active / Off Staff</div><div className="v" style={{ fontSize: "18px", marginTop: "4px" }}><span style={{ color: "#166534" }}>🟢 {hospital.staff_active_count ?? 8}</span> / <span style={{ color: "#991b1b" }}>🔴 {hospital.staff_deactive_count ?? 2}</span></div><div className="s">On duty / Off duty</div></article>
                     </div>
                   </section>
                   <section className="hp-command-grid">
@@ -2680,22 +2682,30 @@ export default function HospitalPortal() {
                     </div>
                   )}
 
-                  <div className="hp-resource-grid">
+                  <div className="hp-resource-grid" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "8px" }}>
                     <div className="hp-resource-mini">
-                      <div className="v">{resourceForm.available_beds}</div>
-                      <div className="k">Available Beds</div>
+                      <div className="v">{hospital.total_beds ?? 40}</div>
+                      <div className="k">Total Beds</div>
+                    </div>
+                    <div className="hp-resource-mini" style={{ background: "#fff59d" }}>
+                      <div className="v" style={{ color: "#b45309" }}>{hospital.booked_beds ?? Math.max(0, (hospital.total_beds || 40) - (resourceForm.available_beds || 0))}</div>
+                      <div className="k" style={{ color: "#78350f" }}>Booked Beds</div>
+                    </div>
+                    <div className="hp-resource-mini" style={{ background: "#dcfce7" }}>
+                      <div className="v" style={{ color: "#15803d" }}>{resourceForm.available_beds}</div>
+                      <div className="k" style={{ color: "#166534" }}>Khali (Free) Beds</div>
                     </div>
                     <div className="hp-resource-mini">
                       <div className="v">{resourceForm.icu_beds}</div>
                       <div className="k">ICU Beds</div>
                     </div>
                     <div className="hp-resource-mini">
-                      <div className="v">{resourceForm.available_ventilators}</div>
-                      <div className="k">Ventilators</div>
+                      <div className="v">{hospital.doctors_active ?? 3} / {hospital.doctors_count ?? 4}</div>
+                      <div className="k">Active Doctors</div>
                     </div>
                     <div className="hp-resource-mini">
-                      <div className="v" style={{ textTransform: "uppercase", fontSize: 14, marginTop: 6 }}>{resourceForm.status}</div>
-                      <div className="k">Status</div>
+                      <div className="v">{hospital.staff_active_count ?? 8} / {hospital.staff_deactive_count ?? 2}</div>
+                      <div className="k">Active / Deactive Staff</div>
                     </div>
                   </div>
                   <div className="hp-resource-notes">

@@ -40,7 +40,15 @@ const DEFAULT_HOSPITALS = [
     hospital_type: "government",
     total_beds: 40,
     available_beds: 10,
+    booked_beds: 30,
     icu_beds: 4,
+    available_icu_beds: 2,
+    doctors_count: 12,
+    doctors_active: 10,
+    nurses_count: 24,
+    nurses_active: 20,
+    staff_active_count: 34,
+    staff_deactive_count: 6,
     emergency_services: true,
     status: "active",
     is_active: true,
@@ -57,10 +65,15 @@ export default function Hospitals() {
   const assignBookingId = isAdmin ? location.state?.assignBookingId : null;
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/hospitals/")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows) => setHospitals(Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS))
-      .catch(() => setHospitals(DEFAULT_HOSPITALS));
+    const loadHospitals = () => {
+      fetch("http://127.0.0.1:8000/api/hospitals/")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((rows) => setHospitals(Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS))
+        .catch(() => setHospitals(DEFAULT_HOSPITALS));
+    };
+    loadHospitals();
+    const interval = setInterval(loadHospitals, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -870,29 +883,53 @@ export default function Hospitals() {
                       Round-the-clock emergency care with live bed visibility and rapid ambulance intake.
                     </div>
 
-                    <div className="h2-stats-mini">
-                      <div className={`h2-mini ${totalTone}`} style={miniToneStyle(totalTone)}>
-                        <div className="v">{safeTotalBeds}</div>
-                        <div className="l">
-                          <span className="i"><BedSingle size={12} strokeWidth={2.4} /></span>
-                          Total Beds
-                        </div>
-                      </div>
-                      <div className={`h2-mini ${availableTone}`} style={miniToneStyle(availableTone)}>
-                        <div className="v">{safeAvailableBeds}</div>
-                        <div className="l">
-                          <span className="i"><CheckCircle2 size={12} strokeWidth={2.4} /></span>
-                          Available
-                        </div>
-                      </div>
-                      <div className={`h2-mini ${icuTone}`} style={miniToneStyle(icuTone)}>
-                        <div className="v">{safeIcuBeds}</div>
-                        <div className="l">
-                          <span className="i"><HeartPulse size={12} strokeWidth={2.4} /></span>
-                          ICU
-                        </div>
-                      </div>
-                    </div>
+                    {(() => {
+                      const safeBookedBeds = h.booked_beds ?? Math.max(0, safeTotalBeds - safeAvailableBeds);
+                      const docsActive = h.doctors_active ?? 10;
+                      const docsTotal = h.doctors_count ?? 12;
+                      const nursesActive = h.nurses_active ?? 20;
+                      const nursesTotal = h.nurses_count ?? 24;
+                      const staffActive = h.staff_active_count ?? 34;
+                      const staffDeactive = h.staff_deactive_count ?? 6;
+
+                      return (
+                        <>
+                          <div className="h2-stats-mini" style={{ gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: "4px" }}>
+                            <div className={`h2-mini ${totalTone}`} style={miniToneStyle(totalTone)}>
+                              <div className="v">{safeTotalBeds}</div>
+                              <div className="l">Total</div>
+                            </div>
+                            <div className="h2-mini tone-yellow" style={{ background: "#fff59d", border: "1px solid #c7b900", color: "#111111" }}>
+                              <div className="v">{safeBookedBeds}</div>
+                              <div className="l">Booked</div>
+                            </div>
+                            <div className={`h2-mini ${availableTone}`} style={miniToneStyle(availableTone)}>
+                              <div className="v">{safeAvailableBeds}</div>
+                              <div className="l">Khali (Free)</div>
+                            </div>
+                            <div className={`h2-mini ${icuTone}`} style={miniToneStyle(icuTone)}>
+                              <div className="v">{safeIcuBeds}</div>
+                              <div className="l">ICU Beds</div>
+                            </div>
+                          </div>
+
+                          <div className="h2-staff-bar" style={{ marginTop: "6px", padding: "6px 8px", background: "rgba(0,0,0,0.03)", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.08)", fontSize: "11px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 800, marginBottom: "4px", color: "#111" }}>
+                              <span>🩺 Doctors: <strong style={{ color: "#166534" }}>{docsActive} Active</strong> / {docsTotal}</span>
+                              <span>👩‍⚕️ Nurses: <strong style={{ color: "#166534" }}>{nursesActive} Active</strong> / {nursesTotal}</span>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px", fontSize: "10px", fontWeight: 700 }}>
+                              <span style={{ background: "#dcfce7", color: "#166534", padding: "2px 6px", borderRadius: "100px", border: "1px solid #86efac" }}>
+                                🟢 Active Staff: {staffActive}
+                              </span>
+                              <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 6px", borderRadius: "100px", border: "1px solid #fca5a5" }}>
+                                🔴 Deactive Staff: {staffDeactive}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     <div className="h2-actions">
                       {assignBookingId ? (
