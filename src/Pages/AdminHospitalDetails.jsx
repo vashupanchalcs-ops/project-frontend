@@ -273,6 +273,7 @@ export default function AdminHospitalDetails() {
                     onClick={() => {
                       setSelectedHospitalId(Number(h.id));
                       setSelectedDashboard({ hospital: h, summary: {}, staff: [] });
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                   >
                     <div style={{ fontWeight: 800 }}>{h.name}</div>
@@ -286,6 +287,7 @@ export default function AdminHospitalDetails() {
                         e.stopPropagation();
                         setSelectedHospitalId(Number(h.id));
                         setSelectedDashboard({ hospital: h, summary: {}, staff: [] });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
                       Live Track on Map
@@ -299,7 +301,12 @@ export default function AdminHospitalDetails() {
               {!selectedDashboard && <div className="ahd-empty">Select a hospital to view complete details.</div>}
               {selectedDashboard && (
                 <>
-                  <h2 className="ahd-title">{selectedDashboard.hospital?.name || "Hospital Details"}</h2>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <h2 className="ahd-title" style={{ margin: 0 }}>{selectedDashboard.hospital?.name || "Hospital Details"}</h2>
+                    <span style={{ fontSize: 11, background: "#166534", color: "#fff", padding: "3px 10px", borderRadius: 999, fontWeight: 800 }}>
+                      ACTIVE PARTNER
+                    </span>
+                  </div>
                   <div className="ahd-row"><span className="ahd-k">Address</span><span>{selectedDashboard.hospital?.address || "-"}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Contact</span><span>{selectedDashboard.hospital?.contact_number || "-"}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Specializations</span><span>{selectedDashboard.hospital?.specializations || "-"}</span></div>
@@ -328,7 +335,7 @@ export default function AdminHospitalDetails() {
                     )}
                   </section>
 
-                  <h3 style={{ marginTop: 14, marginBottom: 8 }}>Doctors & Staff</h3>
+                  <h3 style={{ marginTop: 18, marginBottom: 10 }}>Doctors & Staff Directory</h3>
                   <div className="ahd-staff-grid">
                     {(selectedDashboard.staff || []).map((s) => (
                       <article key={s.id} className="ahd-staff-card">
@@ -340,6 +347,11 @@ export default function AdminHospitalDetails() {
                     ))}
                   </div>
                   {(selectedDashboard.staff || []).length === 0 && <div className="ahd-empty">No staff registered for this hospital.</div>}
+
+                  {/* Clean Footer Section so End of Page is clear & padded */}
+                  <footer style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(17,17,17,0.1)", textAlign: "center", color: "rgba(17,17,17,0.5)", fontSize: 11 }}>
+                    ✓ End of Partner Record for <strong>{selectedDashboard.hospital?.name || "Hospital"}</strong> • Live Monitoring Active
+                  </footer>
                 </>
               )}
             </main>
