@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
-const AMBULANCE_IMAGE = "https://images.unsplash.com/photo-1587745416684-47953f16f02f?auto=format&fit=crop&w=1400&q=90";
+const AMBULANCE_IMAGE = "/ambulance.jpg";
 
 export default function UserHome() {
   const navigate = useNavigate();
