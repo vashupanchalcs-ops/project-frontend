@@ -259,8 +259,8 @@ export default function AdminHospitalDetails() {
                     <div style={{ fontWeight: 800 }}>{h.name}</div>
                     <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>{h.email || "No email"}</div>
                     <div className="ahd-row"><span className="ahd-k">Khali / Total Beds</span><span><strong style={{ color: "#166534" }}>{h.available_beds} Khali</strong> / {h.total_beds}</span></div>
-                    <div className="ahd-row"><span className="ahd-k">Doctors Active</span><span>{h.doctors_active ?? 3}/{h.doctors_count ?? 4}</span></div>
-                    <div className="ahd-row"><span className="ahd-k">Staff (On/Off)</span><span>🟢 {h.staff_active_count ?? 8} / 🔴 {h.staff_deactive_count ?? 2}</span></div>
+                    <div className="ahd-row"><span className="ahd-k">Doctors Active</span><span>{h.doctors_active ?? 0}/{h.doctors_count ?? 0}</span></div>
+                    <div className="ahd-row"><span className="ahd-k">Staff (On/Off)</span><span>🟢 {h.staff_active_count ?? 0} / 🔴 {h.staff_deactive_count ?? 0}</span></div>
                     <button
                       className="ahd-track-btn"
                       onClick={(e) => {
@@ -288,9 +288,9 @@ export default function AdminHospitalDetails() {
                   <div className="ahd-row"><span className="ahd-k">Active Cases</span><span>{selectedDashboard.summary?.active_cases ?? 0}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Total / Booked / Khali Beds</span><span>{selectedDashboard.hospital?.total_beds ?? 40} Total · <strong style={{ color: "#b45309" }}>{selectedDashboard.hospital?.booked_beds ?? Math.max(0, (selectedDashboard.hospital?.total_beds || 40) - (selectedDashboard.hospital?.available_beds || 0))} Booked</strong> · <strong style={{ color: "#166534" }}>{selectedDashboard.hospital?.available_beds ?? 10} Khali</strong></span></div>
                   <div className="ahd-row"><span className="ahd-k">ICU / Ventilator Beds</span><span>{selectedDashboard.hospital?.available_icu_beds ?? selectedDashboard.hospital?.icu_beds ?? 0} Free ICU · {selectedDashboard.hospital?.available_ventilators ?? 0} Ventilators</span></div>
-                  <div className="ahd-row"><span className="ahd-k">Doctors On Duty</span><span><strong style={{ color: "#166534" }}>{selectedDashboard.hospital?.doctors_active ?? 3} Active</strong> / {selectedDashboard.hospital?.doctors_count ?? 4} Total Doctors</span></div>
-                  <div className="ahd-row"><span className="ahd-k">Nurses On Duty</span><span><strong style={{ color: "#166534" }}>{selectedDashboard.hospital?.nurses_active ?? 3} Active</strong> / {selectedDashboard.hospital?.nurses_count ?? 4} Total Nurses</span></div>
-                  <div className="ahd-row"><span className="ahd-k">Live Staff Capacity</span><span>🟢 Active: {selectedDashboard.hospital?.staff_active_count ?? 8} · 🔴 Deactive: {selectedDashboard.hospital?.staff_deactive_count ?? 2}</span></div>
+                  <div className="ahd-row"><span className="ahd-k">Doctors On Duty</span><span><strong style={{ color: "#166534" }}>{selectedDashboard.hospital?.doctors_active ?? 0} Active</strong> / {selectedDashboard.hospital?.doctors_count ?? 0} Total Doctors</span></div>
+                  <div className="ahd-row"><span className="ahd-k">Nurses On Duty</span><span><strong style={{ color: "#166534" }}>{selectedDashboard.hospital?.nurses_active ?? 0} Active</strong> / {selectedDashboard.hospital?.nurses_count ?? 0} Total Nurses</span></div>
+                  <div className="ahd-row"><span className="ahd-k">Live Staff Capacity</span><span>🟢 Active: {selectedDashboard.hospital?.staff_active_count ?? 0} · 🔴 Deactive: {selectedDashboard.hospital?.staff_deactive_count ?? 0}</span></div>
 
                   <section className="ahd-map-wrap">
                     <div className="ahd-map-head">

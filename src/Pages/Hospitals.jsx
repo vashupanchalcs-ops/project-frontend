@@ -885,12 +885,12 @@ export default function Hospitals() {
 
                     {(() => {
                       const safeBookedBeds = h.booked_beds ?? Math.max(0, safeTotalBeds - safeAvailableBeds);
-                      const docsActive = h.doctors_active ?? 10;
-                      const docsTotal = h.doctors_count ?? 12;
-                      const nursesActive = h.nurses_active ?? 20;
-                      const nursesTotal = h.nurses_count ?? 24;
-                      const staffActive = h.staff_active_count ?? 34;
-                      const staffDeactive = h.staff_deactive_count ?? 6;
+                      const docsActive = h.doctors_active ?? 0;
+                      const docsTotal = h.doctors_count ?? 0;
+                      const nursesActive = h.nurses_active ?? 0;
+                      const nursesTotal = h.nurses_count ?? 0;
+                      const staffActive = h.staff_active_count ?? 0;
+                      const staffDeactive = h.staff_deactive_count ?? 0;
 
                       return (
                         <>
