@@ -1,9 +1,10 @@
 import { Ambulance, ArrowRight, MapPin } from "lucide-react";
+import AMBULANCE_IMAGE from "../assets/ambulance.jpg";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
-const AMBULANCE_IMAGE = "/ambulance.jpg";
+// Image imported above via Vite asset pipeline (src/assets/ambulance.jpg)
 
 export default function UserHome() {
   const navigate = useNavigate();
