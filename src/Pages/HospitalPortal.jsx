@@ -2286,7 +2286,7 @@ export default function HospitalPortal() {
                     <div className="hp-command-stats" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "8px" }}>
                       <article className="hp-command-stat"><div className="k">Total Beds</div><div className="v">{hospital.total_beds ?? 40}</div><div className="s">Total registered capacity</div></article>
                       <article className="hp-command-stat"><div className="k">Booked Beds</div><div className="v" style={{ color: "#d97706" }}>{hospital.booked_beds ?? Math.max(0, (hospital.total_beds || 40) - (hospital.available_beds || 0))}</div><div className="s">Currently occupied</div></article>
-                      <article className="hp-command-stat"><div className="k">Khali (Free) Beds</div><div className="v" style={{ color: "#166534" }}>{hospital.available_beds ?? 10}</div><div className="s">Ready for intake</div></article>
+                      <article className="hp-command-stat"><div className="k">Available Beds</div><div className="v" style={{ color: "#166534" }}>{hospital.available_beds ?? 10}</div><div className="s">Ready for intake</div></article>
                       <article className="hp-command-stat"><div className="k">Active Doctors</div><div className="v">{hospital.doctors_active ?? 0}</div><div className="s">Out of {hospital.doctors_count ?? 0} total</div></article>
                       <article className="hp-command-stat"><div className="k">Active Nurses</div><div className="v">{hospital.nurses_active ?? 0}</div><div className="s">Out of {hospital.nurses_count ?? 0} total</div></article>
                       <article className="hp-command-stat"><div className="k">Active / Off Staff</div><div className="v" style={{ fontSize: "18px", marginTop: "4px" }}><span style={{ color: "#166534" }}>🟢 {hospital.staff_active_count ?? 0}</span> / <span style={{ color: "#991b1b" }}>🔴 {hospital.staff_deactive_count ?? 0}</span></div><div className="s">On duty / Off duty</div></article>
@@ -2693,7 +2693,7 @@ export default function HospitalPortal() {
                     </div>
                     <div className="hp-resource-mini" style={{ background: "#dcfce7" }}>
                       <div className="v" style={{ color: "#15803d" }}>{resourceForm.available_beds}</div>
-                      <div className="k" style={{ color: "#166534" }}>Khali (Free) Beds</div>
+                      <div className="k" style={{ color: "#166534" }}>Available Beds</div>
                     </div>
                     <div className="hp-resource-mini">
                       <div className="v">{resourceForm.icu_beds}</div>

@@ -15,7 +15,8 @@ const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
   import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ||
   import.meta.env.VITE_GOOGLE_SIGNIN_CLIENT_ID ||
-  (typeof window !== "undefined" ? window.localStorage.getItem("sr_google_client_id") || "" : "");
+  (typeof window !== "undefined" ? window.localStorage.getItem("sr_google_client_id") || "" : "") ||
+  "1054368593444-swiftrescue.apps.googleusercontent.com";
 
 const getUsers = () => {
   try {

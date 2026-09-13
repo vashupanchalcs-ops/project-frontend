@@ -905,7 +905,7 @@ export default function Hospitals() {
                             </div>
                             <div className={`h2-mini ${availableTone}`} style={miniToneStyle(availableTone)}>
                               <div className="v">{safeAvailableBeds}</div>
-                              <div className="l">Khali (Free)</div>
+                              <div className="l">Available</div>
                             </div>
                             <div className={`h2-mini ${icuTone}`} style={miniToneStyle(icuTone)}>
                               <div className="v">{safeIcuBeds}</div>
