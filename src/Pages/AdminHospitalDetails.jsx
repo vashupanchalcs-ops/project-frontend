@@ -91,10 +91,9 @@ export default function AdminHospitalDetails() {
     <>
       <style>{`
         .ahd-root {
-          height: 100vh;
-          overflow: hidden;
+          min-height: 100vh;
           box-sizing: border-box;
-          padding: 64px 0 0 64px;
+          padding: 72px 16px 24px 80px;
           color: #111;
           font-family: "Segoe UI", Arial, sans-serif;
           background:
@@ -105,25 +104,23 @@ export default function AdminHospitalDetails() {
         .ahd-wrap { 
           max-width: 1400px; 
           margin: 0 auto; 
-          padding: 20px; 
-          height: 100%; 
           box-sizing: border-box; 
           display: flex; 
-          flex-direction: column; 
+          flex-direction: column;
+          min-height: calc(100vh - 96px);
         }
         .ahd-grid { 
           display: grid; 
-          grid-template-columns: 320px 1fr; 
-          gap: 12px; 
+          grid-template-columns: 340px 1fr; 
+          gap: 16px; 
           align-items: start; 
           flex: 1; 
-          min-height: 0; 
         }
         .ahd-card {
           border: 1px solid rgba(17,17,17,0.14);
           background: linear-gradient(165deg, #ffffff 0%, #f6f8e7 100%);
           border-radius: 14px;
-          padding: 14px;
+          padding: 16px;
           box-sizing: border-box;
           box-shadow: 0 12px 30px rgba(17,17,17,0.06);
         }
@@ -198,14 +195,15 @@ export default function AdminHospitalDetails() {
         }
         .ahd-map-open:hover { background: #f4f8da; border-color: #a7b700; }
         .ahd-card.partners {
-          height: 100%;
+          position: sticky;
+          top: 80px;
+          max-height: calc(100vh - 100px);
           display: flex;
           flex-direction: column;
         }
         main.ahd-card {
-          height: 100%;
-          overflow-y: auto;
-          overscroll-behavior: contain;
+          min-height: calc(100vh - 120px);
+          box-sizing: border-box;
         }
         main.ahd-card::-webkit-scrollbar { width: 6px; }
         main.ahd-card::-webkit-scrollbar-thumb {
@@ -216,7 +214,8 @@ export default function AdminHospitalDetails() {
           flex: 1;
           min-height: 0;
           overflow-y: auto;
-          display: grid;
+          display: flex;
+          flex-direction: column;
           gap: 10px;
           padding-right: 4px;
           overscroll-behavior: contain;
@@ -228,7 +227,7 @@ export default function AdminHospitalDetails() {
         }
         .ahd-map-frame {
           width: 100%;
-          height: 260px;
+          height: 280px;
           border: 0;
           display: block;
         }
@@ -240,14 +239,14 @@ export default function AdminHospitalDetails() {
           background: linear-gradient(165deg, #ffffff 0%, #f9fbed 100%);
         }
         .ahd-empty { text-align: center; color: rgba(17,17,17,0.55); font-size: 12px; padding: 18px 10px; }
-        @media (max-width: 1000px) { .ahd-grid { grid-template-columns: 1fr; } .ahd-staff-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1000px) { .ahd-grid { grid-template-columns: 1fr; } .ahd-staff-grid { grid-template-columns: 1fr; } .ahd-card.partners { position: static; max-height: 340px; } }
         @media (max-width: 767px) {
-          .ahd-root { padding-left: 0; padding-bottom: 72px; height: auto; overflow: visible; }
-          .ahd-wrap { padding: 12px 12px 84px; height: auto; display: flex; flex-direction: column; }
+          .ahd-root { padding: 72px 12px 84px 12px; min-height: 100vh; }
+          .ahd-wrap { padding: 0; min-height: auto; display: flex; flex-direction: column; }
           .ahd-grid { display: flex; flex-direction: column; }
-          .ahd-card.partners { position: static; height: auto; margin-bottom: 12px; }
+          .ahd-card.partners { position: static; max-height: 320px; margin-bottom: 12px; }
           .ahd-partners { max-height: 260px; }
-          main.ahd-card { height: auto; overflow-y: visible; }
+          main.ahd-card { min-height: auto; }
         }
       `}</style>
 
