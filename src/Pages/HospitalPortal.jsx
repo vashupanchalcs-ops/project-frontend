@@ -175,10 +175,14 @@ export default function HospitalPortal() {
         specializations: dashboard.hospital?.specializations || "",
         facilities: dashboard.hospital?.facilities || "",
       };
+      // Server bed counts ALWAYS take priority – cache only keeps unsaved text edits
       const cachedResources = readResourceCache(hospitalId);
-      const savedResources = Object.keys(cachedResources).length
-        ? { ...serverResources, ...cachedResources }
-        : serverResources;
+      const savedResources = {
+        ...serverResources,
+        // Only keep cached specializations/facilities/status if user was mid-edit
+        ...(cachedResources.specializations ? { specializations: cachedResources.specializations } : {}),
+        ...(cachedResources.facilities ? { facilities: cachedResources.facilities } : {}),
+      };
       setResourceForm(savedResources);
       setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (e) {
@@ -213,7 +217,8 @@ export default function HospitalPortal() {
         body: JSON.stringify(resourceForm),
       });
       if (!res.ok) throw new Error("Resource update failed");
-      saveResourceCache(hospital.id, resourceForm);
+      // Clear cache after successful save so server stays source of truth
+      try { localStorage.removeItem(RESOURCE_CACHE_KEY); } catch {}
       await fetchHospitalDashboard();
       setResourceEditMode(false);
     } catch {

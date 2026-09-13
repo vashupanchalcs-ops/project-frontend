@@ -219,10 +219,59 @@ export default function Hospitals() {
     return haversineKm(pickupPoint, { lat: hLat, lng: hLng }) * 1.56;
   };
 
+  // Priority scoring: higher score = better hospital for assignment
+  // Weights: ICU beds (40) > Facilities (25) > Doctors (15) > Staff (10) > Distance (10)
+  const getHospitalPriorityScore = (hospital) => {
+    const icuBeds = Number(hospital?.available_icu_beds || hospital?.icu_beds || 0);
+    const facilitiesCount = String(hospital?.facilities || "").split(",").filter(f => f.trim()).length;
+    const doctorsActive = Number(hospital?.doctors_active || 0);
+    const staffActive = Number(hospital?.staff_active_count || 0);
+    const availableBeds = Number(hospital?.available_beds || 0);
+
+    // ICU beds score (0-40 points): each ICU bed = 8 pts, max 40
+    const icuScore = Math.min(icuBeds * 8, 40);
+    // Facilities score (0-25 points): each facility = 5 pts, max 25
+    const facilityScore = Math.min(facilitiesCount * 5, 25);
+    // Doctor score (0-15 points): each active doctor = 3 pts, max 15
+    const doctorScore = Math.min(doctorsActive * 3, 15);
+    // Staff score (0-10 points): each active staff = 1 pt, max 10
+    const staffScore = Math.min(staffActive * 1, 10);
+    // Bed availability bonus (0-10 points)
+    const bedScore = Math.min(availableBeds * 2, 10);
+
+    // Distance penalty (0-10 points subtracted): closer = less penalty
+    let distancePenalty = 0;
+    if (pickupPoint) {
+      const distKm = getDistanceToPickup(hospital);
+      if (distKm !== null) {
+        // 0 km = 0 penalty, 50+ km = 10 penalty
+        distancePenalty = Math.min(distKm / 5, 10);
+      } else {
+        distancePenalty = 10; // unknown distance = max penalty
+      }
+    }
+
+    return icuScore + facilityScore + doctorScore + staffScore + bedScore - distancePenalty;
+  };
+
   const sortedHospitals = [...hospitals];
-  if (assignBookingId && pickupPoint) {
-    sortedHospitals.sort((a, b) => (getDistanceToPickup(a) ?? Infinity) - (getDistanceToPickup(b) ?? Infinity));
-  }
+  // Always sort by priority — best hospitals show first
+  sortedHospitals.sort((a, b) => {
+    // Closed/inactive hospitals go to bottom
+    const aActive = a.is_active !== false && a.status !== "closed";
+    const bActive = b.is_active !== false && b.status !== "closed";
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+
+    // Full hospitals go below active ones
+    const aFull = a.status === "full" || Number(a.available_beds || 0) === 0;
+    const bFull = b.status === "full" || Number(b.available_beds || 0) === 0;
+    if (!aFull && bFull) return -1;
+    if (aFull && !bFull) return 1;
+
+    // Sort by priority score (higher first)
+    return getHospitalPriorityScore(b) - getHospitalPriorityScore(a);
+  });
 
   return (
     <>
