@@ -87,13 +87,23 @@ export default function AdminHospitalDetails() {
   const mapEmbedSrc = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&z=14&output=embed` : "";
   const openMapLink = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&z=14` : "";
 
+  // Pin selected hospital to position #1 (TOP) in the list!
+  const sortedHospitals = useMemo(() => {
+    if (!hospitals.length) return [];
+    if (!selectedHospitalId) return hospitals;
+    const selected = hospitals.find((h) => Number(h.id) === Number(selectedHospitalId));
+    if (!selected) return hospitals;
+    const others = hospitals.filter((h) => Number(h.id) !== Number(selectedHospitalId));
+    return [selected, ...others];
+  }, [hospitals, selectedHospitalId]);
+
   return (
     <>
       <style>{`
         .ahd-root {
           min-height: 100vh;
           box-sizing: border-box;
-          padding: 72px 16px 24px 80px;
+          padding: 72px 16px 80px 80px;
           color: #111;
           font-family: "Segoe UI", Arial, sans-serif;
           background:
@@ -107,7 +117,7 @@ export default function AdminHospitalDetails() {
           box-sizing: border-box; 
           display: flex; 
           flex-direction: column;
-          min-height: calc(100vh - 96px);
+          padding-bottom: 40px;
         }
         .ahd-grid { 
           display: grid; 
@@ -202,13 +212,10 @@ export default function AdminHospitalDetails() {
           flex-direction: column;
         }
         main.ahd-card {
-          min-height: calc(100vh - 120px);
+          min-height: auto;
           box-sizing: border-box;
-        }
-        main.ahd-card::-webkit-scrollbar { width: 6px; }
-        main.ahd-card::-webkit-scrollbar-thumb {
-          background: rgba(17,17,17,0.18);
-          border-radius: 8px;
+          margin-bottom: 40px;
+          padding-bottom: 24px;
         }
         .ahd-partners {
           flex: 1;
@@ -227,7 +234,7 @@ export default function AdminHospitalDetails() {
         }
         .ahd-map-frame {
           width: 100%;
-          height: 280px;
+          height: 300px;
           border: 0;
           display: block;
         }
@@ -255,9 +262,9 @@ export default function AdminHospitalDetails() {
           <div className="ahd-grid">
             <aside className="ahd-card partners">
               <h2 className="ahd-title">Hospital Partners</h2>
-              {hospitals.length === 0 && <div className="ahd-empty">No hospitals found.</div>}
+              {sortedHospitals.length === 0 && <div className="ahd-empty">No hospitals found.</div>}
               <div className="ahd-partners">
-                {hospitals.map((h) => (
+                {sortedHospitals.map((h) => (
                   <div
                     key={h.id}
                     ref={Number(selectedHospitalId) === Number(h.id) ? selectedItemRef : null}
