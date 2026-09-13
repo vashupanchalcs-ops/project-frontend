@@ -334,7 +334,7 @@ export default function HospitalPortal() {
     const bid = selectedMapBooking?.booking_id || selectedMapBooking?.id;
     if (!bid) { setActiveRoute(null); return; }
     let cancel = false;
-    fetch(`${BASE_URL}/api/route/active/${bid}/`)
+    fetch(`${BASE}/api/route/active/${bid}/`)
       .then((r) => r.json())
       .then((data) => {
         if (!cancel && data?.id) setActiveRoute(data);
