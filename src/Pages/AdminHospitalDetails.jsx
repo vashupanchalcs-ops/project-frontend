@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
-// Deployment v1.0.4 - Pin selected hospital to top and enable full page scrolling
+// Deployment v1.0.5 - Pin selected hospital to top and enable full page scrolling with zero cutoff
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
 
 // Keep the partner screen useful while the API is unavailable or has no seeded rows.
@@ -104,9 +104,10 @@ export default function AdminHospitalDetails() {
         .ahd-root {
           min-height: 100vh;
           box-sizing: border-box;
-          padding: 72px 16px 80px 80px;
+          padding: 72px 16px 140px 80px;
           color: #111;
           font-family: "Segoe UI", Arial, sans-serif;
+          overflow-y: auto;
           background:
             radial-gradient(880px 420px at 95% 4%, rgba(255, 255, 255, 0.15), transparent 72%),
             radial-gradient(760px 380px at 3% -4%, rgba(223,235,120,0.2), transparent 70%),
@@ -208,9 +209,10 @@ export default function AdminHospitalDetails() {
         .ahd-card.partners {
           position: sticky;
           top: 80px;
-          max-height: calc(100vh - 100px);
+          max-height: calc(100vh - 96px);
           display: flex;
           flex-direction: column;
+          overflow: hidden;
         }
         main.ahd-card {
           min-height: auto;
@@ -225,7 +227,8 @@ export default function AdminHospitalDetails() {
           display: flex;
           flex-direction: column;
           gap: 10px;
-          padding-right: 4px;
+          padding-right: 6px;
+          padding-bottom: 40px;
           overscroll-behavior: contain;
         }
         .ahd-partners::-webkit-scrollbar { width: 6px; }
