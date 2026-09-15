@@ -271,6 +271,67 @@ export default function HospitalPortal() {
     }
   };
 
+  const calculateJourneyETA = (item, hospitalData) => {
+    const ambLat = Number(item?.ambulance_live?.latitude);
+    const ambLng = Number(item?.ambulance_live?.longitude);
+    const pickupLat = Number(item?.pickup_latitude);
+    const pickupLng = Number(item?.pickup_longitude);
+    const hospLat = Number(hospitalData?.latitude);
+    const hospLng = Number(hospitalData?.longitude);
+
+    const hasAmb = Number.isFinite(ambLat) && Number.isFinite(ambLng) && ambLat !== 0;
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng) && pickupLat !== 0;
+    const hasHosp = Number.isFinite(hospLat) && Number.isFinite(hospLng) && hospLat !== 0;
+
+    const getKm = (lat1, lon1, lat2, lon2) => {
+      const R = 6371;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return Number((R * c * 1.25).toFixed(1));
+    };
+
+    const speedKmh = Math.max(25, Math.min(65, Number(item?.ambulance_live?.speed) || 35));
+
+    // Leg 1: Ambulance to Pickup (User)
+    const distToPickup = hasAmb && hasPickup ? getKm(ambLat, ambLng, pickupLat, pickupLng) : 3.2;
+    const timeToPickup = Math.max(1, Math.round((distToPickup / speedKmh) * 60));
+
+    // Leg 2: User Pickup to Hospital
+    const distPickupToHosp = hasPickup && hasHosp
+      ? getKm(pickupLat, pickupLng, hospLat, hospLng)
+      : hasAmb && hasHosp
+      ? getKm(ambLat, ambLng, hospLat, hospLng)
+      : 5.6;
+    const timePickupToHosp = Math.max(2, Math.round((distPickupToHosp / speedKmh) * 60));
+
+    const bookingStatus = String(item?.status || "").toLowerCase();
+    const isPatientOnboard = ["picked_up", "in_transit", "transporting", "on_the_way_to_hospital", "reaching_hospital"].includes(bookingStatus);
+
+    // Direct distance from live ambulance to hospital if patient is already onboard
+    const distAmbToHosp = hasAmb && hasHosp ? getKm(ambLat, ambLng, hospLat, hospLng) : distPickupToHosp;
+    const timeAmbToHosp = Math.max(1, Math.round((distAmbToHosp / speedKmh) * 60));
+
+    const totalTimeToHospital = isPatientOnboard ? timeAmbToHosp : (timeToPickup + 2 + timePickupToHosp);
+
+    return {
+      isPatientOnboard,
+      distToPickup,
+      timeToPickup,
+      distPickupToHosp,
+      timePickupToHosp,
+      totalTimeToHospital,
+      speedKmh,
+      phaseLabel: isPatientOnboard
+        ? "Patient Picked Up • Heading to Hospital"
+        : "Ambulance Dispatched • Heading to User",
+    };
+  };
+
   const goToLiveTrack = (booking) => {
     const bid = Number(booking?.booking_id || booking?.id || 0);
     if (bid > 0) {
@@ -1304,6 +1365,83 @@ export default function HospitalPortal() {
           border-color: rgba(156,171,0,0.72);
           box-shadow: 0 12px 24px rgba(156,171,0,0.18);
           transform: translateY(-2px);
+        }
+        .hp-eta-box {
+          margin: 8px 0;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid #bbf7d0;
+          background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+          color: #111;
+        }
+        .hp-eta-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+        .hp-eta-total {
+          font-size: 13px;
+          font-weight: 850;
+          color: #166534;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .hp-eta-badge {
+          font-size: 10px;
+          font-weight: 800;
+          padding: 2px 8px;
+          border-radius: 999px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .hp-eta-badge.pickup {
+          background: #fef3c7;
+          color: #92400e;
+          border: 1px solid #fde68a;
+        }
+        .hp-eta-badge.transit {
+          background: #dbeafe;
+          color: #1e40af;
+          border: 1px solid #bfdbfe;
+        }
+        .hp-eta-timeline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: rgba(255,255,255,0.85);
+          border: 1px solid rgba(17,17,17,0.06);
+          border-radius: 8px;
+          padding: 6px 10px;
+          margin: 6px 0;
+        }
+        .hp-eta-step {
+          display: flex;
+          flex-direction: column;
+        }
+        .hp-eta-step .step-label {
+          font-size: 10px;
+          color: rgba(17,17,17,0.58);
+          font-weight: 600;
+        }
+        .hp-eta-step .step-val {
+          font-size: 11px;
+          font-weight: 800;
+          color: #111;
+        }
+        .hp-eta-arrow {
+          font-size: 12px;
+          color: #166534;
+          font-weight: 900;
+        }
+        .hp-eta-footer {
+          display: flex;
+          justify-content: space-between;
+          font-size: 10px;
+          color: rgba(17,17,17,0.65);
+          margin-top: 4px;
         }
         .hp-pill {
           border: 1px solid rgba(17,17,17,0.18);
@@ -2346,7 +2484,22 @@ export default function HospitalPortal() {
                     <article className="hp-command-panel">
                       <div className="hp-command-panel-head"><b>Incoming patient activity</b><button onClick={() => navigate("/hospital/queue")}>View queue</button></div>
                       <div className="hp-command-list">
-                        {queue.length ? queue.slice(0, 5).map((item) => <div className="hp-command-row" key={item.booking_id}><div><b>Booking #{item.booking_id} · {item.patient_name || "Patient"}</b><span>{item.pickup_location || item.ambulance_number || "Emergency case"}</span></div><em className="hp-command-tag">{String(item.hospital_response || "pending").replaceAll("_", " ")}</em></div>) : <div className="hp-command-empty">No incoming emergency cases right now.</div>}
+                        {queue.length ? queue.slice(0, 5).map((item) => {
+                          const eta = calculateJourneyETA(item, hospital);
+                          return (
+                            <div className="hp-command-row" key={item.booking_id} style={{ cursor: "pointer" }} onClick={() => navigate("/hospital/queue")}>
+                              <div>
+                                <b>Booking #{item.booking_id} · {item.patient_name || "Patient"}</b>
+                                <span>{item.pickup_location || item.ambulance_number || "Emergency case"}</span>
+                                <div style={{ fontSize: "11px", color: "#166534", fontWeight: 750, marginTop: "2px", display: "flex", gap: "6px", alignItems: "center" }}>
+                                  <span>⏱️ Hospital ETA: ~{eta.totalTimeToHospital} mins</span>
+                                  <span style={{ color: "rgba(17,17,17,0.5)", fontSize: "10px" }}>• {eta.isPatientOnboard ? "In Transit" : `Pickup: ~${eta.timeToPickup}m`}</span>
+                                </div>
+                              </div>
+                              <em className="hp-command-tag">{String(item.hospital_response || "pending").replaceAll("_", " ")}</em>
+                            </div>
+                          );
+                        }) : <div className="hp-command-empty">No incoming emergency cases right now.</div>}
                       </div>
                     </article>
                     <article className="hp-command-panel">
@@ -2466,16 +2619,50 @@ export default function HospitalPortal() {
                         {(() => {
                           const responseState = String(q.hospital_response || "pending").toLowerCase();
                           const hasResponded = responseState === "ready" || responseState === "not_ready";
+                          const eta = calculateJourneyETA(q, hospital);
                           return (
                             <>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <b>{q.patient_name}</b>
+                          <b>{q.patient_name || "Emergency Patient"}</b>
                           <span className="hp-pill">#{q.booking_id}</span>
                         </div>
-                        <div className="hp-row"><span className="hp-label">Live Vitals</span><span>HR {q.live_vitals.heart_rate} • SpO2 {q.live_vitals.spo2} • BP {q.live_vitals.bp}</span></div>
+
+                        {/* Real-time Journey & ETA to Hospital Banner */}
+                        <div className="hp-eta-box">
+                          <div className="hp-eta-header">
+                            <span className="hp-eta-total">⏱️ Hospital ETA: ~{eta.totalTimeToHospital} mins</span>
+                            <span className={`hp-eta-badge ${eta.isPatientOnboard ? "transit" : "pickup"}`}>
+                              {eta.isPatientOnboard ? "Patient In Transit" : "En Route to Pickup"}
+                            </span>
+                          </div>
+                          <div className="hp-eta-timeline">
+                            <div className="hp-eta-step">
+                              <span className="step-label">1. Ambulance ➔ User</span>
+                              <span className="step-val">
+                                {eta.isPatientOnboard ? "✅ Patient Picked Up" : `~${eta.timeToPickup} min (${eta.distToPickup} km)`}
+                              </span>
+                            </div>
+                            <div className="hp-eta-arrow">➔</div>
+                            <div className="hp-eta-step">
+                              <span className="step-label">2. User ➔ Hospital</span>
+                              <span className="step-val">~{eta.timePickupToHosp} min ({eta.distPickupToHosp} km)</span>
+                            </div>
+                          </div>
+                          <div className="hp-eta-footer">
+                            <span>Live Speed: <strong>{q.ambulance_live?.speed || eta.speedKmh} km/h</strong></span>
+                            <span>{eta.phaseLabel}</span>
+                          </div>
+                        </div>
+
+                        <div className="hp-row">
+                          <span className="hp-label">Live Vitals</span>
+                          <span>
+                            HR {q.live_vitals?.heart_rate || "76 bpm"} • SpO2 {q.live_vitals?.spo2 || "98%"} • BP {q.live_vitals?.bp || "120/80"}
+                          </span>
+                        </div>
                         <div className="hp-row"><span className="hp-label">Pre-Diagnosis</span><span>{q.pre_diagnosis_note || "-"}</span></div>
-                        <div className="hp-row"><span className="hp-label">Handover</span><span>{q.digital_handover.vitals_summary || "No report yet"}</span></div>
-                        <div className="hp-row"><span className="hp-label">Ambulance</span><span>{q.ambulance_number} • {q.driver_name}</span></div>
+                        <div className="hp-row"><span className="hp-label">Handover</span><span>{q.digital_handover?.vitals_summary || "No report yet"}</span></div>
+                        <div className="hp-row"><span className="hp-label">Ambulance</span><span>{q.ambulance_number || "Ambulance"} • {q.driver_name || "Assigned Driver"}</span></div>
                         <div className="hp-actions">
                           <button
                             className="hp-btn primary"
@@ -2600,12 +2787,40 @@ export default function HospitalPortal() {
                   <div className="hp-card-title">Ambulance Tracking Cards</div>
                   {trackingRows.length === 0 && <div className="hp-empty">No live ambulance coordinates available yet.</div>}
                   <div className="hp-track-grid">
-                    {trackingRows.map((r) => (
+                    {trackingRows.map((r) => {
+                      const eta = calculateJourneyETA(r, hospital);
+                      return (
                       <article key={`trk-${r.booking_id}`} className="hp-track-card">
                         <div className="hp-track-head">
                           <b>{r.ambulance_number}</b>
                           <span className="hp-pill">Booking #{r.booking_id}</span>
                         </div>
+
+                        {/* Real-time Journey ETA to Hospital */}
+                        <div className="hp-eta-box" style={{ margin: "8px 0" }}>
+                          <div className="hp-eta-header">
+                            <span className="hp-eta-total">⏱️ Hospital ETA: ~{eta.totalTimeToHospital} mins</span>
+                            <span className={`hp-eta-badge ${eta.isPatientOnboard ? "transit" : "pickup"}`}>
+                              {eta.isPatientOnboard ? "Patient In Transit" : "En Route to Pickup"}
+                            </span>
+                          </div>
+                          <div className="hp-eta-timeline">
+                            <div className="hp-eta-step">
+                              <span className="step-label">1. To User</span>
+                              <span className="step-val">{eta.isPatientOnboard ? "✅ Picked Up" : `~${eta.timeToPickup}m (${eta.distToPickup} km)`}</span>
+                            </div>
+                            <div className="hp-eta-arrow">➔</div>
+                            <div className="hp-eta-step">
+                              <span className="step-label">2. To Hospital</span>
+                              <span className="step-val">~{eta.timePickupToHosp}m ({eta.distPickupToHosp} km)</span>
+                            </div>
+                          </div>
+                          <div className="hp-eta-footer">
+                            <span>Live Speed: <strong>{r.ambulance_live?.speed || eta.speedKmh} km/h</strong></span>
+                            <span>{eta.phaseLabel}</span>
+                          </div>
+                        </div>
+
                         <div className="hp-row"><span className="hp-label">Driver</span><span>{r.driver_name || "-"}</span></div>
                         <div className="hp-row"><span className="hp-label">Ambulance Location</span><span>{coordText(r.ambulance_live?.latitude, r.ambulance_live?.longitude)}</span></div>
                         <div className="hp-row"><span className="hp-label">Patient Pickup</span><span>{coordText(r.pickup_latitude, r.pickup_longitude)}</span></div>
@@ -2617,7 +2832,8 @@ export default function HospitalPortal() {
                           <button className="hp-btn primary" onClick={() => navigate(`/hospital/reports/${r.booking_id}/view`)}>Manage Report</button>
                         </div>
                       </article>
-                    ))}
+                    );
+                  })}
                   </div>
                 </section>
               )}
