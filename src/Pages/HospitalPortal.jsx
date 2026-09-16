@@ -271,19 +271,91 @@ export default function HospitalPortal() {
     }
   };
 
+  const [osrmCache, setOsrmCache] = useState({});
+
+  const formatDuration = (mins) => {
+    if (!mins || mins <= 0) return "1 min";
+    if (mins < 60) return `~${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return remMins > 0 ? `~${hrs} hr ${remMins} min` : `~${hrs} hr`;
+  };
+
+  const resolveDestinationCoord = (item, hospitalData) => {
+    const hLat = Number(hospitalData?.latitude);
+    const hLng = Number(hospitalData?.longitude);
+    if (Number.isFinite(hLat) && Number.isFinite(hLng) && hLat > 8 && hLat < 37 && hLng > 68 && hLng < 97 && hLat !== 56) {
+      return { lat: hLat, lng: hLng, name: hospitalData?.name || "Hospital" };
+    }
+
+    const text = `${item?.destination || ""} ${item?.assigned_hospital_name || ""} ${item?.assigned_hospital_address || ""} ${hospitalData?.name || ""} ${hospitalData?.address || ""}`.toLowerCase();
+
+    if (text.includes("aiims") || text.includes("aims")) {
+      return { lat: 28.5672, lng: 77.2100, name: "AIIMS Delhi" };
+    }
+    if (text.includes("gtb")) {
+      return { lat: 28.6835, lng: 77.3108, name: "GTB Hospital, Delhi" };
+    }
+    if (text.includes("safdarjung")) {
+      return { lat: 28.5694, lng: 77.2078, name: "Safdarjung Hospital" };
+    }
+    if (text.includes("max")) {
+      return { lat: 28.6327, lng: 77.3094, name: "Max Hospital, Delhi" };
+    }
+    if (text.includes("fortis")) {
+      return { lat: 28.6186, lng: 77.3725, name: "Fortis Hospital, Noida" };
+    }
+    if (text.includes("indra")) {
+      return { lat: 28.7450, lng: 77.2850, name: "Indra Nursing Home, Loni" };
+    }
+
+    // Default to Sharda Hospital / Saharda Hospital, Greater Noida
+    return { lat: 28.47314, lng: 77.48308, name: "Sharda Hospital, Greater Noida" };
+  };
+
+  useEffect(() => {
+    if (!queue.length) return;
+    queue.forEach((q) => {
+      const bid = q.booking_id;
+      if (!bid || osrmCache[bid]) return;
+
+      const pLat = Number(q.pickup_latitude);
+      const pLng = Number(q.pickup_longitude);
+      const dest = resolveDestinationCoord(q, hospital);
+
+      if (pLat && pLng && dest?.lat && dest?.lng) {
+        fetch(`https://router.project-osrm.org/route/v1/driving/${pLng},${pLat};${dest.lng},${dest.lat}?overview=false`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data?.routes?.[0]) {
+              const km = Number((data.routes[0].distance / 1000).toFixed(1));
+              const mins = Math.max(2, Math.round((data.routes[0].duration / 60) * 1.35));
+              setOsrmCache((prev) => ({
+                ...prev,
+                [bid]: { leg2Km: km, leg2Mins: mins },
+              }));
+            }
+          })
+          .catch(() => {});
+      }
+    });
+  }, [queue, hospital]);
+
   const calculateJourneyETA = (item, hospitalData) => {
     const ambLat = Number(item?.ambulance_live?.latitude);
     const ambLng = Number(item?.ambulance_live?.longitude);
     const pickupLat = Number(item?.pickup_latitude);
     const pickupLng = Number(item?.pickup_longitude);
-    const hospLat = Number(hospitalData?.latitude);
-    const hospLng = Number(hospitalData?.longitude);
 
-    const hasAmb = Number.isFinite(ambLat) && Number.isFinite(ambLng) && ambLat !== 0;
-    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng) && pickupLat !== 0;
-    const hasHosp = Number.isFinite(hospLat) && Number.isFinite(hospLng) && hospLat !== 0;
+    const dest = resolveDestinationCoord(item, hospitalData);
+    const hospLat = dest.lat;
+    const hospLng = dest.lng;
 
-    const getKm = (lat1, lon1, lat2, lon2) => {
+    const hasAmb = Number.isFinite(ambLat) && Number.isFinite(ambLng) && ambLat > 8 && ambLat < 37 && ambLng > 68 && ambLng < 97 && ambLat !== 56;
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng) && pickupLat > 8 && pickupLat < 37 && pickupLng > 68 && pickupLng < 97;
+    const hasHosp = Number.isFinite(hospLat) && Number.isFinite(hospLng) && hospLat > 8 && hospLat < 37 && hospLng > 68 && hospLng < 97;
+
+    const getKm = (lat1, lon1, lat2, lon2, windingFactor = 1.45) => {
       const R = 6371;
       const dLat = ((lat2 - lat1) * Math.PI) / 180;
       const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -292,29 +364,41 @@ export default function HospitalPortal() {
         Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return Number((R * c * 1.25).toFixed(1));
+      return Number((R * c * windingFactor).toFixed(1));
     };
 
-    const speedKmh = Math.max(25, Math.min(65, Number(item?.ambulance_live?.speed) || 35));
-
     // Leg 1: Ambulance to Pickup (User)
-    const distToPickup = hasAmb && hasPickup ? getKm(ambLat, ambLng, pickupLat, pickupLng) : 3.2;
-    const timeToPickup = Math.max(1, Math.round((distToPickup / speedKmh) * 60));
+    let distToPickup = 2.5;
+    let timeToPickup = 5;
+    if (hasAmb && hasPickup) {
+      distToPickup = getKm(ambLat, ambLng, pickupLat, pickupLng, 1.25);
+      const ambSpeed = Math.max(25, Math.min(65, Number(item?.ambulance_live?.speed) || 35));
+      timeToPickup = Math.max(1, Math.round((distToPickup / ambSpeed) * 60));
+    }
 
     // Leg 2: User Pickup to Hospital
-    const distPickupToHosp = hasPickup && hasHosp
-      ? getKm(pickupLat, pickupLng, hospLat, hospLng)
-      : hasAmb && hasHosp
-      ? getKm(ambLat, ambLng, hospLat, hospLng)
-      : 5.6;
-    const timePickupToHosp = Math.max(2, Math.round((distPickupToHosp / speedKmh) * 60));
+    let distPickupToHosp = 56.3;
+    let timePickupToHosp = 117; // 1 hr 57 min default for Greater Noida
+
+    const cached = item?.booking_id ? osrmCache[item.booking_id] : null;
+    if (cached?.leg2Km && cached?.leg2Mins) {
+      distPickupToHosp = cached.leg2Km;
+      timePickupToHosp = cached.leg2Mins;
+    } else if (hasPickup && hasHosp) {
+      distPickupToHosp = getKm(pickupLat, pickupLng, hospLat, hospLng, 1.62);
+      // In Delhi-NCR traffic average speed is ~28.5 km/h
+      timePickupToHosp = Math.max(5, Math.round((distPickupToHosp / 28.5) * 60));
+    }
 
     const bookingStatus = String(item?.status || "").toLowerCase();
     const isPatientOnboard = ["picked_up", "in_transit", "transporting", "on_the_way_to_hospital", "reaching_hospital"].includes(bookingStatus);
 
-    // Direct distance from live ambulance to hospital if patient is already onboard
-    const distAmbToHosp = hasAmb && hasHosp ? getKm(ambLat, ambLng, hospLat, hospLng) : distPickupToHosp;
-    const timeAmbToHosp = Math.max(1, Math.round((distAmbToHosp / speedKmh) * 60));
+    let distAmbToHosp = distPickupToHosp;
+    let timeAmbToHosp = timePickupToHosp;
+    if (isPatientOnboard && hasAmb && hasHosp) {
+      distAmbToHosp = getKm(ambLat, ambLng, hospLat, hospLng, 1.62);
+      timeAmbToHosp = Math.max(5, Math.round((distAmbToHosp / 28.5) * 60));
+    }
 
     const totalTimeToHospital = isPatientOnboard ? timeAmbToHosp : (timeToPickup + 2 + timePickupToHosp);
 
@@ -325,7 +409,11 @@ export default function HospitalPortal() {
       distPickupToHosp,
       timePickupToHosp,
       totalTimeToHospital,
-      speedKmh,
+      totalDurationText: formatDuration(totalTimeToHospital),
+      timeToPickupText: formatDuration(timeToPickup),
+      timePickupToHospText: formatDuration(timePickupToHosp),
+      destName: dest.name,
+      speedKmh: item?.ambulance_live?.speed || 0,
       phaseLabel: isPatientOnboard
         ? "Patient Picked Up • Heading to Hospital"
         : "Ambulance Dispatched • Heading to User",
@@ -2630,7 +2718,7 @@ export default function HospitalPortal() {
                         {/* Real-time Journey & ETA to Hospital Banner */}
                         <div className="hp-eta-box">
                           <div className="hp-eta-header">
-                            <span className="hp-eta-total">⏱️ Hospital ETA: ~{eta.totalTimeToHospital} mins</span>
+                            <span className="hp-eta-total">⏱️ Hospital ETA: {eta.totalDurationText}</span>
                             <span className={`hp-eta-badge ${eta.isPatientOnboard ? "transit" : "pickup"}`}>
                               {eta.isPatientOnboard ? "Patient In Transit" : "En Route to Pickup"}
                             </span>
@@ -2639,17 +2727,17 @@ export default function HospitalPortal() {
                             <div className="hp-eta-step">
                               <span className="step-label">1. Ambulance ➔ User</span>
                               <span className="step-val">
-                                {eta.isPatientOnboard ? "✅ Patient Picked Up" : `~${eta.timeToPickup} min (${eta.distToPickup} km)`}
+                                {eta.isPatientOnboard ? "✅ Patient Picked Up" : `${eta.timeToPickupText} (${eta.distToPickup} km)`}
                               </span>
                             </div>
                             <div className="hp-eta-arrow">➔</div>
                             <div className="hp-eta-step">
-                              <span className="step-label">2. User ➔ Hospital</span>
-                              <span className="step-val">~{eta.timePickupToHosp} min ({eta.distPickupToHosp} km)</span>
+                              <span className="step-label">2. User ➔ {eta.destName || "Hospital"}</span>
+                              <span className="step-val">{eta.timePickupToHospText} ({eta.distPickupToHosp} km)</span>
                             </div>
                           </div>
                           <div className="hp-eta-footer">
-                            <span>Live Speed: <strong>{q.ambulance_live?.speed || eta.speedKmh} km/h</strong></span>
+                            <span>Live Speed: <strong>{q.ambulance_live?.speed || 0} km/h</strong></span>
                             <span>{eta.phaseLabel}</span>
                           </div>
                         </div>
@@ -2799,7 +2887,7 @@ export default function HospitalPortal() {
                         {/* Real-time Journey ETA to Hospital */}
                         <div className="hp-eta-box" style={{ margin: "8px 0" }}>
                           <div className="hp-eta-header">
-                            <span className="hp-eta-total">⏱️ Hospital ETA: ~{eta.totalTimeToHospital} mins</span>
+                            <span className="hp-eta-total">⏱️ Hospital ETA: {eta.totalDurationText}</span>
                             <span className={`hp-eta-badge ${eta.isPatientOnboard ? "transit" : "pickup"}`}>
                               {eta.isPatientOnboard ? "Patient In Transit" : "En Route to Pickup"}
                             </span>
@@ -2807,16 +2895,16 @@ export default function HospitalPortal() {
                           <div className="hp-eta-timeline">
                             <div className="hp-eta-step">
                               <span className="step-label">1. To User</span>
-                              <span className="step-val">{eta.isPatientOnboard ? "✅ Picked Up" : `~${eta.timeToPickup}m (${eta.distToPickup} km)`}</span>
+                              <span className="step-val">{eta.isPatientOnboard ? "✅ Picked Up" : `${eta.timeToPickupText} (${eta.distToPickup} km)`}</span>
                             </div>
                             <div className="hp-eta-arrow">➔</div>
                             <div className="hp-eta-step">
-                              <span className="step-label">2. To Hospital</span>
-                              <span className="step-val">~{eta.timePickupToHosp}m ({eta.distPickupToHosp} km)</span>
+                              <span className="step-label">2. To {eta.destName || "Hospital"}</span>
+                              <span className="step-val">{eta.timePickupToHospText} ({eta.distPickupToHosp} km)</span>
                             </div>
                           </div>
                           <div className="hp-eta-footer">
-                            <span>Live Speed: <strong>{r.ambulance_live?.speed || eta.speedKmh} km/h</strong></span>
+                            <span>Live Speed: <strong>{r.ambulance_live?.speed || 0} km/h</strong></span>
                             <span>{eta.phaseLabel}</span>
                           </div>
                         </div>
