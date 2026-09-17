@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -16,7 +16,10 @@ const Icons = {
   Play:      () => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>),
 };
 
-const getStatusConfig = (status) => {
+const getStatusConfig = (status, hospital_response) => {
+  if (hospital_response === "not_ready") {
+    return { color: "#cf1322", bg: "#fff2f0", border: "#ff4d4f", dot: "#cf1322", pulse: true, label: "Hospital Unavailable" };
+  }
   switch (status?.toLowerCase()) {
     case "confirmed": return { color:"#00d4aa", bg:"rgba(0,212,170,0.12)", border:"rgba(0,212,170,0.3)",    dot:"#00d4aa", pulse:true,  label:"Confirmed" };
     case "pending":   return { color:"#111111", bg:"#fff3df", border:"#f59a23", dot:"#f59a23", pulse:false, label:"Pending" };
@@ -35,6 +38,7 @@ export function MyBookings() {
   const [loading,  setLoading]  = useState(true);
   const [filter,   setFilter]   = useState("all");
   const navigate = useNavigate();
+  const location = useLocation();
   const email    = localStorage.getItem("user") || "";
   const name     = localStorage.getItem("name") || "";
 
@@ -274,6 +278,31 @@ export function MyBookings() {
             </div>
             <h1 style={{ fontSize:28, fontWeight:900, color:"#111", margin:"0 0 4px", letterSpacing:-0.5 }}>Booking History</h1>
             <p style={{ fontSize:13, color:"rgba(17,17,17,0.62)", margin:0 }}>Access and track all your ambulance requests through one centralized hub</p>
+            {location.state?.flashMsg && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "10px 16px",
+                  background: "#dcfce7",
+                  border: "1px solid #16a34a",
+                  borderRadius: "12px",
+                  color: "#166534",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>✅ {location.state.flashMsg}</span>
+                <button
+                  onClick={() => navigate(location.pathname, { replace: true, state: {} })}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 700, color: "#166534" }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -334,7 +363,7 @@ export function MyBookings() {
           {!loading && filtered.length>0 && (
             <div className="mb-grid">
               {filtered.map(b=>{
-                const sc          = getStatusConfig(b.status);
+                const sc          = getStatusConfig(b.status, b.hospital_response);
                 const isConfirmed = b.status==="confirmed";
                 const isPending = b.status==="pending";
                 const isCompleted = b.status==="completed";
@@ -370,14 +399,75 @@ export function MyBookings() {
                       )}
                       <div className="mb-detail-grid">
                         <DetailItem icon={<Icons.MapPin/>} iconColor="#ffffff"               label="Pickup Location" value={b.pickup_location}/>
-                        <DetailItem icon={<Icons.MapPin/>} iconColor="rgba(147,112,219,0.9)" label="Assigned Hospital" value={b.assigned_hospital_name || b.destination || "Admin will assign"}/>
+                        <DetailItem
+                          icon={<Icons.MapPin/>}
+                          iconColor="rgba(147,112,219,0.9)"
+                          label="Assigned Hospital"
+                          value={`${b.assigned_hospital_name || b.destination || "Admin will assign"}${b.is_user_selected_hospital ? " (Your Choice)" : ""}`}
+                        />
                         <DetailItem icon={<Icons.User/>}   iconColor="rgba(100,149,237,0.9)" label="Booked By"       value={b.booked_by}/>
                         <DetailItem icon={<Icons.Clock/>}  iconColor="rgba(17,17,17,0.5)" label="Date & Time"     value={b.created_at?new Date(b.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):null}/>
-                        <DetailItem icon={<Icons.Clock/>}  iconColor="#00a58a" label="Hospital Response" value={b.hospital_response || "pending"} />
+                        <DetailItem
+                          icon={<Icons.Clock/>}
+                          iconColor={b.hospital_response === "ready" ? "#00a58a" : b.hospital_response === "not_ready" ? "#cf1322" : "#f59a23"}
+                          label="Hospital Response"
+                          value={b.hospital_response === "ready" ? "Approved / Ready" : b.hospital_response === "not_ready" ? "Rejected (Unavailable)" : "Pending Approval"}
+                        />
                         <DetailItem icon={<Icons.Clock/>}  iconColor="#ffffff" label="Response Note" value={b.hospital_response_note || "-"} />
                         <DetailItem icon={<Icons.Clock/>}  iconColor="#00a58a" label="Medical Insurance" value={b.insurance_status || "pending"} />
                       </div>
                     </div>
+                    {b.hospital_response === "not_ready" && (
+                      <div
+                        style={{
+                          margin: "0 20px 16px",
+                          padding: "14px 18px",
+                          background: "#fff1f0",
+                          border: "1.5px solid #ffa39e",
+                          borderRadius: "14px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "10px",
+                          boxShadow: "0 6px 16px rgba(207,19,34,0.08)",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                          <span style={{ fontSize: "22px", lineHeight: 1 }}>⚠️</span>
+                          <div>
+                            <div style={{ color: "#cf1322", fontWeight: 900, fontSize: "14px", lineHeight: 1.35 }}>
+                              Choose another hospital this hospital is currently unavailable
+                            </div>
+                            <div style={{ color: "rgba(17,17,17,0.7)", fontSize: "12px", marginTop: 4 }}>
+                              {b.assigned_hospital_name ? `${b.assigned_hospital_name} is currently full or unavailable.` : "Selected hospital is currently unavailable."}
+                              {b.hospital_response_note ? ` (${b.hospital_response_note})` : ""} Please select another hospital from our network to proceed.
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => navigate("/Hospitals", { state: { reselectForBookingId: b.id } })}
+                          style={{
+                            padding: "10px 18px",
+                            background: "#cf1322",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "10px",
+                            fontSize: "13px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            alignSelf: "flex-start",
+                            boxShadow: "0 4px 12px rgba(207,19,34,0.25)",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#a8071a")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "#cf1322")}
+                        >
+                          🏥 Choose Another Hospital →
+                        </button>
+                      </div>
+                    )}
                     {String(b.insurance_status || "").toLowerCase() === "approved" && (
                       <div style={{ marginTop: 10, border: "1px solid rgba(0,170,120,0.42)", background: "rgba(0,212,170,0.12)", borderRadius: 10, padding: "9px 11px", fontSize: 13, fontWeight: 800, color: "#007a52" }}>
                         Your medical insurance approved.

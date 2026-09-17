@@ -122,6 +122,7 @@ export default function Ambulances() {
   const [isSplitView, setIsSplitView] = useState(false);
   const [mapLocation, setMapLocation] = useState(null);
   const [mapLocationStatus, setMapLocationStatus] = useState("idle");
+  const [targetHospital, setTargetHospital] = useState(null);
 
   const leafletReady = useLeaflet();
   const mapRef = useRef(null);
@@ -245,9 +246,10 @@ export default function Ambulances() {
     setTimeout(() => setToast(null), 3200);
   };
 
-  const openBooking = (a) => {
+  const openBooking = (a, hospital = null) => {
     if (isAdmin || isDriver) return;
     setSelectedAmb(a);
+    if (hospital) setTargetHospital(hospital);
     setForm({
       pickup_address: "",
       pickup_landmark: "",
@@ -268,10 +270,14 @@ export default function Ambulances() {
   };
 
   useEffect(() => {
-    if (!isUser || new URLSearchParams(location.search).get("book") !== "1") return;
-    openBooking(null);
+    const params = new URLSearchParams(location.search);
+    if (!isUser || params.get("book") !== "1") return;
+    const hospId = params.get("hospital_id");
+    const hospName = params.get("hospital_name");
+    const preselected = location.state?.preselectedHospital || (hospId ? { id: hospId, name: hospName } : null);
+    openBooking(null, preselected);
     navigate("/Ambulances", { replace: true });
-  }, [isUser, location.search, navigate]);
+  }, [isUser, location.search, navigate, location.state]);
 
   const requestPickupLocation = () => {
     if (!("geolocation" in navigator)) {
@@ -667,11 +673,22 @@ export default function Ambulances() {
           pickup_district: district,
           patient_contact_number: form.patient_contact_number.trim(),
           status: "pending",
+          destination: targetHospital?.name || "",
+          user_selected_hospital_id: targetHospital?.id || null,
+          assigned_hospital_id: targetHospital?.id || null,
+          assigned_hospital_name: targetHospital?.name || "",
+          is_user_selected_hospital: !!targetHospital,
         }),
       });
       if (res.ok) {
-        showToast("Request submitted successfully", "ok");
+        showToast(
+          targetHospital
+            ? `Request submitted for ${targetHospital.name}. Hospital will review shortly.`
+            : "Request submitted successfully",
+          "ok"
+        );
         setShowModal(false);
+        setTargetHospital(null);
         window.dispatchEvent(new Event("new-booking"));
       } else {
         const err = await res.json().catch(() => ({}));
@@ -1949,6 +1966,45 @@ export default function Ambulances() {
             <h3>Book an ambulance</h3>
             <p>Share your pickup location and contact number.</p>
 
+            {targetHospital && (
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  border: "1.5px solid #86efac",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  margin: "10px 0 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#166534", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Selected Target Hospital
+                  </div>
+                  <div style={{ fontSize: "14px", fontWeight: 900, color: "#111827" }}>
+                    🏥 {targetHospital.name}
+                  </div>
+                </div>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    background: "#dcfce7",
+                    color: "#166534",
+                    fontWeight: 800,
+                    padding: "3px 8px",
+                    borderRadius: "100px",
+                    border: "1px solid #bbf7d0",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  User Choice
+                </span>
+              </div>
+            )}
+
             <div className="amb-location-explainer">
               <strong>Pickup location</strong>
             </div>
@@ -2058,7 +2114,7 @@ export default function Ambulances() {
             </div>
 
             <div className="amb-modal-actions">
-              <button className="amb2-btn" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="amb2-btn" onClick={() => { setShowModal(false); setTargetHospital(null); }}>Cancel</button>
               <button className="amb2-btn main" disabled={loading || geocoding} onClick={submitBooking}>
                 {geocoding ? "Resolving Location..." : loading ? "Sending..." : "Submit"}
               </button>

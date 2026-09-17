@@ -64,8 +64,12 @@ export default function Hospitals() {
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
-  const isAdmin = localStorage.getItem("role") === "admin";
+  const role = localStorage.getItem("role");
+  const isAdmin = role === "admin";
+  const isDriver = role === "driver";
+  const isUser = !isAdmin && !isDriver && role !== "hospital";
   const assignBookingId = isAdmin ? location.state?.assignBookingId : null;
+  const reselectForBookingId = location.state?.reselectForBookingId || null;
 
   useEffect(() => {
     const loadHospitals = () => {
@@ -173,6 +177,28 @@ export default function Hospitals() {
       navigate("/Requests", {
         state: { flashMsg: "Hospital assign failed. Try again." },
       });
+    }
+  };
+
+  const reassignUserHospital = async (h) => {
+    if (!reselectForBookingId) return;
+    try {
+      const res = await fetch(`${BASE}/api/bookings/${reselectForBookingId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assign_hospital_id: h.id,
+          destination: h.name,
+          send_hospital_alert: true,
+          is_user_selected_hospital: true,
+        }),
+      });
+      if (!res.ok) throw new Error("Update failed");
+      navigate("/MyBookings", {
+        state: { flashMsg: `Booking #${reselectForBookingId} transferred to ${h.name}. Waiting for hospital approval.` },
+      });
+    } catch {
+      alert("Failed to transfer hospital. Please try again.");
     }
   };
 
@@ -867,6 +893,11 @@ export default function Hospitals() {
                 Assign a hospital to #{assignBookingId} to send an immediate notification to the facility
               </div>
             )}
+            {reselectForBookingId && (
+              <div className="h2-assign-banner" style={{ background: "#fff7ed", border: "1.5px solid #ea580c", color: "#9a3412" }}>
+                ⚠️ <strong>Re-select Hospital for Booking #{reselectForBookingId}</strong>: Your previous hospital was unavailable. Choose any available hospital below to immediately transfer your emergency request.
+              </div>
+            )}
           </div>
 
           <div className="h2-stats">
@@ -983,7 +1014,7 @@ export default function Hospitals() {
                       );
                     })()}
 
-                    <div className="h2-actions">
+                    <div className="h2-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                       {assignBookingId ? (
                         <button
                           className="h2-btn assign"
@@ -992,21 +1023,56 @@ export default function Hospitals() {
                         >
                           {canAssign ? `Assign To #${assignBookingId}` : "Not Available"}
                         </button>
-                      ) : (
+                      ) : reselectForBookingId ? (
                         <button
-                          className="h2-btn main"
-                          onClick={() => {
-                            if (isAdmin) {
-                              navigate("/HospitalPartnerDetails", { state: { hospitalId: h.id } });
-                              return;
-                            }
-                            handleDirections(h);
-                          }}
+                          className="h2-btn assign"
+                          style={{ background: "#16a34a", color: "#fff", borderColor: "#15803d", fontWeight: 800, flex: "1 1 auto" }}
+                          disabled={!canAssign}
+                          onClick={() => reassignUserHospital(h)}
                         >
-                          {isAdmin ? "More Details" : "See More"}
+                          {canAssign ? `🏥 Transfer to ${h.name}` : "Currently Full"}
                         </button>
+                      ) : (
+                        <>
+                          {isUser && (
+                            <button
+                              className="h2-btn"
+                              style={{
+                                background: canAssign ? "#f59a23" : "#f3f4f6",
+                                color: canAssign ? "#111111" : "#9ca3af",
+                                borderColor: canAssign ? "#d97706" : "#e5e7eb",
+                                fontWeight: 850,
+                                flex: "1 1 auto",
+                                cursor: canAssign ? "pointer" : "not-allowed",
+                              }}
+                              disabled={!canAssign}
+                              onClick={() => {
+                                navigate(
+                                  `/Ambulances?book=1&hospital_id=${h.id}&hospital_name=${encodeURIComponent(h.name)}`,
+                                  { state: { preselectedHospital: h } }
+                                );
+                              }}
+                              title={canAssign ? "Book an ambulance directly for this hospital" : "This hospital currently has no available beds"}
+                            >
+                              {canAssign ? "🚑 Book for this Hospital" : "Beds Unavailable"}
+                            </button>
+                          )}
+                          <button
+                            className="h2-btn main"
+                            style={isUser ? { flex: "0 0 auto", padding: "8px 12px" } : { flex: 1 }}
+                            onClick={() => {
+                              if (isAdmin) {
+                                navigate("/HospitalPartnerDetails", { state: { hospitalId: h.id } });
+                                return;
+                              }
+                              handleDirections(h);
+                            }}
+                          >
+                            {isAdmin ? "More Details" : "See More"}
+                          </button>
+                        </>
                       )}
-                      <button className="h2-btn" onClick={() => navigator.clipboard?.writeText(h.address || "")}>📋</button>
+                      <button className="h2-btn" onClick={() => navigator.clipboard?.writeText(h.address || "")} title="Copy hospital address">📋</button>
                     </div>
                   </div>
                 </motion.article>

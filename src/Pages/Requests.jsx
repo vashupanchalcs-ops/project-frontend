@@ -193,6 +193,16 @@ const Requests = () => {
       <div className="req-actions">
         {b.status === "pending" && (
           <>
+            {b.is_user_selected_hospital && (
+              <button
+                className="req-action req-confirm"
+                style={{ ...btnStyle, background: "#126f1e", color: "#fff", borderColor: "#126f1e" }}
+                onClick={() => updateBooking(b.id, { status: "confirmed", send_hospital_alert: true })}
+                title="Confirm booking and immediately send alert to user's selected hospital"
+              >
+                ✓ Confirm & Send to {b.assigned_hospital_name || "Hospital"}
+              </button>
+            )}
             <button className="req-action req-confirm" style={btnStyle} onClick={() => updateStatus(b.id, "confirmed")}>✓ Confirm</button>
             <button className="req-action req-cancel" style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
           </>
@@ -231,6 +241,10 @@ const Requests = () => {
               >
                 {Number(b.ambulance_id || 0) <= 0
                   ? "Assign Ambulance First"
+                  : b.hospital_response === "not_ready"
+                  ? "Hospital Rejected (Unavailable)"
+                  : !b.hospital_alert_sent
+                  ? `Send to ${b.assigned_hospital_name || "Hospital"} First`
                   : b.assigned_hospital_name
                   ? "Waiting Hospital Approval"
                   : "Assign Hospital First"}
@@ -242,9 +256,43 @@ const Requests = () => {
 
         {b.status === "confirmed" && (
           <>
-            <button className="req-action req-assign" style={btnStyle} onClick={() => openHospitalAssign(b.id)}>
-              {b.assigned_hospital_name ? "Reassign Hospital" : "Assign Hospital"}
-            </button>
+            {b.is_user_selected_hospital ? (
+              !b.hospital_alert_sent && b.hospital_response !== "ready" ? (
+                <button
+                  className="req-action req-assign"
+                  style={{ ...btnStyle, background: "#126f1e", color: "#ffffff", borderColor: "#126f1e", fontWeight: 800 }}
+                  onClick={() => updateBooking(b.id, { send_hospital_alert: true })}
+                >
+                  📤 Send to {b.assigned_hospital_name || "Hospital"}
+                </button>
+              ) : b.hospital_response === "not_ready" ? (
+                <div
+                  className="req-action req-waiting"
+                  style={{ ...btnStyle, background: "#fff1f0", borderColor: "#ffa39e", color: "#cf1322", cursor: "default" }}
+                  title="Hospital rejected. Patient has been notified to choose another hospital."
+                >
+                  ❌ {b.assigned_hospital_name} Rejected (Waiting User)
+                </div>
+              ) : b.hospital_response === "ready" ? (
+                <div
+                  className="req-action req-waiting"
+                  style={{ ...btnStyle, background: "#f6ffed", borderColor: "#b7eb8f", color: "#389e0d", cursor: "default" }}
+                >
+                  ✅ {b.assigned_hospital_name} Approved
+                </div>
+              ) : (
+                <div
+                  className="req-action req-waiting"
+                  style={{ ...btnStyle, background: "#fffbe6", borderColor: "#ffe58f", color: "#d48806", cursor: "default" }}
+                >
+                  ⏳ Sent to {b.assigned_hospital_name} (Waiting Response)
+                </div>
+              )
+            ) : (
+              <button className="req-action req-assign" style={btnStyle} onClick={() => openHospitalAssign(b.id)}>
+                {b.assigned_hospital_name ? "Reassign Hospital" : "Assign Hospital"}
+              </button>
+            )}
           </>
         )}
 
@@ -755,7 +803,14 @@ const Requests = () => {
                       </div>
                       <div className="req-cell">
                         <div className="req-label">Destination</div>
-                        <div className="req-val">{safeText(b.assigned_hospital_name || b.destination, "Admin will assign")}</div>
+                        <div className="req-val">
+                          {safeText(b.assigned_hospital_name || b.destination, "Admin will assign")}
+                          {b.is_user_selected_hospital && (
+                            <span style={{ display: "inline-block", marginLeft: 6, padding: "2px 6px", borderRadius: 6, background: "#e3f2fd", color: "#1565c0", fontSize: 9, fontWeight: 800 }}>
+                              👤 User Choice
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="req-cell">
                         <div className="req-label">Created</div>
@@ -784,9 +839,28 @@ const Requests = () => {
                           </div>
                         </div>
                       )}
+                      {b.is_user_selected_hospital && !b.hospital_alert_sent && b.hospital_response !== "ready" && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#126f1e", background: "#f0fdf4" }}>
+                          <div className="req-label" style={{ color: "#166534" }}>👤 User-Selected Hospital</div>
+                          <div className="req-val" style={{ color: "#166534", fontWeight: 700 }}>
+                            User booked specifically for <strong>{b.assigned_hospital_name || b.destination}</strong>. Admin does not need to choose a hospital — click "Send to {b.assigned_hospital_name || 'Hospital'}" above.
+                          </div>
+                        </div>
+                      )}
+                      {b.hospital_response === "not_ready" && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#ffa39e", background: "#fff1f0" }}>
+                          <div className="req-label" style={{ color: "#cf1322" }}>❌ Hospital Rejected (Unavailable)</div>
+                          <div className="req-val" style={{ color: "#cf1322", fontWeight: 700 }}>
+                            {b.assigned_hospital_name || "Hospital"} is currently unavailable ({b.hospital_response_note || "No beds/staff"}). User has been asked to choose another hospital.
+                          </div>
+                        </div>
+                      )}
                       <div className="req-cell" style={{ gridColumn: "1 / -1" }}>
                         <div className="req-label">Hospital Workflow</div>
                         <div className="req-val">
+                          {b.is_user_selected_hospital && (
+                            <strong style={{ color: "#1565c0", marginRight: 6 }}>[User Choice]</strong>
+                          )}
                           Assigned: {safeText(b.assigned_hospital_name, "Not assigned")} ·
                           Alert: {b.hospital_alert_sent ? " sent" : " pending"} ·
                           Response: {safeText(b.hospital_response, "pending")}
