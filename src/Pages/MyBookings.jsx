@@ -16,9 +16,12 @@ const Icons = {
   Play:      () => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>),
 };
 
-const getStatusConfig = (status, hospital_response) => {
+const getStatusConfig = (status, hospital_response, driver_accepted) => {
   if (hospital_response === "not_ready") {
     return { color: "#cf1322", bg: "#fff2f0", border: "#ff4d4f", dot: "#cf1322", pulse: true, label: "Hospital Unavailable" };
+  }
+  if (driver_accepted) {
+    return { color: "#166534", bg: "#dcfce7", border: "#86efac", dot: "#16a34a", pulse: true, label: "Ambulance is ready" };
   }
   switch (status?.toLowerCase()) {
     case "confirmed": return { color:"#00d4aa", bg:"rgba(0,212,170,0.12)", border:"rgba(0,212,170,0.3)",    dot:"#00d4aa", pulse:true,  label:"Confirmed" };
@@ -328,13 +331,17 @@ export function MyBookings() {
           {confirmedBooking && !loading && (
             <div className="mb-banner" onClick={()=>goToTracking(confirmedBooking)}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <span style={{ width:8, height:8, borderRadius:"50%", background:"#00d4aa", display:"inline-block", animation:"mb-pulse 1.6s infinite", boxShadow:"0 0 8px rgba(0,212,170,0.6)" }}/>
+                <span style={{ width:8, height:8, borderRadius:"50%", background: confirmedBooking.driver_accepted ? "#16a34a" : "#00d4aa", display:"inline-block", animation:"mb-pulse 1.6s infinite", boxShadow: confirmedBooking.driver_accepted ? "0 0 8px rgba(22,163,74,0.6)" : "0 0 8px rgba(0,212,170,0.6)" }}/>
                 <div>
-                  <div style={{ fontSize:13, fontWeight:800, color:"#00d4aa" }}>Booking Confirmed — #{confirmedBooking.id}</div>
-                  <div style={{ fontSize:11, color:"rgba(17,17,17,0.58)", marginTop:3 }}>Your driver is on the way. Select this card for live tracking.</div>
+                  <div style={{ fontSize:13, fontWeight:800, color: confirmedBooking.driver_accepted ? "#166534" : "#00d4aa" }}>
+                    {confirmedBooking.driver_accepted ? `🚑 Ambulance is ready — #${confirmedBooking.id}` : `Booking Confirmed — #${confirmedBooking.id}`}
+                  </div>
+                  <div style={{ fontSize:11, color:"rgba(17,17,17,0.58)", marginTop:3 }}>
+                    {confirmedBooking.driver_accepted ? "Ambulance is ready! Driver has accepted your booking and is en route. Select this card for live tracking." : "Your driver is on the way. Select this card for live tracking."}
+                  </div>
                 </div>
               </div>
-              <div style={{ fontSize:12, fontWeight:700, color:"#00d4aa", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}>🗺 Track Now →</div>
+              <div style={{ fontSize:12, fontWeight:700, color: confirmedBooking.driver_accepted ? "#166534" : "#00d4aa", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}>🗺 Track Now →</div>
             </div>
           )}
 
@@ -363,7 +370,7 @@ export function MyBookings() {
           {!loading && filtered.length>0 && (
             <div className="mb-grid">
               {filtered.map(b=>{
-                const sc          = getStatusConfig(b.status, b.hospital_response);
+                const sc          = getStatusConfig(b.status, b.hospital_response, b.driver_accepted);
                 const isConfirmed = b.status==="confirmed";
                 const isPending = b.status==="pending";
                 const isCompleted = b.status==="completed";
@@ -397,6 +404,31 @@ export function MyBookings() {
                           </div>
                         </div>
                       )}
+                      {b.driver_accepted && (
+                        <div
+                          style={{
+                            margin: "12px 0 16px",
+                            padding: "12px 16px",
+                            background: "#f0fdf4",
+                            border: "1.5px solid #86efac",
+                            borderRadius: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            boxShadow: "0 4px 12px rgba(22,163,74,0.06)",
+                          }}
+                        >
+                          <span style={{ fontSize: "22px", lineHeight: 1 }}>🚑</span>
+                          <div>
+                            <div style={{ color: "#166534", fontWeight: 900, fontSize: "14px" }}>
+                              Ambulance is ready
+                            </div>
+                            <div style={{ color: "#15803d", fontSize: "11px", marginTop: 2 }}>
+                              The assigned driver has accepted your emergency booking and is on the way.
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <div className="mb-detail-grid">
                         <DetailItem icon={<Icons.MapPin/>} iconColor="#ffffff"               label="Pickup Location" value={b.pickup_location}/>
                         <DetailItem
@@ -407,6 +439,12 @@ export function MyBookings() {
                         />
                         <DetailItem icon={<Icons.User/>}   iconColor="rgba(100,149,237,0.9)" label="Booked By"       value={b.booked_by}/>
                         <DetailItem icon={<Icons.Clock/>}  iconColor="rgba(17,17,17,0.5)" label="Date & Time"     value={b.created_at?new Date(b.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):null}/>
+                        <DetailItem
+                          icon={<Icons.Clock/>}
+                          iconColor={b.driver_accepted ? "#16a34a" : "#0284c7"}
+                          label="Driver Status"
+                          value={b.driver_accepted ? "Ambulance is ready (Accepted)" : b.sent_to_driver ? "Dispatched to Driver" : "Pending Driver Dispatch"}
+                        />
                         <DetailItem
                           icon={<Icons.Clock/>}
                           iconColor={b.hospital_response === "ready" ? "#00a58a" : b.hospital_response === "not_ready" ? "#cf1322" : "#f59a23"}

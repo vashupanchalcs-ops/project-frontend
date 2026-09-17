@@ -271,6 +271,27 @@ export default function HospitalPortal() {
     }
   };
 
+  const markPatientReached = async (bookingId) => {
+    try {
+      setQueue((prev) =>
+        prev.map((item) =>
+          Number(item.booking_id) === Number(bookingId)
+            ? { ...item, patient_reached: true, patient_reached_at: new Date().toISOString() }
+            : item
+        )
+      );
+      const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_reached: true }),
+      });
+      if (!res.ok) throw new Error("Patient reached update failed");
+      await fetchHospitalDashboard({ silent: true });
+    } catch {
+      setErr("Unable to update patient reached status");
+    }
+  };
+
   const [osrmCache, setOsrmCache] = useState({});
 
   const formatDuration = (mins) => {
@@ -2764,6 +2785,41 @@ export default function HospitalPortal() {
                               <button className="hp-btn no" onClick={() => updateHospitalResponse(q.booking_id, "not_ready")}>Reject</button>
                             </>
                           )}
+                          {q.patient_reached ? (
+                            <span
+                              className="hp-pill"
+                              style={{
+                                background: "#dcfce7",
+                                color: "#166534",
+                                border: "1.5px solid #86efac",
+                                fontWeight: 800,
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                fontSize: "12px",
+                              }}
+                            >
+                              🏥 Patient Reached Hospital
+                            </span>
+                          ) : (
+                            <button
+                              className="hp-btn ok"
+                              style={{
+                                background: "#0284c7",
+                                color: "#ffffff",
+                                borderColor: "#0369a1",
+                                fontWeight: 800,
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => markPatientReached(q.booking_id)}
+                            >
+                              🏥 Patient Reached
+                            </button>
+                          )}
                         </div>
                         {hasResponded && (
                           <div className="hp-response-note" style={{ marginTop: 6 }}>
@@ -2816,6 +2872,43 @@ export default function HospitalPortal() {
                                 <button className="hp-btn ok" onClick={() => updateHospitalResponse(q.booking_id, "ready")}>Approve</button>
                                 <button className="hp-btn no" onClick={() => updateHospitalResponse(q.booking_id, "not_ready")}>Reject</button>
                               </>
+                            )}
+                            {response === "ready" && (
+                              q.patient_reached ? (
+                                <span
+                                  className="hp-pill"
+                                  style={{
+                                    background: "#dcfce7",
+                                    color: "#166534",
+                                    border: "1.5px solid #86efac",
+                                    fontWeight: 800,
+                                    padding: "6px 14px",
+                                    borderRadius: "8px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    fontSize: "12px",
+                                  }}
+                                >
+                                  🏥 Patient Reached Hospital
+                                </span>
+                              ) : (
+                                <button
+                                  className="hp-btn ok"
+                                  style={{
+                                    background: "#0284c7",
+                                    color: "#ffffff",
+                                    borderColor: "#0369a1",
+                                    fontWeight: 800,
+                                    padding: "6px 14px",
+                                    borderRadius: "8px",
+                                    cursor: "pointer",
+                                  }}
+                                  onClick={() => markPatientReached(q.booking_id)}
+                                >
+                                  🏥 Patient Reached
+                                </button>
+                              )
                             )}
                           </div>
                         </article>
@@ -3379,6 +3472,25 @@ export default function HospitalPortal() {
 
                           <div className="hp-row"><span className="hp-label">Condition</span><span>{c.pre_diagnosis_note || c.digital_handover?.patient_condition || "-"}</span></div>
                           <div className="hp-row"><span className="hp-label">Pickup</span><span>{c.pickup_location || "-"}</span></div>
+                          <div className="hp-row" style={{ marginTop: 6 }}>
+                            <span className="hp-label">Arrival</span>
+                            <span>
+                              {c.patient_reached ? (
+                                <span style={{ color: "#166534", fontWeight: 700, fontSize: "12px" }}>✅ Patient Reached Hospital</span>
+                              ) : (
+                                <button
+                                  className="hp-btn ok"
+                                  style={{ background: "#0284c7", color: "#fff", borderColor: "#0369a1", padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "6px", cursor: "pointer" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markPatientReached(c.booking_id);
+                                  }}
+                                >
+                                  🏥 Patient Reached
+                                </button>
+                              )}
+                            </span>
+                          </div>
 
                         </article>
                       );
@@ -3419,6 +3531,22 @@ export default function HospitalPortal() {
                         <div className="hp-case-modal-box wide"><div className="k">Vitals / Handover</div><div className="v">{openCase.digital_handover?.vitals_summary || `HR ${openCase.live_vitals?.heart_rate || "-"} - SpO2 ${openCase.live_vitals?.spo2 || "-"} - BP ${openCase.live_vitals?.bp || "-"}`}</div></div>
                         <div className="hp-case-modal-box wide"><div className="k">Insurance</div><div className="v">{openCase.insurance?.provider || "Provider not submitted"} - Status: {openCase.insurance?.status || "pending"}</div></div>
                         <div className="hp-case-modal-box wide"><div className="k">Bill Basis</div><div className="v">{openCase.billBreakdown?.rule || "-"}</div></div>
+                        <div className="hp-case-modal-box wide">
+                          <div className="k">Patient Arrival Gate</div>
+                          <div className="v">
+                            {openCase.patient_reached ? (
+                              <span style={{ color: "#166534", fontWeight: 800 }}>✅ Patient Reached Hospital (Driver can complete task)</span>
+                            ) : (
+                              <button
+                                className="hp-btn ok"
+                                style={{ background: "#0284c7", color: "#ffffff", borderColor: "#0369a1", fontWeight: 800, padding: "8px 16px", borderRadius: "8px", cursor: "pointer" }}
+                                onClick={() => markPatientReached(openCase.booking_id)}
+                              >
+                                🏥 Click to Confirm Patient Reached
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

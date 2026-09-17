@@ -316,14 +316,14 @@ export default function DriverDashboard() {
             const byDriverPhone = dPhone && bPhone && bPhone === dPhone;
             return byAmb || byAmbNo || byDriver || byDriverEmail || byDriverPhone;
           })
-          .filter(
-            (b) =>
-              b.sent_to_driver ||
+          .filter((b) => {
+            if (b.driver_rejected_once && !b.sent_to_driver) return false;
+            return (
+              (b.sent_to_driver && !b.driver_rejected_once) ||
               b.driver_task_completed ||
-              b.status === "completed" ||
-              b.status === "confirmed" ||
-              b.status === "pending"
-          )
+              b.status === "completed"
+            );
+          })
           .sort((a, b) => b.id - a.id);
         setMyBookings(mine);
         const confirmed = mine.filter(b => b.status === "confirmed" && b.sent_to_driver);
@@ -352,6 +352,25 @@ export default function DriverDashboard() {
       }).catch(() => {});
   }, [ambId, effectiveAmbId, driverName, driverEmail, driverPhone, ambulance, ambNumber, allAmbs, leafletReady, loadNotifications]);
 
+  const acceptBooking = async (bookingId) => {
+    setMyBookings((prev) =>
+      prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
+    );
+    addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
+    try {
+      const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driver_accepted: true, driver_status: "accepted" }),
+      });
+      if (!res.ok) throw new Error("Accept failed");
+      fetchBookings();
+    } catch {
+      addLog("Accept booking failed", "error");
+      fetchBookings();
+    }
+  };
+
   const completeBookingTask = async (bookingId) => {
     try {
       await fetch(`${BASE}/api/bookings/${bookingId}/`, {
@@ -367,14 +386,16 @@ export default function DriverDashboard() {
   };
 
   const cancelDriverRequest = async (bookingId) => {
+    // 1-Click instant removal so the card disappears immediately from driver view
+    setMyBookings((prev) => prev.filter((b) => Number(b.id) !== Number(bookingId)));
+    addLog(`❌ Booking #${bookingId} request cancelled by driver`, "warn");
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cancel_driver_request: true }),
+        body: JSON.stringify({ cancel_driver_request: true, driver_status: "rejected" }),
       });
       if (!res.ok) throw new Error("Cancel failed");
-      addLog(`❌ Booking #${bookingId} request cancelled by driver`, "warn");
       fetchBookings();
       if (route?.booking_id === bookingId && route?.id) {
         try {
@@ -388,6 +409,7 @@ export default function DriverDashboard() {
       }
     } catch {
       addLog("Cancel request failed", "error");
+      fetchBookings();
     }
   };
 
@@ -2138,7 +2160,50 @@ export default function DriverDashboard() {
                       <div className="dd-booking-item cell"><div className="dd-booking-lbl">Hospital</div><div className="dd-booking-val">{b.assigned_hospital_name || b.destination || "Admin assigning..."}</div></div>
                       <div className="dd-booking-item cell" style={{ gridColumn: "1 / -1" }}><div className="dd-booking-lbl">Pickup</div><div className="dd-booking-val">📍 {b.pickup_location}</div></div>
                     </div>
-                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && !b.report_submitted_at && (
+                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && !b.driver_accepted && (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          padding: "14px 16px",
+                          background: "#fffbe6",
+                          border: "1.5px solid #ffe58f",
+                          borderRadius: "14px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: "#d48806", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span>🚨</span>
+                            <span>New Dispatch Assigned to You!</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "rgba(17,17,17,0.68)", marginTop: 3 }}>
+                            Please accept this emergency booking or decline to let another ambulance take it.
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <button
+                            className="dd-btn dd-btn-green"
+                            style={{ background: "#16a34a", color: "#ffffff", fontWeight: 850, padding: "10px 20px", borderRadius: 10, cursor: "pointer" }}
+                            onClick={() => acceptBooking(b.id)}
+                          >
+                            ✓ Accept Booking
+                          </button>
+                          <button
+                            className="dd-btn dd-btn-red"
+                            style={{ background: "#ef4444", color: "#ffffff", fontWeight: 850, padding: "10px 16px", borderRadius: 10, cursor: "pointer" }}
+                            onClick={() => cancelDriverRequest(b.id)}
+                          >
+                            ✖ Cancel Request
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && b.driver_accepted && !b.report_submitted_at && (
                       <div className="dd-booking-item cell" style={{ marginTop: 4 }}>
                         <div className="dd-booking-lbl" style={{ fontWeight: 800, color: "#111" }}>Patient Condition Form</div>
                         <div className="dd-report-grid">
@@ -2192,40 +2257,80 @@ export default function DriverDashboard() {
                         Report sent to admin and hospital: {new Date(b.report_submitted_at).toLocaleString("en-IN")}
                       </div>
                     )}
-                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && (
-                      <div className="dd-booking-actions-grid">
-                        <button
-                          className="dd-btn dd-btn-green"
-                          onClick={() => navigate(`/driver/insurance-form?booking=${b.id}`)}
-                        >
-                          🛡 Medical Insurance Form
-                        </button>
-                        {b.report_submitted_at ? (
-                          <button
-                            className="dd-btn"
-                            style={{ background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7", cursor: "default" }}
-                            disabled
-                          >
-                            Report Sent
-                          </button>
-                        ) : (
+                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && b.driver_accepted && (
+                      <>
+                        <div style={{
+                          marginTop: 6,
+                          marginBottom: 4,
+                          padding: "6px 12px",
+                          background: "#dcfce7",
+                          border: "1px solid #86efac",
+                          borderRadius: "8px",
+                          color: "#166534",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}>
+                          ✅ Booking Accepted by Driver
+                        </div>
+                        <div className="dd-booking-actions-grid">
                           <button
                             className="dd-btn dd-btn-green"
-                            onClick={() => submitPatientReport(b.id)}
+                            onClick={() => navigate(`/driver/insurance-form?booking=${b.id}`)}
                           >
-                            Send Report To Admin & Hospital
+                            🛡 Medical Insurance Form
                           </button>
-                        )}
-                        <button className="dd-btn dd-btn-green" onClick={() => openLiveTrackForBooking(b)}>
-                          🗺 Live Track
-                        </button>
-                        <button className="dd-btn dd-btn-red" onClick={() => completeBookingTask(b.id)}>
-                          ✅ Task Complete
-                        </button>
-                        <button className="dd-btn dd-btn-grey" onClick={() => cancelDriverRequest(b.id)}>
-                          ✖ Cancel Request
-                        </button>
-                      </div>
+                          {b.report_submitted_at ? (
+                            <button
+                              className="dd-btn"
+                              style={{ background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7", cursor: "default" }}
+                              disabled
+                            >
+                              Report Sent
+                            </button>
+                          ) : (
+                            <button
+                              className="dd-btn dd-btn-green"
+                              onClick={() => submitPatientReport(b.id)}
+                            >
+                              Send Report To Admin & Hospital
+                            </button>
+                          )}
+                          <button className="dd-btn dd-btn-green" onClick={() => openLiveTrackForBooking(b)}>
+                            🗺 Live Track
+                          </button>
+                          {b.patient_reached ? (
+                            <button className="dd-btn dd-btn-red" onClick={() => completeBookingTask(b.id)}>
+                              ✅ Task Complete
+                            </button>
+                          ) : (
+                            <div
+                              style={{
+                                padding: "8px 12px",
+                                background: "#fffbd6",
+                                border: "1.5px solid #f59a23",
+                                borderRadius: 10,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: "#8a5800",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                textAlign: "center",
+                                minWidth: 140,
+                              }}
+                              title="Hospital will click Patient Reached once ambulance arrives at the hospital"
+                            >
+                              ⏳ Waiting for Hospital (Patient Reached)
+                            </div>
+                          )}
+                          <button className="dd-btn dd-btn-grey" onClick={() => cancelDriverRequest(b.id)}>
+                            ✖ Cancel Request
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                 );

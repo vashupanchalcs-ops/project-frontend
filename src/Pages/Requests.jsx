@@ -318,8 +318,22 @@ const Requests = () => {
         )}
 
         {b.status === "confirmed" && b.sent_to_driver && (
-          <button className="req-action req-waiting" style={{ ...btnStyle, background: "#fffbd6" }} disabled>
-            {b.driver_task_completed ? "Task Completed by Driver" : "Dispatched to Driver"}
+          <button
+            className="req-action req-waiting"
+            style={{
+              ...btnStyle,
+              background: b.driver_accepted ? "#dcfce7" : "#fffbd6",
+              color: b.driver_accepted ? "#166534" : "#854d0e",
+              borderColor: b.driver_accepted ? "#86efac" : "#fef08a",
+              fontWeight: 700,
+            }}
+            disabled
+          >
+            {b.driver_task_completed
+              ? "Task Completed by Driver"
+              : b.driver_accepted
+                ? "✅ Booking accepted by driver"
+                : "Dispatched to Driver (Awaiting Acceptance)"}
           </button>
         )}
         {b.status === "confirmed" && b.sent_to_driver && !b.driver_rejected_once && (
@@ -820,7 +834,8 @@ const Requests = () => {
                         <div className="req-label">Status</div>
                         <div className="req-val">
                           {safeText(b.status, "pending")}
-                          {b.sent_to_driver ? " · sent to driver" : ""}
+                          {b.driver_accepted ? " · booking accepted by driver" : b.sent_to_driver ? " · sent to driver" : ""}
+                          {b.patient_reached ? " · patient reached" : ""}
                           {b.driver_task_completed ? " · task completed" : ""}
                           {b.driver_rejected_once && !b.sent_to_driver ? " · driver can not take booking" : ""}
                         </div>
@@ -867,6 +882,34 @@ const Requests = () => {
                           {b.hospital_response_note ? ` (${b.hospital_response_note})` : ""}
                         </div>
                       </div>
+                      <div className="req-cell" style={{ gridColumn: "1 / -1" }}>
+                        <div className="req-label">Driver Response</div>
+                        <div className="req-val">
+                          {b.driver_accepted ? (
+                            <strong style={{ color: "#166534" }}>✅ Booking accepted by driver</strong>
+                          ) : b.driver_rejected_once && !b.sent_to_driver ? (
+                            <strong style={{ color: "#cf1322" }}>❌ Driver rejected / cancelled dispatch</strong>
+                          ) : b.sent_to_driver ? (
+                            <span style={{ color: "#b45309" }}>⏳ Dispatched (Awaiting Driver Acceptance)</span>
+                          ) : (
+                            <span style={{ color: "#888" }}>Pending dispatch to driver</span>
+                          )}
+                          {b.patient_reached && (
+                            <span style={{ marginLeft: 8, color: "#166534", fontWeight: 700 }}>
+                              · 🏥 Patient Reached Hospital
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {b.driver_accepted && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#86efac", background: "#f0fdf4" }}>
+                          <div className="req-label" style={{ color: "#166534" }}>✅ Driver Status</div>
+                          <div className="req-val" style={{ color: "#166534", fontWeight: 700 }}>
+                            Booking accepted by driver {b.driver_name ? `(${b.driver_name})` : ""}. Ambulance is en route.
+                            {b.patient_reached ? " · 🏥 Patient reached hospital." : ""}
+                          </div>
+                        </div>
+                      )}
                       {b.report_submitted_at && (
                         <div className="req-cell" style={{ gridColumn: "1 / -1" }}>
                           <div className="req-label">Patient Report</div>
