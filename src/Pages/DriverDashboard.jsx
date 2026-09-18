@@ -130,11 +130,11 @@ export default function DriverDashboard() {
       : "";
 
     const pickupText = String(route?.pickup_location || "").trim();
-    const destText = String(route?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
+    const destText = String(route?.destination || "Hospital").trim();
 
     const startPt = startCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
     const viaPt = pickupCoordStr || pickupText;
-    const endPt = destCoordStr || destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+    const endPt = destCoordStr || destText || "Hospital";
 
     let daddrStr = encodeURIComponent(endPt);
     if (viaPt && viaPt !== startPt && viaPt !== endPt) {
@@ -151,11 +151,11 @@ export default function DriverDashboard() {
     const startCoord = inIndia(dLat, dLng) ? `${dLat},${dLng}` : "";
     
     const pickupText = String(route?.pickup_location || "").trim();
-    const destText = String(route?.destination || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India").trim();
+    const destText = String(route?.destination || "Hospital").trim();
 
     const startPt = startCoord || pickupText || "28.73724,77.30666";
     const viaPt = pickupText;
-    const endPt = destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+    const endPt = destText || "Hospital";
 
     let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startPt)}&destination=${encodeURIComponent(endPt)}`;
     if (viaPt && viaPt !== startPt && viaPt !== endPt) {

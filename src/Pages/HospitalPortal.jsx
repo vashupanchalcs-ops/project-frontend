@@ -546,7 +546,7 @@ export default function HospitalPortal() {
 
     const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
     const viaPt = pickupCoordStr || pickupText;
-    const endPt = destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+    const endPt = destText || "Hospital";
 
     let daddrStr = encodeURIComponent(endPt);
     if (viaPt && viaPt !== startPt && viaPt !== endPt) {

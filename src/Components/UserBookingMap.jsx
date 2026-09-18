@@ -157,11 +157,11 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
     const pickupCoordStr = routePickupCoord || (isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "");
     const pickupText = activeRoute?.pickup_location || String(booking?.pickup_location || "").trim();
-    const destText = routeDestCoord || hospCoordStr || activeRoute?.destination || String(booking?.assigned_hospital_name || booking?.destination || "Hospital, India").trim();
+    const destText = routeDestCoord || hospCoordStr || activeRoute?.destination || String(booking?.assigned_hospital_address || booking?.assigned_hospital_name || booking?.destination || "Hospital").trim();
 
     const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
     const viaPt = pickupCoordStr || pickupText;
-    const endPt = destText || "Hospital, India";
+    const endPt = destText || "Hospital";
 
     let daddrStr = encodeURIComponent(endPt);
     if (viaPt && viaPt !== startPt && viaPt !== endPt) {

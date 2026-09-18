@@ -137,11 +137,11 @@ export default function AdminRouteManager({
     const destLat = Number(destCoord?.lat);
     const destLng = Number(destCoord?.lng);
     const destCoordStr = isIndiaCoord(destLat, destLng) ? `${destLat},${destLng}` : "";
-    const destText = String(selBook?.assigned_hospital_address || selBook?.assigned_hospital_name || selBook?.destination || "").trim();
+    const destText = String(selBook?.assigned_hospital_name || selBook?.assigned_hospital_address || selBook?.destination || "").trim();
 
     const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
     const viaPt = pickupCoordStr || pickupText;
-    const endPt = destCoordStr || destText || "Saharda Hospital, Ghaziabad, Uttar Pradesh, India";
+    const endPt = destCoordStr || destText || "Hospital";
 
     let daddrStr = encodeURIComponent(endPt);
     if (viaPt && viaPt !== startPt && viaPt !== endPt) {
@@ -191,7 +191,7 @@ export default function AdminRouteManager({
     }
 
     const pickup = pickupFromBooking || pickupFromText || { lat: 28.7371, lng: 77.3041 };
-    const destination = hospitalFromDb || hospitalFromText || { lat: 28.4744, lng: 77.5030 };
+    const destination = hospitalFromDb || hospitalFromText || null;
     return { pickup, destination };
   };
 
@@ -211,12 +211,14 @@ export default function AdminRouteManager({
       setPickupCoord(pickup);
       setDestCoord(destination);
 
+      const targetDest = destination || { lat: 28.5355, lng: 77.3910 };
       const legA = haversineKm(ambCoord, pickup) * 1.25;
-      const legB = haversineKm(pickup, destination) * 1.25;
+      const legB = haversineKm(pickup, targetDest) * 1.25;
       const totalKm = (legA + legB).toFixed(1);
       const mins = Math.max(1, Math.round((totalKm / 28) * 60));
 
-      const stats = { distKm: totalKm, mins };
+      const isTransfer = Boolean(selBook.transfer_requested || selBook.transferred_to_ambulance_number);
+      const stats = { distKm: totalKm, mins, isTransfer };
       setRouteStats(stats);
       setRouteMode("full");
       showToast(`Route calculated: ${stats.distKm} km · ~${stats.mins} min`);
@@ -387,15 +389,24 @@ export default function AdminRouteManager({
               </button>
 
               {routeStats && (
-                <div className="arm-route-card">
-                  <div style={{ fontWeight: 800, marginBottom: 5, color: "#b78103", fontSize: 13 }}>★ Best Route Calculated</div>
+                <div
+                  className="arm-route-card"
+                  style={{
+                    background: routeStats.isTransfer ? "#fef2f2" : "#eff6ff",
+                    borderColor: routeStats.isTransfer ? "#dc2626" : "#2563eb",
+                    boxShadow: routeStats.isTransfer ? "0 6px 20px rgba(220,38,38,0.22)" : "0 6px 20px rgba(37,99,235,0.22)"
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: 5, color: routeStats.isTransfer ? "#b91c1c" : "#1d4ed8", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>{routeStats.isTransfer ? "🚨 Emergency Transfer Route (RED)" : "⚡ Active Dispatch Route (BLUE)"}</span>
+                  </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>
                     {routeStats.distKm} km · ~{routeStats.mins} min
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)", marginTop: 2 }}>
                     Ambulance ➔ User Pickup ➔ Hospital
                   </div>
-                  <button className="arm-push-btn" onClick={pushRoute} disabled={pushing}>
+                  <button className="arm-push-btn" onClick={pushRoute} disabled={pushing} style={{ background: routeStats.isTransfer ? "#dc2626" : "#2563eb" }}>
                     {pushing ? "Sending…" : "Send To Driver"}
                   </button>
                 </div>
