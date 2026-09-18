@@ -208,6 +208,64 @@ const Requests = () => {
           </>
         )}
 
+        {b.transfer_requested && b.transfer_status === "pending" && (
+          <>
+            <button
+              className="req-action req-confirm"
+              style={{
+                ...btnStyle,
+                background: "#126f1e",
+                color: "#ffffff",
+                borderColor: "#126f1e",
+                fontWeight: 900,
+              }}
+              onClick={() =>
+                updateBooking(b.id, {
+                  approve_ambulance_transfer: true,
+                  target_ambulance_id: b.transfer_target_ambulance_id,
+                })
+              }
+              title={`Approve transfer and immediately switch booking to ${b.transfer_target_ambulance_number}`}
+            >
+              ✓ Switch booking to this ambulance ({b.transfer_target_ambulance_number})
+            </button>
+            <button
+              className="req-action req-cancel"
+              style={{
+                ...btnStyle,
+                background: "#ffffff",
+                color: "#c92828",
+                borderColor: "#c92828",
+                fontWeight: 800,
+              }}
+              onClick={() =>
+                updateBooking(b.id, {
+                  reject_ambulance_transfer: true,
+                })
+              }
+              title="Reject the driver's chosen ambulance to manually assign an alternate ambulance"
+            >
+              ✕ Reject Transfer (Assign Alternate)
+            </button>
+          </>
+        )}
+
+        {b.transfer_status === "rejected" && !b.transferred_to_ambulance_number && (
+          <button
+            className="req-action req-assign"
+            style={{
+              ...btnStyle,
+              background: "#f59a23",
+              color: "#111111",
+              borderColor: "#111111",
+              fontWeight: 900,
+            }}
+            onClick={() => openAmbulanceReassign(b.id)}
+          >
+            🚑 Assign Another Ambulance (Proximity / ETA)
+          </button>
+        )}
+
         {b.status === "confirmed" && !b.sent_to_driver && (
           <>
             <button className="req-action req-assign" style={btnStyle} onClick={() => openAmbulanceAssign(b.id)}>
@@ -846,6 +904,46 @@ const Requests = () => {
                           {formatMoney(calculateBookingBill({ booking: b }).total)}
                         </div>
                       </div>
+                      {b.transfer_requested && b.transfer_status === "pending" && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#f59a23", background: "#fffbe6" }}>
+                          <div className="req-label" style={{ color: "#d48806", fontWeight: 900 }}>
+                            🚨 EMERGENCY AMBULANCE CHANGE REQUESTED BY DRIVER
+                          </div>
+                          <div className="req-val" style={{ color: "#111", fontWeight: 700, fontSize: 12, marginTop: 4 }}>
+                            Driver reported that ambulance <strong>{b.transfer_from_ambulance_number || b.ambulance_number}</strong> ({b.driver}) cannot continue transport.
+                            <br />
+                            Driver selected nearest ambulance: <strong style={{ color: "#b45309" }}>{b.transfer_target_ambulance_number}</strong>
+                            <br />
+                            <span style={{ fontSize: 11, color: "#666" }}>
+                              Click <strong>"Switch booking to this ambulance"</strong> to approve, or <strong>"✕ Reject Transfer"</strong> to manually assign another ambulance.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {b.transfer_status === "rejected" && !b.transferred_to_ambulance_number && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#ffa39e", background: "#fff1f0" }}>
+                          <div className="req-label" style={{ color: "#cf1322", fontWeight: 900 }}>
+                            ❌ TRANSFER REJECTED BY ADMIN
+                          </div>
+                          <div className="req-val" style={{ color: "#cf1322", fontWeight: 700, fontSize: 12 }}>
+                            Transfer to {b.transfer_target_ambulance_number} was rejected. Click "Assign Another Ambulance" above to assign based on proximity/ETA.
+                          </div>
+                        </div>
+                      )}
+
+                      {b.transferred_to_ambulance_number && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#86efac", background: "#f0fdf4" }}>
+                          <div className="req-label" style={{ color: "#166534", fontWeight: 900 }}>
+                            🔄 AMBULANCE TRANSFERRED
+                          </div>
+                          <div className="req-val" style={{ color: "#166534", fontWeight: 700, fontSize: 12 }}>
+                            Booking transferred from <strong>{b.transfer_from_ambulance_number || "original ambulance"}</strong> to <strong>{b.transferred_to_ambulance_number || b.ambulance_number}</strong> (Driver: {b.driver}).
+                            {b.driver_accepted ? " · ✅ Booking accepted by new driver." : " · ⏳ Dispatched to new driver."}
+                          </div>
+                        </div>
+                      )}
+
                       {b.driver_rejected_once && !b.sent_to_driver && (
                         <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#111", background: "#f0f6b6" }}>
                           <div className="req-label">Dispatch Alert</div>

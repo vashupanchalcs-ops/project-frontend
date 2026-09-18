@@ -98,6 +98,7 @@ export default function DriverDashboard() {
   const [allAmbs,       setAllAmbs]      = useState([]);
   const [allHospitals,  setAllHospitals] = useState([]);
   const [changeReqAmb,  setChangeReqAmb] = useState(null);
+  const [selectedTransferBooking, setSelectedTransferBooking] = useState(null);
   const [effectiveAmbId, setEffectiveAmbId] = useState(ambId || 0);
   const [pendingReq,    setPendingReq]   = useState(() => {
     try { return JSON.parse(localStorage.getItem("dr_change_req") || "null"); } catch { return null; }
@@ -314,9 +315,26 @@ export default function DriverDashboard() {
             const byDriverEmail = dEmail && bookingDriverEmail === dEmail;
             const bPhone = String(b.driver_contact || "").replace(/\D+/g, "");
             const byDriverPhone = dPhone && bPhone && bPhone === dPhone;
-            return byAmb || byAmbNo || byDriver || byDriverEmail || byDriverPhone;
+
+            const transferredFromMe =
+              Boolean(b.transferred_to_ambulance_number) &&
+              (
+                (dEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
+                (ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+                (eId > 0 && Number(b.transfer_from_ambulance_id) === eId)
+              );
+
+            return byAmb || byAmbNo || byDriver || byDriverEmail || byDriverPhone || transferredFromMe;
           })
           .filter((b) => {
+            const transferredFromMe =
+              Boolean(b.transferred_to_ambulance_number) &&
+              (
+                (dEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
+                (ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+                (eId > 0 && Number(b.transfer_from_ambulance_id) === eId)
+              );
+            if (transferredFromMe) return true;
             if (b.driver_rejected_once && !b.sent_to_driver) return false;
             return (
               (b.sent_to_driver && !b.driver_rejected_once) ||
@@ -326,6 +344,36 @@ export default function DriverDashboard() {
           })
           .sort((a, b) => b.id - a.id);
         setMyBookings(mine);
+
+        // Sync pending change request banner with backend booking transfer status
+        const pendingTransfer = rows.find(
+          (b) =>
+            b.transfer_requested &&
+            b.transfer_status === "pending" &&
+            (
+              (dEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
+              (ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+              (eId > 0 && Number(b.transfer_from_ambulance_id) === eId)
+            )
+        );
+        if (pendingTransfer) {
+          const reqObj = {
+            newAmbNumber: pendingTransfer.transfer_target_ambulance_number,
+            bookingId: pendingTransfer.id,
+            status: "pending",
+          };
+          setPendingReq(reqObj);
+          localStorage.setItem("dr_change_req", JSON.stringify(reqObj));
+        } else {
+          const storedReq = JSON.parse(localStorage.getItem("dr_change_req") || "null");
+          if (storedReq?.bookingId) {
+            const match = rows.find((b) => Number(b.id) === Number(storedReq.bookingId));
+            if (match && match.transfer_status !== "pending") {
+              setPendingReq(null);
+              localStorage.removeItem("dr_change_req");
+            }
+          }
+        }
         const confirmed = mine.filter(b => b.status === "confirmed" && b.sent_to_driver);
         if (confirmed.length) {
           const latest = confirmed[0];
@@ -1235,32 +1283,101 @@ export default function DriverDashboard() {
     } catch { addLog("Route update fail", "error"); }
   };
 
+  const activeTransferBooking = useMemo(() => {
+    if (selectedTransferBooking) return selectedTransferBooking;
+    return (
+      myBookings.find(
+        (b) =>
+          b.status === "confirmed" &&
+          b.sent_to_driver &&
+          !b.driver_task_completed &&
+          !b.transferred_to_ambulance_number
+      ) || null
+    );
+  }, [selectedTransferBooking, myBookings]);
+
+  const availableNearbyAmbs = useMemo(() => {
+    const curId = Number(effectiveAmbId || ambId || 0);
+    const curAmbNo = String(ambulance?.ambulance_number || ambNumber || "").trim().toLowerCase();
+    const myLoc =
+      location ||
+      (inIndia(Number(ambulance?.latitude), Number(ambulance?.longitude))
+        ? { lat: Number(ambulance.latitude), lng: Number(ambulance.longitude) }
+        : null);
+
+    return allAmbs
+      .filter((a) => {
+        if (curId > 0 && Number(a.id) === curId) return false;
+        if (curAmbNo && String(a.ambulance_number || "").trim().toLowerCase() === curAmbNo) return false;
+        return a.status === "available";
+      })
+      .map((a) => {
+        const alat = Number(a.latitude);
+        const alng = Number(a.longitude);
+        if (myLoc && inIndia(alat, alng)) {
+          const straightKm = haversineKm(myLoc, { lat: alat, lng: alng });
+          const roadKm = Number((straightKm * 1.3).toFixed(1));
+          return { amb: a, km: roadKm, mins: approxMins(roadKm) };
+        }
+        return { amb: a, km: null, mins: null };
+      })
+      .sort((a, b) => {
+        if (a.km == null && b.km == null) return 0;
+        if (a.km == null) return 1;
+        if (b.km == null) return -1;
+        return a.km - b.km;
+      });
+  }, [allAmbs, effectiveAmbId, ambId, ambulance, ambNumber, location]);
+
   const sendChangeRequest = async () => {
     if (!changeReqAmb) return;
+    const targetBooking = activeTransferBooking;
+    const bookingId = targetBooking?.id || null;
     const req = {
-      driverEmail, driverName, driverPhone,
-      currentAmbId: ambId, currentAmbNumber: ambNumber,
-      newAmbId: changeReqAmb.id, newAmbNumber: changeReqAmb.ambulance_number,
-      status: "pending", timestamp: new Date().toISOString(),
+      driverEmail,
+      driverName,
+      driverPhone,
+      currentAmbId: ambId,
+      currentAmbNumber: ambNumber,
+      newAmbId: changeReqAmb.id,
+      newAmbNumber: changeReqAmb.ambulance_number,
+      bookingId,
+      status: "pending",
+      timestamp: new Date().toISOString(),
     };
     try {
-      const res  = await fetch(`${BASE}/api/ambulances/change-request/`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req),
-      });
-      const data = await res.json();
-      if (data.status === "already_pending") {
-        addLog("⚠️A request is currently in progress", "warn");
-        localStorage.setItem("dr_change_req", JSON.stringify(req));
-        setPendingReq(req);
-        return;
+      if (bookingId) {
+        const patchRes = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            request_ambulance_transfer: true,
+            target_ambulance_id: changeReqAmb.id,
+            target_ambulance_number: changeReqAmb.ambulance_number,
+            driver_email: driverEmail,
+            driver_name: driverName,
+          }),
+        });
+        if (!patchRes.ok) {
+          const errData = await patchRes.json().catch(() => ({}));
+          throw new Error(errData?.error || "Transfer request failed");
+        }
       }
+
+      fetch(`${BASE}/api/ambulances/change-request/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      }).catch(() => {});
+
       localStorage.setItem("dr_change_req", JSON.stringify(req));
       setPendingReq(req);
       setChangeReqAmb(null);
-      addLog(`📤 Change request submitted successfully — ${changeReqAmb.ambulance_number}`, "success");
-    } catch {
-      addLog("❌Unable to send request. Please try again.", "error");
+      addLog(`📤 Transfer request submitted for ${changeReqAmb.ambulance_number}`, "success");
+      sendPush("🔄 Ambulance Transfer Requested", `Request sent for ${changeReqAmb.ambulance_number}. Waiting for admin approval.`);
+      fetchBookings();
+    } catch (err) {
+      addLog(`❌ Transfer request failed: ${err.message || "Network error"}`, "error");
     }
   };
 
@@ -2099,241 +2216,324 @@ export default function DriverDashboard() {
                   completed: { c:"rgba(255,255,255,0.4)", bg:"rgba(255,255,255,0.05)", bd:"rgba(255,255,255,0.1)" },
                   cancelled: { c:"#ffffff", bg:"rgba(255, 255, 255, 0.15)",    bd:"rgba(255, 255, 255, 0.15)"    },
                 }[b.status] || { c:"#888", bg:"rgba(255,255,255,0.05)", bd:"rgba(255,255,255,0.1)" };
-                return (
-                  <div key={b.id} className="dd-booking-card dd-anim">
-                    <div className="dd-booking-top">
-                      <div className="dd-booking-amb">🚑 {b.ambulance_number} · #{b.id}</div>
-                      <div className="dd-booking-right">
-                        <div className="dd-menu-wrap">
-                          <button
-                            className="dd-menu-btn"
-                            title="More"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setBookingMenuOpenId((prev) => (prev === b.id ? null : b.id));
-                            }}
-                          >
-                            ⋮
-                          </button>
-                          {bookingMenuOpenId === b.id && (
-                            <div className="dd-menu-pop" onClick={(e) => e.stopPropagation()}>
-                              <div className="dd-menu-title">Booking Actions</div>
-                              {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed ? (
-                                <>
-                                  <div className="dd-menu-sub">Remove this booking from driver workflow.</div>
-                                  <button
-                                    className="dd-menu-danger"
-                                    onClick={async () => {
-                                      await cancelDriverRequest(b.id);
-                                      setBookingMenuOpenId(null);
-                                    }}
-                                  >
-                                    Remove Booking
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="dd-menu-sub">Permanent deletion is irreversible. This booking will be lost forever.</div>
-                                  <button
-                                    className="dd-menu-danger"
-                                    onClick={() => deleteBookingPermanently(b.id)}
-                                    disabled={deletingBookingId === b.id}
-                                  >
-                                    {deletingBookingId === b.id ? "Deleting..." : "Permanently Delete"}
-                                  </button>
-                                </>
+                const isTransferredFromMe =
+                      Boolean(b.transferred_to_ambulance_number) &&
+                      (
+                        (driverEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === driverEmail.toLowerCase().trim()) ||
+                        (ambNumber && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === String(ambNumber).toLowerCase().trim()) ||
+                        (ambId > 0 && Number(b.transfer_from_ambulance_id) === ambId)
+                      );
+
+                    return (
+                      <div key={b.id} className="dd-booking-card dd-anim">
+                        <div className="dd-booking-top">
+                          <div className="dd-booking-amb">🚑 {b.ambulance_number} · #{b.id}</div>
+                          <div className="dd-booking-right">
+                            <div className="dd-menu-wrap">
+                              <button
+                                className="dd-menu-btn"
+                                title="More"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setBookingMenuOpenId((prev) => (prev === b.id ? null : b.id));
+                                }}
+                              >
+                                ⋮
+                              </button>
+                              {bookingMenuOpenId === b.id && (
+                                <div className="dd-menu-pop" onClick={(e) => e.stopPropagation()}>
+                                  <div className="dd-menu-title">Booking Actions</div>
+                                  {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && !isTransferredFromMe ? (
+                                    <>
+                                      <div className="dd-menu-sub">Remove this booking from driver workflow.</div>
+                                      <button
+                                        className="dd-menu-danger"
+                                        onClick={async () => {
+                                          await cancelDriverRequest(b.id);
+                                          setBookingMenuOpenId(null);
+                                        }}
+                                      >
+                                        Remove Booking
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="dd-menu-sub">Permanent deletion is irreversible. This booking will be lost forever.</div>
+                                      <button
+                                        className="dd-menu-danger"
+                                        onClick={() => deleteBookingPermanently(b.id)}
+                                        disabled={deletingBookingId === b.id}
+                                      >
+                                        {deletingBookingId === b.id ? "Deleting..." : "Permanently Delete"}
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                        <span className="dd-booking-pill" style={{ color:bsc.c, background:bsc.bg, borderColor:bsc.bd }}>{statusLabel}</span>
-                      </div>
-                    </div>
-                    <div className="dd-booking-row grid">
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">Patient</div><div className="dd-booking-val">{b.booked_by}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">Email</div><div className="dd-booking-val">{b.booked_by_email || "-"}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">Contact</div><div className="dd-booking-val">{b.patient_contact_number || "-"}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">Created</div><div className="dd-booking-val">{b.created_at || "-"}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">Landmark</div><div className="dd-booking-val">{b.pickup_landmark || "-"}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">City</div><div className="dd-booking-val">{b.pickup_city || "-"}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">District</div><div className="dd-booking-val">{b.pickup_district || "-"}</div></div>
-                      <div className="dd-booking-item cell"><div className="dd-booking-lbl">Hospital</div><div className="dd-booking-val">{b.assigned_hospital_name || b.destination || "Admin assigning..."}</div></div>
-                      <div className="dd-booking-item cell" style={{ gridColumn: "1 / -1" }}><div className="dd-booking-lbl">Pickup</div><div className="dd-booking-val">📍 {b.pickup_location}</div></div>
-                    </div>
-                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && !b.driver_accepted && (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          padding: "14px 16px",
-                          background: "#fffbe6",
-                          border: "1.5px solid #ffe58f",
-                          borderRadius: "14px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          gap: 12,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 900, color: "#d48806", display: "flex", alignItems: "center", gap: 6 }}>
-                            <span>🚨</span>
-                            <span>New Dispatch Assigned to You!</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "rgba(17,17,17,0.68)", marginTop: 3 }}>
-                            Please accept this emergency booking or decline to let another ambulance take it.
+                            <span className="dd-booking-pill" style={{ color:bsc.c, background:bsc.bg, borderColor:bsc.bd }}>
+                              {isTransferredFromMe ? "Transferred" : statusLabel}
+                            </span>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <button
-                            className="dd-btn dd-btn-green"
-                            style={{ background: "#16a34a", color: "#ffffff", fontWeight: 850, padding: "10px 20px", borderRadius: 10, cursor: "pointer" }}
-                            onClick={() => acceptBooking(b.id)}
-                          >
-                            ✓ Accept Booking
-                          </button>
-                          <button
-                            className="dd-btn dd-btn-red"
-                            style={{ background: "#ef4444", color: "#ffffff", fontWeight: 850, padding: "10px 16px", borderRadius: 10, cursor: "pointer" }}
-                            onClick={() => cancelDriverRequest(b.id)}
-                          >
-                            ✖ Cancel Request
-                          </button>
+                        <div className="dd-booking-row grid">
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">Patient</div><div className="dd-booking-val">{b.booked_by}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">Email</div><div className="dd-booking-val">{b.booked_by_email || "-"}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">Contact</div><div className="dd-booking-val">{b.patient_contact_number || "-"}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">Created</div><div className="dd-booking-val">{b.created_at || "-"}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">Landmark</div><div className="dd-booking-val">{b.pickup_landmark || "-"}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">City</div><div className="dd-booking-val">{b.pickup_city || "-"}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">District</div><div className="dd-booking-val">{b.pickup_district || "-"}</div></div>
+                          <div className="dd-booking-item cell"><div className="dd-booking-lbl">Hospital</div><div className="dd-booking-val">{b.assigned_hospital_name || b.destination || "Admin assigning..."}</div></div>
+                          <div className="dd-booking-item cell" style={{ gridColumn: "1 / -1" }}><div className="dd-booking-lbl">Pickup</div><div className="dd-booking-val">📍 {b.pickup_location}</div></div>
                         </div>
-                      </div>
-                    )}
 
-                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && b.driver_accepted && !b.report_submitted_at && (
-                      <div className="dd-booking-item cell" style={{ marginTop: 4 }}>
-                        <div className="dd-booking-lbl" style={{ fontWeight: 800, color: "#111" }}>Patient Condition Form</div>
-                        <div className="dd-report-grid">
-                          <input
-                            className="dd-report-input"
-                            placeholder="Patient name"
-                            value={reportDrafts[b.id]?.patient_name ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "patient_name", e.target.value)}
-                          />
-                          <input
-                            className="dd-report-input"
-                            placeholder="Age"
-                            value={reportDrafts[b.id]?.patient_age ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "patient_age", e.target.value)}
-                          />
-                          <input
-                            className="dd-report-input"
-                            placeholder="Gender"
-                            value={reportDrafts[b.id]?.patient_gender ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "patient_gender", e.target.value)}
-                          />
-                          <input
-                            className="dd-report-input"
-                            placeholder="Attendant name"
-                            value={reportDrafts[b.id]?.attendant_name ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "attendant_name", e.target.value)}
-                          />
-                          <input
-                            className="dd-report-input full"
-                            placeholder="Attendant contact"
-                            value={reportDrafts[b.id]?.attendant_contact ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "attendant_contact", e.target.value)}
-                          />
-                          <textarea
-                            className="dd-report-textarea full"
-                            placeholder="Patient condition"
-                            value={reportDrafts[b.id]?.patient_condition ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "patient_condition", e.target.value)}
-                          />
-                          <textarea
-                            className="dd-report-textarea full"
-                            placeholder="Vitals summary (BP, pulse, etc.)"
-                            value={reportDrafts[b.id]?.vitals_summary ?? ""}
-                            onChange={(e) => updateReportDraft(b.id, "vitals_summary", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {b.report_submitted_at && (
-                      <div className="dd-report-note">
-                        Report sent to admin and hospital: {new Date(b.report_submitted_at).toLocaleString("en-IN")}
-                      </div>
-                    )}
-                    {b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && b.driver_accepted && (
-                      <>
-                        <div style={{
-                          marginTop: 6,
-                          marginBottom: 4,
-                          padding: "6px 12px",
-                          background: "#dcfce7",
-                          border: "1px solid #86efac",
-                          borderRadius: "8px",
-                          color: "#166534",
-                          fontSize: 11,
-                          fontWeight: 800,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}>
-                          ✅ Booking Accepted by Driver
-                        </div>
-                        <div className="dd-booking-actions-grid">
-                          <button
-                            className="dd-btn dd-btn-green"
-                            onClick={() => navigate(`/driver/insurance-form?booking=${b.id}`)}
+                        {/* Relieved driver notice banner */}
+                        {isTransferredFromMe && (
+                          <div
+                            style={{
+                              marginTop: 10,
+                              padding: "14px 18px",
+                              background: "#f0fdf4",
+                              border: "1.5px solid #86efac",
+                              borderRadius: "12px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              color: "#166534",
+                            }}
                           >
-                            🛡 Medical Insurance Form
-                          </button>
-                          {b.report_submitted_at ? (
-                            <button
-                              className="dd-btn"
-                              style={{ background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7", cursor: "default" }}
-                              disabled
-                            >
-                              Report Sent
-                            </button>
-                          ) : (
-                            <button
-                              className="dd-btn dd-btn-green"
-                              onClick={() => submitPatientReport(b.id)}
-                            >
-                              Send Report To Admin & Hospital
-                            </button>
-                          )}
-                          <button className="dd-btn dd-btn-green" onClick={() => openLiveTrackForBooking(b)}>
-                            🗺 Live Track
-                          </button>
-                          {b.patient_reached ? (
-                            <button className="dd-btn dd-btn-red" onClick={() => completeBookingTask(b.id)}>
-                              ✅ Task Complete
-                            </button>
-                          ) : (
-                            <div
-                              style={{
-                                padding: "8px 12px",
-                                background: "#fffbd6",
-                                border: "1.5px solid #f59a23",
-                                borderRadius: 10,
-                                fontSize: 11,
-                                fontWeight: 800,
-                                color: "#8a5800",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                textAlign: "center",
-                                minWidth: 140,
-                              }}
-                              title="Hospital will click Patient Reached once ambulance arrives at the hospital"
-                            >
-                              ⏳ Waiting for Hospital (Patient Reached)
+                            <span style={{ fontSize: 22 }}>🔄</span>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 900 }}>
+                                Your booking is transferred to this ambulance: {b.transferred_to_ambulance_number}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#15803d", marginTop: 3 }}>
+                                Patient care and routing have been transferred. Your ambulance is now free and marked available.
+                              </div>
                             </div>
-                          )}
-                          <button className="dd-btn dd-btn-grey" onClick={() => cancelDriverRequest(b.id)}>
-                            ✖ Cancel Request
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
+                          </div>
+                        )}
+
+                        {!isTransferredFromMe && b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && !b.driver_accepted && (
+                          <div
+                            style={{
+                              marginTop: 10,
+                              padding: "14px 16px",
+                              background: "#fffbe6",
+                              border: "1.5px solid #ffe58f",
+                              borderRadius: "14px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: 12,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 900, color: "#d48806", display: "flex", alignItems: "center", gap: 6 }}>
+                                <span>🚨</span>
+                                <span>New Dispatch Assigned to You!</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: "rgba(17,17,17,0.68)", marginTop: 3 }}>
+                                Please accept this emergency booking or decline to let another ambulance take it.
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                              <button
+                                className="dd-btn dd-btn-green"
+                                style={{ background: "#16a34a", color: "#ffffff", fontWeight: 850, padding: "10px 20px", borderRadius: 10, cursor: "pointer" }}
+                                onClick={() => acceptBooking(b.id)}
+                              >
+                                ✓ Accept Booking
+                              </button>
+                              <button
+                                className="dd-btn dd-btn-red"
+                                style={{ background: "#ef4444", color: "#ffffff", fontWeight: 850, padding: "10px 16px", borderRadius: 10, cursor: "pointer" }}
+                                onClick={() => cancelDriverRequest(b.id)}
+                              >
+                                ✖ Cancel Request
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {!isTransferredFromMe && b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && b.driver_accepted && !b.report_submitted_at && (
+                          <div className="dd-booking-item cell" style={{ marginTop: 4 }}>
+                            <div className="dd-booking-lbl" style={{ fontWeight: 800, color: "#111" }}>Patient Condition Form</div>
+                            <div className="dd-report-grid">
+                              <input
+                                className="dd-report-input"
+                                placeholder="Patient name"
+                                value={reportDrafts[b.id]?.patient_name ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "patient_name", e.target.value)}
+                              />
+                              <input
+                                className="dd-report-input"
+                                placeholder="Age"
+                                value={reportDrafts[b.id]?.patient_age ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "patient_age", e.target.value)}
+                              />
+                              <input
+                                className="dd-report-input"
+                                placeholder="Gender"
+                                value={reportDrafts[b.id]?.patient_gender ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "patient_gender", e.target.value)}
+                              />
+                              <input
+                                className="dd-report-input"
+                                placeholder="Attendant name"
+                                value={reportDrafts[b.id]?.attendant_name ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "attendant_name", e.target.value)}
+                              />
+                              <input
+                                className="dd-report-input full"
+                                placeholder="Attendant contact"
+                                value={reportDrafts[b.id]?.attendant_contact ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "attendant_contact", e.target.value)}
+                              />
+                              <textarea
+                                className="dd-report-textarea full"
+                                placeholder="Patient condition"
+                                value={reportDrafts[b.id]?.patient_condition ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "patient_condition", e.target.value)}
+                              />
+                              <textarea
+                                className="dd-report-textarea full"
+                                placeholder="Vitals summary (BP, pulse, etc.)"
+                                value={reportDrafts[b.id]?.vitals_summary ?? ""}
+                                onChange={(e) => updateReportDraft(b.id, "vitals_summary", e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {!isTransferredFromMe && b.report_submitted_at && (
+                          <div className="dd-report-note">
+                            Report sent to admin and hospital: {new Date(b.report_submitted_at).toLocaleString("en-IN")}
+                          </div>
+                        )}
+                        {!isTransferredFromMe && b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed && b.driver_accepted && (
+                          <>
+                            <div style={{
+                              marginTop: 6,
+                              marginBottom: 4,
+                              padding: "6px 12px",
+                              background: "#dcfce7",
+                              border: "1px solid #86efac",
+                              borderRadius: "8px",
+                              color: "#166534",
+                              fontSize: 11,
+                              fontWeight: 800,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}>
+                              ✅ Booking Accepted by Driver
+                            </div>
+
+                            {b.transfer_requested && b.transfer_status === "pending" && (
+                              <div style={{
+                                marginTop: 4,
+                                marginBottom: 6,
+                                padding: "8px 12px",
+                                background: "#fffbe6",
+                                border: "1px solid #ffe58f",
+                                borderRadius: "8px",
+                                color: "#d48806",
+                                fontSize: 11,
+                                fontWeight: 750,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}>
+                                <span>⏳</span>
+                                <span>Ambulance Change Requested for {b.transfer_target_ambulance_number}. Waiting for admin approval.</span>
+                              </div>
+                            )}
+
+                            <div className="dd-booking-actions-grid">
+                              <button
+                                className="dd-btn dd-btn-green"
+                                onClick={() => navigate(`/driver/insurance-form?booking=${b.id}`)}
+                              >
+                                🛡 Medical Insurance Form
+                              </button>
+                              {b.report_submitted_at ? (
+                                <button
+                                  className="dd-btn"
+                                  style={{ background: "#e8f5e9", color: "#2e7d32", border: "1px solid #a5d6a7", cursor: "default" }}
+                                  disabled
+                                >
+                                  Report Sent
+                                </button>
+                              ) : (
+                                <button
+                                  className="dd-btn dd-btn-green"
+                                  onClick={() => submitPatientReport(b.id)}
+                                >
+                                  Send Report To Admin & Hospital
+                                </button>
+                              )}
+                              <button className="dd-btn dd-btn-green" onClick={() => openLiveTrackForBooking(b)}>
+                                🗺 Live Track
+                              </button>
+                              {b.patient_reached ? (
+                                <button className="dd-btn dd-btn-red" onClick={() => completeBookingTask(b.id)}>
+                                  ✅ Task Complete
+                                </button>
+                              ) : (
+                                <div
+                                  style={{
+                                    padding: "8px 12px",
+                                    background: "#fffbd6",
+                                    border: "1.5px solid #f59a23",
+                                    borderRadius: 10,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    color: "#8a5800",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    textAlign: "center",
+                                    minWidth: 140,
+                                  }}
+                                  title="Hospital will click Patient Reached once ambulance arrives at the hospital"
+                                >
+                                  ⏳ Waiting for Hospital (Patient Reached)
+                                </div>
+                              )}
+                              {b.transfer_requested && b.transfer_status === "pending" ? (
+                                <button
+                                  className="dd-btn"
+                                  style={{ background: "#fffbe6", color: "#d48806", border: "1.5px solid #ffe58f", fontWeight: 800 }}
+                                  onClick={() => {
+                                    setSelectedTransferBooking(b);
+                                    switchTab("change-request");
+                                  }}
+                                >
+                                  ⏳ Transfer Pending ({b.transfer_target_ambulance_number})
+                                </button>
+                              ) : (
+                                <button
+                                  className="dd-btn"
+                                  style={{ background: "#ffffff", color: "#111", border: "1.5px solid #111", fontWeight: 800 }}
+                                  onClick={() => {
+                                    setSelectedTransferBooking(b);
+                                    switchTab("change-request");
+                                  }}
+                                  title="Emergency breakdown? Transfer booking to nearest available ambulance"
+                                >
+                                  🔄 Transfer / Change Ambulance
+                                </button>
+                              )}
+                              <button className="dd-btn dd-btn-grey" onClick={() => cancelDriverRequest(b.id)}>
+                                ✖ Cancel Request
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
               })}
               </div>}
           </div>
@@ -2429,43 +2629,179 @@ export default function DriverDashboard() {
         )}
 
         {/* ── CHANGE REQUEST TAB ── */}
-        {tab === "change-request" && (
-          <div className="dd-content">
-            <div className="dd-card dd-anim">
-              <div className="dd-card-title">🔄 Ambulance Change Request</div>
-              {pendingReq ? (
-                <div className="dd-pending-banner" style={{ marginBottom: 0 }}>
-                  Request pending. Waiting for admin approval.
-                  <br/><span style={{ fontSize:11, color:"#666" }}>Request sent for{pendingReq.newAmbNumber}</span>
+        {tab === "change-request" && (() => {
+          const activePendingReq = (activeTransferBooking?.transfer_requested && activeTransferBooking?.transfer_status === "pending")
+            ? { newAmbNumber: activeTransferBooking.transfer_target_ambulance_number, bookingId: activeTransferBooking.id }
+            : pendingReq;
+          const isTransferredAway = Boolean(activeTransferBooking?.transferred_to_ambulance_number);
+          const transferredAwayAmbulance = activeTransferBooking?.transferred_to_ambulance_number;
+
+          return (
+            <div className="dd-content" style={{ maxWidth: 880 }}>
+              <div className="dd-card dd-anim" style={{ background: "#ffffff", border: "1px solid rgba(17,17,17,0.14)", borderRadius: 14, padding: 18 }}>
+                <div className="dd-card-title" style={{ fontSize: 13, fontWeight: 900, color: "#111", display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.5px" }}>
+                  <span>🔄</span> AMBULANCE CHANGE REQUEST
                 </div>
-              ) : (
-                <>
-                  <div style={{ fontSize:12, color:"rgba(17,17,17,0.65)", marginBottom:10 }}>Select another ambulance and send the request.</div>
-                  <div className="dd-amb-list">
-                    {allAmbs.filter(a => a.id !== ambId).map(a => {
-                      const as = SC[a.status] || SC.offline;
-                      return (
-                        <div key={a.id} className={`dd-amb-item ${changeReqAmb?.id===a.id?"selected":""}`} onClick={() => setChangeReqAmb(a)}>
-                          <div style={{ width:30, height:30, borderRadius:7, background:"rgba(255, 255, 255, 0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🚑</div>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div className="dd-amb-item-name">{a.ambulance_number}</div>
-                            <div className="dd-amb-item-sub">{a.location||"—"}</div>
-                          </div>
-                          <span style={{ fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:20, color:as.c, background:as.bg, border:`1px solid ${as.b}`, textTransform:"uppercase", flexShrink:0 }}>
-                            {a.status?.replace("_"," ")}
-                          </span>
-                        </div>
-                      );
-                    })}
+
+                {activePendingReq ? (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      background: "#ffffff",
+                      border: "1px solid rgba(17,17,17,0.18)",
+                      borderRadius: 12,
+                      padding: "20px 24px",
+                      color: "#111",
+                    }}
+                  >
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>
+                      Request pending. Waiting for admin approval.
+                    </div>
+                    <div style={{ fontSize: 13, color: "#555555", marginTop: 6 }}>
+                      Request sent for {activePendingReq.newAmbNumber || "selected ambulance"}
+                    </div>
                   </div>
-                  <button className="dd-btn dd-btn-red" disabled={!changeReqAmb} onClick={sendChangeRequest}>
-                    {changeReqAmb ? `📤 Send Request — ${changeReqAmb.ambulance_number}` : "Please select an ambulance to proceed"}
-                  </button>
-                </>
-              )}
+                ) : isTransferredAway ? (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      background: "#f0fdf4",
+                      border: "1.5px solid #86efac",
+                      borderRadius: 12,
+                      padding: "20px 24px",
+                      color: "#166534",
+                    }}
+                  >
+                    <div style={{ fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>✅</span> Your booking is transferred to this ambulance: {transferredAwayAmbulance}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#15803d", marginTop: 6 }}>
+                      The dispatch has been reassigned. Your ambulance has been freed and marked available.
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {activeTransferBooking ? (
+                      <div style={{
+                        marginTop: 10,
+                        marginBottom: 14,
+                        padding: "10px 14px",
+                        background: "#f8f9fa",
+                        border: "1px solid rgba(17,17,17,0.12)",
+                        borderRadius: 10,
+                        fontSize: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4
+                      }}>
+                        <div style={{ fontWeight: 800, color: "#111" }}>
+                          Active Booking #{activeTransferBooking.id} · Patient: {activeTransferBooking.patient_name || activeTransferBooking.booked_by}
+                        </div>
+                        <div style={{ color: "#555" }}>
+                          📍 Pickup: {activeTransferBooking.pickup_location} → 🏥 Destination: {activeTransferBooking.assigned_hospital_name || activeTransferBooking.destination || "Hospital"}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: "rgba(17,17,17,0.65)", marginTop: 8, marginBottom: 12 }}>
+                        Select another available ambulance based on real-time ETA and proximity to transfer your patient.
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: 12, fontWeight: 750, color: "#111", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span>Select Nearest Available Ambulance:</span>
+                      <span style={{ fontSize: 11, color: "#666", fontWeight: 500 }}>Sorted by proximity & ETA</span>
+                    </div>
+
+                    <div className="dd-amb-list" style={{ maxHeight: 340 }}>
+                      {availableNearbyAmbs.length === 0 ? (
+                        <div style={{ padding: 20, textAlign: "center", color: "#888", fontSize: 12 }}>
+                          No other available ambulances found nearby.
+                        </div>
+                      ) : (
+                        availableNearbyAmbs.map(({ amb: a, km, mins }) => {
+                          const as = SC[a.status] || SC.available;
+                          const isSelected = changeReqAmb?.id === a.id;
+                          return (
+                            <div
+                              key={a.id}
+                              className={`dd-amb-item ${isSelected ? "selected" : ""}`}
+                              style={{
+                                border: isSelected ? "2px solid #111" : "1.5px solid rgba(17,17,17,0.14)",
+                                background: isSelected ? "#fffde6" : "#ffffff",
+                                cursor: "pointer",
+                                padding: "10px 14px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                borderRadius: 10,
+                                transition: "all 0.15s ease",
+                              }}
+                              onClick={() => setChangeReqAmb(a)}
+                            >
+                              <div style={{ width: 34, height: 34, borderRadius: 8, background: "#f0f0e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                                🚑
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <span className="dd-amb-item-name" style={{ fontSize: 14, fontWeight: 800 }}>{a.ambulance_number}</span>
+                                  <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 20, color: as.c, background: as.bg, border: `1px solid ${as.b}`, textTransform: "uppercase" }}>
+                                    {a.status?.replace("_", " ")}
+                                  </span>
+                                </div>
+                                <div className="dd-amb-item-sub" style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
+                                  Driver: {a.driver || "Available Staff"} · Contact: {a.driver_contact ? `+91 ${a.driver_contact}` : "N/A"}
+                                </div>
+                              </div>
+                              {km != null ? (
+                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 850, color: "#166534" }}>
+                                    ⚡ ~{mins} mins
+                                  </div>
+                                  <div style={{ fontSize: 10, color: "#666" }}>
+                                    {km} km away
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 10, color: "#888", textAlign: "right" }}>
+                                  {a.location || "Ready"}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {changeReqAmb && (
+                      <div style={{ marginTop: 14, padding: "14px", background: "#fffbe6", border: "1.5px solid #ffe58f", borderRadius: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#d48806", marginBottom: 8 }}>
+                          Ready to transfer booking to <strong>{changeReqAmb.ambulance_number}</strong>
+                        </div>
+                        <button
+                          className="dd-btn"
+                          style={{
+                            background: "#111111",
+                            color: "#ffffff",
+                            fontWeight: 850,
+                            fontSize: 13,
+                            padding: "11px 18px",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            marginTop: 0,
+                            border: "none"
+                          }}
+                          onClick={sendChangeRequest}
+                        >
+                          Transfer your booking to this ambulance
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
 
         {/* ── AMBULANCES TAB ── */}
