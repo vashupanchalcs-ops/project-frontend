@@ -681,15 +681,27 @@ export default function Ambulances() {
         }),
       });
       if (res.ok) {
+        const created = await res.json().catch(() => null);
         showToast(
           targetHospital
-            ? `Request submitted for ${targetHospital.name}. Hospital will review shortly.`
+            ? `Request submitted for ${targetHospital.name}. Live tracking enabled.`
             : "Request submitted successfully",
           "ok"
         );
         setShowModal(false);
+        const bookedHospitalName = targetHospital?.name;
         setTargetHospital(null);
         window.dispatchEvent(new Event("new-booking"));
+        if (bookedHospitalName) {
+          setTimeout(() => {
+            navigate("/MyBookings", {
+              state: {
+                flashMsg: `Emergency booking for ${bookedHospitalName} is active. Live tracking is available.`,
+                bookingId: created?.id,
+              },
+            });
+          }, 900);
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(err.error || "Booking failed. Try again.", "err");

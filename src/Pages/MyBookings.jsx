@@ -113,12 +113,17 @@ export function MyBookings() {
   }, []);
 
   const filtered         = filter==="all" ? bookings : bookings.filter(b=>b.status===filter);
-  const confirmedBooking = bookings.find(b=>b.status==="confirmed" && b.sent_to_driver);
+  const activeTrackingBooking =
+    bookings.find(b => b.status === "confirmed" && b.driver_accepted) ||
+    bookings.find(b => b.status === "confirmed" && b.sent_to_driver) ||
+    bookings.find(b => b.is_user_selected_hospital && b.status !== "cancelled" && b.status !== "completed") ||
+    bookings.find(b => b.status === "confirmed");
+  const confirmedBooking = activeTrackingBooking;
   const goToTracking     = (b) => navigate("/LiveTracking", { state:{ bookingId:b.id } });
 
   const stats = [
     { label:"TOTAL",     val:bookings.length },
-    { label:"ACTIVE",    val:bookings.filter(b=>b.status==="confirmed" && b.sent_to_driver).length },
+    { label:"ACTIVE",    val:bookings.filter(b=>(b.status==="confirmed" && b.sent_to_driver) || (b.is_user_selected_hospital && b.status!=="cancelled" && b.status!=="completed")).length },
     { label:"PENDING",   val:bookings.filter(b=>b.status==="pending").length },
     { label:"COMPLETED", val:bookings.filter(b=>b.status==="completed").length },
   ];
@@ -334,10 +339,18 @@ export function MyBookings() {
                 <span style={{ width:8, height:8, borderRadius:"50%", background: confirmedBooking.driver_accepted ? "#16a34a" : "#00d4aa", display:"inline-block", animation:"mb-pulse 1.6s infinite", boxShadow: confirmedBooking.driver_accepted ? "0 0 8px rgba(22,163,74,0.6)" : "0 0 8px rgba(0,212,170,0.6)" }}/>
                 <div>
                   <div style={{ fontSize:13, fontWeight:800, color: confirmedBooking.driver_accepted ? "#166534" : "#00d4aa" }}>
-                    {confirmedBooking.driver_accepted ? `🚑 Ambulance is ready — #${confirmedBooking.id}` : `Booking Confirmed — #${confirmedBooking.id}`}
+                    {confirmedBooking.driver_accepted
+                      ? `🚑 Ambulance is ready — #${confirmedBooking.id}`
+                      : confirmedBooking.is_user_selected_hospital
+                      ? `🏥 Hospital Booking Active — #${confirmedBooking.id}`
+                      : `Booking Confirmed — #${confirmedBooking.id}`}
                   </div>
                   <div style={{ fontSize:11, color:"rgba(17,17,17,0.58)", marginTop:3 }}>
-                    {confirmedBooking.driver_accepted ? "Ambulance is ready! Driver has accepted your booking and is en route. Select this card for live tracking." : "Your driver is on the way. Select this card for live tracking."}
+                    {confirmedBooking.driver_accepted
+                      ? "Ambulance is ready! Driver has accepted your booking and is en route. Select this card for live tracking."
+                      : confirmedBooking.is_user_selected_hospital
+                      ? `Booked for ${confirmedBooking.assigned_hospital_name || confirmedBooking.destination || "Hospital"}. Click here to track your route & ambulance live.`
+                      : "Your driver is on the way. Select this card for live tracking."}
                   </div>
                 </div>
               </div>
@@ -374,13 +387,18 @@ export function MyBookings() {
                 const isConfirmed = b.status==="confirmed";
                 const isPending = b.status==="pending";
                 const isCompleted = b.status==="completed";
+                const canTrack =
+                  isConfirmed ||
+                  (b.is_user_selected_hospital && b.status !== "cancelled" && b.status !== "rejected") ||
+                  b.sent_to_driver ||
+                  b.driver_accepted;
                 return (
                   <div key={b.id} className={`mb-card ${isConfirmed?"confirmed-card":""} ${isPending?"pending-card":""} ${isCompleted?"completed-card":""}`}>
                     <div className="mb-card-header">
                       <div style={{ display:"flex", alignItems:"center", gap:9 }}>
                         {isConfirmed && <span style={{ width:7, height:7, borderRadius:"50%", background:"#00d4aa", display:"inline-block", animation:"mb-pulse 1.6s infinite", boxShadow:"0 0 7px rgba(0,212,170,0.8)" }}/>}
                         <span style={{ fontSize:16, fontWeight:800, color:"#111" }}>Booking <span style={{ color:"rgba(17,17,17,0.35)", fontWeight:500 }}>#{b.id}</span></span>
-                        {isConfirmed && (
+                        {canTrack && (
                           <button className="mb-track-chip" onClick={() => goToTracking(b)}>
                             Live Track
                           </button>
@@ -402,6 +420,49 @@ export function MyBookings() {
                             <div style={{ fontSize:18, fontWeight:900, color:"#111", letterSpacing:1 }}>{b.ambulance_number||`AMB-${b.ambulance_id}`}</div>
                             <div style={{ fontSize:9, color:"rgba(17,17,17,0.45)", letterSpacing:1, textTransform:"uppercase", marginTop:2 }}>Assigned Ambulance</div>
                           </div>
+                        </div>
+                      )}
+                      {b.is_user_selected_hospital && (
+                        <div
+                          style={{
+                            margin: "10px 0 14px",
+                            padding: "10px 14px",
+                            background: "#eff6ff",
+                            border: "1.5px solid #bfdbfe",
+                            borderRadius: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "10px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "18px" }}>🏥</span>
+                            <div>
+                              <div style={{ color: "#1d4ed8", fontWeight: 800, fontSize: "12px" }}>
+                                User-Selected Hospital Booking
+                              </div>
+                              <div style={{ color: "#2563eb", fontSize: "11px", marginTop: 1 }}>
+                                Route to <strong>{b.assigned_hospital_name || b.destination}</strong> • Live tracking active
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => goToTracking(b)}
+                            style={{
+                              background: "#2563eb",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "6px",
+                              padding: "6px 12px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            🗺 Track Route
+                          </button>
                         </div>
                       )}
                       {b.driver_accepted && (
@@ -512,7 +573,7 @@ export function MyBookings() {
                       </div>
                     )}
 
-                    {isConfirmed && (
+                    {canTrack && (
                       <div className="mb-card-footer">
                         <button className="mb-track-btn" onClick={()=>goToTracking(b)}>
                           <Icons.Play/> Live Tracking <span className="live-badge">LIVE</span>

@@ -1,9 +1,10 @@
 /**
  * LiveTracking.jsx → src/Pages/LiveTracking.jsx
  * Dedicated fullscreen live tracking page (sidebar 4th item for users).
+ * Supports both standard ambulance dispatches and user-selected hospital bookings.
  */
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import UserBookingMap from "../Components/UserBookingMap";
 
 const defaultApiBase = import.meta.env.DEV
@@ -13,25 +14,69 @@ const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$
 
 export default function LiveTracking() {
   const [booking, setBooking] = useState(null);
+  const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [noActive, setNoActive] = useState(false);
 
   const navigate = useNavigate();
-  const email = localStorage.getItem("user") || "";
-  const name = localStorage.getItem("name") || "";
+  const location = useLocation();
+  const email = (localStorage.getItem("user") || "").trim().toLowerCase();
+  const name = (localStorage.getItem("name") || "").trim().toLowerCase();
+  const selectedBookingId = location.state?.bookingId || null;
 
   const fetchConfirmed = useCallback(async () => {
     try {
       const res = await fetch(`${BASE}/api/bookings/`);
       const data = await res.json();
-      const confirmed = data.find(
+      if (!Array.isArray(data)) {
+        setNoActive(true);
+        setLoading(false);
+        return;
+      }
+
+      // Filter for current user's bookings
+      const myBookings = data.filter((b) => {
+        const bEmail = String(b.booked_by_email || b.user_email || "").trim().toLowerCase();
+        const bName = String(b.booked_by || "").trim().toLowerCase();
+        const matchesUser = (email && bEmail === email) || (name && bName === name);
+        const notCancelled = b.status !== "cancelled" && b.status !== "rejected";
+        return matchesUser && notCancelled;
+      });
+
+      // Trackable bookings: confirmed dispatches or active user-selected hospital bookings
+      const trackable = myBookings.filter(
         (b) =>
-          (b.booked_by_email === email || b.user_email === email || b.booked_by === name) &&
-          b.status === "confirmed" &&
-          b.sent_to_driver
+          b.is_user_selected_hospital ||
+          b.status === "confirmed" ||
+          b.sent_to_driver ||
+          b.driver_accepted
       );
-      if (confirmed) {
-        setBooking(confirmed);
+
+      setAllBookings(trackable);
+
+      let target = null;
+      // 1. If explicit bookingId passed via location state
+      if (selectedBookingId) {
+        target = myBookings.find((b) => Number(b.id) === Number(selectedBookingId));
+      }
+      // 2. Otherwise keep currently selected if still valid
+      if (!target && booking?.id) {
+        target = trackable.find((b) => Number(b.id) === Number(booking.id));
+      }
+      // 3. Fallback prioritization:
+      if (!target) {
+        target =
+          trackable.find((b) => b.status === "confirmed" && b.driver_accepted) ||
+          trackable.find((b) => b.status === "confirmed" && b.sent_to_driver) ||
+          trackable.find((b) => b.is_user_selected_hospital && b.status !== "completed") ||
+          trackable.find((b) => b.status === "confirmed") ||
+          trackable[0] ||
+          myBookings[0] ||
+          null;
+      }
+
+      if (target) {
+        setBooking(target);
         setNoActive(false);
       } else {
         setBooking(null);
@@ -41,7 +86,7 @@ export default function LiveTracking() {
       setNoActive(true);
     }
     setLoading(false);
-  }, [email, name]);
+  }, [email, name, selectedBookingId, booking?.id]);
 
   useEffect(() => {
     fetchConfirmed();
@@ -146,7 +191,7 @@ export default function LiveTracking() {
             <div style={{ fontSize: 64, opacity: 0.3 }}>🚑</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#111" }}>You have no active bookings at the moment</div>
             <div style={{ fontSize: 13, color: "rgba(17,17,17,0.6)", maxWidth: 300 }}>
-              Track your ambulance in real-time once the booking is confirmed
+              Track your ambulance and hospital route in real-time once a booking is created or confirmed
             </div>
             <button
               onClick={() => navigate("/Ambulances")}
@@ -154,6 +199,57 @@ export default function LiveTracking() {
             >
               🚑 Book an Ambulance
             </button>
+          </div>
+        )}
+
+        {/* Multi-booking switcher if user has more than 1 trackable booking */}
+        {!loading && booking && allBookings.length > 1 && (
+          <div
+            style={{
+              position: "absolute",
+              top: 14,
+              right: 18,
+              zIndex: 9999,
+              background: "rgba(255, 255, 255, 0.96)",
+              backdropFilter: "blur(8px)",
+              border: "1.5px solid rgba(0,0,0,0.12)",
+              borderRadius: 30,
+              padding: "4px 8px",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            }}
+          >
+            <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(17,17,17,0.6)", textTransform: "uppercase", paddingLeft: 6 }}>
+              Active:
+            </span>
+            {allBookings.map((b) => {
+              const isSelected = Number(b.id) === Number(booking.id);
+              const label = b.is_user_selected_hospital
+                ? `🏥 #${b.id} ${b.assigned_hospital_name ? `(${b.assigned_hospital_name.slice(0, 10)}...)` : ""}`
+                : `🚑 #${b.id}`;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setBooking(b)}
+                  style={{
+                    background: isSelected ? "#111111" : "#f1f1ee",
+                    color: isSelected ? "#ffffff" : "#333333",
+                    border: "none",
+                    borderRadius: 20,
+                    padding: "4px 10px",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  title={b.is_user_selected_hospital ? `Track hospital booking #${b.id} to ${b.assigned_hospital_name || 'Hospital'}` : `Track booking #${b.id}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         )}
 
