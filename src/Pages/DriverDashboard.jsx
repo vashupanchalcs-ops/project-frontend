@@ -305,11 +305,12 @@ export default function DriverDashboard() {
         const dEmail = String(driverEmail || "").toLowerCase().trim();
         const dPhone = String((driverPhone || localStorage.getItem("phone") || "")).replace(/\D+/g, "");
         const ambNo = String(ambulance?.ambulance_number || localStorage.getItem("ambulance_number") || ambNumber || "").toLowerCase().trim();
+        const isPlaceholderAmb = !ambNo || ambNo === "amb-0000" || ambNo === "amb-000";
         const mine = rows
           .filter((b) => {
             const byAmb = eId > 0 && Number(b.ambulance_id) === eId;
             const byDriver = dName && String(b.driver || "").toLowerCase().trim() === dName;
-            const byAmbNo = ambNo && String(b.ambulance_number || "").toLowerCase().trim() === ambNo;
+            const byAmbNo = !isPlaceholderAmb && ambNo && String(b.ambulance_number || "").toLowerCase().trim() === ambNo;
             const mappedAmb = allAmbs.find((a) => Number(a.id) === Number(b.ambulance_id));
             const bookingDriverEmail = String(b.driver_email || mappedAmb?.driver_email || "").toLowerCase().trim();
             const byDriverEmail = dEmail && bookingDriverEmail === dEmail;
@@ -320,7 +321,7 @@ export default function DriverDashboard() {
               Boolean(b.transferred_to_ambulance_number) &&
               (
                 (dEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
-                (ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+                (!isPlaceholderAmb && ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
                 (eId > 0 && Number(b.transfer_from_ambulance_id) === eId)
               );
 
@@ -331,7 +332,7 @@ export default function DriverDashboard() {
               Boolean(b.transferred_to_ambulance_number) &&
               (
                 (dEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
-                (ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+                (!isPlaceholderAmb && ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
                 (eId > 0 && Number(b.transfer_from_ambulance_id) === eId)
               );
             if (transferredFromMe) return true;
@@ -352,7 +353,7 @@ export default function DriverDashboard() {
             b.transfer_status === "pending" &&
             (
               (dEmail && String(b.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
-              (ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+              (!isPlaceholderAmb && ambNo && String(b.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
               (eId > 0 && Number(b.transfer_from_ambulance_id) === eId)
             )
         );
@@ -365,14 +366,8 @@ export default function DriverDashboard() {
           setPendingReq(reqObj);
           localStorage.setItem("dr_change_req", JSON.stringify(reqObj));
         } else {
-          const storedReq = JSON.parse(localStorage.getItem("dr_change_req") || "null");
-          if (storedReq?.bookingId) {
-            const match = rows.find((b) => Number(b.id) === Number(storedReq.bookingId));
-            if (match && match.transfer_status !== "pending") {
-              setPendingReq(null);
-              localStorage.removeItem("dr_change_req");
-            }
-          }
+          setPendingReq(null);
+          localStorage.removeItem("dr_change_req");
         }
         const confirmed = mine.filter(b => b.status === "confirmed" && b.sent_to_driver);
         if (confirmed.length) {
@@ -503,6 +498,13 @@ export default function DriverDashboard() {
       addLog("Patient report send failed", "error");
     }
   };
+
+  useEffect(() => {
+    if (tab === "change-request") {
+      fetchAmbulance();
+      fetchBookings();
+    }
+  }, [tab, fetchAmbulance, fetchBookings]);
 
   useEffect(() => {
     fetchAmbulance(); fetchBookings(); loadNotifications(); pollServerNotifications();
@@ -1298,7 +1300,9 @@ export default function DriverDashboard() {
 
   const availableNearbyAmbs = useMemo(() => {
     const curId = Number(effectiveAmbId || ambId || 0);
+    const curEmail = String(driverEmail || "").trim().toLowerCase();
     const curAmbNo = String(ambulance?.ambulance_number || ambNumber || "").trim().toLowerCase();
+    const isPlaceholderAmb = !curAmbNo || curAmbNo === "amb-0000" || curAmbNo === "amb-000";
     const myLoc =
       location ||
       (inIndia(Number(ambulance?.latitude), Number(ambulance?.longitude))
@@ -1308,8 +1312,10 @@ export default function DriverDashboard() {
     return allAmbs
       .filter((a) => {
         if (curId > 0 && Number(a.id) === curId) return false;
-        if (curAmbNo && String(a.ambulance_number || "").trim().toLowerCase() === curAmbNo) return false;
-        return a.status === "available";
+        if (curEmail && String(a.driver_email || "").trim().toLowerCase() === curEmail) return false;
+        if (!isPlaceholderAmb && curAmbNo && String(a.ambulance_number || "").trim().toLowerCase() === curAmbNo) return false;
+        const st = String(a.status || "").toLowerCase().trim();
+        return st === "available" || st === "online" || (st !== "busy" && st !== "offline" && st !== "en_route");
       })
       .map((a) => {
         const alat = Number(a.latitude);
@@ -1327,7 +1333,7 @@ export default function DriverDashboard() {
         if (b.km == null) return -1;
         return a.km - b.km;
       });
-  }, [allAmbs, effectiveAmbId, ambId, ambulance, ambNumber, location]);
+  }, [allAmbs, effectiveAmbId, ambId, driverEmail, ambulance, ambNumber, location]);
 
   const sendChangeRequest = async () => {
     if (!changeReqAmb) return;
@@ -2628,11 +2634,10 @@ export default function DriverDashboard() {
           </div>
         )}
 
-        {/* ── CHANGE REQUEST TAB ── */}
         {tab === "change-request" && (() => {
           const activePendingReq = (activeTransferBooking?.transfer_requested && activeTransferBooking?.transfer_status === "pending")
             ? { newAmbNumber: activeTransferBooking.transfer_target_ambulance_number, bookingId: activeTransferBooking.id }
-            : pendingReq;
+            : (pendingReq && activeTransferBooking && Number(pendingReq.bookingId) === Number(activeTransferBooking.id) && pendingReq.status === "pending" ? pendingReq : null);
           const isTransferredAway = Boolean(activeTransferBooking?.transferred_to_ambulance_number);
           const transferredAwayAmbulance = activeTransferBooking?.transferred_to_ambulance_number;
 
