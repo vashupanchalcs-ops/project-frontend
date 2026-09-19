@@ -83,34 +83,8 @@ const Requests = () => {
     if (!rootRef.current) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".req-head-anim",
-        { y: 16, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.46, stagger: 0.08, ease: "power2.out" }
-      );
-
-      gsap.utils.toArray(".req-card-item").forEach((card, idx) => {
-        gsap.fromTo(
-          card,
-          {
-            y: 48,
-            opacity: 0.58,
-          },
-          {
-            y: 0,
-            opacity: 1,
-            ease: "none",
-            delay: Math.min(idx * 0.015, 0.2),
-            scrollTrigger: {
-              trigger: card,
-              start: "top 94%",
-              end: "top 56%",
-              scrub: 1,
-              invalidateOnRefresh: true,
-            },
-          }
-        );
-      });
+      gsap.set(".req-head-anim", { y: 0, opacity: 1, clearProps: "all" });
+      gsap.set(".req-card-item", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
 
     return () => ctx.revert();
@@ -904,6 +878,17 @@ const Requests = () => {
                           {formatMoney(calculateBookingBill({ booking: b }).total)}
                         </div>
                       </div>
+                      {b.assigned_doctor_names && (
+                        <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#86efac", background: "#f0fdf4" }}>
+                          <div className="req-label" style={{ color: "#166534", fontWeight: 800 }}>
+                            👨‍⚕️ Assigned Hospital Doctor(s)
+                          </div>
+                          <div className="req-val" style={{ color: "#14532d", fontWeight: 700, fontSize: 13, marginTop: 2 }}>
+                            {b.assigned_doctor_names} {b.assigned_doctor_specializations && `(${b.assigned_doctor_specializations})`}
+                            {b.assigned_doctor_contacts && <span style={{ color: "#15803d", marginLeft: 8, fontSize: 12 }}>📞 {b.assigned_doctor_contacts}</span>}
+                          </div>
+                        </div>
+                      )}
                       {b.transfer_requested && b.transfer_status === "pending" && (
                         <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#f59a23", background: "#fffbe6" }}>
                           <div className="req-label" style={{ color: "#d48806", fontWeight: 900 }}>

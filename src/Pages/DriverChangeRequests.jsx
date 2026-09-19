@@ -352,7 +352,7 @@ export default function DriverChangeRequests() {
           </div>
 
           {/* PENDING */}
-          {pending.length>0 && (
+          {false && (
             <div style={{marginBottom:28}}>
               <div className="dcr-sec-title">
                 ⏳ Pending
@@ -399,7 +399,7 @@ export default function DriverChangeRequests() {
           )}
 
           {/* PROCESSED */}
-          {processed.length>0&&(
+          {false && (
             <div>
               <div className="dcr-sec-title">Processed</div>
               {processed.map((req,i)=>{

@@ -93,7 +93,7 @@ export default function DriverView() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(".dv-anim", { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, stagger: 0.08, ease: "power2.out" });
+      gsap.set(".dv-anim", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
   }, [mobileTab, route, isOnline]);

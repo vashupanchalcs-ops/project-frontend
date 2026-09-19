@@ -61,6 +61,8 @@ def staff_to_dict(s):
         "banner_data": s.banner_data,
         "is_on_call": s.is_on_call,
         "is_active": s.is_active,
+        "is_busy": getattr(s, "is_busy", False),
+        "assigned_booking_id": getattr(s, "assigned_booking_id", None),
         "years_experience": s.years_experience,
         "created_at": s.created_at.isoformat(),
         "updated_at": s.updated_at.isoformat(),

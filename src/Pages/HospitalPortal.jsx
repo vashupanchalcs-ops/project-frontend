@@ -477,9 +477,9 @@ export default function HospitalPortal() {
   useEffect(() => {
     if (activeTab !== "home") return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(".hp-home-anim", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.62, stagger: 0.08, ease: "power2.out" });
-      gsap.fromTo(".hp-home-chip", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.52, stagger: 0.06, delay: 0.24, ease: "power2.out" });
-      gsap.fromTo(".hp-home-video", { scale: 1.08 }, { scale: 1, duration: 1.1, ease: "power2.out" });
+      gsap.set(".hp-home-anim", { y: 0, opacity: 1, clearProps: "all" });
+      gsap.set(".hp-home-chip", { y: 0, opacity: 1, clearProps: "all" });
+      gsap.set(".hp-home-video", { scale: 1, clearProps: "all" });
     });
     return () => ctx.revert();
   }, [activeTab, hospital?.id]);
@@ -2772,7 +2772,23 @@ export default function HospitalPortal() {
                         <div className="hp-row"><span className="hp-label">Pre-Diagnosis</span><span>{q.pre_diagnosis_note || "-"}</span></div>
                         <div className="hp-row"><span className="hp-label">Handover</span><span>{q.digital_handover?.vitals_summary || "No report yet"}</span></div>
                         <div className="hp-row"><span className="hp-label">Ambulance</span><span>{q.ambulance_number || "Ambulance"} • {q.driver_name || "Assigned Driver"}</span></div>
+                        {q.assigned_doctor_names && (
+                          <div style={{ marginTop: 8, padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12 }}>
+                            <span style={{ color: "#166534", fontWeight: 700 }}>👨‍⚕️ Assigned Doctor(s):</span> {q.assigned_doctor_names}
+                            {q.assigned_doctor_specializations && <span style={{ color: "#475569" }}> ({q.assigned_doctor_specializations})</span>}
+                            {q.assigned_doctor_contacts && <div style={{ color: "#64748b", marginTop: 2 }}>📞 {q.assigned_doctor_contacts}</div>}
+                          </div>
+                        )}
                         <div className="hp-actions">
+                          {(q.report_submitted_at || q.digital_handover?.report_submitted_at || q.patient_condition) && (
+                            <button
+                              className="hp-btn primary"
+                              style={{ background: q.assigned_doctor_names ? "#0f766e" : "#166534", color: "#fff" }}
+                              onClick={() => navigate(`/hospital/assign-doctor?booking_id=${q.booking_id}`)}
+                            >
+                              👨‍⚕️ {q.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
+                            </button>
+                          )}
                           <button
                             className="hp-btn primary"
                             onClick={() => navigate(`/hospital/reports/${q.booking_id}/insurance`)}
@@ -2942,6 +2958,20 @@ export default function HospitalPortal() {
                           <div className="hp-report-summary">
                             {q.driver_modified_report || q.digital_handover?.driver_modified_report || q.vitals_summary || q.digital_handover?.vitals_summary || q.pre_diagnosis_note || "Detailed report not available yet."}
                           </div>
+                          {q.assigned_doctor_names && (
+                            <div style={{ marginTop: 8, padding: "6px 10px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6, fontSize: 11, textAlign: "left" }}>
+                              <b style={{ color: "#166534" }}>👨‍⚕️ Assigned Staff:</b> {q.assigned_doctor_names}
+                              {q.assigned_doctor_specializations && <span style={{ color: "#475569" }}> ({q.assigned_doctor_specializations})</span>}
+                              {q.assigned_doctor_contacts && <div style={{ color: "#64748b", marginTop: 2 }}>📞 {q.assigned_doctor_contacts}</div>}
+                            </div>
+                          )}
+                          <button
+                            className="hp-btn primary"
+                            style={{ marginTop: 8, background: q.assigned_doctor_names ? "#0f766e" : "#166534" }}
+                            onClick={() => navigate(`/hospital/assign-doctor?booking_id=${q.booking_id}`)}
+                          >
+                            👨‍⚕️ {q.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
+                          </button>
                           <button
                             className="hp-btn primary"
                             style={{ marginTop: 8 }}

@@ -35,23 +35,7 @@ const Reports = () => {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.utils.toArray(".rep-anim").forEach((el) => {
-        gsap.fromTo(
-          el,
-          { y: 22, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 90%",
-              end: "top 62%",
-              scrub: 0.8,
-            },
-          }
-        );
-      });
+      gsap.set(".rep-anim", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
   }, [bookings.length, ambulances.length, hospitals.length]);

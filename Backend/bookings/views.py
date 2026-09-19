@@ -332,6 +332,11 @@ def booking_to_dict(b):
         "reassigned_at": b.reassigned_at.isoformat() if b.reassigned_at else None,
         "created_at":       b.created_at.strftime("%d %b %Y, %I:%M %p"),
         "is_read":          b.is_read,
+        "assigned_doctors_json": getattr(b, "assigned_doctors_json", "[]"),
+        "assigned_doctor_names": getattr(b, "assigned_doctor_names", ""),
+        "assigned_doctor_specializations": getattr(b, "assigned_doctor_specializations", ""),
+        "assigned_doctor_contacts": getattr(b, "assigned_doctor_contacts", ""),
+        "doctors_assigned_at": b.doctors_assigned_at.isoformat() if getattr(b, "doctors_assigned_at", None) else None,
         "chat_thread_id": _chat_thread_id(b),
     }
 
@@ -619,6 +624,64 @@ SwiftRescue Dispatch Team
                 )
             except Exception as e:
                 print("Notify user ready email error:", e)
+
+        if "assigned_doctors" in data or "assign_doctors" in data:
+            from hospitals.models import HospitalStaff
+            doctors_input = data.get("assigned_doctors") or data.get("assign_doctors") or []
+            if isinstance(doctors_input, str):
+                try:
+                    doctors_input = json.loads(doctors_input)
+                except Exception:
+                    doctors_input = []
+            if not isinstance(doctors_input, list):
+                doctors_input = [doctors_input] if doctors_input else []
+            
+            doctors_input = doctors_input[:3]
+            HospitalStaff.objects.filter(assigned_booking_id=b.id).update(is_active=True, is_busy=False, assigned_booking_id=None)
+            
+            doctor_ids = []
+            names = []
+            specs = []
+            contacts = []
+            json_list = []
+            
+            for doc in doctors_input:
+                if isinstance(doc, dict):
+                    d_id = _to_int(doc.get("id"))
+                    d_name = str(doc.get("full_name") or doc.get("name") or "").strip()
+                    d_spec = str(doc.get("specialization") or doc.get("spec") or "").strip()
+                    d_phone = str(doc.get("contact_number") or doc.get("contact") or doc.get("phone") or "").strip()
+                else:
+                    d_id = _to_int(doc)
+                    d_name, d_spec, d_phone = "", "", ""
+                    
+                staff_obj = HospitalStaff.objects.filter(id=d_id).first() if d_id > 0 else None
+                if staff_obj:
+                    d_name = d_name or staff_obj.full_name
+                    d_spec = d_spec or staff_obj.specialization
+                    d_phone = d_phone or staff_obj.contact_number
+                    staff_obj.is_active = False
+                    staff_obj.is_busy = True
+                    staff_obj.assigned_booking_id = b.id
+                    staff_obj.save()
+                
+                if d_name:
+                    doctor_ids.append(d_id)
+                    names.append(d_name)
+                    specs.append(d_spec)
+                    contacts.append(d_phone)
+                    json_list.append({
+                        "id": d_id,
+                        "full_name": d_name,
+                        "specialization": d_spec,
+                        "contact_number": d_phone,
+                    })
+            
+            b.assigned_doctors_json = json.dumps(json_list)
+            b.assigned_doctor_names = ", ".join(names)
+            b.assigned_doctor_specializations = ", ".join(specs)
+            b.assigned_doctor_contacts = ", ".join(contacts)
+            b.doctors_assigned_at = timezone.now()
 
         if isinstance(patient_report, dict):
             b.patient_name = str(patient_report.get("patient_name", "")).strip()

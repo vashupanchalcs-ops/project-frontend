@@ -32,7 +32,7 @@ export default function LiveMap() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(".lm-anim", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, stagger: 0.06, ease: "power2.out" });
+      gsap.set(".lm-anim", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
   }, [activeTab, !!selectedDriver]);

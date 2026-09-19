@@ -1446,7 +1446,7 @@ export default function DriverDashboard() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(".dd-anim", { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, stagger: 0.05, ease: "power2.out" });
+      gsap.set(".dd-anim", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
   }, [tab, myBookings.length, notifications.length, allAmbs.length, allHospitals.length]);
@@ -2186,6 +2186,19 @@ export default function DriverDashboard() {
                           <div className="dd-booking-item cell"><div className="dd-booking-lbl">District</div><div className="dd-booking-val">{b.pickup_district || "-"}</div></div>
                           <div className="dd-booking-item cell"><div className="dd-booking-lbl">Hospital</div><div className="dd-booking-val">{b.assigned_hospital_name || b.destination || "Admin assigning..."}</div></div>
                           <div className="dd-booking-item cell" style={{ gridColumn: "1 / -1" }}><div className="dd-booking-lbl">Pickup</div><div className="dd-booking-val">📍 {b.pickup_location}</div></div>
+                          {b.assigned_doctor_names && (
+                            <div className="dd-booking-item cell" style={{ gridColumn: "1 / -1", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "8px 12px" }}>
+                              <div className="dd-booking-lbl" style={{ color: "#166534", fontWeight: 800 }}>👨‍⚕️ Receiving Hospital Doctor(s)</div>
+                              <div className="dd-booking-val" style={{ color: "#14532d", fontWeight: 700 }}>
+                                {b.assigned_doctor_names} {b.assigned_doctor_specializations && `(${b.assigned_doctor_specializations})`}
+                              </div>
+                              {b.assigned_doctor_contacts && (
+                                <div style={{ fontSize: 11, color: "#166534", marginTop: 2 }}>
+                                  📞 Contact: {b.assigned_doctor_contacts}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Relieved driver notice banner */}

@@ -177,6 +177,35 @@ export default function HospitalResponses() {
                         Driver report received and hospital notified automatically.
                       </div>
                     )}
+                    {b.assigned_doctor_names && (
+                      <div style={{ marginTop: 8, padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12 }}>
+                        <span style={{ color: "#166534", fontWeight: 700 }}>👨‍⚕️ Assigned Doctor(s):</span> {b.assigned_doctor_names}
+                        {b.assigned_doctor_specializations && <span style={{ color: "#475569" }}> ({b.assigned_doctor_specializations})</span>}
+                        {b.assigned_doctor_contacts && <div style={{ color: "#64748b", marginTop: 2 }}>📞 {b.assigned_doctor_contacts}</div>}
+                      </div>
+                    )}
+                    {b.report_submitted_at && (
+                      <button
+                        onClick={() => navigate(`/hospital/assign-doctor?booking_id=${b.id}`)}
+                        style={{
+                          marginTop: 10,
+                          background: b.assigned_doctor_names ? "#0f766e" : "#166534",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "8px 16px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        👨‍⚕️ {b.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
+                      </button>
+                    )}
+
                   </article>
                 );
               })}

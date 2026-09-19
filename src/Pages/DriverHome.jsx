@@ -46,11 +46,7 @@ export default function DriverHome() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".dh-reveal",
-        { y: 24, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.65, stagger: 0.08, ease: "power2.out" }
-      );
+      gsap.set(".dh-reveal", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
   }, []);

@@ -74,6 +74,11 @@ class Booking(models.Model):
     driver_rejection_reason = models.CharField(max_length=200, blank=True, default="")
     reassigned_due_to_unavailability = models.BooleanField(default=False)
     reassigned_at = models.DateTimeField(null=True, blank=True)
+    assigned_doctors_json = models.TextField(blank=True, default="[]")
+    assigned_doctor_names = models.CharField(max_length=500, blank=True, default="")
+    assigned_doctor_specializations = models.CharField(max_length=500, blank=True, default="")
+    assigned_doctor_contacts = models.CharField(max_length=300, blank=True, default="")
+    doctors_assigned_at = models.DateTimeField(null=True, blank=True)
     created_at       = models.DateTimeField(auto_now_add=True)
     is_read          = models.BooleanField(default=False)
 

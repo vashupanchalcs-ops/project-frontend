@@ -58,6 +58,8 @@ class HospitalStaff(models.Model):
     banner_data = models.TextField(blank=True, default="")
     is_on_call = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    is_busy = models.BooleanField(default=False)
+    assigned_booking_id = models.IntegerField(null=True, blank=True)
     years_experience = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

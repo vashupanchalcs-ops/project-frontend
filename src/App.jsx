@@ -38,7 +38,7 @@ import DriverVoiceReports    from "./Pages/DriverVoiceReports";
 import HospitalCaseReportView from "./Pages/HospitalCaseReportView";
 import DriverInsuranceForm   from "./Pages/DriverInsuranceForm";
 import HospitalInsuranceView from "./Pages/HospitalInsuranceView";
-
+import HospitalDoctorAssignment from "./Pages/HospitalDoctorAssignment";
 
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
@@ -107,27 +107,8 @@ const App = () => {
 
     const ctx = gsap.context(() => {
       const targets = gsap.utils.toArray(animatedSelector);
-      targets.forEach((card, index) => {
-        gsap.fromTo(
-          card,
-          {
-            y: 36,
-            opacity: 0.65
-          },
-          {
-            y: 0,
-            opacity: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 92%",
-              end: "top 56%",
-              scrub: 0.9,
-              invalidateOnRefresh: true
-            },
-            delay: Math.min(index * 0.012, 0.18)
-          }
-        );
+      targets.forEach((card) => {
+        gsap.set(card, { y: 0, opacity: 1, clearProps: "all" });
       });
     });
 
@@ -190,6 +171,7 @@ const App = () => {
         <Route path="/hospital/cases" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalDoctorAssignment />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />

@@ -97,36 +97,7 @@ export default function Hospitals() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.utils.toArray(".h2-scroll").forEach((el) => {
-        gsap.fromTo(
-          el,
-          { y: 24, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 88%",
-              end: "top 60%",
-              scrub: 0.8,
-            },
-          }
-        );
-      });
-
-      gsap.utils.toArray(".h2-top img").forEach((img) => {
-        gsap.to(img, {
-          yPercent: -10,
-          ease: "none",
-          scrollTrigger: {
-            trigger: img,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: 0.7,
-          },
-        });
-      });
+      gsap.set(".h2-scroll", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
   }, [hospitals.length]);

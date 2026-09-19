@@ -78,39 +78,13 @@ export function MyBookings() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".mb-reveal-top",
-        { y: 24, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: "power3.out" }
-      );
-
-      gsap.fromTo(
-        ".mb-stat",
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, stagger: 0.08, ease: "power2.out", delay: 0.15 }
-      );
-
-      gsap.utils.toArray(".mb-card").forEach((el) => {
-        gsap.fromTo(
-          el,
-          { y: 22, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.55,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 88%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        );
-      });
+      gsap.set(".mb-reveal-top", { y: 0, opacity: 1, clearProps: "all" });
+      gsap.set(".mb-stat", { y: 0, opacity: 1, clearProps: "all" });
+      gsap.set(".mb-card", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [bookings.length]);
 
   const filtered         = filter==="all" ? bookings : bookings.filter(b=>b.status===filter);
   const activeTrackingBooking =
@@ -514,6 +488,23 @@ export function MyBookings() {
                         />
                         <DetailItem icon={<Icons.Clock/>}  iconColor="#ffffff" label="Response Note" value={b.hospital_response_note || "-"} />
                         <DetailItem icon={<Icons.Clock/>}  iconColor="#00a58a" label="Medical Insurance" value={b.insurance_status || "pending"} />
+                        {b.assigned_doctor_names && (
+                          <div style={{ gridColumn: "1 / -1", marginTop: 8, padding: "10px 14px", background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 10, fontSize: 13 }}>
+                            <div style={{ color: "#166534", fontWeight: 800, display: "flex", alignItems: "center", gap: 6 }}>
+                              👨‍⚕️ Assigned Doctor(s): {b.assigned_doctor_names}
+                            </div>
+                            {b.assigned_doctor_specializations && (
+                              <div style={{ color: "#374151", fontSize: 12, marginTop: 3 }}>
+                                <b>Specialization:</b> {b.assigned_doctor_specializations}
+                              </div>
+                            )}
+                            {b.assigned_doctor_contacts && (
+                              <div style={{ color: "#4b5563", fontSize: 12, marginTop: 2 }}>
+                                📞 <b>Direct Contact:</b> {b.assigned_doctor_contacts}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     {b.hospital_response === "not_ready" && (
