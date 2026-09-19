@@ -499,6 +499,25 @@ export default function DriverDashboard() {
     }
   };
 
+  const requestIcuForBooking = async (bookingId) => {
+    if (!window.confirm("🚨 Alert hospital that this patient urgently requires an ICU Bed?")) return;
+    try {
+      const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          icu_required: true,
+          icu_requested_at: new Date().toISOString(),
+        }),
+      });
+      if (!res.ok) throw new Error("ICU request failed");
+      addLog(`🚨 ICU Bed requested for booking #${bookingId}`, "success");
+      fetchBookings();
+    } catch {
+      addLog("Failed to request ICU bed", "error");
+    }
+  };
+
   useEffect(() => {
     if (tab === "change-request") {
       fetchAmbulance();
@@ -2414,6 +2433,33 @@ export default function DriverDashboard() {
                                 >
                                   ⏳ Waiting for Hospital (Patient Reached)
                                 </div>
+                              )}
+                              {b.icu_required ? (
+                                <span
+                                  style={{
+                                    padding: "8px 12px",
+                                    background: "#fee2e2",
+                                    border: "1.5px solid #ef4444",
+                                    borderRadius: 10,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    color: "#b91c1c",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6
+                                  }}
+                                >
+                                  🚨 ICU Bed Requested
+                                </span>
+                              ) : (
+                                <button
+                                  className="dd-btn"
+                                  style={{ background: "#dc2626", color: "#fff", border: "1.5px solid #b91c1c", fontWeight: 800 }}
+                                  onClick={() => requestIcuForBooking(b.id)}
+                                  title="Flag that this patient urgently needs an ICU bed at the receiving hospital"
+                                >
+                                  🚨 ICU Required
+                                </button>
                               )}
                               {b.transfer_requested && b.transfer_status === "pending" ? (
                                 <button

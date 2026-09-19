@@ -4,6 +4,7 @@ import {
   ChevronsRight, Truck, Building2, BarChart2,
   ClipboardList, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
   Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, Mic, FileText,
+  BedDouble, UserCheck,
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -15,19 +16,21 @@ const adminNavItems = [
   { to: "/Analytics",            icon: Activity,      label: "Analytics"        },
   { to: "/Requests",             icon: ClipboardList, label: "Requests"         },
   { to: "/CallIntakeConsole",    icon: PhoneCall,     label: "Call Intake"      },
-  { to: "/DriverChangeRequests", icon: RefreshCw,     label: "Driver Requests", dot: true },
+  { to: "/DriverChangeRequests", icon: Bot,           label: "AI Chat",         dot: true },
   { to: "/AdminChatControl",     icon: Bot,           label: "AI Chat Control", dot: true },
   { to: "/LiveMap",              icon: Compass,       label: "Live Map",        dot: true },
 ];
 
 const hospitalNavItems = [
-  { to: "/hospital/home",      icon: Building2,     label: "Hospital Home" },
-  { to: "/hospital/responses", icon: ShieldCheck,   label: "Hospital Response", dot: true },
-  { to: "/hospital/reports",   icon: BookOpen,      label: "Case Reports", dot: true },
-  { to: "/hospital/live-track", icon: MapPinned,    label: "Live Map", dot: true },
-  { to: "/hospital/resources", icon: BriefcaseBusiness, label: "Resources & Beds" },
-  { to: "/hospital/staff",     icon: Users,           label: "Doctors & Staff" },
-  { to: "/hospital/cases",     icon: FileText,        label: "Cases" },
+  { to: "/hospital/home",          icon: Building2,         label: "Hospital Home" },
+  { to: "/hospital/responses",     icon: ShieldCheck,       label: "Hospital Response", dot: true },
+  { to: "/hospital/beds",          icon: BedDouble,         label: "Bed Management", dot: true },
+  { to: "/hospital/assign-doctor", icon: UserCheck,         label: "Staff Allocation" },
+  { to: "/hospital/reports",       icon: BookOpen,          label: "Case Reports", dot: true },
+  { to: "/hospital/live-track",    icon: MapPinned,         label: "Live Map", dot: true },
+  { to: "/hospital/resources",     icon: BriefcaseBusiness, label: "Resources & Beds" },
+  { to: "/hospital/staff",         icon: Users,             label: "Doctors & Staff" },
+  { to: "/hospital/cases",         icon: FileText,          label: "Cases" },
 ];
 
 const userNavItems = [

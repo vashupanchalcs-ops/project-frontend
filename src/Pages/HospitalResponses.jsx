@@ -9,6 +9,13 @@ export default function HospitalResponses() {
   const [bookings, setBookings] = useState([]);
   const [ambulances, setAmbulances] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(""), 4000);
+  };
 
   const fetchBookings = ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -47,6 +54,53 @@ export default function HospitalResponses() {
     [bookings]
   );
 
+  const handleAssignBed = async (b) => {
+    if (!b.assigned_hospital_id) {
+      alert("No hospital associated with this booking.");
+      return;
+    }
+    setActionLoading(`bed-${b.id}`);
+    try {
+      const res = await fetch(`${BASE}/api/hospitals/${b.assigned_hospital_id}/beds/assign/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: b.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to assign bed");
+      showToast(`✅ Bed ${data.bed?.bed_number || "assigned"} allocated successfully!`);
+      fetchBookings({ silent: true });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSwitchIcu = async (b) => {
+    if (!b.assigned_hospital_id) {
+      alert("No hospital associated with this booking.");
+      return;
+    }
+    if (!window.confirm("Switch this patient to an available ICU Bed? The previous bed will be released.")) return;
+    setActionLoading(`icu-${b.id}`);
+    try {
+      const res = await fetch(`${BASE}/api/hospitals/${b.assigned_hospital_id}/beds/switch-icu/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: b.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No available ICU bed found");
+      showToast(`🚨 Successfully switched to ICU Bed ${data.icu_bed?.bed_number}!`);
+      fetchBookings({ silent: true });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -69,8 +123,8 @@ export default function HospitalResponses() {
           border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 14px;
           background: #ffffff;
-          padding: 11px 12px;
-          box-shadow: 0 10px 24px rgba(255, 255, 255, 0.15);
+          padding: 14px 16px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.06);
         }
         .hr-head {
           display: flex;
@@ -91,39 +145,28 @@ export default function HospitalResponses() {
         }
         .hr-line { font-size: 12px; margin-bottom: 4px; color: rgba(17,17,17,0.84); }
         .hr-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
-        .hr-btn {
-          border: 1px solid #111;
+        .hr-toast {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          background: #111;
+          color: #fff;
+          padding: 12px 20px;
           border-radius: 10px;
-          background: #ffffff;
-          color: #111;
-          height: 36px;
-          font-size: 12px;
-          font-weight: 800;
-          cursor: pointer;
-          font-family: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          z-index: 9999;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .hr-btn.secondary {
-          background: #fff;
-        }
-        .hr-btn.remove {
-          background: #fff;
-          border-color: rgba(20,20,20,0.28);
-          color: rgba(17,17,17,0.88);
-        }
-        .hr-btn.remove:hover {
-          border-color: #111;
-          background: #f4f4ea;
-        }
-        .hr-btn:disabled { opacity: 0.55; cursor: not-allowed; }
         .hr-auto-note {
           margin-top: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(0,0,0,0.06);
+          background: #f8fafc;
           border-radius: 8px;
           padding: 8px 10px;
           font-size: 11px;
           font-weight: 700;
-          color: #111;
+          color: #334155;
         }
         .hr-empty {
           margin-top: 20px;
@@ -141,10 +184,12 @@ export default function HospitalResponses() {
         }
       `}</style>
 
+      {toastMsg && <div className="hr-toast">{toastMsg}</div>}
+
       <div className="hr-root">
         <div className="hr-wrap">
           <h1 className="hr-title">Hospital Responses</h1>
-          <div className="hr-sub">Only hospital-confirmed responses are shown here after hospital sends Ready/Not Ready alert.</div>
+          <div className="hr-sub">Approved emergency cases with doctor allocations and real-time bed management.</div>
 
           {loading ? (
             <div className="hr-empty">Loading...</div>
@@ -154,58 +199,153 @@ export default function HospitalResponses() {
             <div className="hr-grid">
               {hospitalAssigned.map((b) => {
                 const response = String(b.hospital_response || "").toLowerCase();
-                const statusLabel = response === "ready" ? "Approved" : response === "not_ready" ? "Rejected" : "Pending";
-                const statusMessage = response === "ready"
+                const isApproved = response === "ready";
+                const statusLabel = isApproved ? "Approved" : response === "not_ready" ? "Rejected" : "Pending";
+                const statusMessage = isApproved
                   ? "Request accepted. We are preparing."
                   : "Request rejected. Currently not available.";
                 return (
                   <article className="hr-card" key={b.id}>
                     <div className="hr-head">
                       <div className="hr-id">BOOKING #{b.id}</div>
-                      <div className="hr-pill">{statusLabel}</div>
+                      <div className="hr-pill" style={{
+                        background: isApproved ? "#dcfce7" : "#fee2e2",
+                        color: isApproved ? "#166534" : "#991b1b",
+                        borderColor: isApproved ? "#86efac" : "#fca5a5"
+                      }}>{statusLabel}</div>
                     </div>
                     <div className="hr-line"><b>Patient:</b> {b.patient_name || b.booked_by}</div>
                     <div className="hr-line"><b>Pickup:</b> {b.pickup_location}</div>
                     <div className="hr-line"><b>Hospital:</b> {b.assigned_hospital_name}</div>
                     <div className="hr-line"><b>Alert:</b> {b.hospital_alert_sent ? "sent" : "pending"}</div>
                     <div className="hr-line"><b>Note:</b> {b.hospital_response_note || "-"}</div>
-                    <div className="hr-auto-note">
-                      {statusMessage}
-                    </div>
-                    {b.report_submitted_at && (
-                      <div className="hr-auto-note" style={{ marginTop: 8 }}>
-                        Driver report received and hospital notified automatically.
-                      </div>
-                    )}
-                    {b.assigned_doctor_names && (
+                    <div className="hr-auto-note">{statusMessage}</div>
+
+                    {/* Assigned Doctor Display */}
+                    {b.assigned_doctor_names ? (
                       <div style={{ marginTop: 8, padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12 }}>
                         <span style={{ color: "#166534", fontWeight: 700 }}>👨‍⚕️ Assigned Doctor(s):</span> {b.assigned_doctor_names}
                         {b.assigned_doctor_specializations && <span style={{ color: "#475569" }}> ({b.assigned_doctor_specializations})</span>}
                         {b.assigned_doctor_contacts && <div style={{ color: "#64748b", marginTop: 2 }}>📞 {b.assigned_doctor_contacts}</div>}
                       </div>
-                    )}
-                    {b.report_submitted_at && (
-                      <button
-                        onClick={() => navigate(`/hospital/assign-doctor?booking_id=${b.id}`)}
-                        style={{
-                          marginTop: 10,
-                          background: b.assigned_doctor_names ? "#0f766e" : "#166534",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: 8,
-                          padding: "8px 16px",
-                          fontSize: 12,
+                    ) : null}
+
+                    {/* Assigned Bed Display */}
+                    {b.assigned_bed_number ? (
+                      <div style={{
+                        marginTop: 8,
+                        padding: "8px 12px",
+                        background: b.assigned_bed_type === "icu" ? "#eff6ff" : "#fefce8",
+                        border: `1px solid ${b.assigned_bed_type === "icu" ? "#93c5fd" : "#fde047"}`,
+                        borderRadius: 8,
+                        fontSize: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}>
+                        <div>
+                          <span style={{ color: b.assigned_bed_type === "icu" ? "#1d4ed8" : "#854d0e", fontWeight: 700 }}>
+                            🛏️ Assigned Bed:
+                          </span>{" "}
+                          <b>{b.assigned_bed_number}</b> ({b.assigned_bed_type?.toUpperCase() || "GENERAL"})
+                        </div>
+                        <span style={{
+                          fontSize: 10,
                           fontWeight: 800,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        👨‍⚕️ {b.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
-                      </button>
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: b.assigned_bed_type === "icu" ? "#1d4ed8" : "#ca8a04",
+                          color: "#fff"
+                        }}>
+                          {b.assigned_bed_type === "icu" ? "ICU BED" : "RESERVED"}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {/* ICU Required Alert from Driver */}
+                    {b.icu_required && (
+                      <div style={{
+                        marginTop: 10,
+                        padding: "10px 12px",
+                        background: "#fef2f2",
+                        border: "1.5px solid #ef4444",
+                        borderRadius: 8,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6
+                      }}>
+                        <div style={{ color: "#b91c1c", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                          🚨 <span>Driver Flagged: Patient Requires ICU Bed Urgently!</span>
+                        </div>
+                        {b.assigned_bed_type !== "icu" && isApproved && (
+                          <button
+                            onClick={() => handleSwitchIcu(b)}
+                            disabled={actionLoading === `icu-${b.id}`}
+                            style={{
+                              background: "#dc2626",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 6,
+                              padding: "6px 12px",
+                              fontSize: 11,
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              alignSelf: "flex-start",
+                            }}
+                          >
+                            {actionLoading === `icu-${b.id}` ? "Switching..." : "🔄 Switch to Available ICU Bed"}
+                          </button>
+                        )}
+                      </div>
                     )}
 
+                    {/* Action Buttons for Approved Bookings */}
+                    {isApproved && (
+                      <div className="hr-actions">
+                        {/* Assign Staff Button */}
+                        <button
+                          onClick={() => navigate(`/hospital/assign-doctor?booking_id=${b.id}`)}
+                          style={{
+                            background: b.assigned_doctor_names ? "#0f766e" : "#166534",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 8,
+                            padding: "8px 14px",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          👨‍⚕️ {b.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
+                        </button>
+
+                        {/* Assign Bed Button if not assigned yet */}
+                        {!b.assigned_bed_number && (
+                          <button
+                            onClick={() => handleAssignBed(b)}
+                            disabled={actionLoading === `bed-${b.id}`}
+                            style={{
+                              background: "#2563eb",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 8,
+                              padding: "8px 14px",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            {actionLoading === `bed-${b.id}` ? "Allocating..." : "🛏️ Assign Bed"}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </article>
                 );
               })}

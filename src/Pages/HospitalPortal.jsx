@@ -271,6 +271,39 @@ export default function HospitalPortal() {
     }
   };
 
+  const assignBedInPortal = async (bookingId) => {
+    if (!hospital?.id) return;
+    try {
+      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/beds/assign/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to assign bed");
+      await fetchHospitalDashboard({ silent: true });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const switchIcuInPortal = async (bookingId) => {
+    if (!hospital?.id) return;
+    if (!window.confirm("Switch patient to an available ICU Bed? The existing bed will be freed.")) return;
+    try {
+      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/beds/switch-icu/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No available ICU bed found");
+      await fetchHospitalDashboard({ silent: true });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const markPatientReached = async (bookingId) => {
     try {
       setQueue((prev) =>
@@ -2882,7 +2915,83 @@ export default function HospitalPortal() {
                           <div className="hp-row"><span className="hp-label">Alert</span><span>{q.hospital_response ? "sent" : "pending"}</span></div>
                           <div className="hp-row"><span className="hp-label">Note</span><span>{q.hospital_response_note || "Awaiting hospital approval based on bed/staff availability."}</span></div>
                           <div className="hp-response-tile-note">{message}</div>
-                          <div className="hp-actions">
+
+                          {/* Assigned Doctor Display */}
+                          {q.assigned_doctor_names && (
+                            <div style={{ marginTop: 8, padding: "8px 10px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 11 }}>
+                              <span style={{ color: "#166534", fontWeight: 700 }}>👨‍⚕️ Assigned Doctor:</span> {q.assigned_doctor_names}
+                              {q.assigned_doctor_specializations && <span style={{ color: "#475569" }}> ({q.assigned_doctor_specializations})</span>}
+                            </div>
+                          )}
+
+                          {/* Assigned Bed Display */}
+                          {q.assigned_bed_number && (
+                            <div style={{
+                              marginTop: 8,
+                              padding: "8px 10px",
+                              background: q.assigned_bed_type === "icu" ? "#eff6ff" : "#fefce8",
+                              border: `1px solid ${q.assigned_bed_type === "icu" ? "#93c5fd" : "#fde047"}`,
+                              borderRadius: 8,
+                              fontSize: 11,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between"
+                            }}>
+                              <div>
+                                <span style={{ color: q.assigned_bed_type === "icu" ? "#1d4ed8" : "#854d0e", fontWeight: 700 }}>
+                                  🛏️ Assigned Bed:
+                                </span> <b>{q.assigned_bed_number}</b> ({q.assigned_bed_type?.toUpperCase() || "GENERAL"})
+                              </div>
+                              <span style={{
+                                fontSize: 9,
+                                fontWeight: 800,
+                                padding: "2px 6px",
+                                borderRadius: 999,
+                                background: q.assigned_bed_type === "icu" ? "#1d4ed8" : "#ca8a04",
+                                color: "#fff"
+                              }}>
+                                {q.assigned_bed_type === "icu" ? "ICU BED" : "RESERVED"}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* ICU Alert */}
+                          {q.icu_required && (
+                            <div style={{
+                              marginTop: 8,
+                              padding: "8px 10px",
+                              background: "#fef2f2",
+                              border: "1.5px solid #ef4444",
+                              borderRadius: 8,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4
+                            }}>
+                              <div style={{ color: "#b91c1c", fontWeight: 800, fontSize: 11 }}>
+                                🚨 Driver: Patient Requires ICU Bed!
+                              </div>
+                              {q.assigned_bed_type !== "icu" && response === "ready" && (
+                                <button
+                                  onClick={() => switchIcuInPortal(q.booking_id)}
+                                  style={{
+                                    background: "#dc2626",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: 6,
+                                    padding: "5px 10px",
+                                    fontSize: 10,
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                    alignSelf: "flex-start",
+                                  }}
+                                >
+                                  🔄 Switch to Available ICU Bed
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="hp-actions" style={{ flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                             {!hasResponded && (
                               <>
                                 <button className="hp-btn ok" onClick={() => updateHospitalResponse(q.booking_id, "ready")}>Approve</button>
@@ -2890,41 +2999,82 @@ export default function HospitalPortal() {
                               </>
                             )}
                             {response === "ready" && (
-                              q.patient_reached ? (
-                                <span
-                                  className="hp-pill"
-                                  style={{
-                                    background: "#dcfce7",
-                                    color: "#166534",
-                                    border: "1.5px solid #86efac",
-                                    fontWeight: 800,
-                                    padding: "6px 14px",
-                                    borderRadius: "8px",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    fontSize: "12px",
-                                  }}
-                                >
-                                  🏥 Patient Reached Hospital
-                                </span>
-                              ) : (
+                              <>
+                                {/* Assign Staff Button */}
                                 <button
                                   className="hp-btn ok"
                                   style={{
-                                    background: "#0284c7",
+                                    background: q.assigned_doctor_names ? "#0f766e" : "#166534",
                                     color: "#ffffff",
-                                    borderColor: "#0369a1",
+                                    borderColor: q.assigned_doctor_names ? "#0d9488" : "#15803d",
                                     fontWeight: 800,
-                                    padding: "6px 14px",
+                                    padding: "6px 12px",
                                     borderRadius: "8px",
+                                    fontSize: "11px",
                                     cursor: "pointer",
                                   }}
-                                  onClick={() => markPatientReached(q.booking_id)}
+                                  onClick={() => navigate(`/hospital/assign-doctor?booking_id=${q.booking_id}`)}
                                 >
-                                  🏥 Patient Reached
+                                  👨‍⚕️ {q.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
                                 </button>
-                              )
+
+                                {/* Assign Bed Button */}
+                                {!q.assigned_bed_number && (
+                                  <button
+                                    className="hp-btn ok"
+                                    style={{
+                                      background: "#2563eb",
+                                      color: "#ffffff",
+                                      borderColor: "#1d4ed8",
+                                      fontWeight: 800,
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      fontSize: "11px",
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => assignBedInPortal(q.booking_id)}
+                                  >
+                                    🛏️ Assign Bed
+                                  </button>
+                                )}
+
+                                {q.patient_reached ? (
+                                  <span
+                                    className="hp-pill"
+                                    style={{
+                                      background: "#dcfce7",
+                                      color: "#166534",
+                                      border: "1.5px solid #86efac",
+                                      fontWeight: 800,
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      fontSize: "11px",
+                                    }}
+                                  >
+                                    🏥 Reached
+                                  </span>
+                                ) : (
+                                  <button
+                                    className="hp-btn ok"
+                                    style={{
+                                      background: "#0284c7",
+                                      color: "#ffffff",
+                                      borderColor: "#0369a1",
+                                      fontWeight: 800,
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      fontSize: "11px",
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => markPatientReached(q.booking_id)}
+                                  >
+                                    🏥 Patient Reached
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </article>

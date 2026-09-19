@@ -39,6 +39,7 @@ import HospitalCaseReportView from "./Pages/HospitalCaseReportView";
 import DriverInsuranceForm   from "./Pages/DriverInsuranceForm";
 import HospitalInsuranceView from "./Pages/HospitalInsuranceView";
 import HospitalDoctorAssignment from "./Pages/HospitalDoctorAssignment";
+import HospitalBeds             from "./Pages/HospitalBeds";
 
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
@@ -172,6 +173,7 @@ const App = () => {
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalDoctorAssignment />} />} />
+        <Route path="/hospital/beds" element={<HospitalRoute element={<HospitalBeds />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />

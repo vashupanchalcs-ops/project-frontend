@@ -282,9 +282,9 @@ export default function DriverChangeRequests() {
 
           <div className="dcr-top">
             <div>
-              <div className="dcr-tag">🔄 Requests</div>
-              <h1 className="dcr-title">Driver Requests Management</h1>
-              <p className="dcr-sub">Review and approve ambulance reassignment requests</p>
+              <div className="dcr-tag">🤖 AI Support Console</div>
+              <h1 className="dcr-title">Driver Support & AI Chat</h1>
+              <p className="dcr-sub">Real-time driver AI assistance, navigation updates, and dispatch guidance</p>
             </div>
             <button className="dcr-refresh" onClick={load}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -351,89 +351,7 @@ export default function DriverChangeRequests() {
             </div>
           </div>
 
-          {/* PENDING */}
-          {false && (
-            <div style={{marginBottom:28}}>
-              <div className="dcr-sec-title">
-                ⏳ Pending
-                <span style={{marginLeft:8,fontSize:12,fontWeight:700,background:"#ffffff",color:"#111",border:"1px solid rgba(255, 255, 255, 0.15)",borderRadius:100,padding:"2px 10px"}}>{pending.length}</span>
-              </div>
-              {pending.map((req,i)=>(
-                <div key={i} className="dcr-card pending-card">
-                  <div className="dcr-card-top">
-                    <div className="dcr-driver-row">
-                      <div className="dcr-driver-av">{req.driverName?.[0]?.toUpperCase()||"D"}</div>
-                      <div>
-                        <div className="dcr-driver-name">{req.driverName||"Driver"}</div>
-                        <div className="dcr-driver-mail">{req.driverEmail}</div>
-                        {req.driverPhone&&<div className="dcr-driver-ph">📞 {req.driverPhone}</div>}
-                      </div>
-                    </div>
-                    <span className="dcr-status-pill" style={{color:"#b36800",background:"rgba(179,104,0,0.09)",borderColor:"rgba(179,104,0,0.22)"}}>Pending</span>
-                  </div>
-
-                  <div className="dcr-change-row">
-                    <div className="dcr-amb-box">
-                      <div className="dcr-amb-box-lbl">Current</div>
-                      <div className="dcr-amb-num">🚑 {req.currentAmbNumber||req.currentAmbId||"—"}</div>
-                    </div>
-                    <div className="dcr-arrow">→</div>
-                    <div className="dcr-amb-box">
-                      <div className="dcr-amb-box-lbl">Requested</div>
-                      <div className="dcr-amb-num" style={{color:"#111"}}>🚑 {req.newAmbNumber||req.newAmbId||"—"}</div>
-                    </div>
-                  </div>
-
-                  <div className="dcr-meta">
-                    {req.timestamp&&<div className="dcr-meta-item">🕐 <b>{new Date(req.timestamp).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</b></div>}
-                  </div>
-
-                  <div className="dcr-actions">
-                    <button className="dcr-btn dcr-btn-approve" onClick={()=>respond(req,"approved")}>✅ Approve</button>
-                    <button className="dcr-btn dcr-btn-reject"  onClick={()=>respond(req,"rejected")}>❌ Reject</button>
-                    <button className="dcr-btn dcr-btn-delete"  onClick={()=>deleteRequest(req)}>🗑 Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* PROCESSED */}
-          {false && (
-            <div>
-              <div className="dcr-sec-title">Processed</div>
-              {processed.map((req,i)=>{
-                const sc = req.status==="approved"
-                  ? {c:"#00875a",bg:"rgba(0,135,90,0.09)",b:"rgba(0,135,90,0.22)"}
-                  : {c:"#ffffff",bg:"rgba(255, 255, 255, 0.15)",b:"rgba(255, 255, 255, 0.15)"};
-                return(
-                  <div key={i} className="dcr-card" style={{opacity:.75}}>
-                    <div className="dcr-card-top">
-                      <div className="dcr-driver-row">
-                        <div className="dcr-driver-av" style={{background:"#a1a1a6"}}>{req.driverName?.[0]?.toUpperCase()||"D"}</div>
-                        <div>
-                          <div className="dcr-driver-name">{req.driverName||"Driver"}</div>
-                          <div className="dcr-driver-mail">{req.driverEmail}</div>
-                        </div>
-                      </div>
-                      <span className="dcr-status-pill" style={{color:sc.c,background:sc.bg,borderColor:sc.b}}>
-                        {req.status==="approved"?"✅ Approved":"❌ Rejected"}
-                      </span>
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
-                      <div style={{fontSize:12,color:"var(--sr-text-sub, rgba(17,17,17,.72))"}}>
-                        {req.currentAmbNumber||req.currentAmbId} → <b style={{color:"var(--sr-text,#111)"}}>{req.newAmbNumber||req.newAmbId}</b>
-                      </div>
-                      <button className="dcr-btn dcr-btn-delete" style={{padding:"5px 14px",fontSize:11}} onClick={()=>deleteRequest(req)}>
-                        🗑 Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
+          
         </div>
       </div>
     </>
