@@ -101,6 +101,7 @@ const Leftsidebar = () => {
           flex: 1; display: flex; flex-direction: column;
           align-items: center; gap: 4px;
           padding: 12px 0; width: 100%;
+          overflow-x: visible !important;
           overflow-y: auto;
           scrollbar-width: none;
         }
@@ -127,13 +128,18 @@ const Leftsidebar = () => {
           box-shadow: none;
         }
         .lsb-tooltip {
-          position: absolute; left: 54px;
+          position: absolute !important; left: 56px !important;
+          top: 50% !important; transform: translateY(-50%) !important;
+          border-radius: 8px !important; font-weight: 750 !important;
           background: #000000; color: #fff;
           white-space: nowrap; opacity: 0; pointer-events: none;
           transition: opacity 0.15s; border: 1px solid #000000;
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; z-index: 99999;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; z-index: 999999 !important;
+          box-shadow: 0 4px 18px rgba(0,0,0,0.35) !important;
         }
-        .lsb-item:hover .lsb-tooltip { opacity: 1; }
+        .lsb-item:hover .lsb-tooltip,
+        .lsb-item:focus .lsb-tooltip,
+        .lsb-item:active .lsb-tooltip { opacity: 1 !important; visibility: visible !important; }
         .lsb-dot {
           position: absolute; top: 6px; right: 6px;
           width: 6px; height: 6px; border-radius: 50%;
@@ -404,7 +410,7 @@ const Leftsidebar = () => {
             return (
               <div key={item.to} style={{ display: "contents" }}>
                 {role === "admin" && index === 6 && <div className="lsb-divider" />}
-                <Link to={item.to} className={`lsb-item ${isActive ? "active" : ""}`}>
+                <Link to={item.to} className={`lsb-item ${isActive ? "active" : ""}`} title={item.label}>
                   <Icon size={20} />
                   {item.dot && !isPendingReq && <div className="lsb-dot" />}
                   {isPendingReq && <div className="lsb-dot-red">{pendingCount}</div>}
