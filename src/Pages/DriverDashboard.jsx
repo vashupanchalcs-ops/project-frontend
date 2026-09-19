@@ -606,7 +606,10 @@ export default function DriverDashboard() {
     setIsTracking(false);
     addLog("⏹ Stop Tracking ", "warn");
   };
-  useEffect(() => () => stopTracking(), []);
+  useEffect(() => {
+    startTracking();
+    return () => stopTracking();
+  }, []);
 
   useEffect(() => {
     if (!("getBattery" in navigator)) return;
@@ -2526,10 +2529,22 @@ export default function DriverDashboard() {
         )}
 
         {tab === "change-request" && (() => {
+          const eId = Number(effectiveAmbId || ambId || 0);
+          const dEmail = String(driverEmail || "").toLowerCase().trim();
+          const ambNo = String(ambulance?.ambulance_number || localStorage.getItem("ambulance_number") || ambNumber || "").toLowerCase().trim();
+          const isPlaceholderAmb = !ambNo || ambNo === "amb-0000" || ambNo === "amb-000";
+
           const activePendingReq = (activeTransferBooking?.transfer_requested && activeTransferBooking?.transfer_status === "pending")
             ? { newAmbNumber: activeTransferBooking.transfer_target_ambulance_number, bookingId: activeTransferBooking.id }
             : (pendingReq && activeTransferBooking && Number(pendingReq.bookingId) === Number(activeTransferBooking.id) && pendingReq.status === "pending" ? pendingReq : null);
-          const isTransferredAway = Boolean(activeTransferBooking?.transferred_to_ambulance_number);
+          const isTransferredAway = Boolean(
+            activeTransferBooking?.transferred_to_ambulance_number &&
+            (
+              (dEmail && String(activeTransferBooking.transfer_from_driver_email || "").toLowerCase().trim() === dEmail) ||
+              (!isPlaceholderAmb && ambNo && String(activeTransferBooking.transfer_from_ambulance_number || "").toLowerCase().trim() === ambNo) ||
+              (eId > 0 && Number(activeTransferBooking.transfer_from_ambulance_id) === eId)
+            )
+          );
           const transferredAwayAmbulance = activeTransferBooking?.transferred_to_ambulance_number;
 
           return (

@@ -692,16 +692,16 @@ export default function Ambulances() {
         const bookedHospitalName = targetHospital?.name;
         setTargetHospital(null);
         window.dispatchEvent(new Event("new-booking"));
-        if (bookedHospitalName) {
-          setTimeout(() => {
-            navigate("/MyBookings", {
-              state: {
-                flashMsg: `Emergency booking for ${bookedHospitalName} is active. Live tracking is available.`,
-                bookingId: created?.id,
-              },
-            });
-          }, 900);
-        }
+        setTimeout(() => {
+          navigate("/MyBookings", {
+            state: {
+              flashMsg: bookedHospitalName
+                ? `Emergency booking for ${bookedHospitalName} is active. Live tracking is available.`
+                : `Emergency booking #${created?.id || ""} is submitted. Live tracking is available.`,
+              bookingId: created?.id,
+            },
+          });
+        }, 900);
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(err.error || "Booking failed. Try again.", "err");

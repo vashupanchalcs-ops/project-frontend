@@ -415,6 +415,17 @@ export default function AdminRouteManager({
           </div>
 
           <div className="arm-map">
+            <div className="arm-map-header-cover">
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+                <span>🚑</span> {selAmb?.ambulance_number || "Aarogya Fleet"}
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Target: {selBook?.assigned_hospital_name || selBook?.destination || "Hospital"}
+              </div>
+              <div style={{ fontSize: 10, color: "#666", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Pickup: {selBook?.pickup_location || "Patient Location"}
+              </div>
+            </div>
             <iframe
               className="arm-map-frame"
               src={embedSrc}
