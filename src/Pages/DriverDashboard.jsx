@@ -53,10 +53,24 @@ const routeDataFromLngLat = (coords) => {
 const routeDataFromSavedPolyline = (polyline) => {
   try {
     const parsed = JSON.parse(polyline || "[]");
-    if (!Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed) || parsed.length < 2) return null;
     const coords = parsed
-      .map((coord) => (Array.isArray(coord) && coord.length >= 2 ? toLngLat(Number(coord[1]), Number(coord[0])) : null))
+      .map((coord) => {
+        if (!Array.isArray(coord) || coord.length < 2) return null;
+        const c0 = Number(coord[0]);
+        const c1 = Number(coord[1]);
+        if (!Number.isFinite(c0) || !Number.isFinite(c1)) return null;
+        // In India: lat is 6..38, lng is 68..98
+        if (c0 >= 6 && c0 <= 38 && c1 >= 68 && c1 <= 98) {
+          return [c1, c0]; // was [lat, lng], return [lng, lat]
+        }
+        if (c0 >= 68 && c0 <= 98 && c1 >= 6 && c1 <= 38) {
+          return [c0, c1]; // was already [lng, lat]
+        }
+        return null;
+      })
       .filter(Boolean);
+    if (coords.length < 2) return null;
     return routeDataFromLngLat(coords);
   } catch {
     return null;
@@ -191,7 +205,104 @@ export default function DriverDashboard() {
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [location, ambulance, route, routeMode]);
 
+  const [driverRoadRoute, setDriverRoadRoute] = useState(null);
+
+  useEffect(() => {
+    if (!route) {
+      setDriverRoadRoute(null);
+      return;
+    }
+
+    const saved = routeDataFromSavedPolyline(route?.polyline);
+    if (saved && saved.geometry?.coordinates?.length > 2) {
+      setDriverRoadRoute(saved);
+      return;
+    }
+
+    let cancel = false;
+
+    const fetchDriverRoute = async () => {
+      const ambLat = Number(location?.lat ?? ambulance?.latitude);
+      const ambLng = Number(location?.lng ?? ambulance?.longitude);
+      const pLat = Number(route?.pickup_lat);
+      const pLng = Number(route?.pickup_lng);
+      const dLat = Number(route?.dest_lat);
+      const dLng = Number(route?.dest_lng);
+
+      if (!inIndia(pLat, pLng) || !inIndia(dLat, dLng)) return;
+
+      const startLat = inIndia(ambLat, ambLng) ? ambLat : pLat;
+      const startLng = inIndia(ambLat, ambLng) ? ambLng : pLng;
+
+      // 1. Try Backend POST /api/route/
+      try {
+        const res = await fetch(`${BASE}/api/route/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ambulance_lat: startLat,
+            ambulance_lng: startLng,
+            pickup_lat: pLat,
+            pickup_lng: pLng,
+            hospital_lat: dLat,
+            hospital_lng: dLng,
+            dest_lat: dLat,
+            dest_lng: dLng,
+            travel_mode: "car",
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const normalized =
+            data?.geometry?.coordinates?.length >= 2
+              ? data
+              : data?.best_route?.geometry?.coordinates?.length >= 2
+              ? data.best_route
+              : null;
+          if (!cancel && normalized) {
+            setDriverRoadRoute(normalized);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Backend route in DriverDashboard failed, trying OSRM:", err);
+      }
+
+      // 2. Client-side OSRM fallback
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${pLng},${pLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true`;
+        const osrmRes = await fetch(osrmUrl);
+        if (osrmRes.ok) {
+          const osrmData = await osrmRes.json();
+          const r0 = osrmData?.routes?.[0];
+          if (!cancel && r0?.geometry?.coordinates?.length >= 2) {
+            setDriverRoadRoute({
+              distance_m: Math.round(r0.distance || 0),
+              duration_s: Math.round(r0.duration || 0),
+              geometry: r0.geometry,
+              traffic_sections: [],
+              steps: [],
+            });
+            return;
+          }
+        }
+      } catch (osrmErr) {
+        console.warn("Client OSRM fallback in DriverDashboard:", osrmErr);
+      }
+    };
+
+    fetchDriverRoute();
+
+    return () => {
+      cancel = true;
+    };
+  }, [route, location, ambulance]);
+
   const driverTomTomRouteData = useMemo(() => {
+    if (driverRoadRoute?.geometry?.coordinates?.length >= 2) {
+      return driverRoadRoute;
+    }
+
     const savedRoute = routeDataFromSavedPolyline(route?.polyline);
     if (savedRoute) return savedRoute;
 
@@ -199,7 +310,7 @@ export default function DriverDashboard() {
     const pickupCoord = toLngLat(route?.pickup_lat, route?.pickup_lng);
     const destCoord = toLngLat(route?.dest_lat, route?.dest_lng);
     return routeDataFromLngLat([ambCoord, pickupCoord, destCoord]);
-  }, [location, ambulance, route]);
+  }, [driverRoadRoute, location, ambulance, route]);
 
 
   const googleMapsAppUrl = useMemo(() => {

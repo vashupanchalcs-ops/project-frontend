@@ -5,34 +5,33 @@ import "maplibre-gl/dist/maplibre-gl.css";
 const TOMTOM_KEY = (import.meta.env.VITE_TOMTOM_MAPS_KEY || "").trim();
 
 // OpenFreeMap Liberty: rich vector style with road names, street names, shops, POIs, and city labels
-const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
-
-// High-reliability OSM raster style fallback
 const isIndiaPoint = (lat, lng) => {
   const nLat = Number(lat);
   const nLng = Number(lng);
   return Number.isFinite(nLat) && Number.isFinite(nLng) && nLat >= 6 && nLat <= 38 && nLng >= 68 && nLng <= 98;
 };
 
-const OSM_RASTER_STYLE = {
+// Direct high-performance OpenStreetMap raster style with full road, street, city, and shop labels
+const MAP_STYLE = {
   version: 8,
   sources: {
-    "base-tiles": {
+    "osm-base": {
       type: "raster",
       tiles: [
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
         "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
       ],
       tileSize: 256,
-      attribution: "© OpenStreetMap contributors, © OpenFreeMap",
+      attribution: "© OpenStreetMap contributors",
     },
   },
   layers: [
     {
-      id: "base-tiles-layer",
+      id: "osm-base-layer",
       type: "raster",
-      source: "base-tiles",
+      source: "osm-base",
       minzoom: 0,
       maxzoom: 19,
     },
@@ -125,24 +124,14 @@ export default function TomTomLiveMap({
           }
         }
 
-        // 2. High-performance MapLibre vector map (OpenFreeMap Liberty with full labels)
+        // 2. Instant-load high-reliability OpenStreetMap style (full street & shop labels)
         if (!mapLibreMap) {
           mapLibreMap = new maplibregl.Map({
             container: containerRef.current,
-            style: VECTOR_STYLE_URL,
+            style: MAP_STYLE,
             center: [validLng, validLat],
-            zoom: 13,
+            zoom: 14,
             attributionControl: false,
-          });
-
-          // Fallback to OSM raster tiles if vector style fails
-          mapLibreMap.once("error", (e) => {
-            console.warn("Vector map style warning, checking fallback:", e);
-            try {
-              if (!mapLibreMap.getStyle()) {
-                mapLibreMap.setStyle(OSM_RASTER_STYLE);
-              }
-            } catch (_) {}
           });
         }
 
