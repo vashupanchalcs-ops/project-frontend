@@ -62,6 +62,7 @@ export default function TrafficETAPanel({
   remainingDistanceM = null,
   remainingEtaS = null,
   isLiveTracking = false,
+  showGuidance = true,
   className = "",
   style = {},
 }) {
@@ -357,7 +358,7 @@ export default function TrafficETAPanel({
       <div className="tep-analysis-card">
         <div className="tep-analysis-title">
           <span>Traffic Analysis</span>
-          <span style={{ fontSize: 10, color: "#9ca3af" }}>TomTom Orbis Live</span>
+          <span style={{ fontSize: 10, color: "#9ca3af" }}>Google Maps Live</span>
         </div>
 
         <div className="tep-scenario-grid">
@@ -435,7 +436,7 @@ export default function TrafficETAPanel({
       )}
 
       {/* 4. Turn-by-Turn Guidance Steps */}
-      {activeRoute.steps && activeRoute.steps.length > 0 && (
+      {showGuidance && activeRoute.steps && activeRoute.steps.length > 0 && (
         <div>
           <div className="tep-steps-header" onClick={() => setShowSteps(!showSteps)}>
             <span>Turn-by-Turn Guidance ({activeRoute.steps.length} steps)</span>
@@ -467,7 +468,7 @@ export default function TrafficETAPanel({
 
       {/* Disclaimer */}
       <div className="tep-disclaimer">
-        Traffic data provided by TomTom Orbis Engine. Traffic status classification adheres to Aarogya custom thresholds.
+        Traffic data provided by Google Maps when available. Traffic status classification adheres to Aarogya custom thresholds.
       </div>
     </div>
   );

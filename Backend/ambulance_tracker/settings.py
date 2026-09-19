@@ -202,7 +202,10 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # ─── Google Maps (Directions/Geocode) ───────────────────────────────────────
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
+GOOGLE_MAPS_API_KEY = os.getenv(
+    "GOOGLE_MAPS_API_KEY",
+    "AIzaSyDFELdWEMtpHkwOUsfN123las2n98r17to",
+).strip()
 
 # ─── Voice/SMS Intake Integrations ───────────────────────────────────────────
 DIRECT_CALL_HOTLINE_NUMBER = os.getenv("DIRECT_CALL_HOTLINE_NUMBER", "8882128534").strip()

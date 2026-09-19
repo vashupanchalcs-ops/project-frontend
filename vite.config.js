@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     host: "0.0.0.0",
-    port: 5174,       // 5173 busy hai isliye 5174
+    port: 5174,       
     strictPort: true,
   }
 })

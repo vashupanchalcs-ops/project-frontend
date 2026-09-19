@@ -112,17 +112,17 @@ export default function DriverChangeRequests() {
           width:100%;
           max-width:none;
           margin:0;
-          padding:18px clamp(16px,2.2vw,32px) 18px;
+          padding:10px clamp(12px,2vw,24px) 10px;
           height: calc(100vh - 64px);
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 8px;
         }
 
-        .dcr-top   { display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px; }
+        .dcr-top   { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px; }
         .dcr-tag   { display:inline-flex;align-items:center;gap:6px;background:#ffffff;color:#ffffff;border:1px solid #ffffff;border-radius:999px;padding:4px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px; }
-        .dcr-title { font-size:28px;font-weight:800;color:var(--sr-text,#111);letter-spacing:-.5px;margin:0 0 4px; }
+        .dcr-title { font-size:22px;font-weight:800;color:var(--sr-text,#111);letter-spacing:-.5px;margin:0; }
         .dcr-sub   { font-size:13px;color:var(--sr-text-sub, rgba(17,17,17,.7));margin:0; }
 
         .dcr-refresh {
@@ -168,7 +168,6 @@ export default function DriverChangeRequests() {
           border: 1px solid #e0e0e0;
           border-radius: 10px;
           padding: 8px;
-          max-height: 520px;
           overflow: auto;
           background: #ffffff;
         }
@@ -282,9 +281,7 @@ export default function DriverChangeRequests() {
 
           <div className="dcr-top">
             <div>
-              <div className="dcr-tag">🤖 AI Support Console</div>
               <h1 className="dcr-title">Driver Support & AI Chat</h1>
-              <p className="dcr-sub">Real-time driver AI assistance, navigation updates, and dispatch guidance</p>
             </div>
             <button className="dcr-refresh" onClick={load}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>

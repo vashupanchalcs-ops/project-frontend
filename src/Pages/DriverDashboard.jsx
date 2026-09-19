@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { sliceRemainingPath } from "../utils/routeUtils";
 import UnifiedMapHeader from "../Components/UnifiedMapHeader";
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
-import TomTomLiveMap from "../Components/TomTomLiveMap";
+import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 import useLeaflet, { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRouteWithManeuvers, LIGHT_TILE, SATELLITE_TILE } from "../hooks/useLeaflet";
 import { motion } from "framer-motion";
 import gsap from "gsap";
@@ -298,7 +298,7 @@ export default function DriverDashboard() {
     };
   }, [route, location, ambulance]);
 
-  const driverTomTomRouteData = useMemo(() => {
+  const driverRouteData = useMemo(() => {
     if (driverRoadRoute?.geometry?.coordinates?.length >= 2) {
       return driverRoadRoute;
     }
@@ -2298,7 +2298,7 @@ export default function DriverDashboard() {
 
 
               <div style={{ width: "100%", height: "100%", minHeight: 520, borderRadius: 16, overflow: "hidden", position: "relative" }}>
-                <TomTomLiveMap
+                <GoogleMapEmbed
                   ambulanceLoc={
                     location && inIndia(location.lat, location.lng)
                       ? { lat: location.lat, lng: location.lng, speed: speed || location.speed || 0 }
@@ -2316,8 +2316,9 @@ export default function DriverDashboard() {
                       ? { lat: Number(route.dest_lat), lng: Number(route.dest_lng), name: route.destination || "Hospital" }
                       : null
                   }
-                  routeData={driverTomTomRouteData}
+                  routeData={driverRouteData}
                   followAmbulance={routeMode === "start"}
+                  showGuidance
                   height="100%"
                 />
               </div>

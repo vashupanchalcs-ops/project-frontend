@@ -1,8 +1,28 @@
 export const DELHI = { lat: 28.6139, lng: 77.209 };
 
-const GOOGLE_MAPS_KEY = String(import.meta?.env?.VITE_GOOGLE_MAPS_API_KEY || "").trim();
+// Prefer a referrer-restricted env key in production, while keeping local
+// preview usable when no .env file is present.
+const GOOGLE_MAPS_KEY = String(
+  import.meta?.env?.VITE_GOOGLE_MAPS_API_KEY ||
+    "AIzaSyDFELdWEMtpHkwOUsfN123las2n98r17to"
+).trim();
 const GOOGLE_MAPS_LIBRARIES = "places,geometry,marker";
 const GOOGLE_MAPS_SCRIPT_ID = "swiftrescue-google-maps";
+const GOOGLE_MAPS_AUTH_EVENT = "swiftrescue-google-maps-auth-failure";
+
+const installGoogleMapsFailureHandler = () => {
+  if (typeof window === "undefined" || window.__SWIFTRESCUE_GOOGLE_AUTH_HANDLER__) return;
+  const previousHandler = window.gm_authFailure;
+  window.gm_authFailure = () => {
+    window.__SWIFTRESCUE_GOOGLE_MAPS_AUTH_FAILURE__ = true;
+    window.dispatchEvent(new Event(GOOGLE_MAPS_AUTH_EVENT));
+    if (typeof previousHandler === "function") previousHandler();
+  };
+  window.__SWIFTRESCUE_GOOGLE_AUTH_HANDLER__ = true;
+};
+
+export const hasGoogleMapsAuthFailure = () =>
+  typeof window !== "undefined" && Boolean(window.__SWIFTRESCUE_GOOGLE_MAPS_AUTH_FAILURE__);
 
 export const hasConfiguredGoogleMapsKey = () =>
   Boolean(GOOGLE_MAPS_KEY) &&
@@ -11,6 +31,8 @@ export const hasConfiguredGoogleMapsKey = () =>
 
 export const loadGoogleMapsScript = () => {
   if (typeof window === "undefined") return Promise.resolve(false);
+  installGoogleMapsFailureHandler();
+  if (hasGoogleMapsAuthFailure()) return Promise.resolve(false);
   if (window.google?.maps) return Promise.resolve(true);
   if (!hasConfiguredGoogleMapsKey()) return Promise.resolve(false);
 
@@ -19,6 +41,11 @@ export const loadGoogleMapsScript = () => {
     return new Promise((resolve) => {
       const started = Date.now();
       const timer = window.setInterval(() => {
+        if (hasGoogleMapsAuthFailure()) {
+          window.clearInterval(timer);
+          resolve(false);
+          return;
+        }
         if (window.google?.maps) {
           window.clearInterval(timer);
           resolve(true);
@@ -40,7 +67,7 @@ export const loadGoogleMapsScript = () => {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       GOOGLE_MAPS_KEY
     )}&libraries=${GOOGLE_MAPS_LIBRARIES}&loading=async`;
-    script.onload = () => resolve(Boolean(window.google?.maps));
+    script.onload = () => resolve(Boolean(window.google?.maps) && !hasGoogleMapsAuthFailure());
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
@@ -62,11 +89,14 @@ export const normalizePlace = (value = "") =>
     .trim();
 
 export const ensureGoogleMaps = async (timeoutMs = 7000) => {
+  installGoogleMapsFailureHandler();
+  if (hasGoogleMapsAuthFailure()) return false;
   if (!(window.google && window.google.maps)) {
     await loadGoogleMapsScript();
   }
   const started = Date.now();
   while (!(window.google && window.google.maps)) {
+    if (hasGoogleMapsAuthFailure()) return false;
     if (Date.now() - started > timeoutMs) return false;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }

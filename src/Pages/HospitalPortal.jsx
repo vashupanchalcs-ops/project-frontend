@@ -1,5 +1,5 @@
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
-import TomTomLiveMap from "../Components/TomTomLiveMap";
+import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
@@ -3521,7 +3521,7 @@ export default function HospitalPortal() {
                       <section className="hp-map-panel">
                         {selectedMapBooking ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
-                            <TomTomLiveMap
+                            <GoogleMapEmbed
                               ambulanceLoc={
                                 hasCoordPair(selectedMapBooking?.ambulance_live?.latitude, selectedMapBooking?.ambulance_live?.longitude)
                                   ? {

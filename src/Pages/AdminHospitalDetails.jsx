@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import TomTomLiveMap from "../Components/TomTomLiveMap";
+import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 
 // Deployment v1.0.5 - Pin selected hospital to top and enable full page scrolling with zero cutoff
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
@@ -328,7 +328,7 @@ export default function AdminHospitalDetails() {
                     </div>
                     {hasCoords ? (
                       <div style={{ height: 320, width: "100%", position: "relative" }}>
-                        <TomTomLiveMap
+                        <GoogleMapEmbed
                           destinationLoc={{
                             lat,
                             lng,

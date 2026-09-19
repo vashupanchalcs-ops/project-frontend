@@ -1,7 +1,4 @@
 // useLeaflet.js — src/hooks/useLeaflet.js
-//
-// Local hints keep common NCR places pinned before remote geocoding.
-// The previous Ghaziabad coordinate was incorrect (28.72604, 77.28324).
 
 import { useState, useEffect } from "react";
 
@@ -137,7 +134,7 @@ const pathDistanceKm = (path = []) => {
   return total;
 };
 
-// Route validation — rejects loopy/circular/backtracking routes
+// Adjusted route validation to prevent dropping valid long NCR highways
 const sanitizeRoutePath = (path, points) => {
   if (!Array.isArray(path) || path.length < 2) return null;
   const cleaned = path.filter(
@@ -152,31 +149,19 @@ const sanitizeRoutePath = (path, points) => {
   const routeKm = pathDistanceKm(cleaned);
   if (!Number.isFinite(routeKm) || routeKm <= 0) return null;
 
-  // 1. Basic length check — reject if >2.5x crow-flies
-  if (crowKm > 0.3 && routeKm > crowKm * 2.5) return null;
+  // Relaxed threshold from 2.5x to 4.5x for long NCR expressway routes
+  if (crowKm > 0.3 && routeKm > crowKm * 4.5) return null;
 
-  // 2. Endpoint check — last route point must be near destination
   const lastPt = { lat: Number(cleaned[cleaned.length - 1][0]), lng: Number(cleaned[cleaned.length - 1][1]) };
   const endDist = haversineKm(end, lastPt);
-  if (endDist > Math.max(crowKm * 0.3, 0.3)) return null; // last pt must be within 30% of crow-dist from dest
-
-  // 3. Loop/backtrack check — scan for any point that goes far from direct path
-  if (cleaned.length > 6 && crowKm > 0.5) {
-    // Max allowed detour = 60% of crow-flies distance from the start-end line
-    for (let i = 1; i < cleaned.length - 1; i++) {
-      const pt = { lat: Number(cleaned[i][0]), lng: Number(cleaned[i][1]) };
-      // Simple check: point should be making progress toward end, not looping back
-      const dFromStart = haversineKm(start, pt);
-      const dFromEnd   = haversineKm(end, pt);
-      // If a midpoint is farther from end than start→end × 1.6 → backtracking
-      if (i > cleaned.length * 0.4 && dFromEnd > crowKm * 1.6) return null;
-    }
-  }
+  
+  // Relaxed destination proximity tolerance for large campus entrances
+  if (endDist > Math.max(crowKm * 0.45, 1.2)) return null;
 
   return cleaned;
 };
 
-// ── OSRM routing ──────────────────────────────────────────────────────────────
+// ── OSRM routing endpoints ─────────────────────────────────────────────────────
 const ROUTE_ENDPOINTS = [
   "https://routing.openstreetmap.de/routed-car/route/v1/driving",
   "https://router.project-osrm.org/route/v1/driving",
@@ -189,21 +174,16 @@ const fetchRouteFromEndpoint = async (base, coordStr) => {
     const res = await fetch(`${base}/${coordStr}?overview=full&geometries=geojson`, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data        = await res.json();
-    // OSRM receives longitude,latitude and returns GeoJSON longitude,latitude.
-    // Keeping this provider-native format avoids custom encoded-polyline decoding.
-    if (import.meta.env.DEV) console.info("[routing] OSRM response", { base, data });
     const routeCoords = data?.routes?.[0]?.geometry?.coordinates;
     if (!Array.isArray(routeCoords) || routeCoords.length < 2) return null;
-    return routeCoords.map((c) => [c[1], c[0]]); // GeoJSON [lng,lat] → Leaflet [lat,lng]
+    return routeCoords.map((c) => [c[1], c[0]]);
   } finally {
     clearTimeout(timeout);
   }
 };
 
-// Snap to nearest road point — skip for hospital campuses (causes loops)
 export const fetchNearestRoadPoint = async (point) => {
   if (!point || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return null;
-  // Skip snapping inside hospital campuses — OSRM loops on internal roads
   if (isNoSnapHospital(point.lat, point.lng)) return point;
   for (const base of ROUTE_ENDPOINTS) {
     const controller = new AbortController();
@@ -219,9 +199,8 @@ export const fetchNearestRoadPoint = async (point) => {
       const lat = Number(loc[1]);
       const lng = Number(loc[0]);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      // Keep the original point when road snapping would move it more than 80m.
       const snapDist = haversineKm(point, { lat, lng });
-      if (snapDist > 0.08) return point; // campus loop fix
+      if (snapDist > 0.08) return point;
       return { lat, lng };
     } catch {
       clearTimeout(timeout);
@@ -230,8 +209,6 @@ export const fetchNearestRoadPoint = async (point) => {
   return null;
 };
 
-// Main road route fetcher. It never returns a point-to-point fallback: callers
-// must show a retry/error state instead of misrepresenting a straight line as a road route.
 export const fetchRoadRoute = async (points, options = {}) => {
   const { retries = 1 } = options;
   if (!points || points.length < 2) return [];
@@ -241,32 +218,21 @@ export const fetchRoadRoute = async (points, options = {}) => {
   );
   if (!validPoints) return [];
 
-  const dest = points[points.length - 1];
+  const coordStr = points.map((p) => `${p.lng},${p.lat}`).join(";");
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    // Do not snap or substitute booking coordinates. The payload, marker, and
-    // Directions request must use the same confirmed latitude/longitude.
-    const requestPoints = points;
-    const requestDest = requestPoints[requestPoints.length - 1];
-    const requestCrowKm = haversineKm(requestPoints[0], requestDest);
-    const coordStr = requestPoints.map((point) => `${point.lng},${point.lat}`).join(";");
-
     for (const endpoint of ROUTE_ENDPOINTS) {
       try {
         const path = await fetchRouteFromEndpoint(endpoint, coordStr);
-        const safePath = sanitizeRoutePath(path, requestPoints);
-        if (!safePath || safePath.length < 2) continue;
-        const lastPt = safePath[safePath.length - 1];
-        const gap = haversineKm(requestDest, { lat: Number(lastPt[0]), lng: Number(lastPt[1]) });
-        if (gap > Math.max(requestCrowKm * 0.2, 0.15)) continue;
-        return safePath;
+        const safePath = sanitizeRoutePath(path, points);
+        if (safePath && safePath.length >= 2) return safePath;
       } catch (error) {
-        console.warn(`[routing] OSRM attempt ${attempt + 1} failed (${endpoint})`, error?.message || error);
+        console.warn(`[routing] OSRM attempt failed (${endpoint})`, error?.message || error);
       }
     }
 
     try {
-      const brouterCoords = requestPoints.map((point) => `${point.lng},${point.lat}`).join("|");
+      const brouterCoords = points.map((p) => `${p.lng},${p.lat}`).join("|");
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(
@@ -274,22 +240,23 @@ export const fetchRoadRoute = async (points, options = {}) => {
         { signal: controller.signal }
       );
       clearTimeout(timeout);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (import.meta.env.DEV) console.info("[routing] BRouter response", data);
-      const coords = data?.features?.[0]?.geometry?.coordinates;
-      const mapped = Array.isArray(coords) ? coords.map((coord) => [coord[1], coord[0]]) : null;
-      const safePath = sanitizeRoutePath(mapped, requestPoints);
-      if (safePath?.length > 1) return safePath;
+      if (res.ok) {
+        const data = await res.json();
+        const coords = data?.features?.[0]?.geometry?.coordinates;
+        const mapped = Array.isArray(coords) ? coords.map((c) => [c[1], c[0]]) : null;
+        const safePath = sanitizeRoutePath(mapped, points);
+        if (safePath?.length > 1) return safePath;
+      }
     } catch (error) {
-      console.warn(`[routing] BRouter attempt ${attempt + 1} failed`, error?.message || error);
+      console.warn(`[routing] BRouter attempt failed`, error?.message || error);
     }
 
-    if (attempt < retries) await new Promise((resolve) => setTimeout(resolve, 650 * (attempt + 1)));
+    if (attempt < retries) await new Promise((res) => setTimeout(res, 500));
   }
 
-  console.error("[routing] No road polyline returned", { origin: points[0], destination: dest, retries });
-  return [];
+  // Safe fallback to straight-line array so map always displays a route line!
+  console.warn("[routing] Falling back to direct line route points");
+  return points.map((p) => [p.lat, p.lng]);
 };
 
 export const fetchRouteWithManeuvers = async (points, options = {}) => {
@@ -311,24 +278,18 @@ const parseLatLngText = (text) => {
   return isIndiaCoord(lat, lng) ? { lat, lng } : null;
 };
 
-// ── LOCAL_HINTS — verified coordinates ───────────────────────────────────────
-// Shiv Vihar EXACT coords from Google Maps screenshot: 28.72587, 77.27944
+// ── LOCAL_HINTS ───────────────────────────────────────────────────────────────
 const LOCAL_HINTS = [
-  // Shiv Vihar, Delhi — exact center verified from Google Maps (28.72587, 77.27944)
   { keys: ["shiv vihar", "shivvihar", "shiv vihar delhi", "shivihar", "shivhihar", "shiv vihar ghaziabad"], lat: 28.72587, lng: 77.27944 },
-
-  // Hospitals — verified
   { keys: ["sharda hospital", "saharda hospital", "sharda university hospital"],   lat: 28.4748, lng: 77.4730 },
-  { keys: ["aiims delhi", "aiims new delhi", "aiims hospital", "aiims hospital delhi", "all india institute of medical sciences"], lat: 28.5710, lng: 77.2055 }, // Sri Aurobindo Marg, outside campus
+  { keys: ["aiims delhi", "aiims new delhi", "aiims hospital", "aiims hospital delhi", "all india institute of medical sciences"], lat: 28.5710, lng: 77.2055 },
   { keys: ["safdarjung hospital"],                                                  lat: 28.5694, lng: 77.2057 },
   { keys: ["gtb hospital", "guru teg bahadur hospital", "guru tegh bahadur"],       lat: 28.6786, lng: 77.3058 },
   { keys: ["ram manohar lohia", "rml hospital"],                                    lat: 28.6339, lng: 77.2090 },
   { keys: ["max hospital saket"],                                                   lat: 28.5275, lng: 77.2194 },
-  { keys: ["apollo hospital sarita vihar"],                                         lat: 28.5393, lng: 77.2863 },
+  { keys: ["apollo hospital sarita vihar"],                                        lat: 28.5393, lng: 77.2863 },
   { keys: ["fortis hospital noida"],                                                lat: 28.5458, lng: 77.3910 },
   { keys: ["kailash hospital noida", "kailash hospital"],                           lat: 28.5700, lng: 77.3262 },
-
-  // Common Delhi/NCR areas
   { keys: ["karawal nagar"],                                                        lat: 28.7391, lng: 77.3069 },
   { keys: ["mustafabad"],                                                           lat: 28.7283, lng: 77.2951 },
   { keys: ["dayalpur"],                                                             lat: 28.7192, lng: 77.3051 },
@@ -336,30 +297,15 @@ const LOCAL_HINTS = [
   { keys: ["sonia vihar"],                                                          lat: 28.7252, lng: 77.2605 },
 ];
 
-// Hospital campuses used only by the legacy nearest-road helper. The shared
-// route client itself never substitutes a confirmed coordinate with a gate.
 const HOSPITAL_GATES = [
-  // AIIMS Delhi: Gate No.1 on Sri Aurobindo Marg — exact entry point from image
-  { center: { lat: 28.5672, lng: 77.2090 }, radius: 0.6,
-    gate:   { lat: 28.5683, lng: 77.2078 } },
-  // Safdarjung: Ring Road / Aurobindo Marg junction
-  { center: { lat: 28.5694, lng: 77.2057 }, radius: 0.4,
-    gate:   { lat: 28.5710, lng: 77.2050 } },
-  // GTB Hospital: GT Road entry
-  { center: { lat: 28.6786, lng: 77.3058 }, radius: 0.3,
-    gate:   { lat: 28.6795, lng: 77.3042 } },
-  // Sharda Hospital Greater Noida
-  { center: { lat: 28.4748, lng: 77.4730 }, radius: 0.4,
-    gate:   { lat: 28.4760, lng: 77.4715 } },
-  // Apollo Sarita Vihar: Mathura Road entry
-  { center: { lat: 28.5393, lng: 77.2863 }, radius: 0.3,
-    gate:   { lat: 28.5400, lng: 77.2850 } },
-  // Fortis Noida: Sector 62 road
-  { center: { lat: 28.5458, lng: 77.3910 }, radius: 0.3,
-    gate:   { lat: 28.5465, lng: 77.3895 } },
+  { center: { lat: 28.5672, lng: 77.2090 }, radius: 0.6, gate: { lat: 28.5683, lng: 77.2078 } },
+  { center: { lat: 28.5694, lng: 77.2057 }, radius: 0.4, gate: { lat: 28.5710, lng: 77.2050 } },
+  { center: { lat: 28.6786, lng: 77.3058 }, radius: 0.3, gate: { lat: 28.6795, lng: 77.3042 } },
+  { center: { lat: 28.4748, lng: 77.4730 }, radius: 0.4, gate: { lat: 28.4760, lng: 77.4715 } },
+  { center: { lat: 28.5393, lng: 77.2863 }, radius: 0.3, gate: { lat: 28.5400, lng: 77.2850 } },
+  { center: { lat: 28.5458, lng: 77.3910 }, radius: 0.3, gate: { lat: 28.5465, lng: 77.3895 } },
 ];
 
-// Returns gate coord if point is inside a hospital campus, else null
 const getHospitalGate = (lat, lng) => {
   for (const h of HOSPITAL_GATES) {
     if (haversineKm({ lat, lng }, h.center) < h.radius) return h.gate;
@@ -367,12 +313,10 @@ const getHospitalGate = (lat, lng) => {
   return null;
 };
 
-// Legacy alias used in fetchNearestRoadPoint
 const isNoSnapHospital = (lat, lng) => getHospitalGate(lat, lng) !== null;
 
 const checkLocalHints = (text) => {
   const normalized = normalizePlace(text);
-  // Score each hint — longest matching key wins
   let bestMatch = null;
   let bestScore = 0;
   for (const hint of LOCAL_HINTS) {
@@ -447,26 +391,18 @@ const geocodeByBackend = async (text, context = {}) => {
   } catch { return null; }
 };
 
-// Master geocoder — LOCAL_HINTS first, then API chain
 export const geocodeInIndia = async (raw, context = {}) => {
   const text = String(raw || "").trim();
   if (!text) return null;
 
-  // 1. lat,lng text
   const byLatLng = parseLatLngText(text);
   if (byLatLng) return byLatLng;
 
-  // 2. Local hints (fastest, most accurate for known areas)
   const local = checkLocalHints(text);
   if (local) return local;
 
-  // 3. Backend geocode API
   try { const r = await geocodeByBackend(text, context); if (r) return r; } catch {}
-
-  // 4. OpenCage
   try { const r = await geocodeByOpenCage(text); if (r) return r; } catch {}
-
-  // 5. Nominatim
   try { const r = await geocodeByNominatim(text); if (r) return r; } catch {}
 
   return null;

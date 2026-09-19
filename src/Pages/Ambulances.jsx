@@ -9,7 +9,7 @@ import useLeaflet, {
   fetchRoadRoute,
   LIGHT_TILE,
 } from "../hooks/useLeaflet";
-import TomTomLiveMap from "../Components/TomTomLiveMap";
+import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -1882,7 +1882,7 @@ export default function Ambulances() {
                   })()}
                  
                   <div className="amb-map-box" style={{ position: "relative" }}>
-                    <TomTomLiveMap
+                    <GoogleMapEmbed
                       ambulanceLoc={
                         selectedAmb && isIndiaLatLng(Number(selectedAmb.latitude), Number(selectedAmb.longitude))
                           ? { lat: Number(selectedAmb.latitude), lng: Number(selectedAmb.longitude), heading: Number(selectedAmb.heading) || 0, speed: selectedAmb.speed || 0 }

@@ -17,6 +17,12 @@ const coordText = (lat, lng) => {
   return `${nLat.toFixed(5)}, ${nLng.toFixed(5)}`;
 };
 
+const formatBattery = (val) => {
+  if (val === null || val === undefined || val === "" || val === "-") return "-";
+  const num = Number(val);
+  return Number.isFinite(num) ? `${num}%` : `${val}`;
+};
+
 export default function UnifiedMapHeader({
   ambulanceNumber = "AMB-0000",
   bookingId = null,
@@ -35,16 +41,17 @@ export default function UnifiedMapHeader({
   return (
     <div style={{ background: "#ffffff", border: "1px solid rgba(17,17,17,0.12)", borderRadius: 10, marginBottom: 8, overflow: "hidden", fontFamily: "Segoe UI, sans-serif" }}>
       {/* Top Title Bar */}
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(17,17,17,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "rgba(255,255,255,0.92)" }}>
+      <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(17,17,17,0.12)", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8, background: "rgba(255,255,255,0.92)" }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
           <span>🚑</span>
           <span>{ambulanceNumber} {bookingId ? `• Booking #${bookingId}` : ""}</span>
         </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ fontSize: 11, color: "rgba(17,17,17,0.66)", fontWeight: 600 }}>{driverName}</div>
           {onSetRouteMode && (
             <div style={{ display: "inline-flex", gap: 6 }}>
               <button
+                type="button"
                 onClick={() => onSetRouteMode("start")}
                 style={{
                   background: routeMode === "start" ? "#00c853" : "#ffffff",
@@ -61,6 +68,7 @@ export default function UnifiedMapHeader({
                 ▶ Start Route
               </button>
               <button
+                type="button"
                 onClick={() => onSetRouteMode("full")}
                 style={{
                   background: routeMode === "full" ? "#111111" : "#ffffff",
@@ -87,14 +95,14 @@ export default function UnifiedMapHeader({
       </div>
 
       {/* Metrics Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 8, padding: "10px 14px", background: "rgba(255,255,255,0.72)", fontSize: 11 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, padding: "10px 14px", background: "rgba(255,255,255,0.72)", fontSize: 11 }}>
         <div>
           <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>Speed</span>
           <span style={{ fontWeight: 700, color: "#111" }}>{speed || 0} km/h</span>
         </div>
         <div>
           <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>Battery</span>
-          <span style={{ fontWeight: 700, color: "#111" }}>{battery !== null && battery !== undefined ? `${battery}%` : "-%"}</span>
+          <span style={{ fontWeight: 700, color: "#111" }}>{formatBattery(battery)}</span>
         </div>
         <div>
           <span style={{ color: "rgba(17,17,17,0.55)", display: "block", fontSize: 10, fontWeight: 600 }}>🚑 Ambulance</span>

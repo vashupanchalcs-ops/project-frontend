@@ -13,6 +13,7 @@ from ambulance.tracking_views import (
     suggest_route,
     respond_route,
     driver_active_route,
+    active_route_by_booking,
     get_traffic_route,
     update_battery,
 )
@@ -45,6 +46,7 @@ urlpatterns = [
     path("api/update-battery/",                      update_battery),
     path("api/driver/location/",                     views.get_driver_location_by_ambulance),
     path("api/driver/active-route/",                 driver_active_route),
+    path("api/route/active/<int:booking_id>/",       active_route_by_booking),
     path("api/driver/route/<int:route_id>/respond/", respond_route),
 
     path("api/admin/live-locations/",    all_live_locations),

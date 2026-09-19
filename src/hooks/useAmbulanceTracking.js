@@ -108,7 +108,7 @@ export function calculatePolylineProgress(coords, point) {
  * 
  * - Polls ambulance GPS every `pollIntervalMs` (default 4000ms)
  * - Interpolates remaining distance and remaining ETA using polyline progress
- * - NEVER consumes a TomTom routing API request per GPS ping
+ * - NEVER consumes a routing API request per GPS ping
  * - Flags `shouldReroute` when ambulance deviates > 150m or interval elapsed
  */
 export default function useAmbulanceTracking({

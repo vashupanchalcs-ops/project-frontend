@@ -336,6 +336,18 @@ def driver_active_route(request):
 
 
 @csrf_exempt
+def active_route_by_booking(request, booking_id):
+    if request.method != "GET":
+        return JsonResponse({"error": "GET only"}, status=405)
+
+    route = SuggestedRoute.objects.filter(
+        booking_id=booking_id,
+        status__in=["pending", "accepted"],
+    ).order_by("-created_at").first()
+    return JsonResponse(_route_dict(route) if route else {})
+
+
+@csrf_exempt
 def get_traffic_route(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST only"}, status=405)

@@ -2,7 +2,7 @@
  * UserBookingMap.jsx — src/Components/UserBookingMap.jsx
  *
  * Real-Time Ambulance Tracking & Dispatch View for Users:
- * - Powered by TomTom Orbis + MapLibre Live Engine (TomTomLiveMap).
+ * - Powered by Google Maps JavaScript, TrafficLayer, and route fallbacks.
  * - Real-time ambulance tracking with polyline progress interpolation (useAmbulanceTracking).
  * - Live dynamic ETA & remaining distance calculation (zero unnecessary API quota calls).
  * - Multi-segment traffic-aware polyline and emergency status indicators.
@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import TomTomLiveMap from "./TomTomLiveMap";
+import GoogleMapEmbed from "./GoogleMapEmbed";
 import useAmbulanceTracking, { haversineM } from "../hooks/useAmbulanceTracking";
 import { isIndiaCoord } from "../hooks/useLeaflet";
 
@@ -122,7 +122,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return { lat: pickupLoc.lat - 0.005, lng: pickupLoc.lng - 0.005, heading: 0, speed: 0 };
   }, [ambulanceLoc, pickupLoc]);
 
-  // ── Fetch or Calculate Route from Backend / TomTom API ───────────────────────
+  // ── Fetch or calculate the cached Google-backed route ───────────────────────
   useEffect(() => {
     if (!pickupLoc || !destLoc) return;
 
@@ -528,7 +528,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           </div>
         </div>
 
-        {/* Right Side Map View (TomTom Orbis Live Map Engine) */}
+        {/* Right Side Map View (Google Maps live route engine) */}
         <div className="ubm-map-area">
           {routeMode === "start" && (
             <div
@@ -555,7 +555,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             </div>
           )}
 
-          <TomTomLiveMap
+          <GoogleMapEmbed
             ambulanceLoc={effectiveAmbLoc}
             pickupLoc={pickupLoc}
             destinationLoc={destLoc}

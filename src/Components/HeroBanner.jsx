@@ -35,9 +35,9 @@ function HeroBanner({ movie }) {
         />
       </picture>
 
-      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/15" />
+      <div className="absolute inset-0 bg-linear-to-r from-black via-black/65 to-black/15" />
 
-      <div className="relative z-10 mx-auto flex h-full min-h-[68vh] max-w-[1400px] flex-col justify-center gap-5 px-5 py-8 md:px-10">
+      <div className="relative z-10 mx-auto flex h-full min-h-[68vh] max-w-350 flex-col justify-center gap-5 px-5 py-8 md:px-10">
         <p className="hero-item text-sm uppercase tracking-[0.25em] text-red-300">Now Streaming</p>
         <h1 className="hero-item title-font text-5xl leading-none md:text-8xl">{movie.title}</h1>
         <p className="hero-item max-w-xl text-sm text-white/80 md:text-base">{movie.overview}</p>

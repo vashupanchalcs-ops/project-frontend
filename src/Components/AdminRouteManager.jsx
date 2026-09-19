@@ -2,16 +2,16 @@
  * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
  *
  * Professional Aarogya Live Command Center & Dispatch Engine:
- * - Powered by TomTom Orbis + MapLibre Map Engine (TomTomLiveMap).
+ * - Powered by Google Maps JavaScript, TrafficLayer, and route fallbacks.
  * - Real-time traffic-aware routing from backend POST /api/route/.
  * - Live ambulance tracking with polyline progress interpolation (useAmbulanceTracking).
- * - Traffic analysis panel (TrafficETAPanel): free-flow vs historic vs live ETA, turn-by-turn steps.
- * - Graceful fallback to MapLibre Positron and straight line if API key or offline.
+ * - Traffic analysis panel (TrafficETAPanel): free-flow vs historic vs live ETA.
+ * - Graceful fallback to Google embed, OSRM road geometry, and straight line if offline.
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import UnifiedMapHeader from "./UnifiedMapHeader";
-import TomTomLiveMap from "./TomTomLiveMap";
+import GoogleMapEmbed from "./GoogleMapEmbed";
 import TrafficETAPanel from "./TrafficETAPanel";
 import useAmbulanceTracking, { haversineM } from "../hooks/useAmbulanceTracking";
 import { geocodeInIndia, isIndiaCoord, normalizePlace } from "../hooks/useLeaflet";
@@ -242,7 +242,7 @@ export default function AdminRouteManager({
     }
   }, [selAmb?.id, selBook?.id]);
 
-  // ── Find Route via Backend TomTom API ───────────────────────────────────────
+  // ── Find Route via the Google-backed backend route endpoint ────────────────
   const findRoute = async () => {
     if (!selAmb) return showToast("Select an ambulance first", "error");
     if (!selBook) return showToast("Select a booking first", "error");
@@ -257,7 +257,7 @@ export default function AdminRouteManager({
       setPickupCoord(pickup);
       setDestCoord(destination);
 
-      // Call backend TomTom routing endpoint
+      // Call the cached Google-backed routing endpoint.
       const response = await fetch(`${BASE}/api/route/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -291,7 +291,7 @@ export default function AdminRouteManager({
           const mins = Math.max(1, Math.round((normalizedRoute.duration_s || 0) / 60));
           const isTransfer = Boolean(selBook.transfer_requested || selBook.transferred_to_ambulance_number);
           setRouteStats({ distKm, mins, isTransfer });
-          const providerTag = data?.provider === "tomtom" ? "TomTom Live" : "Live Road";
+          const providerTag = data?.provider === "google" ? "Google Traffic" : "Fallback Road";
           showToast(`Traffic Route: ${distKm} km · ~${mins} min (${providerTag})`);
           return;
         }
@@ -449,20 +449,22 @@ export default function AdminRouteManager({
           animation: pulse 1.5s infinite;
         }
 
-        /* Top control header overlay */
+        /* Right-corner ambulance summary overlay */
         .arm-map-header-cover {
           position: absolute;
           top: 0;
-          left: 0;
+          right: 0;
+          left: auto;
           width: 360px;
           height: auto;
           min-height: 80px;
           z-index: 20;
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(8px);
-          border-right: 1px solid rgba(17,17,17,0.12);
+          border-left: 1px solid rgba(17,17,17,0.12);
           border-bottom: 1px solid rgba(17,17,17,0.12);
-          border-bottom-right-radius: 12px;
+          border-bottom-left-radius: 12px;
+          border-bottom-right-radius: 0;
           padding: 10px 14px;
           pointer-events: auto;
           box-shadow: 0 4px 14px rgba(0,0,0,0.08);
@@ -488,7 +490,7 @@ export default function AdminRouteManager({
             <div className="arm-panel-header">
               <div style={{ fontWeight: 800, fontSize: 14 }}>Route Manager</div>
               <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>
-                TomTom Orbis Live Traffic Engine
+                Google Maps Live Traffic Engine
               </div>
             </div>
 
@@ -593,15 +595,16 @@ export default function AdminRouteManager({
                     activeRouteIndex={activeRouteIndex}
                     onSelectRouteIndex={(idx) => setActiveRouteIndex(idx)}
                     currentStepIndex={currentStepIndex}
+                    showGuidance={false}
                   />
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Map Canvas (TomTom Orbis Live Map Engine) */}
+          {/* Right Map Canvas (Google Maps live route engine) */}
           <div className="arm-map">
-            {/* Top-Left Target & Status Overlay */}
+            {/* Top-right target and status overlay */}
             <div className="arm-map-header-cover">
               <div style={{ fontSize: 13, fontWeight: 900, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
                 <span>🚑</span> {selAmb?.ambulance_number || "Aarogya Fleet"}
@@ -627,8 +630,8 @@ export default function AdminRouteManager({
               </div>
             )}
 
-            {/* High-Performance TomTom / MapLibre Engine */}
-            <TomTomLiveMap
+            {/* Interactive Google map with quota-safe fallback */}
+            <GoogleMapEmbed
               ambulanceLoc={liveAmbulanceCoord}
               pickupLoc={effectivePickupLoc}
               destinationLoc={effectiveDestLoc}
