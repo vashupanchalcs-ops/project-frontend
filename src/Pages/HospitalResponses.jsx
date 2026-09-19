@@ -304,8 +304,7 @@ export default function HospitalResponses() {
                         </div>
                         {b.assigned_bed_type !== "icu" && isApproved && (
                           <button
-                            onClick={() => handleSwitchIcu(b)}
-                            disabled={actionLoading === `icu-${b.id}`}
+                            onClick={() => navigate(`/hospital/beds?booking_id=${b.id}&type=icu`)}
                             style={{
                               background: "#dc2626",
                               color: "#fff",
@@ -318,7 +317,7 @@ export default function HospitalResponses() {
                               alignSelf: "flex-start",
                             }}
                           >
-                            {actionLoading === `icu-${b.id}` ? "Switching..." : "🔄 Switch to Available ICU Bed"}
+                            🚨 Allocate ICU Bed
                           </button>
                         )}
                       </div>
@@ -347,11 +346,10 @@ export default function HospitalResponses() {
                           👨‍⚕️ {b.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
                         </button>
 
-                        {/* Assign Bed Button if not assigned yet */}
-                        {!b.assigned_bed_number && (
+                        {/* Allocate Bed Button — navigates to Bed Management Console to choose specific bed */}
+                        {!b.assigned_bed_number ? (
                           <button
-                            onClick={() => handleAssignBed(b)}
-                            disabled={actionLoading === `bed-${b.id}`}
+                            onClick={() => navigate(`/hospital/beds?booking_id=${b.id}&type=${b.icu_required ? "icu" : "general"}`)}
                             style={{
                               background: "#2563eb",
                               color: "#fff",
@@ -366,7 +364,26 @@ export default function HospitalResponses() {
                               gap: 6,
                             }}
                           >
-                            {actionLoading === `bed-${b.id}` ? "Allocating..." : "🛏️ Assign Bed"}
+                            🛏️ Allocate Bed
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => navigate(`/hospital/beds?booking_id=${b.id}&type=${b.icu_required ? "icu" : "general"}`)}
+                            style={{
+                              background: "#f1f5f9",
+                              color: "#334155",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: 8,
+                              padding: "8px 12px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            🔄 Change Bed
                           </button>
                         )}
                       </div>

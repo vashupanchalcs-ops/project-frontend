@@ -3036,20 +3036,20 @@ export default function HospitalPortal() {
                               </div>
                               {q.assigned_bed_type !== "icu" && response === "ready" && (
                                 <button
-                                  onClick={() => switchIcuInPortal(q.booking_id)}
+                                  onClick={() => navigate(`/hospital/beds?booking_id=${q.booking_id}&type=icu`)}
                                   style={{
                                     background: "#dc2626",
                                     color: "#fff",
                                     border: "none",
                                     borderRadius: 6,
-                                    padding: "5px 10px",
-                                    fontSize: 10,
+                                    padding: "6px 12px",
+                                    fontSize: 11,
                                     fontWeight: 800,
                                     cursor: "pointer",
                                     alignSelf: "flex-start",
                                   }}
                                 >
-                                  🔄 Switch to Available ICU Bed
+                                  🚨 Allocate ICU Bed
                                 </button>
                               )}
                             </div>
@@ -3082,8 +3082,8 @@ export default function HospitalPortal() {
                                   👨‍⚕️ {q.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
                                 </button>
 
-                                {/* Assign Bed Button */}
-                                {!q.assigned_bed_number && (
+                                {/* Allocate Bed Button — navigates to Bed Management Console to choose specific bed */}
+                                {!q.assigned_bed_number ? (
                                   <button
                                     className="hp-btn ok"
                                     style={{
@@ -3096,9 +3096,26 @@ export default function HospitalPortal() {
                                       fontSize: "11px",
                                       cursor: "pointer",
                                     }}
-                                    onClick={() => assignBedInPortal(q.booking_id)}
+                                    onClick={() => navigate(`/hospital/beds?booking_id=${q.booking_id}&type=${q.icu_required ? "icu" : "general"}`)}
                                   >
-                                    🛏️ Assign Bed
+                                    🛏️ Allocate Bed
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="hp-btn"
+                                    style={{
+                                      background: "#f1f5f9",
+                                      color: "#334155",
+                                      border: "1px solid #cbd5e1",
+                                      fontWeight: 700,
+                                      padding: "6px 10px",
+                                      borderRadius: "8px",
+                                      fontSize: "10px",
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => navigate(`/hospital/beds?booking_id=${q.booking_id}&type=${q.icu_required ? "icu" : "general"}`)}
+                                  >
+                                    🔄 Change Bed
                                   </button>
                                 )}
 

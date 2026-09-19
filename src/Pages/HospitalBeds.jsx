@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { BedDouble, ShieldAlert, Activity, CheckCircle, Clock, User, Phone, Heart, Calendar, Stethoscope, X, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { BedDouble, ShieldAlert, Activity, CheckCircle, Clock, User, Phone, Heart, Calendar, Stethoscope, X, RefreshCw, AlertCircle, ArrowLeft } from "lucide-react";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -7,6 +8,11 @@ const defaultApiBase = import.meta.env.DEV
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function HospitalBeds() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const urlBookingId = searchParams.get("booking_id");
+  const urlType = searchParams.get("type"); // "icu" | "general"
+
   const cachedBeds = useMemo(() => {
     try {
       return JSON.parse(sessionStorage.getItem("hospital_beds_cache") || "[]");
@@ -30,6 +36,12 @@ export default function HospitalBeds() {
   const [filterType, setFilterType] = useState("all"); // all, general, icu
   const [updating, setUpdating] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Allocation Mode states
+  const [targetBooking, setTargetBooking] = useState(null);
+  const [pendingBookings, setPendingBookings] = useState([]);
+  const [selectedBookingIdForBed, setSelectedBookingIdForBed] = useState(urlBookingId || "");
+  const icuHubRef = useRef(null);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -285,6 +297,223 @@ export default function HospitalBeds() {
     setUpdating(false);
   };
 
+  // Load target booking and pending bookings for Allocation Mode
+  useEffect(() => {
+    let isMounted = true;
+    const loadBookingData = async () => {
+      let foundTarget = null;
+      let allPending = [];
+
+      try {
+        const portalCache = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+        if (portalCache?.queue && Array.isArray(portalCache.queue)) {
+          allPending = portalCache.queue.map((q) => ({
+            id: q.booking_id,
+            patient_name: q.patient_name,
+            booked_by: q.booked_by,
+            patient_age: q.patient_age,
+            patient_gender: q.patient_gender,
+            patient_contact_number: q.patient_contact,
+            patient_condition: q.patient_condition,
+            vitals_summary: q.vitals_summary,
+            assigned_doctor_names: q.assigned_doctor_names,
+            assigned_doctors_json: q.assigned_doctors_json,
+            assigned_bed_id: q.assigned_bed_id,
+            assigned_bed_number: q.assigned_bed_number,
+            assigned_bed_type: q.assigned_bed_type,
+            icu_required: q.icu_required,
+            hospital_response: q.hospital_response,
+          }));
+        }
+      } catch {}
+
+      try {
+        const myBookingsCache = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+        if (Array.isArray(myBookingsCache)) {
+          myBookingsCache.forEach((b) => {
+            if (!allPending.find((p) => p.id === b.id)) {
+              allPending.push(b);
+            }
+          });
+        }
+      } catch {}
+
+      if (urlBookingId) {
+        foundTarget = allPending.find((b) => String(b.id) === String(urlBookingId));
+        if (!foundTarget) {
+          try {
+            const res = await fetch(`${BASE}/api/bookings/${urlBookingId}/`);
+            if (res.ok) {
+              foundTarget = await res.json();
+              if (!allPending.find((p) => p.id === foundTarget.id)) {
+                allPending.push(foundTarget);
+              }
+            }
+          } catch {}
+        }
+      }
+
+      if (allPending.length === 0) {
+        try {
+          const res = await fetch(`${BASE}/api/bookings/`);
+          if (res.ok) {
+            const list = await res.json();
+            if (Array.isArray(list)) {
+              allPending = list.filter((b) => b.status !== "cancelled");
+              if (urlBookingId && !foundTarget) {
+                foundTarget = allPending.find((b) => String(b.id) === String(urlBookingId));
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (isMounted) {
+        setPendingBookings(allPending);
+        if (foundTarget) {
+          setTargetBooking(foundTarget);
+          setSelectedBookingIdForBed(String(foundTarget.id));
+        }
+      }
+    };
+
+    loadBookingData();
+    return () => { isMounted = false; };
+  }, [urlBookingId]);
+
+  // Auto-scroll to ICU Hub if requested or required
+  useEffect(() => {
+    if (urlType === "icu" || targetBooking?.icu_required) {
+      const timer = setTimeout(() => {
+        if (icuHubRef.current) {
+          icuHubRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [urlType, targetBooking?.icu_required]);
+
+  // Explicit Bed Allocation to a specific Booking
+  const handleAssignBedToBooking = async (bed, booking) => {
+    if (!bed || !booking) return;
+    setUpdating(true);
+    const bedId = bed.id;
+    const bookingId = booking.id;
+
+    const payload = {
+      status: "reserved",
+      assigned_booking_id: bookingId,
+      patient_name: booking.patient_name || booking.booked_by || "Emergency Intake",
+      patient_age: booking.patient_age || "",
+      patient_gender: booking.patient_gender || "",
+      patient_phone: booking.patient_contact_number || "",
+      medical_condition: booking.patient_condition || (bed.bed_type === "icu" ? "Critical Care Required" : "General Inpatient Care"),
+      vitals_summary: booking.vitals_summary || "",
+      attending_doctor: booking.assigned_doctor_names || "",
+      assigned_staff_json: booking.assigned_doctors_json || "[]",
+      admission_time: new Date().toISOString(),
+    };
+
+    // 1. Optimistically update local beds list and selectedBed immediately
+    const updatedBed = { ...bed, ...payload };
+    setSelectedBed(updatedBed);
+    setBeds((prev) =>
+      prev.map((b) => {
+        if (b.id === bedId) return updatedBed;
+        // If this booking previously held another bed, free it!
+        if (b.assigned_booking_id === bookingId && b.id !== bedId) {
+          return {
+            ...b,
+            status: "available",
+            assigned_booking_id: null,
+            patient_name: "",
+            patient_age: "",
+            patient_gender: "",
+            patient_phone: "",
+            medical_condition: "",
+            vitals_summary: "",
+            attending_doctor: "",
+            assigned_staff_json: "[]",
+            admission_time: null,
+          };
+        }
+        return b;
+      })
+    );
+
+    // 2. Update targetBooking state
+    const updatedTarget = {
+      ...booking,
+      assigned_bed_id: bed.id,
+      assigned_bed_number: bed.bed_number,
+      assigned_bed_type: bed.bed_type,
+    };
+    setTargetBooking(updatedTarget);
+
+    showToast(`✅ Bed ${bed.bed_number} successfully assigned to ${booking.patient_name || booking.booked_by}!`);
+
+    // 3. Update sessionStorage caches
+    try {
+      const pc = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+      if (pc && Array.isArray(pc.queue)) {
+        pc.queue = pc.queue.map((q) =>
+          Number(q.booking_id) === Number(bookingId)
+            ? { ...q, assigned_bed_id: bed.id, assigned_bed_number: bed.bed_number, assigned_bed_type: bed.bed_type }
+            : q
+        );
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify(pc));
+      }
+      const mc = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+      if (Array.isArray(mc)) {
+        sessionStorage.setItem("my_bookings_cache", JSON.stringify(mc.map((b) =>
+          Number(b.id) === Number(bookingId)
+            ? { ...b, assigned_bed_id: bed.id, assigned_bed_number: bed.bed_number, assigned_bed_type: bed.bed_type }
+            : b
+        )));
+      }
+      const rc = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+      if (Array.isArray(rc)) {
+        sessionStorage.setItem("admin_requests_cache", JSON.stringify(rc.map((b) =>
+          Number(b.id) === Number(bookingId)
+            ? { ...b, assigned_bed_id: bed.id, assigned_bed_number: bed.bed_number, assigned_bed_type: bed.bed_type }
+            : b
+        )));
+      }
+    } catch {}
+
+    // 4. Send API requests in parallel
+    try {
+      const hid = Number(hospitalInfo?.id || localStorage.getItem("hospital_id")) || 2;
+      await Promise.all([
+        fetch(`${BASE}/api/hospitals/${hid}/beds/assign/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            bed_id: bed.id,
+            bed_type: bed.bed_type,
+          }),
+        }).catch(() => null),
+        fetch(`${BASE}/api/bookings/${bookingId}/`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assigned_bed_id: bed.id,
+            assigned_bed_number: bed.bed_number,
+            assigned_bed_type: bed.bed_type,
+          }),
+        }).catch(() => null),
+        fetch(`${BASE}/api/hospitals/beds/${bed.id}/`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => null),
+      ]);
+    } catch {}
+
+    setUpdating(false);
+  };
+
   // Helper for status styling
   const getStatusColor = (status) => {
     switch (status) {
@@ -351,6 +580,116 @@ export default function HospitalBeds() {
             <RefreshCw size={14} /> Refresh Beds
           </button>
         </div>
+
+        {/* ── ALLOCATION MODE BANNER ────────────────────────────────────────── */}
+        {targetBooking && (
+          <div
+            style={{
+              background: targetBooking.icu_required || urlType === "icu" ? "#fef2f2" : "#eff6ff",
+              border: `2px solid ${targetBooking.icu_required || urlType === "icu" ? "#ef4444" : "#3b82f6"}`,
+              borderRadius: 16,
+              padding: "18px 24px",
+              marginBottom: 26,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 16,
+              boxShadow: targetBooking.icu_required || urlType === "icu"
+                ? "0 8px 24px rgba(239,68,68,0.12)"
+                : "0 8px 24px rgba(59,130,246,0.12)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: targetBooking.icu_required || urlType === "icu" ? "#fee2e2" : "#dbeafe",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  flexShrink: 0,
+                }}
+              >
+                {targetBooking.icu_required || urlType === "icu" ? "🚨" : "🛏️"}
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      background: targetBooking.icu_required || urlType === "icu" ? "#dc2626" : "#2563eb",
+                      color: "#ffffff",
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {targetBooking.icu_required || urlType === "icu" ? "ICU BED ALLOCATION ACTIVE" : "BED ALLOCATION ACTIVE"}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#64748b" }}>
+                    Booking #{targetBooking.id}
+                  </span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#0f172a", marginTop: 4 }}>
+                  Patient: {targetBooking.patient_name || targetBooking.booked_by || "Emergency Patient"}
+                  {targetBooking.patient_age && (
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#475569", marginLeft: 8 }}>
+                      ({targetBooking.patient_age} yrs, {targetBooking.patient_gender || "N/A"})
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: targetBooking.icu_required || urlType === "icu" ? "#991b1b" : "#1e40af", marginTop: 4, fontWeight: 700 }}>
+                  👉 Click on any <span style={{ textDecoration: "underline" }}>AVAILABLE</span> {targetBooking.icu_required || urlType === "icu" ? "ICU Bed box (Red Hub)" : "Bed box (General Ward / ICU)"} below to open its details and click <b>"Assign This Bed"</b>!
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button
+                onClick={() => {
+                  setTargetBooking(null);
+                  navigate("/hospital/beds", { replace: true });
+                }}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#475569",
+                  cursor: "pointer",
+                }}
+              >
+                Exit Allocation Mode
+              </button>
+              <button
+                onClick={() => navigate("/hospital/queue")}
+                style={{
+                  background: targetBooking.icu_required || urlType === "icu" ? "#dc2626" : "#2563eb",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                ← Back to Queue
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Top KPI Metrics Bar */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 28 }}>
@@ -639,7 +978,19 @@ export default function HospitalBeds() {
         </div>
 
         {/* ── SECTION 2: ICU BEDS HUB ──────────────────────────────────────── */}
-        <div style={{ background: "#ffffff", borderRadius: 16, border: "1.5px solid #fca5a5", padding: 24, marginBottom: 28, boxShadow: "0 4px 16px rgba(239,68,68,0.04)" }}>
+        <div
+          ref={icuHubRef}
+          id="icu-hub"
+          style={{
+            background: "#ffffff",
+            borderRadius: 16,
+            border: targetBooking?.icu_required || urlType === "icu" ? "2.5px solid #dc2626" : "1.5px solid #fca5a5",
+            padding: 24,
+            marginBottom: 28,
+            boxShadow: targetBooking?.icu_required || urlType === "icu" ? "0 0 25px rgba(220,38,38,0.18)" : "0 4px 16px rgba(239,68,68,0.04)",
+            transition: "all 0.3s ease",
+          }}
+        >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -896,12 +1247,112 @@ export default function HospitalBeds() {
                   </div>
                 </>
               ) : (
-                <div style={{ background: "#f0fdf4", border: "1px dashed #86efac", borderRadius: 12, padding: 30, textAlign: "center" }}>
-                  <CheckCircle size={40} color="#22c55e" style={{ margin: "0 auto 10px" }} />
-                  <div style={{ fontSize: 16, fontWeight: 900, color: "#166534" }}>This Bed is Available</div>
-                  <div style={{ fontSize: 13, color: "#15803d", marginTop: 4 }}>
-                    Cleaned, sanitized, and ready for immediate emergency patient allocation.
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ background: "#f0fdf4", border: "1px dashed #86efac", borderRadius: 12, padding: "16px 14px", textAlign: "center" }}>
+                    <CheckCircle size={36} color="#22c55e" style={{ margin: "0 auto 6px" }} />
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#166534" }}>This Bed is Available</div>
+                    <div style={{ fontSize: 12, color: "#15803d", marginTop: 2 }}>
+                      Cleaned, sanitized, and ready for immediate patient allocation.
+                    </div>
                   </div>
+
+                  {/* Target Booking Details (if in allocation mode) */}
+                  {targetBooking ? (
+                    <div
+                      style={{
+                        background: targetBooking.icu_required || selectedBed.bed_type === "icu" ? "#fef2f2" : "#eff6ff",
+                        border: `1.5px solid ${targetBooking.icu_required || selectedBed.bed_type === "icu" ? "#fca5a5" : "#93c5fd"}`,
+                        borderRadius: 12,
+                        padding: 14,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 900,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                            background: targetBooking.icu_required || selectedBed.bed_type === "icu" ? "#fee2e2" : "#dbeafe",
+                            color: targetBooking.icu_required || selectedBed.bed_type === "icu" ? "#991b1b" : "#1e40af",
+                          }}
+                        >
+                          {targetBooking.icu_required || selectedBed.bed_type === "icu" ? "🚨 ALLOCATION TARGET (ICU)" : "🛏️ ALLOCATION TARGET"}
+                        </span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>
+                          Booking #{targetBooking.id}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 16, fontWeight: 900, color: "#0f172a" }}>
+                        {targetBooking.patient_name || targetBooking.booked_by || "Emergency Patient"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#475569" }}>
+                        {targetBooking.patient_age ? `${targetBooking.patient_age} yrs` : "Age N/A"} • {targetBooking.patient_gender || "Gender N/A"}
+                        {targetBooking.patient_contact_number && ` • 📞 ${targetBooking.patient_contact_number}`}
+                      </div>
+
+                      {targetBooking.patient_condition && (
+                        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", fontSize: 12 }}>
+                          <b style={{ color: "#0f172a" }}>Condition:</b> <span style={{ color: "#475569" }}>{targetBooking.patient_condition}</span>
+                        </div>
+                      )}
+
+                      {targetBooking.vitals_summary && (
+                        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", fontSize: 12 }}>
+                          <b style={{ color: "#0f172a" }}>Vitals:</b> <span style={{ color: "#475569" }}>{targetBooking.vitals_summary}</span>
+                        </div>
+                      )}
+
+                      {targetBooking.assigned_doctor_names && (
+                        <div style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>
+                          👨‍⚕️ Assigned Doctor: {targetBooking.assigned_doctor_names}
+                        </div>
+                      )}
+
+                      {targetBooking.icu_required && selectedBed.bed_type !== "icu" && (
+                        <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 700, color: "#d48806" }}>
+                          ⚠️ Notice: Driver flagged that patient urgently requires an ICU bed. You are assigning a General Ward bed.
+                        </div>
+                      )}
+                    </div>
+                  ) : pendingBookings.length > 0 ? (
+                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 12 }}>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: "#334155", display: "block", marginBottom: 6 }}>
+                        Assign this bed to an active emergency case:
+                      </label>
+                      <select
+                        value={selectedBookingIdForBed}
+                        onChange={(e) => {
+                          setSelectedBookingIdForBed(e.target.value);
+                          const match = pendingBookings.find((pb) => String(pb.id) === String(e.target.value));
+                          setTargetBooking(match || null);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "1px solid #cbd5e1",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          background: "#ffffff",
+                          color: "#0f172a",
+                        }}
+                      >
+                        <option value="">-- Choose Patient / Booking --</option>
+                        {pendingBookings.map((pb) => (
+                          <option key={pb.id} value={pb.id}>
+                            Booking #{pb.id} - {pb.patient_name || pb.booked_by} {pb.icu_required ? "(🚨 ICU Flagged)" : ""} {pb.assigned_bed_number ? `[Bed: ${pb.assigned_bed_number}]` : "[No Bed Yet]"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -920,7 +1371,64 @@ export default function HospitalBeds() {
                 gap: 10,
               }}
             >
-              {selectedBed.status === "reserved" && (
+              {/* PRIMARY ALLOCATE BUTTON — Click to assign this specific bed */}
+              {selectedBed.status === "available" && targetBooking && (
+                <button
+                  onClick={() => handleAssignBedToBooking(selectedBed, targetBooking)}
+                  disabled={updating}
+                  style={{
+                    background: selectedBed.bed_type === "icu" ? "#dc2626" : "#16a34a",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "14px 20px",
+                    fontSize: 14,
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    boxShadow: selectedBed.bed_type === "icu"
+                      ? "0 4px 14px rgba(220,38,38,0.3)"
+                      : "0 4px 14px rgba(22,163,74,0.3)",
+                    transition: "transform 0.1s ease",
+                  }}
+                >
+                  {updating ? (
+                    "Assigning Bed..."
+                  ) : selectedBed.bed_type === "icu" ? (
+                    <>🚨 Assign ICU Bed {selectedBed.bed_number} to Booking #{targetBooking.id}</>
+                  ) : (
+                    <>🎯 Assign Bed {selectedBed.bed_number} to Booking #{targetBooking.id}</>
+                  )}
+                </button>
+              )}
+
+              {/* SUCCESS RETURN BUTTON if this bed is assigned to targetBooking */}
+              {selectedBed.status === "reserved" && targetBooking && selectedBed.assigned_booking_id === targetBooking.id && (
+                <button
+                  onClick={() => navigate("/hospital/queue")}
+                  style={{
+                    background: "#0f766e",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "12px 20px",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  ← Return to Emergency Queue
+                </button>
+              )}
+
+              {selectedBed.status === "reserved" && (!targetBooking || selectedBed.assigned_booking_id !== targetBooking.id) && (
                 <button
                   onClick={() => handleUpdateStatus("occupied")}
                   disabled={updating}
@@ -972,7 +1480,7 @@ export default function HospitalBeds() {
                   cursor: "pointer",
                 }}
               >
-                Close
+                Close Drawer
               </button>
             </div>
           </div>
