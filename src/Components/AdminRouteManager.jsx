@@ -251,8 +251,14 @@ export default function AdminRouteManager({
         body: JSON.stringify({
           origin_lat: ambCoord.lat,
           origin_lng: ambCoord.lng,
+          ambulance_lat: ambCoord.lat,
+          ambulance_lng: ambCoord.lng,
+          pickup_lat: pickup.lat,
+          pickup_lng: pickup.lng,
           dest_lat: destination.lat,
           dest_lng: destination.lng,
+          hospital_lat: destination.lat,
+          hospital_lng: destination.lng,
           travel_mode: "car",
           max_alternatives: 2,
         }),
@@ -260,18 +266,58 @@ export default function AdminRouteManager({
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.geometry && data.geometry.coordinates) {
-          setRouteData(data);
-          const distKm = ((data.distance_m || 0) / 1000).toFixed(1);
-          const mins = Math.max(1, Math.round((data.duration_s || 0) / 60));
+        const normalizedRoute =
+          data?.geometry?.coordinates?.length >= 2
+            ? data
+            : data?.best_route?.geometry?.coordinates?.length >= 2
+            ? { ...data.best_route, alternatives: data.alternatives || [] }
+            : null;
+        if (normalizedRoute) {
+          setRouteData(normalizedRoute);
+          const distKm = ((normalizedRoute.distance_m || 0) / 1000).toFixed(1);
+          const mins = Math.max(1, Math.round((normalizedRoute.duration_s || 0) / 60));
           const isTransfer = Boolean(selBook.transfer_requested || selBook.transferred_to_ambulance_number);
           setRouteStats({ distKm, mins, isTransfer });
-          showToast(`Traffic Route: ${distKm} km · ~${mins} min (TomTom Live)`);
+          const providerTag = data?.provider === "tomtom" ? "TomTom Live" : "Live Road";
+          showToast(`Traffic Route: ${distKm} km · ~${mins} min (${providerTag})`);
           return;
         }
       }
 
-      // Fallback if API fails or backend offline: build interpolated straight-line GeoJSON
+      // Fallback 1: Direct Client-Side OSRM road route
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${ambCoord.lng},${ambCoord.lat};${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`;
+        const osrmRes = await fetch(osrmUrl);
+        if (osrmRes.ok) {
+          const osrmData = await osrmRes.json();
+          const r0 = osrmData?.routes?.[0];
+          if (r0?.geometry?.coordinates?.length >= 2) {
+            const distKm = ((r0.distance || 0) / 1000).toFixed(1);
+            const mins = Math.max(1, Math.round((r0.duration || 0) / 60));
+            const isTransfer = Boolean(selBook.transfer_requested || selBook.transferred_to_ambulance_number);
+            const clientRoute = {
+              distance_m: Math.round(r0.distance || 0),
+              duration_s: Math.round(r0.duration || 0),
+              geometry: r0.geometry,
+              steps: (r0.legs || []).flatMap((l) => l.steps || []).map((s) => ({
+                instruction: s.name || s.maneuver?.type || "Proceed",
+                distance_m: Math.round(s.distance || 0),
+                turn_type: s.maneuver?.modifier || s.maneuver?.type || "straight",
+              })),
+              traffic_sections: [],
+              alternatives: [],
+            };
+            setRouteData(clientRoute);
+            setRouteStats({ distKm, mins, isTransfer });
+            showToast(`Road Route: ${distKm} km · ~${mins} min (OSRM Live)`);
+            return;
+          }
+        }
+      } catch (osrmErr) {
+        console.warn("Client OSRM fallback error:", osrmErr);
+      }
+
+      // Fallback 2: build interpolated straight-line GeoJSON
       console.warn("Backend routing API returned non-OK, using fallback estimation");
       const d1 = haversineM(ambCoord, pickup);
       const d2 = haversineM(pickup, destination);

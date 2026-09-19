@@ -140,8 +140,14 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           body: JSON.stringify({
             origin_lat: startLat,
             origin_lng: startLng,
+            ambulance_lat: startLat,
+            ambulance_lng: startLng,
+            pickup_lat: pickupLoc.lat,
+            pickup_lng: pickupLoc.lng,
             dest_lat: destLoc.lat,
             dest_lng: destLoc.lng,
+            hospital_lat: destLoc.lat,
+            hospital_lng: destLoc.lng,
             travel_mode: "car",
             max_alternatives: 1,
           }),
@@ -149,8 +155,14 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
         if (res.ok) {
           const data = await res.json();
-          if (!cancel && data && data.geometry && data.geometry.coordinates) {
-            setRouteData(data);
+          const normalizedRoute =
+            data?.geometry?.coordinates?.length >= 2
+              ? data
+              : data?.best_route?.geometry?.coordinates?.length >= 2
+              ? { ...data.best_route, alternatives: data.alternatives || [] }
+              : null;
+          if (!cancel && normalizedRoute) {
+            setRouteData(normalizedRoute);
             setRouteLoading(false);
             return;
           }
@@ -193,7 +205,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return () => {
       cancel = true;
     };
-  }, [booking?.id, destLoc.lat, destLoc.lng]);
+  }, [booking?.id, destLoc.lat, destLoc.lng, pickupLoc.lat, pickupLoc.lng]);
 
   const hospName = booking?.assigned_hospital_name || booking?.destination || "Hospital pending";
 

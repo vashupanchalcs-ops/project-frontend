@@ -54,6 +54,53 @@ const hasCoordPair = (lat, lng) => {
 
 const coordText = (lat, lng) => (hasCoordPair(lat, lng) ? `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : "-");
 
+const toLngLat = (lat, lng) => (hasCoordPair(lat, lng) ? [Number(lng), Number(lat)] : null);
+
+const dedupeLngLat = (coords) => {
+  const out = [];
+  coords.filter(Boolean).forEach((coord) => {
+    const prev = out[out.length - 1];
+    if (!prev || Math.abs(prev[0] - coord[0]) > 0.00001 || Math.abs(prev[1] - coord[1]) > 0.00001) {
+      out.push(coord);
+    }
+  });
+  return out;
+};
+
+const routeDataFromLngLat = (coords) => {
+  const clean = dedupeLngLat(coords);
+  if (clean.length < 2) return null;
+  return {
+    distance_m: 0,
+    duration_s: 0,
+    traffic_delay_s: 0,
+    traffic_sections: [],
+    steps: [],
+    geometry: {
+      type: "LineString",
+      coordinates: clean,
+    },
+  };
+};
+
+const routeDataFromSavedPolyline = (polyline) => {
+  try {
+    const parsed = JSON.parse(polyline || "[]");
+    if (!Array.isArray(parsed)) return null;
+    const coords = parsed
+      .map((coord) => {
+        if (!Array.isArray(coord) || coord.length < 2) return null;
+        const lng = Number(coord[0]);
+        const lat = Number(coord[1]);
+        return hasCoordPair(lat, lng) ? [lng, lat] : null;
+      })
+      .filter(Boolean);
+    return routeDataFromLngLat(coords);
+  } catch {
+    return null;
+  }
+};
+
 const getTabFromPath = (pathname) => {
   const p = String(pathname || "").toLowerCase();
   if (p.includes("/hospital/queue")) return "queue";
@@ -610,6 +657,24 @@ export default function HospitalPortal() {
       .catch(() => {});
     return () => { cancel = true; };
   }, [selectedMapBooking]);
+
+  const hospitalMapRouteData = useMemo(() => {
+    const savedRoute = routeDataFromSavedPolyline(activeRoute?.polyline);
+    if (savedRoute) return savedRoute;
+
+    const ambCoord = toLngLat(
+      selectedMapBooking?.ambulance_live?.latitude,
+      selectedMapBooking?.ambulance_live?.longitude
+    );
+    const pickupCoord =
+      toLngLat(activeRoute?.pickup_lat, activeRoute?.pickup_lng) ||
+      toLngLat(selectedMapBooking?.pickup_latitude, selectedMapBooking?.pickup_longitude);
+    const destCoord =
+      toLngLat(activeRoute?.dest_lat, activeRoute?.dest_lng) ||
+      toLngLat(hospital?.latitude, hospital?.longitude);
+
+    return routeDataFromLngLat([ambCoord, pickupCoord, destCoord]);
+  }, [activeRoute, selectedMapBooking, hospital]);
 
   const fullRouteEmbedSrc = useMemo(() => {
     const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
@@ -3384,6 +3449,7 @@ export default function HospitalPortal() {
                                     }
                                   : null
                               }
+                              routeData={hospitalMapRouteData}
                               height="100%"
                             />
                           </div>

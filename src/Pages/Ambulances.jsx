@@ -229,7 +229,9 @@ export default function Ambulances() {
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.set(".amb2-scroll", { y: 0, opacity: 1, clearProps: "all" });
+      if (rootRef.current?.querySelector?.(".amb2-scroll")) {
+        gsap.set(".amb2-scroll", { y: 0, opacity: 1, clearProps: "all" });
+      }
     }, rootRef);
     return () => ctx.revert();
   }, [ambulances.length]);

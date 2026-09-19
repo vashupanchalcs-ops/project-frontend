@@ -23,6 +23,45 @@ const normalizeName = (v) =>
     .trim();
 const inIndia = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) && lat >= 6 && lat <= 38 && lng >= 68 && lng <= 98;
+const toLngLat = (lat, lng) => {
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  return inIndia(nLat, nLng) ? [nLng, nLat] : null;
+};
+const dedupeLngLat = (coords) => {
+  const out = [];
+  coords.filter(Boolean).forEach((coord) => {
+    const prev = out[out.length - 1];
+    if (!prev || Math.abs(prev[0] - coord[0]) > 0.00001 || Math.abs(prev[1] - coord[1]) > 0.00001) {
+      out.push(coord);
+    }
+  });
+  return out;
+};
+const routeDataFromLngLat = (coords) => {
+  const clean = dedupeLngLat(coords);
+  if (clean.length < 2) return null;
+  return {
+    distance_m: 0,
+    duration_s: 0,
+    traffic_delay_s: 0,
+    traffic_sections: [],
+    steps: [],
+    geometry: { type: "LineString", coordinates: clean },
+  };
+};
+const routeDataFromSavedPolyline = (polyline) => {
+  try {
+    const parsed = JSON.parse(polyline || "[]");
+    if (!Array.isArray(parsed)) return null;
+    const coords = parsed
+      .map((coord) => (Array.isArray(coord) && coord.length >= 2 ? toLngLat(Number(coord[1]), Number(coord[0])) : null))
+      .filter(Boolean);
+    return routeDataFromLngLat(coords);
+  } catch {
+    return null;
+  }
+};
 const approxMins = (km) => Math.max(1, Math.round((km / 28) * 60));
 const haversineKm = (a, b) => {
   const R = 6371;
@@ -151,6 +190,16 @@ export default function DriverDashboard() {
 
     return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
   }, [location, ambulance, route, routeMode]);
+
+  const driverTomTomRouteData = useMemo(() => {
+    const savedRoute = routeDataFromSavedPolyline(route?.polyline);
+    if (savedRoute) return savedRoute;
+
+    const ambCoord = toLngLat(location?.lat ?? ambulance?.latitude, location?.lng ?? ambulance?.longitude);
+    const pickupCoord = toLngLat(route?.pickup_lat, route?.pickup_lng);
+    const destCoord = toLngLat(route?.dest_lat, route?.dest_lng);
+    return routeDataFromLngLat([ambCoord, pickupCoord, destCoord]);
+  }, [location, ambulance, route]);
 
 
   const googleMapsAppUrl = useMemo(() => {
@@ -2156,6 +2205,7 @@ export default function DriverDashboard() {
                       ? { lat: Number(route.dest_lat), lng: Number(route.dest_lng), name: route.destination || "Hospital" }
                       : null
                   }
+                  routeData={driverTomTomRouteData}
                   followAmbulance={routeMode === "start"}
                   height="100%"
                 />
