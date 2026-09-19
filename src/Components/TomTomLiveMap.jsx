@@ -8,6 +8,12 @@ const TOMTOM_KEY = (import.meta.env.VITE_TOMTOM_MAPS_KEY || "").trim();
 const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 // High-reliability OSM raster style fallback
+const isIndiaPoint = (lat, lng) => {
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  return Number.isFinite(nLat) && Number.isFinite(nLng) && nLat >= 6 && nLat <= 38 && nLng >= 68 && nLng <= 98;
+};
+
 const OSM_RASTER_STYLE = {
   version: 8,
   sources: {
@@ -72,14 +78,18 @@ export default function TomTomLiveMap({
 
     const initMap = async () => {
       try {
-        const initialCenter = ambulanceLoc
-          ? [Number(ambulanceLoc.lng), Number(ambulanceLoc.lat)]
-          : pickupLoc
-          ? [Number(pickupLoc.lng), Number(pickupLoc.lat)]
-          : [77.3056, 28.7377]; // Delhi NCR default
-
-        const validLng = Number.isFinite(initialCenter[0]) ? initialCenter[0] : 77.3056;
-        const validLat = Number.isFinite(initialCenter[1]) ? initialCenter[1] : 28.7377;
+        let validLng = 77.3056;
+        let validLat = 28.7377;
+        if (ambulanceLoc && isIndiaPoint(ambulanceLoc.lat, ambulanceLoc.lng)) {
+          validLng = Number(ambulanceLoc.lng);
+          validLat = Number(ambulanceLoc.lat);
+        } else if (pickupLoc && isIndiaPoint(pickupLoc.lat, pickupLoc.lng)) {
+          validLng = Number(pickupLoc.lng);
+          validLat = Number(pickupLoc.lat);
+        } else if (destinationLoc && isIndiaPoint(destinationLoc.lat, destinationLoc.lng)) {
+          validLng = Number(destinationLoc.lng);
+          validLat = Number(destinationLoc.lat);
+        }
 
         let mapLibreMap = null;
 
@@ -201,7 +211,13 @@ export default function TomTomLiveMap({
 
     const lat = Number(ambulanceLoc.lat);
     const lng = Number(ambulanceLoc.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!isIndiaPoint(lat, lng)) {
+      if (ambulanceMarkerRef.current) {
+        ambulanceMarkerRef.current.remove();
+        ambulanceMarkerRef.current = null;
+      }
+      return;
+    }
 
     const heading = Number(ambulanceLoc.heading) || 0;
 
@@ -228,7 +244,7 @@ export default function TomTomLiveMap({
     const map = mapInstanceRef.current;
     if (!map || !mapLoaded) return;
 
-    if (!pickupLoc || !Number.isFinite(Number(pickupLoc.lat)) || !Number.isFinite(Number(pickupLoc.lng))) {
+    if (!pickupLoc || !isIndiaPoint(pickupLoc.lat, pickupLoc.lng)) {
       if (pickupMarkerRef.current) {
         pickupMarkerRef.current.remove();
         pickupMarkerRef.current = null;
@@ -256,7 +272,7 @@ export default function TomTomLiveMap({
     const map = mapInstanceRef.current;
     if (!map || !mapLoaded) return;
 
-    if (!destinationLoc || !Number.isFinite(Number(destinationLoc.lat)) || !Number.isFinite(Number(destinationLoc.lng))) {
+    if (!destinationLoc || !isIndiaPoint(destinationLoc.lat, destinationLoc.lng)) {
       if (destMarkerRef.current) {
         destMarkerRef.current.remove();
         destMarkerRef.current = null;
@@ -278,6 +294,37 @@ export default function TomTomLiveMap({
       destMarkerRef.current.setLngLat([lng, lat]);
     }
   }, [destinationLoc, mapLoaded]);
+
+  // Auto-fit to active markers when no routeData is present yet
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !mapLoaded || routeData) return;
+
+    const points = [];
+    if (ambulanceLoc && isIndiaPoint(ambulanceLoc.lat, ambulanceLoc.lng)) {
+      points.push([Number(ambulanceLoc.lng), Number(ambulanceLoc.lat)]);
+    }
+    if (pickupLoc && isIndiaPoint(pickupLoc.lat, pickupLoc.lng)) {
+      points.push([Number(pickupLoc.lng), Number(pickupLoc.lat)]);
+    }
+    if (destinationLoc && isIndiaPoint(destinationLoc.lat, destinationLoc.lng)) {
+      points.push([Number(destinationLoc.lng), Number(destinationLoc.lat)]);
+    }
+
+    if (points.length >= 2) {
+      try {
+        const bounds = new maplibregl.LngLatBounds();
+        points.forEach((p) => bounds.extend(p));
+        map.fitBounds(bounds, {
+          padding: { top: 70, bottom: 70, left: 70, right: 70 },
+          maxZoom: 15,
+          duration: 600,
+        });
+      } catch (_) {}
+    } else if (points.length === 1) {
+      map.easeTo({ center: points[0], zoom: 14, duration: 600 });
+    }
+  }, [ambulanceLoc, pickupLoc, destinationLoc, mapLoaded, routeData]);
 
   // Render Route and Traffic Sections
   useEffect(() => {
@@ -326,7 +373,7 @@ export default function TomTomLiveMap({
           if (n0 >= 68 && n0 <= 98 && n1 >= 6 && n1 <= 38) {
             return [n0, n1];
           }
-          return [n0, n1];
+          return null; // DISCARD ANY COORDINATE OUTSIDE INDIA (especially [0, 0])
         })
         .filter(Boolean);
 
