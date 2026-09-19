@@ -3,46 +3,34 @@ import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const TOMTOM_KEY = (import.meta.env.VITE_TOMTOM_MAPS_KEY || "").trim();
-const CARTO_KEY = (import.meta.env.VITE_CARTO_API_KEY || "cb1_3qpq_1_d4ebbcec5e84c1e34460888f").trim();
 
-const isLocalhost = typeof window !== "undefined" && (
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1" ||
-  window.location.hostname.startsWith("192.168.")
-);
+// OpenFreeMap Liberty: rich vector style with road names, street names, shops, POIs, and city labels
+const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
-const getMapStyle = () => {
-  const tileUrls = isLocalhost
-    ? [
+// High-reliability OSM raster style fallback
+const OSM_RASTER_STYLE = {
+  version: 8,
+  sources: {
+    "base-tiles": {
+      type: "raster",
+      tiles: [
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      ]
-    : [
-        `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
-        `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
-        `https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
-        `https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
-      ];
-
-  return {
-    version: 8,
-    sources: {
-      "base-tiles": {
-        type: "raster",
-        tiles: tileUrls,
-        tileSize: 256,
-        attribution: "© OpenStreetMap contributors, © CARTO, © TomTom",
-      },
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors, © OpenFreeMap",
     },
-    layers: [
-      {
-        id: "base-tiles-layer",
-        type: "raster",
-        source: "base-tiles",
-        minzoom: 0,
-        maxzoom: 20,
-      },
-    ],
-  };
+  },
+  layers: [
+    {
+      id: "base-tiles-layer",
+      type: "raster",
+      source: "base-tiles",
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
 };
 
 /**
@@ -127,14 +115,24 @@ export default function TomTomLiveMap({
           }
         }
 
-        // 2. High-performance MapLibre fallback (zero key requirement, loads in 10ms)
+        // 2. High-performance MapLibre vector map (OpenFreeMap Liberty with full labels)
         if (!mapLibreMap) {
           mapLibreMap = new maplibregl.Map({
             container: containerRef.current,
-            style: getMapStyle(),
+            style: VECTOR_STYLE_URL,
             center: [validLng, validLat],
             zoom: 13,
             attributionControl: false,
+          });
+
+          // Fallback to OSM raster tiles if vector style fails
+          mapLibreMap.once("error", (e) => {
+            console.warn("Vector map style warning, checking fallback:", e);
+            try {
+              if (!mapLibreMap.getStyle()) {
+                mapLibreMap.setStyle(OSM_RASTER_STYLE);
+              }
+            } catch (_) {}
           });
         }
 
@@ -290,18 +288,21 @@ export default function TomTomLiveMap({
 
     const renderRoute = () => {
       if (isEffectCancelled || !mapInstanceRef.current) return;
-      if (!map.isStyleLoaded()) {
-        map.once("styledata", renderRoute);
+      const currentMap = mapInstanceRef.current;
+
+      // Ensure style is loaded before adding layers/sources
+      if (!currentMap.getStyle()) {
+        currentMap.once("style.load", renderRoute);
         return;
       }
 
       const removeLayers = () => {
         try {
-          if (map.getLayer("route-traffic-jam")) map.removeLayer("route-traffic-jam");
-          if (map.getLayer("route-base")) map.removeLayer("route-base");
-          if (map.getLayer("route-casing")) map.removeLayer("route-casing");
-          if (map.getSource("route-source")) map.removeSource("route-source");
-          if (map.getSource("traffic-jam-source")) map.removeSource("traffic-jam-source");
+          if (currentMap.getLayer("route-traffic-jam")) currentMap.removeLayer("route-traffic-jam");
+          if (currentMap.getLayer("route-base")) currentMap.removeLayer("route-base");
+          if (currentMap.getLayer("route-casing")) currentMap.removeLayer("route-casing");
+          if (currentMap.getSource("route-source")) currentMap.removeSource("route-source");
+          if (currentMap.getSource("traffic-jam-source")) currentMap.removeSource("traffic-jam-source");
         } catch (e) {
           // Safe layer cleanup
         }
@@ -312,19 +313,26 @@ export default function TomTomLiveMap({
         return;
       }
 
-      let coordinates = routeData.geometry.coordinates
-        .filter((c) => Array.isArray(c) && c.length >= 2 && Number.isFinite(Number(c[0])) && Number.isFinite(Number(c[1])))
-        .map((c) => [Number(c[0]), Number(c[1])]);
+      let coordinates = (routeData.geometry.coordinates || [])
+        .filter((c) => Array.isArray(c) && c.length >= 2)
+        .map(([c0, c1]) => {
+          const n0 = Number(c0);
+          const n1 = Number(c1);
+          if (!Number.isFinite(n0) || !Number.isFinite(n1)) return null;
+          // In India: lat is 6..38, lng is 68..98. MapLibre GeoJSON requires [lng, lat]
+          if (n0 >= 6 && n0 <= 38 && n1 >= 68 && n1 <= 98) {
+            return [n1, n0];
+          }
+          if (n0 >= 68 && n0 <= 98 && n1 >= 6 && n1 <= 38) {
+            return [n0, n1];
+          }
+          return [n0, n1];
+        })
+        .filter(Boolean);
 
       if (coordinates.length < 2) {
         removeLayers();
         return;
-      }
-
-      // Auto-detect inverted coordinates: in India, lng is ~68..98 and lat is ~6..38
-      // If c[0] < 45 and c[1] > 55, it's [lat, lng] instead of [lng, lat]
-      if (Math.abs(coordinates[0][0]) < 45 && Math.abs(coordinates[0][1]) > 55) {
-        coordinates = coordinates.map(([lat, lng]) => [lng, lat]);
       }
 
       const geojsonFeature = {
@@ -337,17 +345,19 @@ export default function TomTomLiveMap({
       };
 
       // 1. Add or Update Main Route Line Source
-      const existingSource = map.getSource("route-source");
-      if (existingSource && typeof existingSource.setData === "function") {
+      const existingSource = currentMap.getSource("route-source");
+      const hasBaseLayer = Boolean(currentMap.getLayer("route-base"));
+
+      if (existingSource && typeof existingSource.setData === "function" && hasBaseLayer) {
         existingSource.setData(geojsonFeature);
       } else {
         removeLayers();
-        map.addSource("route-source", {
+        currentMap.addSource("route-source", {
           type: "geojson",
           data: geojsonFeature,
         });
 
-        map.addLayer({
+        currentMap.addLayer({
           id: "route-casing",
           type: "line",
           source: "route-source",
@@ -355,18 +365,18 @@ export default function TomTomLiveMap({
           paint: {
             "line-color": "#1e3a8a",
             "line-width": 8,
-            "line-opacity": 0.6,
+            "line-opacity": 0.7,
           },
         });
 
-        map.addLayer({
+        currentMap.addLayer({
           id: "route-base",
           type: "line",
           source: "route-source",
           layout: { "line-join": "round", "line-cap": "round" },
           paint: {
             "line-color": "#2563eb",
-            "line-width": 6,
+            "line-width": 5,
           },
         });
       }
@@ -400,36 +410,44 @@ export default function TomTomLiveMap({
         features: jamFeatures,
       };
 
-      const existingJamSource = map.getSource("traffic-jam-source");
-      if (existingJamSource && typeof existingJamSource.setData === "function") {
+      const existingJamSource = currentMap.getSource("traffic-jam-source");
+      if (existingJamSource && typeof existingJamSource.setData === "function" && currentMap.getLayer("route-traffic-jam")) {
         existingJamSource.setData(jamCollection);
       } else if (jamFeatures.length > 0) {
-        map.addSource("traffic-jam-source", {
+        if (currentMap.getSource("traffic-jam-source")) {
+          try {
+            currentMap.removeLayer("route-traffic-jam");
+            currentMap.removeSource("traffic-jam-source");
+          } catch (_) {}
+        }
+        currentMap.addSource("traffic-jam-source", {
           type: "geojson",
           data: jamCollection,
         });
 
-        map.addLayer({
+        currentMap.addLayer({
           id: "route-traffic-jam",
           type: "line",
           source: "traffic-jam-source",
           layout: { "line-join": "round", "line-cap": "round" },
           paint: {
             "line-color": ["get", "color"],
-            "line-width": 6.5,
+            "line-width": 5.5,
           },
         });
       }
 
       // 3. Fit bounds to route
       try {
-        const bounds = new maplibregl.LngLatBounds();
-        coordinates.forEach((c) => bounds.extend(c));
-        map.fitBounds(bounds, {
-          padding: { top: 70, bottom: 70, left: 70, right: 70 },
-          duration: 900,
-          maxZoom: 16,
-        });
+        if (coordinates.length >= 2) {
+          const bounds = new maplibregl.LngLatBounds();
+          coordinates.forEach((c) => bounds.extend(c));
+          currentMap.fitBounds(bounds, {
+            padding: { top: 70, bottom: 70, left: 70, right: 70 },
+            duration: 900,
+            maxZoom: 16,
+          });
+        }
       } catch (e) {
         console.warn("Fit bounds error:", e);
       }
@@ -439,8 +457,11 @@ export default function TomTomLiveMap({
 
     return () => {
       isEffectCancelled = true;
-      // Remove any pending styledata listener to prevent double-draw
-      try { map.off("styledata", renderRoute); } catch (_) {}
+      try {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.off("style.load", renderRoute);
+        }
+      } catch (_) {}
     };
   }, [routeData, mapLoaded]);
 

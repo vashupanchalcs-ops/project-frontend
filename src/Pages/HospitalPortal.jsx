@@ -86,13 +86,21 @@ const routeDataFromLngLat = (coords) => {
 const routeDataFromSavedPolyline = (polyline) => {
   try {
     const parsed = JSON.parse(polyline || "[]");
-    if (!Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed) || parsed.length < 2) return null;
     const coords = parsed
       .map((coord) => {
         if (!Array.isArray(coord) || coord.length < 2) return null;
-        const lng = Number(coord[0]);
-        const lat = Number(coord[1]);
-        return hasCoordPair(lat, lng) ? [lng, lat] : null;
+        const c0 = Number(coord[0]);
+        const c1 = Number(coord[1]);
+        if (!Number.isFinite(c0) || !Number.isFinite(c1)) return null;
+        // In India: lat is 6..38, lng is 68..98
+        if (c0 >= 6 && c0 <= 38 && c1 >= 68 && c1 <= 98) {
+          return [c1, c0]; // was [lat, lng], return [lng, lat]
+        }
+        if (c0 >= 68 && c0 <= 98 && c1 >= 6 && c1 <= 38) {
+          return [c0, c1]; // was already [lng, lat]
+        }
+        return null;
       })
       .filter(Boolean);
     return routeDataFromLngLat(coords);
@@ -644,6 +652,7 @@ export default function HospitalPortal() {
   );
 
   const [activeRoute, setActiveRoute] = useState(null);
+  const [dynamicRoadRoute, setDynamicRoadRoute] = useState(null);
 
   useEffect(() => {
     const bid = selectedMapBooking?.booking_id || selectedMapBooking?.id;
@@ -658,9 +667,100 @@ export default function HospitalPortal() {
     return () => { cancel = true; };
   }, [selectedMapBooking]);
 
+  useEffect(() => {
+    if (!selectedMapBooking) {
+      setDynamicRoadRoute(null);
+      return;
+    }
+
+    let cancel = false;
+
+    const fetchLiveRoute = async () => {
+      if (activeRoute?.polyline) return;
+
+      const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
+      const ambLng = Number(selectedMapBooking?.ambulance_live?.longitude);
+      const pLat = Number(activeRoute?.pickup_lat || selectedMapBooking?.pickup_latitude);
+      const pLng = Number(activeRoute?.pickup_lng || selectedMapBooking?.pickup_longitude);
+      const dLat = Number(activeRoute?.dest_lat || hospital?.latitude || selectedMapBooking?.destination_latitude);
+      const dLng = Number(activeRoute?.dest_lng || hospital?.longitude || selectedMapBooking?.destination_longitude);
+
+      if (!hasCoordPair(pLat, pLng) || !hasCoordPair(dLat, dLng)) return;
+
+      const startLat = hasCoordPair(ambLat, ambLng) ? ambLat : pLat;
+      const startLng = hasCoordPair(ambLat, ambLng) ? ambLng : pLng;
+
+      // 1. Try backend POST /api/route/
+      try {
+        const res = await fetch(`${BASE}/api/route/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ambulance_lat: startLat,
+            ambulance_lng: startLng,
+            pickup_lat: pLat,
+            pickup_lng: pLng,
+            hospital_lat: dLat,
+            hospital_lng: dLng,
+            dest_lat: dLat,
+            dest_lng: dLng,
+            travel_mode: 'car',
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const normalized =
+            data?.geometry?.coordinates?.length >= 2
+              ? data
+              : data?.best_route?.geometry?.coordinates?.length >= 2
+              ? data.best_route
+              : null;
+          if (!cancel && normalized) {
+            setDynamicRoadRoute(normalized);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Backend route in HospitalPortal failed, trying OSRM fallback:', err);
+      }
+
+      // 2. Client-side OSRM fallback (100% free road following)
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${pLng},${pLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true`;
+        const osrmRes = await fetch(osrmUrl);
+        if (osrmRes.ok) {
+          const osrmData = await osrmRes.json();
+          const r0 = osrmData?.routes?.[0];
+          if (!cancel && r0?.geometry?.coordinates?.length >= 2) {
+            setDynamicRoadRoute({
+              distance_m: Math.round(r0.distance || 0),
+              duration_s: Math.round(r0.duration || 0),
+              geometry: r0.geometry,
+              traffic_sections: [],
+              steps: [],
+            });
+            return;
+          }
+        }
+      } catch (osrmErr) {
+        console.warn('Client OSRM fallback error:', osrmErr);
+      }
+    };
+
+    fetchLiveRoute();
+
+    return () => {
+      cancel = true;
+    };
+  }, [selectedMapBooking, activeRoute, hospital]);
+
   const hospitalMapRouteData = useMemo(() => {
     const savedRoute = routeDataFromSavedPolyline(activeRoute?.polyline);
     if (savedRoute) return savedRoute;
+
+    if (dynamicRoadRoute?.geometry?.coordinates?.length >= 2) {
+      return dynamicRoadRoute;
+    }
 
     const ambCoord = toLngLat(
       selectedMapBooking?.ambulance_live?.latitude,
@@ -674,7 +774,7 @@ export default function HospitalPortal() {
       toLngLat(hospital?.latitude, hospital?.longitude);
 
     return routeDataFromLngLat([ambCoord, pickupCoord, destCoord]);
-  }, [activeRoute, selectedMapBooking, hospital]);
+  }, [activeRoute, dynamicRoadRoute, selectedMapBooking, hospital]);
 
   const fullRouteEmbedSrc = useMemo(() => {
     const ambLat = Number(selectedMapBooking?.ambulance_live?.latitude);
