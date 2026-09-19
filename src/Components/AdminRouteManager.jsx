@@ -235,6 +235,13 @@ export default function AdminRouteManager({
     return { pickup, destination };
   };
 
+  // Auto-find route when ambulance and booking are both selected
+  useEffect(() => {
+    if (selAmb && selBook && !routeData && !loading) {
+      findRoute();
+    }
+  }, [selAmb?.id, selBook?.id]);
+
   // ── Find Route via Backend TomTom API ───────────────────────────────────────
   const findRoute = async () => {
     if (!selAmb) return showToast("Select an ambulance first", "error");

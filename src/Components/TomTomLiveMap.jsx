@@ -305,6 +305,62 @@ export default function TomTomLiveMap({
     }
   }, [ambulanceLoc, pickupLoc, destinationLoc, mapLoaded, routeData]);
 
+  // Auto-fetch road route if routeData is not provided but pickup and destination are present
+  const [internalRoute, setInternalRoute] = useState(null);
+
+  useEffect(() => {
+    if (routeData && routeData.geometry?.coordinates?.length >= 2) {
+      setInternalRoute(null);
+      return;
+    }
+
+    if (!pickupLoc || !destinationLoc) {
+      setInternalRoute(null);
+      return;
+    }
+
+    const pLat = Number(pickupLoc.lat);
+    const pLng = Number(pickupLoc.lng);
+    const dLat = Number(destinationLoc.lat);
+    const dLng = Number(destinationLoc.lng);
+
+    if (!isIndiaPoint(pLat, pLng) || !isIndiaPoint(dLat, dLng)) return;
+
+    let aLat = ambulanceLoc && isIndiaPoint(ambulanceLoc.lat, ambulanceLoc.lng) ? Number(ambulanceLoc.lat) : pLat;
+    let aLng = ambulanceLoc && isIndiaPoint(ambulanceLoc.lat, ambulanceLoc.lng) ? Number(ambulanceLoc.lng) : pLng;
+
+    let cancelled = false;
+
+    const fetchRoad = async () => {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${aLng},${aLat};${pLng},${pLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const r0 = data?.routes?.[0];
+          if (!cancelled && r0?.geometry?.coordinates?.length >= 2) {
+            setInternalRoute({
+              distance_m: Math.round(r0.distance || 0),
+              duration_s: Math.round(r0.duration || 0),
+              geometry: r0.geometry,
+              traffic_sections: [],
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Auto road fetch error in TomTomLiveMap:", err);
+      }
+    };
+
+    fetchRoad();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [routeData, pickupLoc?.lat, pickupLoc?.lng, destinationLoc?.lat, destinationLoc?.lng, ambulanceLoc?.lat, ambulanceLoc?.lng]);
+
+  const activeRoute = (routeData && routeData.geometry?.coordinates?.length >= 2) ? routeData : internalRoute;
+
   // Render Route and Traffic Sections (Google Maps Navigation Style)
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -324,8 +380,8 @@ export default function TomTomLiveMap({
 
       // Filter and sanitize coordinates into [lng, lat]
       let coordinates = [];
-      if (routeData?.geometry?.coordinates && Array.isArray(routeData.geometry.coordinates)) {
-        coordinates = routeData.geometry.coordinates
+      if (activeRoute?.geometry?.coordinates && Array.isArray(activeRoute.geometry.coordinates)) {
+        coordinates = activeRoute.geometry.coordinates
           .filter((c) => Array.isArray(c) && c.length >= 2)
           .map(([c0, c1]) => {
             const n0 = Number(c0);
@@ -410,7 +466,7 @@ export default function TomTomLiveMap({
         }
 
         // 4. Traffic Jam Segments Overlay (if present)
-        const trafficSections = routeData.traffic_sections || [];
+        const trafficSections = activeRoute.traffic_sections || [];
         const jamFeatures = [];
         trafficSections.forEach((s, idx) => {
           if ((s.category === "JAM" || s.delay_s > 30) && s.end_index > s.start_index) {
@@ -483,7 +539,7 @@ export default function TomTomLiveMap({
         }
       } catch (_) {}
     };
-  }, [routeData, mapLoaded]);
+  }, [activeRoute, mapLoaded]);
 
   return (
     <div
