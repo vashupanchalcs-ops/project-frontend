@@ -38,22 +38,12 @@ const MAP_STYLE = {
   ],
 };
 
-/**
- * TomTomLiveMap.jsx
- *
- * Professional Map Engine for Aarogya Ambulance Command Center:
- * - Powered by TomTom Orbis SDK when key is present, with instant CARTO Voyager fallback
- * - Real-time Ambulance (Green emergency marker with heading rotation)
- * - Patient Pickup (Red beacon marker)
- * - Destination / Hospital (Blue pin)
- * - Multi-segment traffic-aware polyline: Vibrant blue base with Red/Orange jam segments
- * - Auto fitBounds, resize observer, and camera follow
- */
+
 export default function TomTomLiveMap({
-  ambulanceLoc = null,    // { lat, lng, heading, speed }
-  pickupLoc = null,       // { lat, lng, label }
-  destinationLoc = null,  // { lat, lng, name }
-  routeData = null,       // Normalized JSON from POST /api/route/
+  ambulanceLoc = null,    
+  pickupLoc = null,       
+  destinationLoc = null,  
+  routeData = null,       
   followAmbulance = false,
   loading = false,
   error = null,
@@ -315,7 +305,7 @@ export default function TomTomLiveMap({
     }
   }, [ambulanceLoc, pickupLoc, destinationLoc, mapLoaded, routeData]);
 
-  // Render Route and Traffic Sections
+  // Render Route and Traffic Sections (Google Maps Navigation Style)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -327,47 +317,44 @@ export default function TomTomLiveMap({
       const currentMap = mapInstanceRef.current;
 
       // Ensure style is loaded before adding layers/sources
-      if (!currentMap.getStyle()) {
-        currentMap.once("style.load", renderRoute);
+      if (!currentMap.loaded()) {
+        currentMap.once("load", renderRoute);
         return;
       }
 
-      const removeLayers = () => {
-        try {
-          if (currentMap.getLayer("route-traffic-jam")) currentMap.removeLayer("route-traffic-jam");
-          if (currentMap.getLayer("route-base")) currentMap.removeLayer("route-base");
-          if (currentMap.getLayer("route-casing")) currentMap.removeLayer("route-casing");
-          if (currentMap.getSource("route-source")) currentMap.removeSource("route-source");
-          if (currentMap.getSource("traffic-jam-source")) currentMap.removeSource("traffic-jam-source");
-        } catch (e) {
-          // Safe layer cleanup
-        }
-      };
-
-      if (!routeData || !routeData.geometry || !Array.isArray(routeData.geometry.coordinates)) {
-        removeLayers();
-        return;
+      // Filter and sanitize coordinates into [lng, lat]
+      let coordinates = [];
+      if (routeData?.geometry?.coordinates && Array.isArray(routeData.geometry.coordinates)) {
+        coordinates = routeData.geometry.coordinates
+          .filter((c) => Array.isArray(c) && c.length >= 2)
+          .map(([c0, c1]) => {
+            const n0 = Number(c0);
+            const n1 = Number(c1);
+            if (!Number.isFinite(n0) || !Number.isFinite(n1)) return null;
+            // In India: lat is 6..38, lng is 68..98. MapLibre GeoJSON requires [lng, lat]
+            if (n0 >= 6 && n0 <= 38 && n1 >= 68 && n1 <= 98) {
+              return [n1, n0];
+            }
+            if (n0 >= 68 && n0 <= 98 && n1 >= 6 && n1 <= 38) {
+              return [n0, n1];
+            }
+            return null; // DISCARD ANY COORDINATE OUTSIDE INDIA
+          })
+          .filter(Boolean);
       }
 
-      let coordinates = (routeData.geometry.coordinates || [])
-        .filter((c) => Array.isArray(c) && c.length >= 2)
-        .map(([c0, c1]) => {
-          const n0 = Number(c0);
-          const n1 = Number(c1);
-          if (!Number.isFinite(n0) || !Number.isFinite(n1)) return null;
-          // In India: lat is 6..38, lng is 68..98. MapLibre GeoJSON requires [lng, lat]
-          if (n0 >= 6 && n0 <= 38 && n1 >= 68 && n1 <= 98) {
-            return [n1, n0];
-          }
-          if (n0 >= 68 && n0 <= 98 && n1 >= 6 && n1 <= 38) {
-            return [n0, n1];
-          }
-          return null; // DISCARD ANY COORDINATE OUTSIDE INDIA (especially [0, 0])
-        })
-        .filter(Boolean);
-
+      // If no valid coordinates, clear any drawn lines without deleting sources/layers
       if (coordinates.length < 2) {
-        removeLayers();
+        try {
+          const src = currentMap.getSource("route-source");
+          if (src && typeof src.setData === "function") {
+            src.setData({ type: "FeatureCollection", features: [] });
+          }
+          const jamSrc = currentMap.getSource("traffic-jam-source");
+          if (jamSrc && typeof jamSrc.setData === "function") {
+            jamSrc.setData({ type: "FeatureCollection", features: [] });
+          }
+        } catch (_) {}
         return;
       }
 
@@ -380,112 +367,109 @@ export default function TomTomLiveMap({
         },
       };
 
-      // 1. Add or Update Main Route Line Source
-      const existingSource = currentMap.getSource("route-source");
-      const hasBaseLayer = Boolean(currentMap.getLayer("route-base"));
+      try {
+        // 1. Add or Update Main Route Line Source
+        const existingSource = currentMap.getSource("route-source");
+        if (existingSource && typeof existingSource.setData === "function") {
+          existingSource.setData(geojsonFeature);
+        } else if (!existingSource) {
+          currentMap.addSource("route-source", {
+            type: "geojson",
+            data: geojsonFeature,
+          });
+        }
 
-      if (existingSource && typeof existingSource.setData === "function" && hasBaseLayer) {
-        existingSource.setData(geojsonFeature);
-      } else {
-        removeLayers();
-        currentMap.addSource("route-source", {
-          type: "geojson",
-          data: geojsonFeature,
+        // 2. Add Casing Layer (Dark outline for 3D navigation depth)
+        if (!currentMap.getLayer("route-casing")) {
+          currentMap.addLayer({
+            id: "route-casing",
+            type: "line",
+            source: "route-source",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": "#1e40af", // Deep royal blue casing
+              "line-width": 10,
+              "line-opacity": 0.85,
+            },
+          });
+        }
+
+        // 3. Add Base Navigation Layer (Google Maps Bright Blue #0088ff)
+        if (!currentMap.getLayer("route-base")) {
+          currentMap.addLayer({
+            id: "route-base",
+            type: "line",
+            source: "route-source",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": "#0088ff", // Bright Google Maps Navigation Blue
+              "line-width": 6,
+              "line-opacity": 1.0,
+            },
+          });
+        }
+
+        // 4. Traffic Jam Segments Overlay (if present)
+        const trafficSections = routeData.traffic_sections || [];
+        const jamFeatures = [];
+        trafficSections.forEach((s, idx) => {
+          if ((s.category === "JAM" || s.delay_s > 30) && s.end_index > s.start_index) {
+            const segCoords = coordinates.slice(s.start_index, s.end_index + 1);
+            if (segCoords.length >= 2) {
+              jamFeatures.push({
+                type: "Feature",
+                id: idx,
+                properties: {
+                  delay: s.delay_s,
+                  color: s.delay_s > 120 ? "#dc2626" : "#ea580c",
+                },
+                geometry: {
+                  type: "LineString",
+                  coordinates: segCoords,
+                },
+              });
+            }
+          }
         });
 
-        currentMap.addLayer({
-          id: "route-casing",
-          type: "line",
-          source: "route-source",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: {
-            "line-color": "#1e3a8a",
-            "line-width": 8,
-            "line-opacity": 0.7,
-          },
-        });
+        const jamCollection = {
+          type: "FeatureCollection",
+          features: jamFeatures,
+        };
 
-        currentMap.addLayer({
-          id: "route-base",
-          type: "line",
-          source: "route-source",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: {
-            "line-color": "#2563eb",
-            "line-width": 5,
-          },
-        });
-      }
+        const existingJamSource = currentMap.getSource("traffic-jam-source");
+        if (existingJamSource && typeof existingJamSource.setData === "function") {
+          existingJamSource.setData(jamCollection);
+        } else if (jamFeatures.length > 0 && !existingJamSource) {
+          currentMap.addSource("traffic-jam-source", {
+            type: "geojson",
+            data: jamCollection,
+          });
 
-      // 2. Add or Update Traffic Jam Segments Overlay (Red / Orange)
-      const trafficSections = routeData.traffic_sections || [];
-      const jamFeatures = [];
-
-      trafficSections.forEach((s, idx) => {
-        if ((s.category === "JAM" || s.delay_s > 30) && s.end_index > s.start_index) {
-          const segCoords = coordinates.slice(s.start_index, s.end_index + 1);
-          if (segCoords.length >= 2) {
-            jamFeatures.push({
-              type: "Feature",
-              id: idx,
-              properties: {
-                delay: s.delay_s,
-                color: s.delay_s > 120 ? "#dc2626" : "#ea580c",
-              },
-              geometry: {
-                type: "LineString",
-                coordinates: segCoords,
+          if (!currentMap.getLayer("route-traffic-jam")) {
+            currentMap.addLayer({
+              id: "route-traffic-jam",
+              type: "line",
+              source: "traffic-jam-source",
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: {
+                "line-color": ["get", "color"],
+                "line-width": 6,
               },
             });
           }
         }
-      });
 
-      const jamCollection = {
-        type: "FeatureCollection",
-        features: jamFeatures,
-      };
-
-      const existingJamSource = currentMap.getSource("traffic-jam-source");
-      if (existingJamSource && typeof existingJamSource.setData === "function" && currentMap.getLayer("route-traffic-jam")) {
-        existingJamSource.setData(jamCollection);
-      } else if (jamFeatures.length > 0) {
-        if (currentMap.getSource("traffic-jam-source")) {
-          try {
-            currentMap.removeLayer("route-traffic-jam");
-            currentMap.removeSource("traffic-jam-source");
-          } catch (_) {}
-        }
-        currentMap.addSource("traffic-jam-source", {
-          type: "geojson",
-          data: jamCollection,
+        // 5. Fit bounds to route
+        const bounds = new maplibregl.LngLatBounds();
+        coordinates.forEach((c) => bounds.extend(c));
+        currentMap.fitBounds(bounds, {
+          padding: { top: 80, bottom: 80, left: 80, right: 80 },
+          duration: 900,
+          maxZoom: 15,
         });
-
-        currentMap.addLayer({
-          id: "route-traffic-jam",
-          type: "line",
-          source: "traffic-jam-source",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: {
-            "line-color": ["get", "color"],
-            "line-width": 5.5,
-          },
-        });
-      }
-
-      // 3. Fit bounds to route
-      try {
-        if (coordinates.length >= 2) {
-          const bounds = new maplibregl.LngLatBounds();
-          coordinates.forEach((c) => bounds.extend(c));
-          currentMap.fitBounds(bounds, {
-            padding: { top: 70, bottom: 70, left: 70, right: 70 },
-            duration: 900,
-            maxZoom: 16,
-          });
-        }
       } catch (e) {
-        console.warn("Fit bounds error:", e);
+        console.error("Error drawing route on MapLibre map:", e);
       }
     };
 
@@ -495,7 +479,7 @@ export default function TomTomLiveMap({
       isEffectCancelled = true;
       try {
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.off("style.load", renderRoute);
+          mapInstanceRef.current.off("load", renderRoute);
         }
       } catch (_) {}
     };

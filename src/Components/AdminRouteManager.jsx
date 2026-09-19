@@ -65,6 +65,12 @@ export default function AdminRouteManager({
   const selectBooking = (booking) => {
     setSelBook(booking);
     clearRoutePreview();
+    if (booking) {
+      resolveCoords(booking).then(({ pickup, destination }) => {
+        setPickupCoord(pickup);
+        setDestCoord(destination);
+      });
+    }
   };
 
   // ── Load data ───────────────────────────────────────────────────────────────
