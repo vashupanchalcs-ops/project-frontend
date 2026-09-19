@@ -151,6 +151,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           const data = await res.json();
           if (!cancel && data && data.geometry && data.geometry.coordinates) {
             setRouteData(data);
+            setRouteLoading(false);
             return;
           }
         }

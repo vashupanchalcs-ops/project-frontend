@@ -162,6 +162,28 @@ export default function AdminRouteManager({
     return { lat: 28.7372, lng: 77.3066, heading: 0, speed: 0 };
   }, [ambulanceLoc, selAmb]);
 
+  const effectivePickupLoc = useMemo(() => {
+    if (pickupCoord) return { ...pickupCoord, label: selBook?.pickup_location };
+    const pLat = Number(selBook?.pickup_latitude);
+    const pLng = Number(selBook?.pickup_longitude);
+    if (isIndiaCoord(pLat, pLng)) {
+      return { lat: pLat, lng: pLng, label: selBook?.pickup_location || "Pickup" };
+    }
+    return null;
+  }, [pickupCoord, selBook]);
+
+  const effectiveDestLoc = useMemo(() => {
+    if (destCoord) return { ...destCoord, name: selBook?.assigned_hospital_name || selBook?.destination };
+    const matchedHospital =
+      hospitals.find((h) => Number(h.id) === Number(selBook?.assigned_hospital_id)) || null;
+    const dbLat = Number(matchedHospital?.latitude);
+    const dbLng = Number(matchedHospital?.longitude);
+    if (isIndiaCoord(dbLat, dbLng)) {
+      return { lat: dbLat, lng: dbLng, name: matchedHospital?.name || "Hospital" };
+    }
+    return null;
+  }, [destCoord, selBook, hospitals]);
+
   // ── Resolve coordinates ─────────────────────────────────────────────────────
   const resolveCoords = async (booking) => {
     const pickupQuery = [booking.pickup_landmark, booking.pickup_city, booking.pickup_district]
@@ -549,8 +571,8 @@ export default function AdminRouteManager({
             {/* High-Performance TomTom / MapLibre Engine */}
             <TomTomLiveMap
               ambulanceLoc={liveAmbulanceCoord}
-              pickupLoc={pickupCoord ? { ...pickupCoord, label: selBook?.pickup_location } : null}
-              destinationLoc={destCoord ? { ...destCoord, name: selBook?.assigned_hospital_name || selBook?.destination } : null}
+              pickupLoc={effectivePickupLoc}
+              destinationLoc={effectiveDestLoc}
               routeData={routeData}
               followAmbulance={routeMode === "start"}
               loading={loading}
