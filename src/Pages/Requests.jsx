@@ -41,7 +41,14 @@ const safeText = (val, fallback = "Unknown") => {
 };
 
 const Requests = () => {
-  const [bookings, setBookings] = useState([]);
+  const cachedBookings = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+    } catch {
+      return [];
+    }
+  })();
+  const [bookings, setBookings] = useState(cachedBookings);
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const navigate = useNavigate();
@@ -59,6 +66,7 @@ const Requests = () => {
           return bId - aId;
         });
         setBookings(list);
+        try { sessionStorage.setItem("admin_requests_cache", JSON.stringify(list)); } catch {}
       })
       .catch(() => {});
   };

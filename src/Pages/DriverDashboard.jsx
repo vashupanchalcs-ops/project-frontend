@@ -86,7 +86,14 @@ export default function DriverDashboard() {
   const [driverPhone,   setDriverPhone]  = useState(localStorage.getItem("phone") || "");
   const [ambulance,     setAmbulance]    = useState(null);
   const [liveBatteryPct, setLiveBatteryPct] = useState(null);
-  const [myBookings,    setMyBookings]   = useState([]);
+  const cachedDriverBookings = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+    } catch {
+      return [];
+    }
+  })();
+  const [myBookings,    setMyBookings]   = useState(cachedDriverBookings);
   const [isTracking,    setIsTracking]   = useState(false);
   const [location,      setLocation]     = useState(null);
   const [speed,         setSpeed]        = useState(0);

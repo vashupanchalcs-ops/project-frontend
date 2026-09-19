@@ -71,13 +71,20 @@ export default function HospitalPortal() {
   const location = useLocation();
   const navigate = useNavigate();
   const activeTab = getTabFromPath(location.pathname);
-  const [hospital, setHospital] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [queue, setQueue] = useState([]);
-  const [staff, setStaff] = useState([]);
-  const [onCallSpecialists, setOnCallSpecialists] = useState([]);
-  const [redirectSuggestion, setRedirectSuggestion] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cachedPortal = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const [hospital, setHospital] = useState(cachedPortal?.hospital || null);
+  const [summary, setSummary] = useState(cachedPortal?.summary || null);
+  const [queue, setQueue] = useState(cachedPortal?.queue || []);
+  const [staff, setStaff] = useState(cachedPortal?.staff || []);
+  const [onCallSpecialists, setOnCallSpecialists] = useState(cachedPortal?.onCallSpecialists || []);
+  const [redirectSuggestion, setRedirectSuggestion] = useState(cachedPortal?.redirectSuggestion || null);
+  const [loading, setLoading] = useState(!cachedPortal?.hospital);
   const [err, setErr] = useState("");
   const [resourceEditMode, setResourceEditMode] = useState(false);
   const [resourceForm, setResourceForm] = useState({
@@ -159,12 +166,30 @@ export default function HospitalPortal() {
       if (!dashRes.ok) throw new Error("Unable to load hospital dashboard");
       const dashboard = await dashRes.json();
 
-      setHospital(dashboard.hospital || hospitalData);
-      setSummary(dashboard.summary || null);
-      setQueue(Array.isArray(dashboard.queue) ? dashboard.queue : []);
-      setStaff(Array.isArray(dashboard.staff) ? dashboard.staff : []);
-      setOnCallSpecialists(Array.isArray(dashboard.on_call_specialists) ? dashboard.on_call_specialists : []);
-      setRedirectSuggestion(dashboard.redirect_suggestion || null);
+      const finalHosp = dashboard.hospital || hospitalData;
+      const finalSum = dashboard.summary || null;
+      const finalQueue = Array.isArray(dashboard.queue) ? dashboard.queue : [];
+      const finalStaff = Array.isArray(dashboard.staff) ? dashboard.staff : [];
+      const finalSpecs = Array.isArray(dashboard.on_call_specialists) ? dashboard.on_call_specialists : [];
+      const finalRedir = dashboard.redirect_suggestion || null;
+
+      setHospital(finalHosp);
+      setSummary(finalSum);
+      setQueue(finalQueue);
+      setStaff(finalStaff);
+      setOnCallSpecialists(finalSpecs);
+      setRedirectSuggestion(finalRedir);
+
+      try {
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+          hospital: finalHosp,
+          summary: finalSum,
+          queue: finalQueue,
+          staff: finalStaff,
+          onCallSpecialists: finalSpecs,
+          redirectSuggestion: finalRedir,
+        }));
+      } catch {}
 
       const serverResources = {
         total_beds: dashboard.hospital?.total_beds ?? 40,
@@ -193,7 +218,8 @@ export default function HospitalPortal() {
   };
 
   useEffect(() => {
-    fetchHospitalDashboard({ silent: false });
+    // SWR: silent revalidation if we already have hospital data (zero flicker!)
+    fetchHospitalDashboard({ silent: Boolean(hospital) });
     const pollMs =
       activeTab === "tracking" ||
       activeTab === "map" ||
@@ -2632,10 +2658,10 @@ export default function HospitalPortal() {
           </div>
 
           {err && <div className="hp-alert">{err}</div>}
-          {loading && <div className="hp-empty">Loading hospital command center...</div>}
+          {loading && !hospital && <div className="hp-empty">Loading hospital command center...</div>}
           {!loading && !hospital && <div className="hp-empty">Hospital profile not configured for this email.</div>}
 
-          {!loading && hospital && (
+          {hospital && (
             <>
               {activeTab === "home" && (
                 <>

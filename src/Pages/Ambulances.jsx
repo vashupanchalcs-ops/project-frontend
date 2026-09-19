@@ -98,7 +98,14 @@ const reverseGeocodePickup = async (lat, lng) => {
 };
 
 export default function Ambulances() {
-  const [ambulances, setAmbulances] = useState([]);
+  const cachedAmbs = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
+    } catch {
+      return [];
+    }
+  })();
+  const [ambulances, setAmbulances] = useState(cachedAmbs);
   const [bookings, setBookings] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -194,12 +201,20 @@ export default function Ambulances() {
   useEffect(() => {
     fetch(`${BASE}/api/ambulances/`)
       .then((r) => r.json())
-      .then(setAmbulances)
+      .then((data) => {
+        const rows = Array.isArray(data) ? data : [];
+        setAmbulances(rows);
+        try { sessionStorage.setItem("ambulances_list_cache", JSON.stringify(rows)); } catch {}
+      })
       .catch(() => {});
 
     fetch(`${BASE}/api/bookings/`)
       .then((r) => r.json())
-      .then(setBookings)
+      .then((data) => {
+        const rows = Array.isArray(data) ? data : [];
+        setBookings(rows);
+        try { sessionStorage.setItem("ambulances_bookings_cache", JSON.stringify(rows)); } catch {}
+      })
       .catch(() => {});
   }, []);
 

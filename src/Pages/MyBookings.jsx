@@ -37,8 +37,15 @@ const FILTERS = ["all", "confirmed", "pending", "completed", "cancelled"];
 
 export function MyBookings() {
   const rootRef = useRef(null);
-  const [bookings, setBookings] = useState([]);
-  const [loading,  setLoading]  = useState(true);
+  const cachedBookings = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+    } catch {
+      return [];
+    }
+  })();
+  const [bookings, setBookings] = useState(cachedBookings);
+  const [loading,  setLoading]  = useState(cachedBookings.length === 0);
   const [filter,   setFilter]   = useState("all");
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,6 +60,7 @@ export function MyBookings() {
         .filter(b => b.booked_by_email===email || b.user_email===email || b.booked_by===name)
         .sort((a, b) => b.id - a.id);
       setBookings(mine);
+      try { sessionStorage.setItem("my_bookings_cache", JSON.stringify(mine)); } catch {}
       const confirmed = mine.find(b => b.status==="confirmed" && b.sent_to_driver);
       if (confirmed) localStorage.setItem("active_confirmed_booking", JSON.stringify(confirmed));
       else           localStorage.removeItem("active_confirmed_booking");

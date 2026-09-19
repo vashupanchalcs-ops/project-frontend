@@ -59,7 +59,15 @@ const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function Hospitals() {
-  const [hospitals, setHospitals] = useState([]);
+  const cachedHospitals = (() => {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem("hospitals_list_cache") || "null");
+      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_HOSPITALS;
+    } catch {
+      return DEFAULT_HOSPITALS;
+    }
+  })();
+  const [hospitals, setHospitals] = useState(cachedHospitals);
   const [assignBooking, setAssignBooking] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,7 +83,11 @@ export default function Hospitals() {
     const loadHospitals = () => {
       fetch(`${BASE}/api/hospitals/`)
         .then((r) => (r.ok ? r.json() : []))
-        .then((rows) => setHospitals(Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS))
+        .then((rows) => {
+          const list = Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS;
+          setHospitals(list);
+          try { sessionStorage.setItem("hospitals_list_cache", JSON.stringify(list)); } catch {}
+        })
         .catch(() => setHospitals(DEFAULT_HOSPITALS));
     };
     loadHospitals();
