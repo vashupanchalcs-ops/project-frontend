@@ -1,4 +1,5 @@
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
+import TomTomLiveMap from "../Components/TomTomLiveMap";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
@@ -3353,15 +3354,37 @@ export default function HospitalPortal() {
                         ))}
                       </aside>
                       <section className="hp-map-panel">
-                        {(isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc) ? (
+                        {selectedMapBooking ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
-                            <iframe
-                              className="hp-map-frame"
-                              style={{ flex: "1 1 auto", width: "100%", height: "100%", border: 0, display: "block" }}
-                              src={isFullRouteView ? fullRouteEmbedSrc : mapEmbedSrc}
-                              title="Hospital Live Tracking Map"
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
+                            <TomTomLiveMap
+                              ambulanceLoc={
+                                hasCoordPair(selectedMapBooking?.ambulance_live?.latitude, selectedMapBooking?.ambulance_live?.longitude)
+                                  ? {
+                                      lat: Number(selectedMapBooking.ambulance_live.latitude),
+                                      lng: Number(selectedMapBooking.ambulance_live.longitude),
+                                      speed: Number(selectedMapBooking.ambulance_live.speed) || 0,
+                                    }
+                                  : null
+                              }
+                              pickupLoc={
+                                hasCoordPair(selectedMapBooking?.pickup_latitude, selectedMapBooking?.pickup_longitude)
+                                  ? {
+                                      lat: Number(selectedMapBooking.pickup_latitude),
+                                      lng: Number(selectedMapBooking.pickup_longitude),
+                                      label: selectedMapBooking.pickup_location || "Pickup",
+                                    }
+                                  : null
+                              }
+                              destinationLoc={
+                                hasCoordPair(hospital?.latitude, hospital?.longitude)
+                                  ? {
+                                      lat: Number(hospital.latitude),
+                                      lng: Number(hospital.longitude),
+                                      name: hospital?.name || "Hospital",
+                                    }
+                                  : null
+                              }
+                              height="100%"
                             />
                           </div>
                         ) : (

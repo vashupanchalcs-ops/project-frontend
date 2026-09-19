@@ -1,23 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-
-// Dynamic import or safe fallback for TomTom Orbis SDK
-let TomTomConfig = null;
-let TomTomMap = null;
-let TrafficFlowModule = null;
-let TrafficIncidentsModule = null;
-
-try {
-  const core = await import("@tomtom-org/maps-sdk/core");
-  TomTomConfig = core.TomTomConfig;
-  const mapModule = await import("@tomtom-org/maps-sdk/map");
-  TomTomMap = mapModule.TomTomMap;
-  TrafficFlowModule = mapModule.TrafficFlowModule;
-  TrafficIncidentsModule = mapModule.TrafficIncidentsModule;
-} catch (e) {
-  console.warn("TomTom SDK dynamic load warning:", e);
-}
 
 const TOMTOM_KEY = (import.meta.env.VITE_TOMTOM_MAPS_KEY || "").trim();
 const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -37,7 +20,7 @@ export default function TomTomLiveMap({
   ambulanceLoc = null,    // { lat, lng, heading, speed }
   pickupLoc = null,       // { lat, lng, label }
   destinationLoc = null,  // { lat, lng, name }
-  routeData = null,       // Normalized JSON from POST /api/route
+  routeData = null,       // Normalized JSON from POST /api/route/
   followAmbulance = false,
   loading = false,
   error = null,
@@ -68,35 +51,37 @@ export default function TomTomLiveMap({
           ? [Number(pickupLoc.lng), Number(pickupLoc.lat)]
           : [77.3056, 28.7377]; // Delhi / NCR default
 
-        // Validate coordinate bounds
         const validLng = Number.isFinite(initialCenter[0]) ? initialCenter[0] : 77.3056;
         const validLat = Number.isFinite(initialCenter[1]) ? initialCenter[1] : 28.7377;
 
         let mapLibreMap = null;
 
-        // 1. If TomTom SDK is available and API key configured, use TomTomMap
-        if (TomTomConfig && TomTomMap && TOMTOM_KEY) {
+        // 1. If TomTom API key configured, attempt to load TomTom Orbis SDK
+        if (TOMTOM_KEY) {
           try {
-            TomTomConfig.instance.put({ apiKey: TOMTOM_KEY });
-            const ttMap = new TomTomMap({
-              mapLibre: {
-                container: containerRef.current,
-                center: [validLng, validLat],
-                zoom: 13,
-                attributionControl: false,
-              },
-            });
+            const core = await import("@tomtom-org/maps-sdk/core");
+            const mapModule = await import("@tomtom-org/maps-sdk/map");
+            if (core.TomTomConfig && mapModule.TomTomMap) {
+              core.TomTomConfig.instance.put({ apiKey: TOMTOM_KEY });
+              const ttMap = new mapModule.TomTomMap({
+                mapLibre: {
+                  container: containerRef.current,
+                  center: [validLng, validLat],
+                  zoom: 13,
+                  attributionControl: false,
+                },
+              });
 
-            tomtomInstanceRef.current = ttMap;
-            mapLibreMap = ttMap.mapLibreMap;
+              tomtomInstanceRef.current = ttMap;
+              mapLibreMap = ttMap.mapLibreMap;
 
-            // Enable Traffic Layer if module available
-            if (TrafficFlowModule) {
-              try {
-                const trafficFlow = await TrafficFlowModule.create(ttMap);
-                trafficFlow.show();
-              } catch (tfErr) {
-                console.warn("Traffic flow layer skipped:", tfErr);
+              if (mapModule.TrafficFlowModule) {
+                try {
+                  const trafficFlow = await mapModule.TrafficFlowModule.create(ttMap);
+                  trafficFlow.show();
+                } catch (tfErr) {
+                  console.warn("Traffic flow layer skipped:", tfErr);
+                }
               }
             }
           } catch (ttErr) {
@@ -161,25 +146,18 @@ export default function TomTomLiveMap({
     const heading = Number(ambulanceLoc.heading) || 0;
 
     if (!ambulanceMarkerRef.current) {
-      // Create custom DOM element for Ambulance
       const el = document.createElement("div");
       el.className = "tt-amb-marker";
-      el.innerHTML = 
-        <div class="tt-amb-wrap" style="transform: rotate(deg);">
-          <div class="tt-amb-pulse"></div>
-          <div class="tt-amb-badge">🚑</div>
-        </div>
-      ;
+      el.innerHTML = '<div class="tt-amb-wrap" style="transform: rotate(' + heading + 'deg);"><div class="tt-amb-pulse"></div><div class="tt-amb-badge">🚑</div></div>';
       ambulanceMarkerRef.current = new maplibregl.Marker({ element: el, rotationAlignment: "map" })
         .setLngLat([lng, lat])
         .addTo(map);
     } else {
       ambulanceMarkerRef.current.setLngLat([lng, lat]);
       const wrap = ambulanceMarkerRef.current.getElement().querySelector(".tt-amb-wrap");
-      if (wrap) wrap.style.transform = otate(deg);
+      if (wrap) wrap.style.transform = 'rotate(' + heading + 'deg)';
     }
 
-    // Follow camera if enabled
     if (followAmbulance) {
       map.easeTo({ center: [lng, lat], duration: 800 });
     }
@@ -204,12 +182,7 @@ export default function TomTomLiveMap({
     if (!pickupMarkerRef.current) {
       const el = document.createElement("div");
       el.className = "tt-pickup-marker";
-      el.innerHTML = 
-        <div class="tt-pickup-wrap">
-          <div class="tt-pickup-pulse"></div>
-          <div class="tt-pickup-badge">📍</div>
-        </div>
-      ;
+      el.innerHTML = '<div class="tt-pickup-wrap"><div class="tt-pickup-pulse"></div><div class="tt-pickup-badge">📍</div></div>';
       pickupMarkerRef.current = new maplibregl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([lng, lat])
         .addTo(map);
@@ -237,11 +210,7 @@ export default function TomTomLiveMap({
     if (!destMarkerRef.current) {
       const el = document.createElement("div");
       el.className = "tt-dest-marker";
-      el.innerHTML = 
-        <div class="tt-dest-wrap">
-          <div class="tt-dest-badge">🏥</div>
-        </div>
-      ;
+      el.innerHTML = '<div class="tt-dest-wrap"><div class="tt-dest-badge">🏥</div></div>';
       destMarkerRef.current = new maplibregl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([lng, lat])
         .addTo(map);
@@ -255,13 +224,16 @@ export default function TomTomLiveMap({
     const map = mapInstanceRef.current;
     if (!map || !mapLoaded) return;
 
-    // Remove existing route layers & source
     const removeLayers = () => {
-      if (map.getLayer("route-traffic-jam")) map.removeLayer("route-traffic-jam");
-      if (map.getLayer("route-base")) map.removeLayer("route-base");
-      if (map.getLayer("route-casing")) map.removeLayer("route-casing");
-      if (map.getSource("route-source")) map.removeSource("route-source");
-      if (map.getSource("traffic-jam-source")) map.removeSource("traffic-jam-source");
+      try {
+        if (map.getLayer("route-traffic-jam")) map.removeLayer("route-traffic-jam");
+        if (map.getLayer("route-base")) map.removeLayer("route-base");
+        if (map.getLayer("route-casing")) map.removeLayer("route-casing");
+        if (map.getSource("route-source")) map.removeSource("route-source");
+        if (map.getSource("traffic-jam-source")) map.removeSource("traffic-jam-source");
+      } catch (e) {
+        // Safe layer cleanup
+      }
     };
 
     if (!routeData || !routeData.geometry || !routeData.geometry.coordinates || routeData.geometry.coordinates.length < 2) {
@@ -286,7 +258,6 @@ export default function TomTomLiveMap({
       },
     });
 
-    // Dark casing for visibility against light maps
     map.addLayer({
       id: "route-casing",
       type: "line",
@@ -299,7 +270,6 @@ export default function TomTomLiveMap({
       },
     });
 
-    // Main vibrant blue route line
     map.addLayer({
       id: "route-base",
       type: "line",
@@ -324,7 +294,7 @@ export default function TomTomLiveMap({
             id: idx,
             properties: {
               delay: s.delay_s,
-              color: s.delay_s > 120 ? "#dc2626" : "#f97316", // Red for severe, orange for moderate
+              color: s.delay_s > 120 ? "#dc2626" : "#f97316",
             },
             geometry: {
               type: "LineString",
@@ -371,8 +341,8 @@ export default function TomTomLiveMap({
   }, [routeData, mapLoaded]);
 
   return (
-    <div className={	t-map-container } style={{ width: "100%", height, position: "relative", overflow: "hidden" }}>
-      <style>{
+    <div className={"tt-map-container " + className} style={{ width: "100%", height, position: "relative", overflow: "hidden" }}>
+      <style>{`
         .tt-amb-marker { pointer-events: none; }
         .tt-amb-wrap {
           position: relative; width: 42px; height: 42px;
@@ -444,7 +414,7 @@ export default function TomTomLiveMap({
           font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700;
           display: flex; align-items: center; gap: 8px;
         }
-      }</style>
+      `}</style>
 
       {/* Map Canvas */}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />

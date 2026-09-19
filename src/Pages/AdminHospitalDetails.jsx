@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import TomTomLiveMap from "../Components/TomTomLiveMap";
 
 // Deployment v1.0.5 - Pin selected hospital to top and enable full page scrolling with zero cutoff
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
@@ -325,14 +326,17 @@ export default function AdminHospitalDetails() {
                     <div className="ahd-map-head">
                       <span className="ahd-map-live">Live Map Tracking • {new Date(pulseTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
                     </div>
-                    {mapEmbedSrc ? (
-                      <iframe
-                        className="ahd-map-frame"
-                        src={mapEmbedSrc}
-                        title={`${selectedDashboard.hospital?.name || "Hospital"} Map Tracking`}
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      />
+                    {hasCoords ? (
+                      <div style={{ height: 320, width: "100%", position: "relative" }}>
+                        <TomTomLiveMap
+                          destinationLoc={{
+                            lat,
+                            lng,
+                            name: selectedDashboard.hospital?.name || "Hospital",
+                          }}
+                          height="100%"
+                        />
+                      </div>
                     ) : (
                       <div className="ahd-empty">No location found for this hospital.</div>
                     )}

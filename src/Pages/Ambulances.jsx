@@ -9,6 +9,7 @@ import useLeaflet, {
   fetchRoadRoute,
   LIGHT_TILE,
 } from "../hooks/useLeaflet";
+import TomTomLiveMap from "../Components/TomTomLiveMap";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -1878,15 +1879,25 @@ export default function Ambulances() {
                     );
                   })()}
                  
-                 <div className="amb-map-box">
-                    <iframe
-                      src={embedSrc}
-                      title={`Live Map for ${selectedAmb?.ambulance_number || "Ambulance"}`}
-                      style={{ width: "100%", height: "100%", border: "none" }}
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
+                  <div className="amb-map-box" style={{ position: "relative" }}>
+                    <TomTomLiveMap
+                      ambulanceLoc={
+                        selectedAmb && isIndiaLatLng(Number(selectedAmb.latitude), Number(selectedAmb.longitude))
+                          ? { lat: Number(selectedAmb.latitude), lng: Number(selectedAmb.longitude), heading: Number(selectedAmb.heading) || 0, speed: selectedAmb.speed || 0 }
+                          : { lat: 28.7059, lng: 77.3274 }
+                      }
+                      pickupLoc={
+                        bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed")
+                          ? {
+                              lat: Number(bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed").pickup_latitude),
+                              lng: Number(bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed").pickup_longitude),
+                              label: bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed").pickup_location || "Pickup",
+                            }
+                          : null
+                      }
+                      height="100%"
                     />
-                 </div>
+                  </div>
                  <div className="amb-map-status">
                    <span>
                      {mapLocationStatus === "granted"

@@ -1,12 +1,17 @@
 /**
  * UserBookingMap.jsx — src/Components/UserBookingMap.jsx
  *
- * Clean Google Maps Embedded Map Engine & Dispatch Layout (Matching Image 2):
- * - Left 380px Sidebar Panel: Complete trip info, timeline, speed, battery, ETA, and route controls.
- * - Right Side Full-Height Map: Expansive Google Maps iframe showing the full driving route.
+ * Real-Time Ambulance Tracking & Dispatch View for Users:
+ * - Powered by TomTom Orbis + MapLibre Live Engine (TomTomLiveMap).
+ * - Real-time ambulance tracking with polyline progress interpolation (useAmbulanceTracking).
+ * - Live dynamic ETA & remaining distance calculation (zero unnecessary API quota calls).
+ * - Multi-segment traffic-aware polyline and emergency status indicators.
+ * - Left 380px dispatch sidebar + Full-height interactive map canvas.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import TomTomLiveMap from "./TomTomLiveMap";
+import useAmbulanceTracking, { haversineM } from "../hooks/useAmbulanceTracking";
 import { isIndiaCoord } from "../hooks/useLeaflet";
 
 const defaultApiBase = import.meta.env.DEV
@@ -14,19 +19,6 @@ const defaultApiBase = import.meta.env.DEV
   : "https://swiftrescue-backend.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
-const haversineKm = (a, b) => {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-};
-
-const approxMins = (km) => Math.max(1, Math.round((km / 28) * 60));
 const fmtSecs = (s) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
@@ -38,13 +30,12 @@ const coordText = (lat, lng) => {
 };
 
 export default function UserBookingMap({ booking, onClose, embedded = false }) {
-  const [ambLoc, setAmbLoc] = useState(null);
-  const [ambSpeed, setAmbSpeed] = useState(0);
-  const [ambBattery, setAmbBattery] = useState(null);
-  const [ambDriver, setAmbDriver] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
   const [hospCoords, setHospCoords] = useState(null);
+  const [activeRoute, setActiveRoute] = useState(null);
+  const [routeData, setRouteData] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   // ── Timer ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -52,7 +43,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return () => clearInterval(t);
   }, []);
 
-  // ── Fetch Hospital Coordinates for user-selected or assigned hospital ─────
+  // ── Fetch Hospital Coordinates ──────────────────────────────────────────────
   useEffect(() => {
     const hid = booking?.assigned_hospital_id || booking?.user_selected_hospital_id;
     if (!hid) return;
@@ -66,61 +57,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
       .catch(() => {});
   }, [booking?.assigned_hospital_id, booking?.user_selected_hospital_id]);
 
-  // ── Poll ambulance live location ────────────────────────────────────────────
-  useEffect(() => {
-    if (!booking?.ambulance_id && !booking?.ambulance_number) return;
-    const fetchAmb = async () => {
-      try {
-        const res = await fetch(`${BASE}/api/ambulances/`);
-        const list = await res.json();
-        if (!Array.isArray(list)) return;
-        const amb =
-          list.find((a) => Number(a.id) === Number(booking?.ambulance_id)) ||
-          list.find((a) => String(a.ambulance_number || "").toLowerCase() === String(booking?.ambulance_number || "").toLowerCase());
-        if (!amb) return;
-
-        const lat = parseFloat(amb.latitude);
-        const lng = parseFloat(amb.longitude);
-        if (isIndiaCoord(lat, lng)) {
-          setAmbLoc({ lat, lng });
-        }
-        setAmbSpeed(amb.speed || 0);
-        setAmbBattery(amb.battery_percentage ?? null);
-        setAmbDriver(amb.driver || "");
-      } catch {}
-    };
-    fetchAmb();
-    const interval = setInterval(fetchAmb, 5000);
-    return () => clearInterval(interval);
-  }, [booking]);
-
-  // ── Leg stats ───────────────────────────────────────────────────────────────
-  const legStats = useMemo(() => {
-    const ambLat = ambLoc?.lat ?? Number(booking?.pickup_latitude);
-    const ambLng = ambLoc?.lng ?? Number(booking?.pickup_longitude);
-    const pickupLat = Number(booking?.pickup_latitude);
-    const pickupLng = Number(booking?.pickup_longitude);
-
-    let d1 = null, m1 = null;
-    if (isIndiaCoord(ambLat, ambLng) && isIndiaCoord(pickupLat, pickupLng)) {
-      const km1 = haversineKm({ lat: ambLat, lng: ambLng }, { lat: pickupLat, lng: pickupLng }) * 1.25;
-      d1 = km1.toFixed(1);
-      m1 = approxMins(km1);
-    }
-
-    let d2 = "12.4", m2 = 25;
-    const destLat = hospCoords?.lat ?? Number(booking?.destination_latitude);
-    const destLng = hospCoords?.lng ?? Number(booking?.destination_longitude);
-    if (isIndiaCoord(pickupLat, pickupLng) && isIndiaCoord(destLat, destLng)) {
-      const km2 = haversineKm({ lat: pickupLat, lng: pickupLng }, { lat: destLat, lng: destLng }) * 1.35;
-      d2 = km2.toFixed(1);
-      m2 = approxMins(km2);
-    }
-    return { d1, m1, d2, m2 };
-  }, [ambLoc, booking, hospCoords]);
-
-  const [activeRoute, setActiveRoute] = useState(null);
-
+  // ── Fetch Active Route Record from Backend ──────────────────────────────────
   useEffect(() => {
     if (!booking?.id) return;
     let cancel = false;
@@ -132,44 +69,132 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         }
       })
       .catch(() => {});
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [booking?.id]);
 
-  // ── Route Embed URL ─────────────────────────────────────────────────────────
-  const embedSrc = useMemo(() => {
-    const ambLat = ambLoc?.lat;
-    const ambLng = ambLoc?.lng;
-    const ambCoord = isIndiaCoord(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
-    
-    const pickupLat = Number(booking?.pickup_latitude);
-    const pickupLng = Number(booking?.pickup_longitude);
-
-    const routePickupCoord = isIndiaCoord(activeRoute?.pickup_lat, activeRoute?.pickup_lng)
-      ? `${activeRoute.pickup_lat},${activeRoute.pickup_lng}`
-      : "";
-    const routeDestCoord = isIndiaCoord(activeRoute?.dest_lat, activeRoute?.dest_lng)
-      ? `${activeRoute.dest_lat},${activeRoute.dest_lng}`
-      : "";
-
-    const hospCoordStr = isIndiaCoord(hospCoords?.lat, hospCoords?.lng)
-      ? `${hospCoords.lat},${hospCoords.lng}`
-      : "";
-
-    const pickupCoordStr = routePickupCoord || (isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "");
-    const pickupText = activeRoute?.pickup_location || String(booking?.pickup_location || "").trim();
-    const destText = routeDestCoord || hospCoordStr || activeRoute?.destination || String(booking?.assigned_hospital_address || booking?.assigned_hospital_name || booking?.destination || "Hospital").trim();
-
-    const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
-    const viaPt = pickupCoordStr || pickupText;
-    const endPt = destText || "Hospital";
-
-    let daddrStr = encodeURIComponent(endPt);
-    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
-      daddrStr = `${encodeURIComponent(viaPt)}+to:${encodeURIComponent(endPt)}`;
+  // ── Pickup & Destination coordinates ────────────────────────────────────────
+  const pickupLoc = useMemo(() => {
+    const pLat = Number(activeRoute?.pickup_lat || booking?.pickup_latitude);
+    const pLng = Number(activeRoute?.pickup_lng || booking?.pickup_longitude);
+    if (isIndiaCoord(pLat, pLng)) {
+      return { lat: pLat, lng: pLng, label: booking?.pickup_location || "Patient Location" };
     }
+    return { lat: 28.7371, lng: 77.3041, label: booking?.pickup_location || "Patient Location" };
+  }, [activeRoute, booking]);
 
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
-  }, [ambLoc, booking, activeRoute, routeMode, hospCoords]);
+  const destLoc = useMemo(() => {
+    const dLat = Number(activeRoute?.dest_lat || hospCoords?.lat || booking?.destination_latitude);
+    const dLng = Number(activeRoute?.dest_lng || hospCoords?.lng || booking?.destination_longitude);
+    const name = booking?.assigned_hospital_name || booking?.destination || "Assigned Hospital";
+    if (isIndiaCoord(dLat, dLng)) {
+      return { lat: dLat, lng: dLng, name };
+    }
+    return { lat: 28.5355, lng: 77.391, name };
+  }, [activeRoute, hospCoords, booking]);
+
+  // ── Hook: Live Ambulance Tracking ──────────────────────────────────────────
+  const {
+    ambulanceLoc,
+    heading,
+    speed,
+    battery,
+    driverName,
+    remainingDistanceM,
+    remainingEtaS,
+    deviationM,
+    isOffRoute,
+  } = useAmbulanceTracking({
+    ambulanceId: booking?.ambulance_id,
+    ambulanceNumber: booking?.ambulance_number,
+    routeData,
+    destinationLoc: destLoc,
+    pollIntervalMs: 4000,
+    deviationThresholdM: 150,
+  });
+
+  // Effective Ambulance Coordinates
+  const effectiveAmbLoc = useMemo(() => {
+    if (ambulanceLoc && Number.isFinite(ambulanceLoc.lat) && Number.isFinite(ambulanceLoc.lng)) {
+      return ambulanceLoc;
+    }
+    return { lat: pickupLoc.lat - 0.005, lng: pickupLoc.lng - 0.005, heading: 0, speed: 0 };
+  }, [ambulanceLoc, pickupLoc]);
+
+  // ── Fetch or Calculate Route from Backend / TomTom API ───────────────────────
+  useEffect(() => {
+    if (!pickupLoc || !destLoc) return;
+
+    let cancel = false;
+    setRouteLoading(true);
+
+    const fetchRoute = async () => {
+      try {
+        const startLat = effectiveAmbLoc.lat;
+        const startLng = effectiveAmbLoc.lng;
+
+        const res = await fetch(`${BASE}/api/route/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            origin_lat: startLat,
+            origin_lng: startLng,
+            dest_lat: destLoc.lat,
+            dest_lng: destLoc.lng,
+            travel_mode: "car",
+            max_alternatives: 1,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancel && data && data.geometry && data.geometry.coordinates) {
+            setRouteData(data);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("User route fetch error, using fallback geometry:", err);
+      }
+
+      // Fallback: straight-line GeoJSON line
+      if (!cancel) {
+        const d1 = haversineM(effectiveAmbLoc, pickupLoc);
+        const d2 = haversineM(pickupLoc, destLoc);
+        const totalM = d1 + d2;
+        const mins = Math.max(1, Math.round((totalM / 1000 / 28) * 60));
+
+        setRouteData({
+          distance_m: totalM,
+          duration_s: mins * 60,
+          traffic_delay_s: 0,
+          no_traffic_s: mins * 60,
+          historic_s: mins * 60,
+          live_s: mins * 60,
+          traffic_sections: [],
+          steps: [],
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [effectiveAmbLoc.lng, effectiveAmbLoc.lat],
+              [pickupLoc.lng, pickupLoc.lat],
+              [destLoc.lng, destLoc.lat],
+            ],
+          },
+        });
+      }
+      setRouteLoading(false);
+    };
+
+    fetchRoute();
+
+    return () => {
+      cancel = true;
+    };
+  }, [booking?.id, destLoc.lat, destLoc.lng]);
+
+  const hospName = booking?.assigned_hospital_name || booking?.destination || "Hospital pending";
 
   const rootStyle = embedded
     ? { position: "absolute", inset: 0, display: "flex", background: "#ffffff" }
@@ -181,8 +206,6 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
         background: "#ffffff",
         fontFamily: "'Segoe UI', Roboto, sans-serif",
       };
-
-  const hospName = booking?.assigned_hospital_name || booking?.destination || "Hospital pending";
 
   return (
     <div style={rootStyle}>
@@ -215,9 +238,10 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           height: 100%;
           position: relative;
           background: #e5e3df;
+          display: flex;
+          flex-direction: column;
         }
         
-        /* Selected Card Style (Matching Image 2) */
         .ubm-active-card {
           background: #ffffff;
           border: 2px solid #00c853;
@@ -237,7 +261,6 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           text-transform: uppercase;
         }
 
-        /* Timeline (Matching Image 2) */
         .ubm-timeline {
           position: relative;
           padding-left: 28px;
@@ -349,7 +372,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
       `}</style>
 
       <div className="ubm-root">
-        {/* Left Sidebar Panel (Image 2 Dispatch Style) */}
+        {/* Left Sidebar Panel */}
         <div className="ubm-sidebar">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
@@ -383,7 +406,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             )}
           </div>
 
-          {/* Trip Card matching Image 2 */}
+          {/* Trip Card */}
           <div className="ubm-active-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span className="ubm-pill-status">
@@ -400,22 +423,22 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
                   : "Confirmed • En Route"}
               </span>
               <span style={{ fontSize: 12, fontWeight: 800, color: "#111" }}>
-                {ambDriver || booking?.driver || (booking?.is_user_selected_hospital ? "Hospital Direct Route" : "Driver Assigned")}
+                {driverName || booking?.driver || (booking?.is_user_selected_hospital ? "Hospital Direct Route" : "Driver Assigned")}
               </span>
             </div>
 
-            {/* Timeline matching Image 2 */}
+            {/* Timeline */}
             <div className="ubm-timeline">
               <div className="ubm-timeline-line" />
-              
+
               <div className="ubm-timeline-item">
                 <div className="ubm-timeline-dot amb">🚑</div>
                 <div style={{ fontWeight: 800, color: "#111" }}>
                   {booking?.ambulance_number ? `Ambulance (${booking.ambulance_number})` : "Ambulance Status"}
                 </div>
                 <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>
-                  {ambLoc
-                    ? `${coordText(ambLoc?.lat, ambLoc?.lng)} • Speed: ${ambSpeed} km/h`
+                  {ambulanceLoc
+                    ? `${coordText(ambulanceLoc.lat, ambulanceLoc.lng)} • Speed: ${speed} km/h`
                     : booking?.driver_accepted
                     ? "Ambulance is ready • Driver en route"
                     : booking?.sent_to_driver
@@ -429,7 +452,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
               <div className="ubm-timeline-item">
                 <div className="ubm-timeline-dot user">👤</div>
                 <div style={{ fontWeight: 800, color: "#111" }}>Patient Pickup (User)</div>
-                <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>{booking?.pickup_location || "Pickup Location"}</div>
+                <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>{pickupLoc.label}</div>
               </div>
 
               <div className="ubm-timeline-item">
@@ -444,7 +467,6 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
                 </div>
                 <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)" }}>
                   {hospName}
-                  {legStats.d2 && ` • ~${legStats.d2} km (~${legStats.m2} mins)`}
                 </div>
               </div>
             </div>
@@ -453,15 +475,19 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             <div className="ubm-stats-row">
               <div className="ubm-stat-cell">
                 <div className="ubm-stat-val" style={{ color: "#00c853" }}>
-                  {legStats.d1 != null ? `${legStats.d1} km` : booking?.is_user_selected_hospital ? "Pickup Point" : "En Route"}
+                  {remainingDistanceM != null
+                    ? `${(remainingDistanceM / 1000).toFixed(1)} km`
+                    : "En Route"}
                 </div>
-                <div className="ubm-stat-lbl">To Pickup</div>
+                <div className="ubm-stat-lbl">Remaining</div>
               </div>
               <div className="ubm-stat-cell">
                 <div className="ubm-stat-val" style={{ color: "#f59a23" }}>
-                  ~{legStats.m2} m
+                  {remainingEtaS != null
+                    ? `~${Math.max(1, Math.round(remainingEtaS / 60))} m`
+                    : "Calculating"}
                 </div>
-                <div className="ubm-stat-lbl">To Hospital</div>
+                <div className="ubm-stat-lbl">Live ETA</div>
               </div>
               <div className="ubm-stat-cell">
                 <div className="ubm-stat-val">
@@ -478,7 +504,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
               className={`ubm-action-btn ${routeMode === "start" ? "ubm-btn-start" : "ubm-btn-full"}`}
               onClick={() => setRouteMode("start")}
             >
-              ▶ Start Route
+              ▶ Follow Ambulance
             </button>
             <button
               className={`ubm-action-btn ${routeMode === "full" ? "ubm-btn-start" : "ubm-btn-full"}`}
@@ -489,7 +515,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
           </div>
         </div>
 
-        {/* Right Side Map View (Full Height 100%) */}
+        {/* Right Side Map View (TomTom Orbis Live Map Engine) */}
         <div className="ubm-map-area">
           {routeMode === "start" && (
             <div
@@ -512,26 +538,18 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
                 pointerEvents: "none",
               }}
             >
-              <div
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: "6px solid transparent",
-                  borderRight: "6px solid transparent",
-                  borderBottom: "12px solid #ffffff",
-                  transform: "rotate(45deg)",
-                }}
-              />
-              <span>Following Ambulance Live Location</span>
+              <span>🚑 Camera Following Live Ambulance</span>
             </div>
           )}
 
-          <iframe
-            style={{ width: "100%", height: "100%", border: "none", background: "#e5e3df" }}
-            src={embedSrc}
-            title="User Live Booking Map"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
+          <TomTomLiveMap
+            ambulanceLoc={effectiveAmbLoc}
+            pickupLoc={pickupLoc}
+            destinationLoc={destLoc}
+            routeData={routeData}
+            followAmbulance={routeMode === "start"}
+            loading={routeLoading}
+            height="100%"
           />
         </div>
       </div>

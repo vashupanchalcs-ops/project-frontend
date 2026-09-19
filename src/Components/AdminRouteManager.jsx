@@ -1,14 +1,19 @@
 /**
  * AdminRouteManager.jsx — src/Components/AdminRouteManager.jsx
  *
- * Clean Google Maps Embedded Map Engine (Matching Image 3 style):
- * - Fixed yellow Best Route card bottom truncation issue.
- * - Blocked "More options" external Google redirect link overlay completely.
- * - Full 3-point route chain: Ambulance Live Location -> User Pickup -> Hospital.
+ * Professional Aarogya Live Command Center & Dispatch Engine:
+ * - Powered by TomTom Orbis + MapLibre Map Engine (TomTomLiveMap).
+ * - Real-time traffic-aware routing from backend POST /api/route/.
+ * - Live ambulance tracking with polyline progress interpolation (useAmbulanceTracking).
+ * - Traffic analysis panel (TrafficETAPanel): free-flow vs historic vs live ETA, turn-by-turn steps.
+ * - Graceful fallback to MapLibre Positron and straight line if API key or offline.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import UnifiedMapHeader from "./UnifiedMapHeader";
+import TomTomLiveMap from "./TomTomLiveMap";
+import TrafficETAPanel from "./TrafficETAPanel";
+import useAmbulanceTracking, { haversineM } from "../hooks/useAmbulanceTracking";
 import { geocodeInIndia, isIndiaCoord, normalizePlace } from "../hooks/useLeaflet";
 
 const defaultApiBase = import.meta.env.DEV
@@ -17,18 +22,6 @@ const defaultApiBase = import.meta.env.DEV
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const statusColor = { available: "#126f1e", en_route: "#f59a23", busy: "#666666", offline: "#999999" };
-
-const haversineKm = (a, b) => {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-};
 
 export default function AdminRouteManager({
   preSelectedDriver,
@@ -42,6 +35,9 @@ export default function AdminRouteManager({
   const [selBook, setSelBook] = useState(null);
   const [pickupCoord, setPickupCoord] = useState(null);
   const [destCoord, setDestCoord] = useState(null);
+
+  const [routeData, setRouteData] = useState(null);
+  const [activeRouteIndex, setActiveRouteIndex] = useState(0);
   const [routeStats, setRouteStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pushing, setPushing] = useState(false);
@@ -51,7 +47,9 @@ export default function AdminRouteManager({
   const clearRoutePreview = () => {
     setPickupCoord(null);
     setDestCoord(null);
+    setRouteData(null);
     setRouteStats(null);
+    setActiveRouteIndex(0);
   };
 
   const selectAmbulance = (ambulance) => {
@@ -86,7 +84,9 @@ export default function AdminRouteManager({
             (b) => b.status === "confirmed" && b.sent_to_driver && !b.driver_task_completed
           )
         );
-      } catch {}
+      } catch (err) {
+        console.warn("Error loading fleet data:", err);
+      }
     };
     load();
   }, []);
@@ -120,41 +120,53 @@ export default function AdminRouteManager({
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
+    setTimeout(() => setToast(null), 2800);
   };
 
-  // ── Route Embed URL (3-Point Chain: Ambulance -> User Pickup -> Hospital) ───
-  const embedSrc = useMemo(() => {
-    const ambLat = Number(selAmb?.latitude);
-    const ambLng = Number(selAmb?.longitude);
-    const ambCoord = isIndiaCoord(ambLat, ambLng) ? `${ambLat},${ambLng}` : "";
-    
-    const pickupLat = Number(selBook?.pickup_latitude);
-    const pickupLng = Number(selBook?.pickup_longitude);
-    const pickupCoordStr = isIndiaCoord(pickupLat, pickupLng) ? `${pickupLat},${pickupLng}` : "";
-    const pickupText = String(selBook?.pickup_location || "").trim();
+  // ── Hook: Live Ambulance Tracking ──────────────────────────────────────────
+  const handleRerouteNeeded = useCallback((info) => {
+    showToast(`Ambulance deviated ${info.deviationM}m from route. Refreshing...`, "error");
+  }, []);
 
-    const destLat = Number(destCoord?.lat);
-    const destLng = Number(destCoord?.lng);
-    const destCoordStr = isIndiaCoord(destLat, destLng) ? `${destLat},${destLng}` : "";
-    const destText = String(selBook?.assigned_hospital_name || selBook?.assigned_hospital_address || selBook?.destination || "").trim();
+  const {
+    ambulanceLoc,
+    heading,
+    speed,
+    battery,
+    driverName,
+    remainingDistanceM,
+    remainingEtaS,
+    deviationM,
+    isOffRoute,
+    currentStepIndex,
+  } = useAmbulanceTracking({
+    ambulanceId: selAmb?.id || selAmb?.ambulance_id,
+    ambulanceNumber: selAmb?.ambulance_number,
+    routeData,
+    destinationLoc: destCoord,
+    pollIntervalMs: 4000,
+    deviationThresholdM: 150,
+    onRerouteNeeded: handleRerouteNeeded,
+  });
 
-    const startPt = ambCoord || pickupCoordStr || pickupText || "28.73724,77.30666";
-    const viaPt = pickupCoordStr || pickupText;
-    const endPt = destCoordStr || destText || "Hospital";
-
-    let daddrStr = encodeURIComponent(endPt);
-    if (viaPt && viaPt !== startPt && viaPt !== endPt) {
-      daddrStr = `${encodeURIComponent(viaPt)}+to:${encodeURIComponent(endPt)}`;
+  // Effective ambulance coordinates
+  const liveAmbulanceCoord = useMemo(() => {
+    if (ambulanceLoc && Number.isFinite(ambulanceLoc.lat) && Number.isFinite(ambulanceLoc.lng)) {
+      return ambulanceLoc;
     }
-
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(startPt)}&daddr=${daddrStr}&dirflg=d`;
-  }, [selAmb, selBook, destCoord, routeMode]);
+    const lat = Number(selAmb?.latitude);
+    const lng = Number(selAmb?.longitude);
+    if (isIndiaCoord(lat, lng)) {
+      return { lat, lng, heading: Number(selAmb?.heading) || 0, speed: selAmb?.speed || 0 };
+    }
+    return { lat: 28.7372, lng: 77.3066, heading: 0, speed: 0 };
+  }, [ambulanceLoc, selAmb]);
 
   // ── Resolve coordinates ─────────────────────────────────────────────────────
   const resolveCoords = async (booking) => {
     const pickupQuery = [booking.pickup_landmark, booking.pickup_city, booking.pickup_district]
-      .filter(Boolean).join(", ");
+      .filter(Boolean)
+      .join(", ");
     const pickupText = pickupQuery || booking.pickup_location || "";
     const destName = booking.assigned_hospital_name || booking.destination || "";
     const normalizedDest = normalizePlace(destName);
@@ -191,38 +203,90 @@ export default function AdminRouteManager({
     }
 
     const pickup = pickupFromBooking || pickupFromText || { lat: 28.7371, lng: 77.3041 };
-    const destination = hospitalFromDb || hospitalFromText || null;
+    const destination = hospitalFromDb || hospitalFromText || { lat: 28.5355, lng: 77.391 };
     return { pickup, destination };
   };
 
-  // ── Find Route ──────────────────────────────────────────────────────────────
+  // ── Find Route via Backend TomTom API ───────────────────────────────────────
   const findRoute = async () => {
     if (!selAmb) return showToast("Select an ambulance first", "error");
     if (!selBook) return showToast("Select a booking first", "error");
     setLoading(true);
+    setRouteData(null);
     setRouteStats(null);
-    try {
-      const ambCoord =
-        Number.isFinite(Number(selAmb.latitude)) && Number.isFinite(Number(selAmb.longitude))
-          ? { lat: Number(selAmb.latitude), lng: Number(selAmb.longitude) }
-          : { lat: 28.7372, lng: 77.3066 };
+    setActiveRouteIndex(0);
 
+    try {
+      const ambCoord = liveAmbulanceCoord;
       const { pickup, destination } = await resolveCoords(selBook);
       setPickupCoord(pickup);
       setDestCoord(destination);
 
-      const targetDest = destination || { lat: 28.5355, lng: 77.3910 };
-      const legA = haversineKm(ambCoord, pickup) * 1.25;
-      const legB = haversineKm(pickup, targetDest) * 1.25;
-      const totalKm = (legA + legB).toFixed(1);
-      const mins = Math.max(1, Math.round((totalKm / 28) * 60));
+      // Call backend TomTom routing endpoint
+      const response = await fetch(`${BASE}/api/route/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin_lat: ambCoord.lat,
+          origin_lng: ambCoord.lng,
+          dest_lat: destination.lat,
+          dest_lng: destination.lng,
+          travel_mode: "car",
+          max_alternatives: 2,
+        }),
+      });
 
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.geometry && data.geometry.coordinates) {
+          setRouteData(data);
+          const distKm = ((data.distance_m || 0) / 1000).toFixed(1);
+          const mins = Math.max(1, Math.round((data.duration_s || 0) / 60));
+          const isTransfer = Boolean(selBook.transfer_requested || selBook.transferred_to_ambulance_number);
+          setRouteStats({ distKm, mins, isTransfer });
+          showToast(`Traffic Route: ${distKm} km · ~${mins} min (TomTom Live)`);
+          return;
+        }
+      }
+
+      // Fallback if API fails or backend offline: build interpolated straight-line GeoJSON
+      console.warn("Backend routing API returned non-OK, using fallback estimation");
+      const d1 = haversineM(ambCoord, pickup);
+      const d2 = haversineM(pickup, destination);
+      const totalM = d1 + d2;
+      const totalKm = (totalM / 1000).toFixed(1);
+      const mins = Math.max(1, Math.round((totalM / 1000 / 28) * 60));
       const isTransfer = Boolean(selBook.transfer_requested || selBook.transferred_to_ambulance_number);
-      const stats = { distKm: totalKm, mins, isTransfer };
-      setRouteStats(stats);
-      setRouteMode("full");
-      showToast(`Route calculated: ${stats.distKm} km · ~${stats.mins} min`);
+
+      const fallbackRoute = {
+        distance_m: totalM,
+        duration_s: mins * 60,
+        traffic_delay_s: 0,
+        no_traffic_s: mins * 60,
+        historic_s: mins * 60,
+        live_s: mins * 60,
+        traffic_sections: [],
+        steps: [
+          { instruction: "Proceed from Ambulance towards Patient Pickup", distance_m: d1, turn_type: "START" },
+          { instruction: "Arrive at Patient Pickup Location", distance_m: 0, turn_type: "ARRIVE" },
+          { instruction: "Proceed towards Hospital", distance_m: d2, turn_type: "STRAIGHT" },
+          { instruction: "Arrive at Destination Hospital", distance_m: 0, turn_type: "FINISH" },
+        ],
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [ambCoord.lng, ambCoord.lat],
+            [pickup.lng, pickup.lat],
+            [destination.lng, destination.lat],
+          ],
+        },
+      };
+
+      setRouteData(fallbackRoute);
+      setRouteStats({ distKm: totalKm, mins, isTransfer });
+      showToast(`Direct Estimate: ${totalKm} km · ~${mins} min`);
     } catch (e) {
+      console.error("Route calculation error:", e);
       showToast(e.message || "Route calculation error", "error");
     } finally {
       setLoading(false);
@@ -244,7 +308,7 @@ export default function AdminRouteManager({
           destination: selBook.assigned_hospital_name || selBook.destination || "Hospital",
           distance_km: `${routeStats.distKm} km`,
           duration: `${routeStats.mins} min`,
-          polyline: "",
+          polyline: routeData?.geometry?.coordinates ? JSON.stringify(routeData.geometry.coordinates) : "",
           pickup_lat: pickupCoord?.lat ?? null,
           pickup_lng: pickupCoord?.lng ?? null,
           dest_lat: destCoord?.lat ?? null,
@@ -276,25 +340,45 @@ export default function AdminRouteManager({
         .arm-item.sel { background:#f59a23; border-color:#f59a23; color:#111; }
         .arm-item.sel :is(div, span, b) { color:#111 !important; }
         .arm-find-btn,.arm-push-btn { width:100%; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; }
-        .arm-find-btn { background:#ffffff; color:#111; padding:10px 0; margin-bottom:8px; font-size:13px; border:1px solid rgba(17,17,17,0.2); }
+        .arm-find-btn { background:#111827; color:#fff; padding:10px 0; margin-bottom:8px; font-size:13px; border:1px solid rgba(17,17,17,0.2); }
         .arm-find-btn:disabled,.arm-push-btn:disabled { background:#d7d7cd; color:rgba(17,17,17,0.45); cursor:not-allowed; }
-        .arm-route-card { background:#fff8e1; border:1.5px solid #ffa000; border-radius:12px; padding:12px; margin-top:10px; margin-bottom:24px; box-shadow:0 6px 20px rgba(255,160,0,0.22); flex-shrink:0; }
+        .arm-route-card { background:#fff8e1; border:1.5px solid #ffa000; border-radius:12px; padding:12px; margin-top:8px; margin-bottom:12px; box-shadow:0 6px 20px rgba(255,160,0,0.22); flex-shrink:0; }
         .arm-push-btn { background:#111; color:#fff; padding:10px 0; margin-top:8px; font-size:13px; border:1px solid rgba(255,255,255,0.1); }
-        .arm-map { flex:1; min-width:0; position:relative; overflow:hidden !important; }
+        .arm-map { flex:1; min-width:0; position:relative; overflow:hidden !important; display:flex; flex-direction:column; }
         .arm-toast { position:fixed; top:68px; right:16px; z-index:9999; padding:11px 16px; border-radius:8px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,0.22); }
-        .arm-toast.success { background:#ffffff; color:#111; }
-        .arm-toast.error { background:#373737; color:#fff; }
-        .arm-map-frame { width:100%; height:100%; min-height:540px; border:none; background:#e5e3df; }
-        
-        /* Opaque cover card hiding Google's top-left white card & "More options" link 100% */
+        .arm-toast.success { background:#ffffff; color:#111; border:1px solid #10b981; }
+        .arm-toast.error { background:#373737; color:#fff; border:1px solid #ef4444; }
+
+        /* Off-route deviation alert pill */
+        .arm-offroute-pill {
+          position: absolute;
+          top: 14px;
+          right: 60px;
+          z-index: 25;
+          background: #ef4444;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+          animation: pulse 1.5s infinite;
+        }
+
+        /* Top control header overlay */
         .arm-map-header-cover {
           position: absolute;
           top: 0;
           left: 0;
           width: 360px;
-          height: 110px;
-          z-index: 10;
-          background: #ffffff;
+          height: auto;
+          min-height: 80px;
+          z-index: 20;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(8px);
           border-right: 1px solid rgba(17,17,17,0.12);
           border-bottom: 1px solid rgba(17,17,17,0.12);
           border-bottom-right-radius: 12px;
@@ -318,10 +402,13 @@ export default function AdminRouteManager({
         {toast && <div className={`arm-toast ${toast.type}`}>{toast.msg}</div>}
 
         <div style={{ display: "flex", flex: 1, height: "100%", width: "100%" }}>
+          {/* Left Control Panel */}
           <div className="arm-panel">
             <div className="arm-panel-header">
               <div style={{ fontWeight: 800, fontSize: 14 }}>Route Manager</div>
-              <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>Google Maps direction engine</div>
+              <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>
+                TomTom Orbis Live Traffic Engine
+              </div>
             </div>
 
             <div className="arm-panel-inner">
@@ -329,19 +416,20 @@ export default function AdminRouteManager({
                 <UnifiedMapHeader
                   ambulanceNumber={selAmb?.ambulance_number || "AMB-0000"}
                   bookingId={selBook?.id}
-                  driverName={selAmb?.driver || "-"}
-                  speed={selAmb?.speed || 0}
-                  battery={selAmb?.battery_percentage ?? "-"}
+                  driverName={driverName || selAmb?.driver || "-"}
+                  speed={speed}
+                  battery={battery ?? selAmb?.battery_percentage ?? "-"}
                   pickupLocation={selBook?.pickup_location || "Pickup"}
                   destination={selBook?.assigned_hospital_name || selBook?.destination || "Assigned Hospital"}
-                  ambLat={selAmb?.latitude}
-                  ambLng={selAmb?.longitude}
+                  ambLat={liveAmbulanceCoord.lat}
+                  ambLng={liveAmbulanceCoord.lng}
                   pickupLat={selBook?.pickup_latitude}
                   pickupLng={selBook?.pickup_longitude}
                   routeMode={routeMode}
                   onSetRouteMode={(mode) => setRouteMode(mode)}
                 />
               )}
+
               {/* Ambulance selector */}
               <div className="arm-box">
                 <div className="arm-box-label">Select Ambulance</div>
@@ -384,24 +472,28 @@ export default function AdminRouteManager({
                 </div>
               </div>
 
+              {/* Find Route Button */}
               <button className="arm-find-btn" onClick={findRoute} disabled={loading}>
-                {loading ? "Calculating route…" : "Find Route"}
+                {loading ? "Calculating Live Traffic Route…" : "Find Traffic-Aware Route"}
               </button>
 
+              {/* Action Card to Send Route to Driver */}
               {routeStats && (
                 <div
                   className="arm-route-card"
                   style={{
                     background: routeStats.isTransfer ? "#fef2f2" : "#eff6ff",
                     borderColor: routeStats.isTransfer ? "#dc2626" : "#2563eb",
-                    boxShadow: routeStats.isTransfer ? "0 6px 20px rgba(220,38,38,0.22)" : "0 6px 20px rgba(37,99,235,0.22)"
+                    boxShadow: routeStats.isTransfer ? "0 6px 20px rgba(220,38,38,0.22)" : "0 6px 20px rgba(37,99,235,0.22)",
                   }}
                 >
                   <div style={{ fontWeight: 800, marginBottom: 5, color: routeStats.isTransfer ? "#b91c1c" : "#1d4ed8", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-                    <span>{routeStats.isTransfer ? "🚨 Emergency Transfer Route (RED)" : "⚡ Active Dispatch Route (BLUE)"}</span>
+                    <span>{routeStats.isTransfer ? "🚨 Emergency Transfer Route" : "⚡ Active Dispatch Route"}</span>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>
-                    {routeStats.distKm} km · ~{routeStats.mins} min
+                    {remainingDistanceM != null
+                      ? `${(remainingDistanceM / 1000).toFixed(1)} km remaining · ~${Math.max(1, Math.round(remainingEtaS / 60))} min`
+                      : `${routeStats.distKm} km · ~${routeStats.mins} min`}
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(17,17,17,0.65)", marginTop: 2 }}>
                     Ambulance ➔ User Pickup ➔ Hospital
@@ -411,13 +503,32 @@ export default function AdminRouteManager({
                   </button>
                 </div>
               )}
+
+              {/* Traffic ETA Panel & Step-by-Step Guidance */}
+              {routeData && (
+                <div style={{ marginTop: 8 }}>
+                  <TrafficETAPanel
+                    routeData={routeData}
+                    activeRouteIndex={activeRouteIndex}
+                    onSelectRouteIndex={(idx) => setActiveRouteIndex(idx)}
+                    currentStepIndex={currentStepIndex}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Right Map Canvas (TomTom Orbis Live Map Engine) */}
           <div className="arm-map">
+            {/* Top-Left Target & Status Overlay */}
             <div className="arm-map-header-cover">
               <div style={{ fontSize: 13, fontWeight: 900, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
                 <span>🚑</span> {selAmb?.ambulance_number || "Aarogya Fleet"}
+                {speed > 0 && (
+                  <span style={{ fontSize: 10, background: "#dcfce7", color: "#15803d", padding: "1px 6px", borderRadius: 4 }}>
+                    {speed} km/h
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 Target: {selBook?.assigned_hospital_name || selBook?.destination || "Hospital"}
@@ -426,12 +537,24 @@ export default function AdminRouteManager({
                 Pickup: {selBook?.pickup_location || "Patient Location"}
               </div>
             </div>
-            <iframe
-              className="arm-map-frame"
-              src={embedSrc}
-              title="Admin Route Manager Map"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+
+            {/* Off-route deviation alert */}
+            {isOffRoute && (
+              <div className="arm-offroute-pill">
+                <span>⚠️</span>
+                <span>Off-route by {deviationM}m</span>
+              </div>
+            )}
+
+            {/* High-Performance TomTom / MapLibre Engine */}
+            <TomTomLiveMap
+              ambulanceLoc={liveAmbulanceCoord}
+              pickupLoc={pickupCoord ? { ...pickupCoord, label: selBook?.pickup_location } : null}
+              destinationLoc={destCoord ? { ...destCoord, name: selBook?.assigned_hospital_name || selBook?.destination } : null}
+              routeData={routeData}
+              followAmbulance={routeMode === "start"}
+              loading={loading}
+              height="100%"
             />
           </div>
         </div>

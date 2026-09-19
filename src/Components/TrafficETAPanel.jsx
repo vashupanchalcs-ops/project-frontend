@@ -15,16 +15,16 @@ import React, { useState, useMemo } from "react";
 const fmtMins = (secs) => {
   const s = Number(secs) || 0;
   const m = Math.max(1, Math.round(s / 60));
-  return ${m} min;
+  return m + " min";
 };
 
 // Helper to format meters into km or m
 const fmtDist = (meters) => {
   const m = Number(meters) || 0;
   if (m >= 1000) {
-    return ${(m / 1000).toFixed(1)} km;
+    return (m / 1000).toFixed(1) + " km";
   }
-  return ${Math.round(m)} m;
+  return Math.round(m) + " m";
 };
 
 // Helper to format arrival time to local clock (e.g. 03:45 PM)
@@ -59,6 +59,9 @@ export default function TrafficETAPanel({
   activeRouteIndex = 0,
   onSelectRouteIndex = null,
   currentStepIndex = 0,
+  remainingDistanceM = null,
+  remainingEtaS = null,
+  isLiveTracking = false,
   className = "",
   style = {},
 }) {
@@ -91,7 +94,7 @@ export default function TrafficETAPanel({
 
   if (!routeData || !activeRoute) {
     return (
-      <div className={	ep-container empty } style={style}>
+      <div className={"tep-container empty " + className} style={style}>
         <div style={{ padding: 16, textAlign: "center", color: "#666", fontSize: 13 }}>
           Calculating traffic-aware route...
         </div>
@@ -99,29 +102,35 @@ export default function TrafficETAPanel({
     );
   }
 
-  const durationMin = Math.max(1, Math.round((activeRoute.duration_s || 0) / 60));
-  const distanceKm = ((activeRoute.distance_m || 0) / 1000).toFixed(1);
+  const durationMin = remainingEtaS != null
+    ? Math.max(1, Math.round(remainingEtaS / 60))
+    : Math.max(1, Math.round((activeRoute.duration_s || 0) / 60));
+
+  const distanceKm = remainingDistanceM != null
+    ? (remainingDistanceM / 1000).toFixed(1)
+    : ((activeRoute.distance_m || 0) / 1000).toFixed(1);
+
   const delayMin = Math.round((activeRoute.traffic_delay_s || 0) / 60);
 
   const freeFlowMin = Math.max(1, Math.round((activeRoute.no_traffic_s || activeRoute.duration_s || 0) / 60));
   const historicMin = Math.max(1, Math.round((activeRoute.historic_s || activeRoute.duration_s || 0) / 60));
   const liveMin = durationMin;
 
-  const arrivalFormatted = fmtArrival(activeRoute.arrival_time, activeRoute.duration_s);
+  const arrivalFormatted = fmtArrival(activeRoute.arrival_time, remainingEtaS != null ? remainingEtaS : activeRoute.duration_s);
 
   // Available routes list (Primary + Alternatives)
   const allRoutes = [
     { label: "Fastest Route", route: routeData, idx: 0 },
     ...(routeData.alternatives || []).map((alt, i) => ({
-      label: Alternative ,
+      label: "Alternative " + (i + 1),
       route: alt,
       idx: i + 1,
     })),
   ];
 
   return (
-    <div className={	ep-container } style={style}>
-      <style>{
+    <div className={"tep-container " + className} style={style}>
+      <style>{`
         .tep-container {
           background: #ffffff;
           border-radius: 12px;
@@ -210,12 +219,13 @@ export default function TrafficETAPanel({
           font-size: 10px;
           color: #6b7280;
           font-weight: 600;
-          margin-bottom: 2px;
+          text-transform: uppercase;
         }
         .tep-scenario-val {
           font-size: 14px;
           font-weight: 800;
           color: #111827;
+          margin-top: 2px;
         }
         .tep-delay-callout {
           margin-top: 8px;
@@ -269,37 +279,37 @@ export default function TrafficETAPanel({
           font-weight: 700;
           color: #374151;
         }
+        .tep-steps-header:hover {
+          background: #f9fafb;
+        }
         .tep-steps-list {
           max-height: 220px;
           overflow-y: auto;
-          background: #ffffff;
-          border-top: 1px solid #f3f4f6;
+          padding: 0 18px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
         .tep-step-item {
           display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 10px 18px;
-          border-bottom: 1px solid #f3f4f6;
+          gap: 10px;
           font-size: 12px;
+          padding: 6px 8px;
+          border-radius: 6px;
+          background: #f9fafb;
+          border-left: 3px solid transparent;
         }
         .tep-step-item.active {
           background: #eff6ff;
+          border-left-color: #2563eb;
           font-weight: 700;
         }
         .tep-step-icon {
-          font-size: 15px;
+          font-size: 16px;
           flex-shrink: 0;
-          margin-top: 1px;
         }
-        .tep-step-body {
+        .tep-step-text {
           flex: 1;
-          min-width: 0;
-        }
-        .tep-step-instruction {
-          color: #111827;
-          font-weight: 600;
-          line-height: 1.35;
         }
         .tep-step-meta {
           font-size: 11px;
@@ -315,7 +325,7 @@ export default function TrafficETAPanel({
           background: #fafafa;
           border-top: 1px solid #f3f4f6;
         }
-      }</style>
+      `}</style>
 
       {/* 1. Main ETA Card */}
       <div className="tep-main-card">
@@ -359,21 +369,30 @@ export default function TrafficETAPanel({
             <div className="tep-scenario-label">Historic</div>
             <div className="tep-scenario-val">{historicMin} min</div>
           </div>
-          <div className="tep-scenario-box" style={{ borderColor: trafficClassification.color }}>
-            <div className="tep-scenario-label" style={{ color: trafficClassification.color }}>Live ETA</div>
-            <div className="tep-scenario-val" style={{ color: trafficClassification.color }}>{liveMin} min</div>
+          <div className="tep-scenario-box">
+            <div className="tep-scenario-label">Live</div>
+            <div className="tep-scenario-val" style={{ color: "#2563eb" }}>{liveMin} min</div>
           </div>
         </div>
 
         {delayMin > 0 ? (
-          <div className="tep-delay-callout" style={{ background: trafficClassification.bg, color: trafficClassification.color }}>
-            <span>⚠️ Traffic Delay: +{delayMin} min</span>
-            <span style={{ fontSize: 10 }}>+{trafficClassification.ratioPct}% over free-flow</span>
+          <div
+            className="tep-delay-callout"
+            style={{
+              background: delayMin > 5 ? "#fee2e2" : "#fef3c7",
+              color: delayMin > 5 ? "#991b1b" : "#92400e",
+            }}
+          >
+            <span>⏱ Traffic Delay: <strong>+{delayMin} min</strong> slower than free-flow</span>
+            <span>⚠️</span>
           </div>
         ) : (
-          <div className="tep-delay-callout" style={{ background: "#f0fdf4", color: "#16a34a" }}>
-            <span>✓ No Traffic Delay: Smooth Corridors</span>
-            <span style={{ fontSize: 10 }}>0 min delay</span>
+          <div
+            className="tep-delay-callout"
+            style={{ background: "#f0fdf4", color: "#166534" }}
+          >
+            <span>✓ Clear traffic conditions — No delay detected</span>
+            <span>🟢</span>
           </div>
         )}
       </div>
@@ -381,30 +400,33 @@ export default function TrafficETAPanel({
       {/* 3. Alternate Routes Switcher (if alternatives exist) */}
       {allRoutes.length > 1 && (
         <div className="tep-alts-section">
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", marginBottom: 6 }}>
-            Select Route:
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", marginBottom: 6, textTransform: "uppercase" }}>
+            Available Routes ({allRoutes.length})
           </div>
           <div className="tep-alt-row">
-            {allRoutes.map((item) => {
-              const isSel = item.idx === activeRouteIndex;
-              const rMin = Math.max(1, Math.round((item.route.duration_s || 0) / 60));
-              const rKm = ((item.route.distance_m || 0) / 1000).toFixed(1);
-              const diffMin = rMin - durationMin;
-
+            {allRoutes.map((r) => {
+              const isSelected = activeRouteIndex === r.idx;
+              const rMins = Math.max(1, Math.round((r.route.duration_s || 0) / 60));
+              const rKm = ((r.route.distance_m || 0) / 1000).toFixed(1);
+              const diffMin = rMins - Math.max(1, Math.round((routeData.duration_s || 0) / 60));
               return (
                 <button
-                  key={item.idx}
-                  className={	ep-alt-btn }
-                  onClick={() => onSelectRouteIndex && onSelectRouteIndex(item.idx)}
+                  key={r.idx}
+                  className={"tep-alt-btn " + (isSelected ? "active" : "")}
+                  onClick={() => onSelectRouteIndex && onSelectRouteIndex(r.idx)}
+                  type="button"
                 >
-                  <div style={{ fontSize: 11, fontWeight: 800, color: isSel ? "#2563eb" : "#111" }}>
-                    {item.label}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? "#1d4ed8" : "#111" }}>
+                    {r.label}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 800, marginTop: 2 }}>
-                    {rMin} min
-                    {diffMin > 0 && <span style={{ fontSize: 10, color: "#dc2626", marginLeft: 4 }}>+{diffMin}m</span>}
+                    {rMins} min <span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280" }}>({rKm} km)</span>
                   </div>
-                  <div style={{ fontSize: 10, color: "#6b7280" }}>{rKm} km</div>
+                  {diffMin !== 0 && (
+                    <div style={{ fontSize: 10, color: diffMin > 0 ? "#dc2626" : "#16a34a", fontWeight: 700, marginTop: 2 }}>
+                      {diffMin > 0 ? "+" + diffMin + " min slower" : diffMin + " min faster"}
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -412,25 +434,27 @@ export default function TrafficETAPanel({
         </div>
       )}
 
-      {/* 4. Turn-by-Turn Steps */}
+      {/* 4. Turn-by-Turn Guidance Steps */}
       {activeRoute.steps && activeRoute.steps.length > 0 && (
         <div>
           <div className="tep-steps-header" onClick={() => setShowSteps(!showSteps)}>
-            <span>Turn-by-turn Directions ({activeRoute.steps.length} steps)</span>
+            <span>Turn-by-Turn Guidance ({activeRoute.steps.length} steps)</span>
             <span>{showSteps ? "▲" : "▼"}</span>
           </div>
 
           {showSteps && (
             <div className="tep-steps-list">
               {activeRoute.steps.map((step, idx) => {
-                const isCurrent = idx === currentStepIndex;
+                const isActive = idx === currentStepIndex;
+                const icon = getTurnIcon(step.turn_type);
                 return (
-                  <div key={idx} className={	ep-step-item }>
-                    <div className="tep-step-icon">{getTurnIcon(step.turn_type)}</div>
-                    <div className="tep-step-body">
-                      <div className="tep-step-instruction">{step.instruction || "Continue on road"}</div>
+                  <div key={idx} className={"tep-step-item " + (isActive ? "active" : "")}>
+                    <div className="tep-step-icon">{icon}</div>
+                    <div className="tep-step-text">
+                      <div>{step.instruction || "Continue on route"}</div>
                       <div className="tep-step-meta">
-                        {fmtDist(step.distance_m)} · {step.duration_s ? fmtMins(step.duration_s) : ""}
+                        {step.distance_m > 0 && <span>{fmtDist(step.distance_m)}</span>}
+                        {step.duration_s > 0 && <span> · ~{fmtMins(step.duration_s)}</span>}
                       </div>
                     </div>
                   </div>
@@ -441,9 +465,9 @@ export default function TrafficETAPanel({
         </div>
       )}
 
-      {/* 5. Classification Disclaimer */}
+      {/* Disclaimer */}
       <div className="tep-disclaimer">
-        Traffic status (Light/Moderate/Heavy) calculated via Aarogya Dispatch Engine.
+        Traffic data provided by TomTom Orbis Engine. Traffic status classification adheres to Aarogya custom thresholds.
       </div>
     </div>
   );
