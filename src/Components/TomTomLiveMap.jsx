@@ -3,32 +3,46 @@ import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const TOMTOM_KEY = (import.meta.env.VITE_TOMTOM_MAPS_KEY || "").trim();
+const CARTO_KEY = (import.meta.env.VITE_CARTO_API_KEY || "cb1_3qpq_1_d4ebbcec5e84c1e34460888f").trim();
 
-// Bulletproof, high-resolution CARTO Voyager / Positron raster style (Zero API key required, 100% uptime)
-const BULLETPROOF_MAP_STYLE = {
-  version: 8,
-  sources: {
-    "carto-tiles": {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-      ],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors, © CARTO, © TomTom",
+const isLocalhost = typeof window !== "undefined" && (
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname.startsWith("192.168.")
+);
+
+const getMapStyle = () => {
+  const tileUrls = isLocalhost
+    ? [
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ]
+    : [
+        `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
+        `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
+        `https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
+        `https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=${CARTO_KEY}`,
+      ];
+
+  return {
+    version: 8,
+    sources: {
+      "base-tiles": {
+        type: "raster",
+        tiles: tileUrls,
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors, © CARTO, © TomTom",
+      },
     },
-  },
-  layers: [
-    {
-      id: "carto-tiles-layer",
-      type: "raster",
-      source: "carto-tiles",
-      minzoom: 0,
-      maxzoom: 20,
-    },
-  ],
+    layers: [
+      {
+        id: "base-tiles-layer",
+        type: "raster",
+        source: "base-tiles",
+        minzoom: 0,
+        maxzoom: 20,
+      },
+    ],
+  };
 };
 
 /**
@@ -117,7 +131,7 @@ export default function TomTomLiveMap({
         if (!mapLibreMap) {
           mapLibreMap = new maplibregl.Map({
             container: containerRef.current,
-            style: BULLETPROOF_MAP_STYLE,
+            style: getMapStyle(),
             center: [validLng, validLat],
             zoom: 13,
             attributionControl: false,
