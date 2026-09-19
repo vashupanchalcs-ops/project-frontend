@@ -32,12 +32,28 @@ export default function HospitalDoctorAssignment() {
   const queryParams = new URLSearchParams(location.search);
   const initialBookingId = queryParams.get("booking_id") || location.state?.bookingId || null;
 
+  const cachedBookings = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("staff_hub_bookings_cache") || "[]");
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const cachedDocs = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("staff_hub_doctors_cache") || "[]");
+    } catch {
+      return [];
+    }
+  }, []);
+
   const [activeBookingId, setActiveBookingId] = useState(initialBookingId);
-  const [allBookings, setAllBookings] = useState([]);
+  const [allBookings, setAllBookings] = useState(cachedBookings);
   const [activeBooking, setActiveBooking] = useState(null);
-  const [doctors, setDoctors] = useState([]);
+  const [doctors, setDoctors] = useState(cachedDocs);
   const [selectedDocIds, setSelectedDocIds] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cachedBookings.length === 0 && cachedDocs.length === 0);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -54,7 +70,7 @@ export default function HospitalDoctorAssignment() {
 
   // Load all bookings and doctors
   const loadHubData = async () => {
-    setLoading(true);
+    if (allBookings.length === 0) setLoading(true);
     try {
       const hospitalId = localStorage.getItem("hospital_id");
       const [bRes, hRes] = await Promise.all([
@@ -68,6 +84,9 @@ export default function HospitalDoctorAssignment() {
         (b) => !hospitalId || String(b.assigned_hospital_id) === String(hospitalId) || !b.assigned_hospital_id
       );
       setAllBookings(relevantBookings);
+      try {
+        sessionStorage.setItem("staff_hub_bookings_cache", JSON.stringify(relevantBookings));
+      } catch {}
 
       let staffList = [];
       if (hospitalId) {
@@ -107,6 +126,15 @@ export default function HospitalDoctorAssignment() {
         const matchedBooking = relevantBookings.find((b) => String(b.id) === String(activeBookingId));
         if (matchedBooking) {
           setActiveBooking(matchedBooking);
+          // Sort doctors: specialization-matched first, then by experience
+          const condSpec = findMatchingSpecialization(matchedBooking.patient_condition, matchedBooking.vitals_summary);
+          doctorsOnly.sort((a, b) => {
+            const aMatch = a.specialization?.toLowerCase() === condSpec.toLowerCase() ? 1 : 0;
+            const bMatch = b.specialization?.toLowerCase() === condSpec.toLowerCase() ? 1 : 0;
+            if (bMatch !== aMatch) return bMatch - aMatch;
+            return (Number(b.years_experience) || 0) - (Number(a.years_experience) || 0);
+          });
+          setDoctors([...doctorsOnly]);
           if (matchedBooking.assigned_doctors_json) {
             try {
               const existing = JSON.parse(matchedBooking.assigned_doctors_json);
@@ -133,6 +161,19 @@ export default function HospitalDoctorAssignment() {
     return findMatchingSpecialization(activeBooking.patient_condition, activeBooking.vitals_summary);
   }, [activeBooking]);
 
+  // Re-sort doctors whenever matchedSpec changes (after activeBooking loads)
+  useEffect(() => {
+    if (!activeBooking || doctors.length === 0) return;
+    const condSpec = matchedSpec;
+    const sorted = [...doctors].sort((a, b) => {
+      const aMatch = a.specialization?.toLowerCase() === condSpec.toLowerCase() ? 1 : 0;
+      const bMatch = b.specialization?.toLowerCase() === condSpec.toLowerCase() ? 1 : 0;
+      if (bMatch !== aMatch) return bMatch - aMatch;
+      return (Number(b.years_experience) || 0) - (Number(a.years_experience) || 0);
+    });
+    setDoctors(sorted);
+  }, [matchedSpec]);
+
   const toggleDoctorSelection = (docId) => {
     setSelectedDocIds((prev) => {
       if (prev.includes(docId)) {
@@ -154,6 +195,24 @@ export default function HospitalDoctorAssignment() {
 
     setSubmitting(true);
     const selectedDoctorsObj = doctors.filter((d) => selectedDocIds.includes(d.id));
+    const docNames = selectedDoctorsObj.map((d) => d.full_name).join(", ");
+    const docSpecs = selectedDoctorsObj.map((d) => d.specialization).filter(Boolean).join(", ");
+    const docPhones = selectedDoctorsObj.map((d) => d.contact_number).filter(Boolean).join(", ");
+
+    // Optimistically update allBookings state immediately
+    setAllBookings((prev) =>
+      prev.map((b) =>
+        String(b.id) === String(activeBookingId)
+          ? {
+              ...b,
+              assigned_doctor_names: docNames,
+              assigned_doctor_specializations: docSpecs,
+              assigned_doctor_contacts: docPhones,
+              assigned_doctors_json: JSON.stringify(selectedDoctorsObj),
+            }
+          : b
+      )
+    );
 
     try {
       const res = await fetch(`${BASE}/api/bookings/${activeBookingId}/`, {
@@ -172,7 +231,7 @@ export default function HospitalDoctorAssignment() {
         setActiveBookingId(null);
         navigate("/hospital/assign-doctor", { replace: true });
         loadHubData();
-      }, 1000);
+      }, 700);
     } catch {
       showToast("Failed to assign doctors. Try again.", "error");
     } finally {
@@ -522,14 +581,15 @@ export default function HospitalDoctorAssignment() {
                           </span>
                         )}
                         <span style={{
-                          background: hasAssigned ? "#dcfce7" : "#fef3c7",
-                          color: hasAssigned ? "#166534" : "#92400e",
+                          background: hasAssigned ? "#dcfce7" : "#fee2e2",
+                          color: hasAssigned ? "#166534" : "#991b1b",
                           fontSize: 10,
                           fontWeight: 800,
                           padding: "2px 8px",
                           borderRadius: 999,
+                          border: hasAssigned ? "1px solid #bbf7d0" : "1px solid #fca5a5",
                         }}>
-                          {hasAssigned ? "STAFF DEPLOYED" : "UNASSIGNED"}
+                          {hasAssigned ? "✅ ASSIGNED" : "🔴 UNASSIGNED"}
                         </span>
                       </div>
                     </div>
@@ -576,37 +636,39 @@ export default function HospitalDoctorAssignment() {
                           )}
                         </div>
                       ) : (
-                        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#92400e" }}>
+                        <div style={{ background: "#fff1f2", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#991b1b" }}>
                           ⚠️ No doctors assigned yet. Suggested: <b>{conditionMatch}</b>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Action button */}
-                  <div style={{ marginTop: 16 }}>
-                    <button
-                      onClick={() => openAssignmentFor(b)}
-                      style={{
-                        width: "100%",
-                        background: hasAssigned ? "#0f766e" : "#166534",
-                        color: "#ffffff",
-                        border: "none",
-                        borderRadius: 8,
-                        padding: "10px 16px",
-                        fontSize: 13,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Stethoscope size={16} />
-                      {hasAssigned ? "Re-assign / Manage Staff" : "Assign Doctors"}
-                    </button>
-                  </div>
+                  {/* Action button — only shown when NOT yet assigned */}
+                  {!hasAssigned && (
+                    <div style={{ marginTop: 16 }}>
+                      <button
+                        onClick={() => openAssignmentFor(b)}
+                        style={{
+                          width: "100%",
+                          background: "#166534",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "10px 16px",
+                          fontSize: 13,
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Stethoscope size={16} />
+                        Assign Doctors
+                      </button>
+                    </div>
+                  )}
                 </article>
               );
             })}

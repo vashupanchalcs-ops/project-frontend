@@ -145,6 +145,19 @@ export default function DriverInsuranceForm() {
     }
     setSavingId(booking.id);
     setMsg("");
+    // Optimistic update so the card doesn't fluctuate
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === booking.id
+          ? {
+              ...b,
+              insurance_status: "submitted",
+              insurance_provider: draft.insurance_provider,
+              insurance_policy_member_id: draft.policy_member_id,
+            }
+          : b
+      )
+    );
     try {
       const res = await fetch(`${BASE}/api/bookings/${booking.id}/`, {
         method: "PATCH",
@@ -159,7 +172,7 @@ export default function DriverInsuranceForm() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Insurance form send failed");
       setMsg(`Insurance details for Booking #${booking.id} were sent to the hospital.`);
-      await loadBookings();
+      loadBookings();
     } catch (e) {
       setMsg(e.message || "Insurance details send failed.");
     } finally {

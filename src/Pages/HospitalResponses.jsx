@@ -6,9 +6,17 @@ const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$
 
 export default function HospitalResponses() {
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState([]);
+  const cachedBookings = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("hospital_responses_cache") || "[]");
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const [bookings, setBookings] = useState(cachedBookings);
   const [ambulances, setAmbulances] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cachedBookings.length === 0);
   const [actionLoading, setActionLoading] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
 
@@ -18,26 +26,27 @@ export default function HospitalResponses() {
   };
 
   const fetchBookings = ({ silent = false } = {}) => {
-    if (!silent) setLoading(true);
+    if (!silent && bookings.length === 0) setLoading(true);
     Promise.all([
       fetch(`${BASE}/api/bookings/`).then((r) => r.json()).catch(() => []),
       fetch(`${BASE}/api/ambulances/`).then((r) => r.json()).catch(() => []),
     ])
       .then(([bookingData, ambulanceData]) => {
-        setBookings(Array.isArray(bookingData) ? bookingData : []);
+        const bList = Array.isArray(bookingData) ? bookingData : [];
+        setBookings(bList);
         setAmbulances(Array.isArray(ambulanceData) ? ambulanceData : []);
+        try {
+          sessionStorage.setItem("hospital_responses_cache", JSON.stringify(bList));
+        } catch {}
       })
-      .catch(() => {
-        setBookings([]);
-        setAmbulances([]);
-      })
+      .catch(() => {})
       .finally(() => {
-        if (!silent) setLoading(false);
+        setLoading(false);
       });
   };
 
   useEffect(() => {
-    fetchBookings({ silent: false });
+    fetchBookings({ silent: bookings.length > 0 });
     const t = setInterval(() => {
       if (document.visibilityState === "visible") fetchBookings({ silent: true });
     }, 8000);
@@ -69,6 +78,14 @@ export default function HospitalResponses() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to assign bed");
       showToast(`✅ Bed ${data.bed?.bed_number || "assigned"} allocated successfully!`);
+      // Optimistic update
+      setBookings((prev) =>
+        prev.map((item) =>
+          item.id === b.id
+            ? { ...item, assigned_bed_number: data.bed?.bed_number || "G-001", assigned_bed_type: "general" }
+            : item
+        )
+      );
       fetchBookings({ silent: true });
     } catch (err) {
       alert(err.message);
@@ -93,6 +110,14 @@ export default function HospitalResponses() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No available ICU bed found");
       showToast(`🚨 Successfully switched to ICU Bed ${data.icu_bed?.bed_number}!`);
+      // Optimistic update
+      setBookings((prev) =>
+        prev.map((item) =>
+          item.id === b.id
+            ? { ...item, assigned_bed_number: data.icu_bed?.bed_number || "ICU-001", assigned_bed_type: "icu" }
+            : item
+        )
+      );
       fetchBookings({ silent: true });
     } catch (err) {
       alert(err.message);
@@ -191,7 +216,7 @@ export default function HospitalResponses() {
           <h1 className="hr-title">Hospital Responses</h1>
           <div className="hr-sub">Approved emergency cases with doctor allocations and real-time bed management.</div>
 
-          {loading ? (
+          {loading && hospitalAssigned.length === 0 ? (
             <div className="hr-empty">Loading...</div>
           ) : hospitalAssigned.length === 0 ? (
             <div className="hr-empty">No hospital response yet. Waiting for hospital action.</div>

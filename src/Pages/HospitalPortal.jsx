@@ -256,6 +256,18 @@ export default function HospitalPortal() {
 
   const updateHospitalResponse = async (bookingId, response) => {
     try {
+      // Optimistically update queue immediately so cards never flash or disappear
+      setQueue((prev) =>
+        prev.map((item) =>
+          Number(item.booking_id) === Number(bookingId)
+            ? {
+                ...item,
+                hospital_response: response,
+                hospital_response_note: response === "ready" ? "Hospital intake ready" : "No immediate bed/staff availability",
+              }
+            : item
+        )
+      );
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/hospital-response/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -265,7 +277,7 @@ export default function HospitalPortal() {
         }),
       });
       if (!res.ok) throw new Error("Response update failed");
-      await fetchHospitalDashboard();
+      await fetchHospitalDashboard({ silent: true });
     } catch {
       setErr("Unable to update hospital response");
     }
@@ -281,6 +293,19 @@ export default function HospitalPortal() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to assign bed");
+      // Optimistically update queue item with bed info
+      setQueue((prev) =>
+        prev.map((item) =>
+          Number(item.booking_id) === Number(bookingId)
+            ? {
+                ...item,
+                assigned_bed_id: data.bed?.id,
+                assigned_bed_number: data.bed?.bed_number || "G-001",
+                assigned_bed_type: "general",
+              }
+            : item
+        )
+      );
       await fetchHospitalDashboard({ silent: true });
     } catch (err) {
       alert(err.message);
@@ -298,6 +323,19 @@ export default function HospitalPortal() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No available ICU bed found");
+      // Optimistically update queue item with ICU bed info
+      setQueue((prev) =>
+        prev.map((item) =>
+          Number(item.booking_id) === Number(bookingId)
+            ? {
+                ...item,
+                assigned_bed_id: data.icu_bed?.id,
+                assigned_bed_number: data.icu_bed?.bed_number || "ICU-001",
+                assigned_bed_type: "icu",
+              }
+            : item
+        )
+      );
       await fetchHospitalDashboard({ silent: true });
     } catch (err) {
       alert(err.message);

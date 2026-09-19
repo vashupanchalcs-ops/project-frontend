@@ -192,6 +192,20 @@ export default function Login() {
     if (userRecord.role === "hospital" && userRecord.hospital_id) {
       localStorage.setItem("hospital_id", String(userRecord.hospital_id));
     }
+    // Sync regular user to backend database
+    if (userRecord.role === "user" || (!userRecord.role && userRecord.email)) {
+      fetch(`${BASE}/api/auth/sync-user/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: userRecord.email,
+          name: userRecord.name || userRecord.displayName || "",
+          role: "user",
+          phone: userRecord.phone || "",
+        }),
+      }).catch(() => {});
+    }
+
     if (userRecord.role === "driver") navigate("/driver-dashboard", { replace: true });
     else if (userRecord.role === "hospital") navigate("/hospital/home", { replace: true });
     else navigate("/", { replace: true });

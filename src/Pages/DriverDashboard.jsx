@@ -479,6 +479,23 @@ export default function DriverDashboard() {
       addLog("Patient name required", "warn");
       return;
     }
+    // Optimistic update so the card never blinks or hides
+    setMyBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingId
+          ? {
+              ...b,
+              report_submitted_at: new Date().toISOString(),
+              report_submitted_by: driverName || "Driver Team",
+              patient_name: draft.patient_name || b.patient_name,
+              patient_age: draft.patient_age || b.patient_age,
+              patient_gender: draft.patient_gender || b.patient_gender,
+              patient_condition: draft.patient_condition || b.patient_condition,
+              vitals_summary: draft.vitals_summary || b.vitals_summary,
+            }
+          : b
+      )
+    );
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
@@ -501,6 +518,14 @@ export default function DriverDashboard() {
 
   const requestIcuForBooking = async (bookingId) => {
     if (!window.confirm("🚨 Alert hospital that this patient urgently requires an ICU Bed?")) return;
+    // Optimistic update
+    setMyBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingId
+          ? { ...b, icu_required: true, icu_requested_at: new Date().toISOString() }
+          : b
+      )
+    );
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
