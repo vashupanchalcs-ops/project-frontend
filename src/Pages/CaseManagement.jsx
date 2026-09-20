@@ -127,6 +127,7 @@ export default function CaseManagement({ scope = "hospital" }) {
   const [sortBy, setSortBy] = useState("newest");
   const [selected, setSelected] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [toast, setToast] = useState(null);
 
   const loadCases = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -166,6 +167,12 @@ export default function CaseManagement({ scope = "hospital" }) {
     }, 10000);
     return () => clearInterval(timer);
   }, [scope]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const conditionCounts = useMemo(() => cases.reduce((counts, item) => {
     const type = conditionMeta(item.patient_condition).type;
@@ -217,7 +224,7 @@ export default function CaseManagement({ scope = "hospital" }) {
   const openCase = (item) => setSelected(item);
 
   const deleteCase = async (item) => {
-    if (!item?.id || !window.confirm(`Delete case #${item.id} for ${item.patient_name || "this patient"}?`)) return;
+    if (!item?.id || deletingId) return;
     setDeletingId(item.id);
     setError("");
     try {
@@ -232,8 +239,9 @@ export default function CaseManagement({ scope = "hospital" }) {
       }
       setCases((current) => current.filter((caseItem) => String(caseItem.id) !== String(item.id)));
       setSelected((current) => current && String(current.id) === String(item.id) ? null : current);
+      setToast({ type: "success", message: `Case #${item.id} deleted successfully` });
     } catch (deleteError) {
-      setError(deleteError.message || "Unable to delete this case");
+      setToast({ type: "error", message: deleteError.message || "Unable to delete this case" });
     } finally {
       setDeletingId(null);
     }
@@ -306,7 +314,11 @@ export default function CaseManagement({ scope = "hospital" }) {
         .cm-admin .cm-case-row.tone-red{background:#fff8f8}
         .cm-admin .cm-case-row.tone-yellow{background:#fffdf4}
         .cm-admin .cm-case-row.tone-green{background:#f8fdf9}
+        .cm-toast{position:fixed;right:24px;top:104px;z-index:11000;display:flex;align-items:center;gap:10px;min-width:250px;max-width:360px;padding:12px 15px;border:1px solid #b9cdbd;border-radius:10px;background:#fff;color:#17231b;font-size:12px;font-weight:800;box-shadow:0 10px 28px rgba(18,111,30,.16)}
+        .cm-toast-success{border-color:#8bc99a}.cm-toast-success::before{content:"✓";display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#d9f2df;color:#126F1E;font-weight:900}.cm-toast-error{border-color:#efabb1}.cm-toast-error::before{content:"!";display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#ffdfe2;color:#b51f2c;font-weight:900}
+        @media(max-width:820px){.cm-toast{right:12px;top:86px;min-width:0;max-width:calc(100vw - 24px)}}
       `}</style>
+      {toast && <div className={`cm-toast cm-toast-${toast.type}`} role="status">{toast.message}</div>}
       <div className="cm-shell">
         <header className="cm-header">
           <div>
