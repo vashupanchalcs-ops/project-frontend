@@ -155,6 +155,8 @@ export default function HospitalPortal() {
   const [staffForm, setStaffForm] = useState({
     full_name: "",
     role: "doctor",
+    staff_id: "",
+    registration_number: "",
     specialization: "",
     contact_number: "",
     email: "",
@@ -165,11 +167,14 @@ export default function HospitalPortal() {
     is_active: true,
   });
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+  const [createdStaffCredentials, setCreatedStaffCredentials] = useState(null);
   const [lastSyncedAt, setLastSyncedAt] = useState("");
   const [editingStaffId, setEditingStaffId] = useState(null);
   const [editStaffForm, setEditStaffForm] = useState({
     full_name: "",
     role: "doctor",
+    staff_id: "",
+    registration_number: "",
     specialization: "",
     contact_number: "",
     email: "",
@@ -309,17 +314,24 @@ export default function HospitalPortal() {
   };
 
   const addStaff = async () => {
-    if (!hospital?.id || !staffForm.full_name.trim()) return;
+    if (!hospital?.id || !staffForm.full_name.trim() || !staffForm.email.trim() || !staffForm.staff_id.trim() || !staffForm.registration_number.trim()) {
+      setErr("Staff name, email, Staff ID and Reg. No. are required.");
+      return;
+    }
     try {
       const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(staffForm),
       });
-      if (!res.ok) throw new Error("Unable to add staff");
+      const created = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(created.error || "Unable to add staff");
+      setCreatedStaffCredentials(created);
       setStaffForm({
         full_name: "",
         role: "doctor",
+        staff_id: "",
+        registration_number: "",
         specialization: "",
         contact_number: "",
         email: "",
@@ -331,8 +343,8 @@ export default function HospitalPortal() {
       });
       setShowAddStaffForm(false);
       await fetchHospitalDashboard();
-    } catch {
-      setErr("Unable to add staff");
+    } catch (error) {
+      setErr(error?.message || "Unable to add staff");
     }
   };
 
@@ -1018,6 +1030,8 @@ export default function HospitalPortal() {
     setEditStaffForm({
       full_name: staffMember.full_name || "",
       role: staffMember.role || "doctor",
+      staff_id: staffMember.staff_id || "",
+      registration_number: staffMember.registration_number || "",
       specialization: staffMember.specialization || "",
       contact_number: staffMember.contact_number || "",
       email: staffMember.email || "",
@@ -1031,6 +1045,10 @@ export default function HospitalPortal() {
 
   const saveEditStaff = async () => {
     if (!hospital?.id || !editingStaffId) return;
+    if (!editStaffForm.staff_id.trim() || !editStaffForm.registration_number.trim()) {
+      setErr("Staff ID and Registration No. are required. Please enter both before saving.");
+      return;
+    }
     try {
       const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/${editingStaffId}/`, {
         method: "PATCH",
@@ -3379,6 +3397,13 @@ export default function HospitalPortal() {
                           </button>
                           <button
                             className="hp-btn primary"
+                            style={{ marginTop: 8, background: "#0f766e" }}
+                            onClick={() => navigate(`/hospital/reports/${q.booking_id}/view`)}
+                          >
+                            View Photos Report
+                          </button>
+                          <button
+                            className="hp-btn primary"
                             style={{ marginTop: 8 }}
                             onClick={() => navigate(`/hospital/reports/${q.booking_id}/insurance`)}
                           >
@@ -3696,6 +3721,9 @@ export default function HospitalPortal() {
                   {showAddStaffForm && (
                     <section className="hp-card hp-staff-form-card">
                       <div className="hp-card-title">Add New Staff Profile</div>
+                      <div style={{ fontSize: 12, color: "#166534", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "9px 11px", marginBottom: 12 }}>
+                        Hospital assigns the Staff ID and Registration No. The staff member will create their own password from Login → Sign Up using these details and Gmail OTP.
+                      </div>
                       <div className="hp-form-grid">
                         <input className="hp-input" value={staffForm.full_name} onChange={(e) => setStaffForm((f) => ({ ...f, full_name: e.target.value }))} placeholder="Full name" />
                         <select className="hp-select" value={staffForm.role} onChange={(e) => setStaffForm((f) => ({ ...f, role: e.target.value }))}>
@@ -3704,9 +3732,11 @@ export default function HospitalPortal() {
                           <option value="technician">Technician</option>
                           <option value="support">Support</option>
                         </select>
+                        <input className="hp-input" value={staffForm.staff_id} onChange={(e) => setStaffForm((f) => ({ ...f, staff_id: e.target.value }))} placeholder="Staff ID (hospital assigned)" />
+                        <input className="hp-input" value={staffForm.registration_number} onChange={(e) => setStaffForm((f) => ({ ...f, registration_number: e.target.value }))} placeholder="Registration No. (hospital assigned)" />
                         <input className="hp-input" value={staffForm.specialization} onChange={(e) => setStaffForm((f) => ({ ...f, specialization: e.target.value }))} placeholder="Specialization" />
                         <input className="hp-input" value={staffForm.contact_number} onChange={(e) => setStaffForm((f) => ({ ...f, contact_number: e.target.value }))} placeholder="Contact number" />
-                        <input className="hp-input" value={staffForm.email} onChange={(e) => setStaffForm((f) => ({ ...f, email: e.target.value }))} placeholder="Email" />
+                        <input className="hp-input" type="email" value={staffForm.email} onChange={(e) => setStaffForm((f) => ({ ...f, email: e.target.value }))} placeholder="Login email" />
                         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, fontWeight: 800, color: "#334155" }}>Experience (years)<input className="hp-input" type="number" min="0" value={staffForm.years_experience} onChange={(e) => setStaffForm((f) => ({ ...f, years_experience: Number(e.target.value) }))} placeholder="Enter years of experience" /></label>
                         <select className="hp-select" value={staffForm.is_active ? "available" : "unavailable"} onChange={(e) => setStaffForm((f) => ({ ...f, is_active: e.target.value === "available" }))}>
                           <option value="available">Available</option>
@@ -3738,6 +3768,20 @@ export default function HospitalPortal() {
                         <button className="hp-btn ok" onClick={addStaff}>Create Staff Card</button>
                         <button className="hp-btn" onClick={() => setShowAddStaffForm(false)}>Close</button>
                       </div>
+                    </section>
+                  )}
+
+                  {createdStaffCredentials?.staff_id && (
+                    <section className="hp-card" style={{ border: "1px solid #86efac", background: "#f0fdf4" }}>
+                      <div className="hp-card-title" style={{ color: "#166534" }}>Staff profile created</div>
+                      <div style={{ fontSize: 12, color: "#14532d", marginBottom: 10 }}>
+                        Staff identity saved. Share these hospital-assigned details so the staff member can complete Sign Up with Gmail OTP.
+                      </div>
+                      <div className="hp-form-grid">
+                        <div className="hp-input"><b>Staff ID</b><br />{createdStaffCredentials.staff_id || "—"}</div>
+                        <div className="hp-input"><b>Registration No.</b><br />{createdStaffCredentials.registration_number || "—"}</div>
+                      </div>
+                      <button className="hp-btn" onClick={() => setCreatedStaffCredentials(null)}>Dismiss</button>
                     </section>
                   )}
 
@@ -3793,6 +3837,8 @@ export default function HospitalPortal() {
                                 <div className="hp-role-body">
                                   <div className="hp-role-name">{s.full_name}</div>
                                   <div className="hp-role-handle">@{String(s.role || "staff").toLowerCase()}</div>
+                                  <div className="hp-role-meta" style={{ color: "#166534", fontWeight: 800 }}>Staff ID: {s.staff_id || "Pending"}</div>
+                                  <div className="hp-role-meta" style={{ color: "#166534", fontWeight: 800 }}>Reg. No: {s.registration_number || "Pending"}</div>
                                   <div className="hp-role-sub">{s.specialization || "General Care Unit"}</div>
                                   <div className="hp-role-meta">Experience: {s.years_experience} years</div>
                                   <div className="hp-role-meta">Contact: {s.contact_number || "-"}</div>
@@ -3826,6 +3872,8 @@ export default function HospitalPortal() {
                                     <input className="hp-input" value={editStaffForm.specialization} onChange={(e) => setEditStaffForm((f) => ({ ...f, specialization: e.target.value }))} placeholder="Specialization" />
                                     <input className="hp-input" value={editStaffForm.contact_number} onChange={(e) => setEditStaffForm((f) => ({ ...f, contact_number: e.target.value }))} placeholder="Contact number" />
                                     <input className="hp-input" value={editStaffForm.email} onChange={(e) => setEditStaffForm((f) => ({ ...f, email: e.target.value }))} placeholder="Email" />
+                                    <input className="hp-input" value={editStaffForm.staff_id} onChange={(e) => setEditStaffForm((f) => ({ ...f, staff_id: e.target.value }))} placeholder="Staff ID" />
+                                    <input className="hp-input" value={editStaffForm.registration_number} onChange={(e) => setEditStaffForm((f) => ({ ...f, registration_number: e.target.value }))} placeholder="Registration No." />
                                     <input className="hp-input" type="number" value={editStaffForm.years_experience} onChange={(e) => setEditStaffForm((f) => ({ ...f, years_experience: Number(e.target.value) }))} placeholder="Experience (years)" />
                                     <select className="hp-select" value={editStaffForm.is_active ? "available" : "unavailable"} onChange={(e) => setEditStaffForm((f) => ({ ...f, is_active: e.target.value === "available" }))}>
                                       <option value="available">Available</option>

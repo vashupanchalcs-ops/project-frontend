@@ -63,11 +63,6 @@ const sendBackendOtp = async (email) => {
   if (!resp.ok || data.status !== "otp_sent") {
     throw new Error(data.message || "OTP email service failed.");
   }
-  if (data.delivery === "console") {
-    throw new Error(
-      "Email delivery is not configured on local Django. Add Gmail SMTP settings and restart Django, or use the local development OTP from the console."
-    );
-  }
   return data;
 };
 
@@ -100,6 +95,7 @@ export default function Login() {
     phone: "",
     contractId: "",
     hospitalId: "",
+    staffId: "",
     registrationNumber: "",
     password: "",
     confirmPassword: "",
@@ -153,6 +149,7 @@ export default function Login() {
   const resolvedRole = (email, pickedRole) => {
     if (email === ADMIN_EMAIL.toLowerCase()) return "admin";
     if (pickedRole === "hospital") return "hospital";
+    if (pickedRole === "staff") return "staff";
     return pickedRole === "driver" ? "driver" : "user";
   };
 
@@ -192,6 +189,12 @@ export default function Login() {
     if (userRecord.role === "hospital" && userRecord.hospital_id) {
       localStorage.setItem("hospital_id", String(userRecord.hospital_id));
     }
+    if (userRecord.role === "staff") {
+      if (userRecord.staff_id) localStorage.setItem("staff_id", String(userRecord.staff_id));
+      if (userRecord.staff_role) localStorage.setItem("staff_role", String(userRecord.staff_role));
+      if (userRecord.hospital_id) localStorage.setItem("hospital_id", String(userRecord.hospital_id));
+      if (userRecord.hospital_name) localStorage.setItem("hospital_name", String(userRecord.hospital_name));
+    }
     // Sync regular user to backend database
     if (userRecord.role === "user" || (!userRecord.role && userRecord.email)) {
       fetch(`${BASE}/api/auth/sync-user/`, {
@@ -208,6 +211,7 @@ export default function Login() {
 
     if (userRecord.role === "driver") navigate("/driver-dashboard", { replace: true });
     else if (userRecord.role === "hospital") navigate("/hospital/home", { replace: true });
+    else if (userRecord.role === "staff") navigate("/staff/home", { replace: true });
     else navigate("/", { replace: true });
   };
 
@@ -217,6 +221,44 @@ export default function Login() {
 
     const email = form.email.trim().toLowerCase();
     const existing = getUser(email);
+    if (form.role === "staff") {
+      if (!isValidEmail(email) || !form.staffId.trim() || !form.registrationNumber.trim() || !form.password) {
+        return setErr("Email, Staff ID, Registration No. and password are required.");
+      }
+      setBusy(true);
+      try {
+        const resp = await fetch(`${BASE}/api/auth/staff-login/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            staff_id: form.staffId.trim(),
+            registration_number: form.registrationNumber.trim(),
+            password: form.password,
+          }),
+          signal: AbortSignal.timeout(90000),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.valid) return setErr(data.error || "Staff details do not match hospital records.");
+        try {
+          const otpData = await sendBackendOtp(email);
+          setOtpPurpose("staff_login");
+          setOtp(["", "", "", "", "", ""]);
+          setTimer(60);
+          setStep("otp");
+          setInfo(otpData?.dev_otp
+            ? `Gmail SMTP is not configured locally. Use this development OTP: ${otpData.dev_otp}`
+            : `OTP sent to the registered Gmail address ${email}.`);
+        } catch (otpError) {
+          setErr(otpError.message || "We could not send the staff login OTP to Gmail.");
+        }
+      } catch {
+        setErr("Staff login failed due to a network error. Please try again.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     // The role selected on the login form must be resolved before validating
     // contract access. Older locally cached accounts were often saved as
     // `user`, which otherwise made a valid driver login fall back to user UI.
@@ -346,6 +388,10 @@ export default function Login() {
 
   const signupWithGoogle = async () => {
     clearMsgs();
+    if (form.role === "staff") {
+      setErr("Hospital staff accounts are created by the hospital portal. Use Sign In with your issued credentials.");
+      return;
+    }
     const role = resolvedRole(form.email.trim().toLowerCase(), form.role);
     const localPhone = normalizePhone(form.phone);
 
@@ -453,6 +499,70 @@ export default function Login() {
     if (e) e.preventDefault();
     clearMsgs();
 
+    if (form.role === "staff" && ["staff_login", "staff_signup"].includes(otpPurpose)) {
+      setBusy(true);
+      try {
+        const otpData = await sendBackendOtp(form.email.trim().toLowerCase());
+        setOtp(["", "", "", "", "", ""]);
+        setTimer(60);
+        setInfo(otpData?.dev_otp
+          ? "Gmail SMTP is not configured in this local backend. Use the development OTP from the backend console."
+          : `A new OTP was sent to ${form.email.trim().toLowerCase()}.`);
+      } catch (otpError) {
+        setErr(otpError.message || "We could not resend the staff Gmail OTP.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (form.role === "staff") {
+      const email = form.email.trim().toLowerCase();
+      if (!isValidEmail(email) || !form.staffId.trim() || !form.registrationNumber.trim()) {
+        return setErr("Email, Staff ID and Registration No. are required.");
+      }
+      if (!form.password || form.password.length < 6) {
+        return setErr("Password must be at least 6 characters.");
+      }
+      if (form.password !== form.confirmPassword) {
+        return setErr("Password and confirm password do not match.");
+      }
+
+      setBusy(true);
+      try {
+        const identityResp = await fetch(`${BASE}/api/auth/staff-signup/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            staff_id: form.staffId.trim(),
+            registration_number: form.registrationNumber.trim(),
+            password: form.password,
+            verify_only: true,
+          }),
+          signal: AbortSignal.timeout(90000),
+        });
+        const identity = await identityResp.json().catch(() => ({}));
+        if (!identityResp.ok || !identity.valid) {
+          return setErr(identity.error || "Staff details do not match hospital records.");
+        }
+
+        const otpData = await sendBackendOtp(email);
+        setOtpPurpose("staff_signup");
+        setOtp(["", "", "", "", "", ""]);
+        setTimer(60);
+        setStep("otp");
+        setInfo(otpData?.dev_otp
+          ? `Gmail SMTP is not configured locally. Use this development OTP: ${otpData.dev_otp}`
+          : `OTP sent to the registered Gmail address ${email}.`);
+      } catch (error) {
+        setErr(error.message || "We could not send the staff signup OTP to Gmail.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const email = form.email.trim().toLowerCase();
     const phone = normalizePhone(form.phone);
 
@@ -496,13 +606,15 @@ export default function Login() {
     setBusy(true);
 
     try {
-      await sendBackendOtp(email);
+      const otpData = await sendBackendOtp(email);
       setBusy(false);
       setOtpPurpose("signup");
       setOtp(["", "", "", "", "", ""]);
       setTimer(60);
       setStep("otp");
-      setInfo(`OTP has been sent to ${email}.`);
+      setInfo(otpData?.dev_otp
+        ? `Gmail SMTP is not configured locally. Use this development OTP: ${otpData.dev_otp}`
+        : `OTP has been sent to ${email}.`);
       return;
     } catch (otpError) {
       if (IS_PROD) {
@@ -550,11 +662,79 @@ export default function Login() {
       verified = false;
     }
 
-    if (!verified) {
+    if (!verified && !["staff_login", "staff_signup"].includes(otpPurpose)) {
       verified = verifyLocalOtp(email, entered);
     }
 
     if (!verified) return setErr("OTP is invalid or expired.");
+
+    if (otpPurpose === "staff_signup") {
+      setBusy(true);
+      try {
+        const resp = await fetch(`${BASE}/api/auth/staff-signup/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            staff_id: form.staffId.trim(),
+            registration_number: form.registrationNumber.trim(),
+            password: form.password,
+          }),
+          signal: AbortSignal.timeout(90000),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.valid) return setErr(data.error || "Staff signup could not be completed.");
+        completeLogin({
+          ...(data.staff || {}),
+          ...data,
+          email: data.email || email,
+          name: data.name || form.name.trim(),
+          role: "staff",
+          staff_role: data.staff_role || data.staff?.role || "support",
+          hospital_id: data.hospital_id || data.hospital?.id || "",
+          hospital_name: data.hospital_name || data.hospital?.name || "",
+        });
+      } catch {
+        setErr("Staff signup failed after OTP verification. Please try again.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (otpPurpose === "staff_login") {
+      setBusy(true);
+      try {
+        const resp = await fetch(`${BASE}/api/auth/staff-login/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            staff_id: form.staffId.trim(),
+            registration_number: form.registrationNumber.trim(),
+            password: form.password,
+          }),
+          signal: AbortSignal.timeout(90000),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.valid) return setErr(data.error || "Staff credentials are no longer valid.");
+        completeLogin({
+          ...(data.staff || {}),
+          ...data,
+          email: data.email || email,
+          name: data.name || form.name.trim(),
+          role: "staff",
+          staff_role: data.staff_role || data.staff?.role || "support",
+          hospital_id: data.hospital_id || data.hospital?.id || "",
+          hospital_name: data.hospital_name || data.hospital?.name || "",
+        });
+      } catch {
+        setErr("Staff login failed after OTP verification. Please try again.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
 
     if (otpPurpose === "reset") {
       const existing = getUser(email);
@@ -1425,7 +1605,7 @@ export default function Login() {
                 {info ? <div className="auth-msg ok">{info}</div> : null}
 
                 <form className={`auth-form ${authMode === "login" && !isResetMode ? "auth-login-form" : ""}`} onSubmit={isResetMode ? sendResetOtp : (authMode === "signup" ? sendOtp : loginWithPassword)}>
-                  {authMode === "signup" && !isResetMode && (
+                  {authMode === "signup" && !isResetMode && form.role !== "staff" && (
                     <div className="auth-field">
                       <label>Full Name</label>
                       <input name="name" value={form.name} onChange={onChange} placeholder="Enter your full name" />
@@ -1443,6 +1623,7 @@ export default function Login() {
                       <button type="button" className={`auth-role ${form.role === "user" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "user" }))}>User</button>
                       <button type="button" className={`auth-role ${form.role === "driver" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "driver" }))}>Driver</button>
                       <button type="button" className={`auth-role ${form.role === "hospital" ? "on" : ""}`} onClick={() => setForm((f) => ({ ...f, role: "hospital" }))}>Hospital</button>
+                      <button type="button" className={`auth-role ${form.role === "staff" ? "on" : ""}`} onClick={() => { clearMsgs(); setForm((f) => ({ ...f, role: "staff" })); }}>Hospital Staff</button>
                     </div>
                   </div>
 
@@ -1488,6 +1669,19 @@ export default function Login() {
                           placeholder="Enter registration number"
                           required
                         />
+                      </div>
+                    </>
+                  )}
+
+                  {form.role === "staff" && !isResetMode && (
+                    <>
+                      <div className="auth-field">
+                        <label>Staff ID</label>
+                        <input name="staffId" value={form.staffId} onChange={onChange} placeholder="e.g. AIIMS-DR-0001" required />
+                      </div>
+                      <div className="auth-field">
+                        <label>Staff Registration Number</label>
+                        <input name="registrationNumber" value={form.registrationNumber} onChange={onChange} placeholder="e.g. AIIMS-DR-REG-0001" required />
                       </div>
                     </>
                   )}
@@ -1543,6 +1737,7 @@ export default function Login() {
                   <div className="auth-note">
                     Active role: <b>{rolePreview.toUpperCase()}</b>
                     {rolePreview === "admin" ? ` (Admin email detected)` : ""}
+                    {rolePreview === "staff" ? " · Use credentials issued by your hospital" : ""}
                   </div>
 
                   <button className="auth-btn" type="submit" disabled={busy}>
@@ -1592,7 +1787,9 @@ export default function Login() {
             {step === "otp" && (
               <>
                 <h2 className="auth-step-title">Verify <span className="hl">OTP</span></h2>
-                <p className="auth-step-sub">6-digit code sent to <b>{form.email}</b></p>
+                <p className="auth-step-sub">
+                  {["staff_login", "staff_signup"].includes(otpPurpose) ? "Gmail OTP sent to " : "6-digit code sent to "}<b>{form.email}</b>
+                </p>
 
                 {err ? <div className="auth-msg err">{err}</div> : null}
                 {info ? <div className="auth-msg ok">{info}</div> : null}

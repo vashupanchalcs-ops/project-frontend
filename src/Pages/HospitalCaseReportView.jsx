@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Image as ImageIcon, X } from "lucide-react";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -10,18 +11,27 @@ export default function HospitalCaseReportView() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [photoIndex, setPhotoIndex] = useState(null);
   const [error, setError] = useState("");
+  const invalidBooking = !Number(bookingId || 0);
 
   useEffect(() => {
     const id = Number(bookingId || 0);
     if (!id) {
-      setError("Invalid booking id.");
       return;
     }
     const load = () => {
       fetch(`${BASE}/api/bookings/${id}/`, { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Booking not found"))))
-        .then((data) => setBooking(data))
+        .then(async (data) => {
+          setBooking(data);
+          const hospitalId = Number(localStorage.getItem("hospital_id") || data.assigned_hospital_id || 0);
+          const query = hospitalId ? `role=hospital&hospital_id=${hospitalId}` : "role=admin";
+          const photoResponse = await fetch(`${BASE}/api/bookings/${id}/photos/?${query}`, { cache: "no-store" });
+          const photoData = await photoResponse.json().catch(() => ({}));
+          setPhotos(photoResponse.ok && Array.isArray(photoData.photos) ? photoData.photos : []);
+        })
         .catch((e) => setError(e.message || "Unable to load report."));
     };
     load();
@@ -74,9 +84,9 @@ export default function HospitalCaseReportView() {
           </button>
         </div>
 
-        {error && (
+        {(error || invalidBooking) && (
           <div style={{ border: "1px solid #d99", background: "#fff3f3", color: "#a00", borderRadius: 12, padding: 10 }}>
-            {error}
+            {error || "Invalid booking id."}
           </div>
         )}
 
@@ -118,6 +128,19 @@ export default function HospitalCaseReportView() {
               </div>
             )}
 
+            <section className="condition-photo-card" style={{ border: "1px solid #c9e0d0", borderRadius: 12, padding: 14, background: "#ffffff", marginBottom: 10, color: "#142019" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 12, letterSpacing: 0.8, color: "#587064", fontWeight: 800 }}>PATIENT CONDITION PHOTOS</div>
+                  <div style={{ marginTop: 4, fontSize: 13 }}>Images sent by the assigned ambulance driver for this case.</div>
+                </div>
+                <span style={{ color: "#126f1e", fontWeight: 900, fontSize: 13 }}><ImageIcon size={15} style={{ verticalAlign: "-3px", marginRight: 5 }} />{photos.length} photo(s)</span>
+              </div>
+              {photos.length === 0 ? <div style={{ border: "1px dashed #bcd4c3", borderRadius: 9, padding: 18, color: "#68776c", fontSize: 13 }}>No condition photos have been received for this booking yet.</div> : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(125px,1fr))", gap: 10 }}>
+                {photos.map((photo, index) => <button key={photo.id} type="button" onClick={() => setPhotoIndex(index)} style={{ padding: 0, border: "1px solid #c9dcd0", borderRadius: 9, overflow: "hidden", background: "#f5faf6", cursor: "pointer", color: "#142019", textAlign: "left" }}><img src={photo.url} alt={photo.label} style={{ width: "100%", height: 88, objectFit: "cover", display: "block" }} /><span style={{ display: "block", padding: "6px 7px", fontSize: 11, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{photo.label}</span></button>)}
+              </div>}
+            </section>
+
             {booking.driver_voice_transcript && (
               <details style={{ border: "1px solid rgba(17,17,17,0.12)", borderRadius: 12, padding: 14, background: "#fff" }}>
                 <summary style={{ fontSize: 12, letterSpacing: 0.8, color: "rgba(17,17,17,0.65)", fontWeight: 800, cursor: "pointer" }}>
@@ -129,6 +152,14 @@ export default function HospitalCaseReportView() {
           </div>
         )}
       </div>
+      {photoIndex !== null && photos[photoIndex] && <div onClick={(event) => { if (event.target === event.currentTarget) setPhotoIndex(null); }} style={{ position: "fixed", inset: 0, zIndex: 10001, background: "rgba(8,20,12,.76)", display: "grid", placeItems: "center", padding: 20 }}>
+        <div className="condition-photo-card" style={{ width: "min(900px, 100%)", background: "#fff", borderRadius: 14, padding: 14, position: "relative", color: "#142019" }}>
+          <button type="button" onClick={() => setPhotoIndex(null)} style={{ position: "absolute", right: 10, top: 10, border: "1px solid #bfd3c4", borderRadius: "50%", background: "#fff", width: 32, height: 32, cursor: "pointer", color: "#142019" }}><X size={16} /></button>
+          <div style={{ fontWeight: 900, fontSize: 18, margin: "2px 42px 12px" }}>{photos[photoIndex].label} · Booking #{bookingId}</div>
+          <img src={photos[photoIndex].url} alt={photos[photoIndex].label} style={{ display: "block", width: "100%", maxHeight: "65vh", objectFit: "contain", background: "#f2f6f3", borderRadius: 10 }} />
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginTop: 10, fontSize: 12, color: "#587064" }}><button type="button" disabled={photoIndex <= 0} onClick={() => setPhotoIndex((value) => Math.max(0, value - 1))} style={{ border: "1px solid #bfd3c4", borderRadius: 8, background: "#fff", padding: "8px 12px", color: "#126f1e", fontWeight: 800 }}><ChevronLeft size={14} style={{ verticalAlign: "-3px" }} /> Previous</button><span>{photoIndex + 1} / {photos.length}</span><button type="button" disabled={photoIndex >= photos.length - 1} onClick={() => setPhotoIndex((value) => Math.min(photos.length - 1, value + 1))} style={{ border: "1px solid #bfd3c4", borderRadius: 8, background: "#fff", padding: "8px 12px", color: "#126f1e", fontWeight: 800 }}>Next <ChevronRight size={14} style={{ verticalAlign: "-3px" }} /></button></div>
+        </div>
+      </div>}
     </div>
   );
 }

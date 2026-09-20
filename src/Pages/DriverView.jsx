@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import gsap from "gsap";
-import useLeaflet, {
+import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import {
   DARK_TILE, DELHI, makePinIcon,
   geocodeInIndia, fetchRoadRoute,
   SATELLITE_TILE, isIndiaCoord,
@@ -50,7 +51,7 @@ const btn       = { width: "100%", border: "none", borderRadius: 6, padding: 10,
 const logColors = { info: "#888", success: "#00c853", warn: "#ffaa00", error: "#f44336" };
 
 export default function DriverView() {
-  const leafletReady = useLeaflet();
+  const leafletReady = false;
 
   const [email,          setEmail]         = useState(() => localStorage.getItem("dr_email")  || "");
   const [ambId,          setAmbId]         = useState(() => localStorage.getItem("dr_amb_id") || "");
@@ -624,20 +625,18 @@ export default function DriverView() {
           <div className="dv-panel">{panelContent}</div>
 
           <div className={`dv-map ${mobileTab !== "map" ? "hidden" : ""}`} style={{ overflow: "hidden", position: "relative", background: "#111" }}>
-            <button onClick={() => setIs3D(!is3D)} style={{
-              position: "absolute", top: 12, right: 12, zIndex: 1000,
-              background: "#000", color: "#fff", border: "none", padding: "8px 16px",
-              borderRadius: 20, cursor: "pointer", fontWeight: 600, fontSize: 11,
-              display: "flex", gap: "6px", alignItems: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-            }}>
-              {is3D ? "🌍 Disable 3D View" : "🧊 Enable 3D View"}
-            </button>
-            <div ref={mapDivRef} style={{
-              position: "absolute", top: -100, left: -100, right: -100, bottom: -100,
-              zIndex: 1, transition: "transform 0.5s cubic-bezier(0.4,0,0.2,1)",
-              transform: is3D ? "perspective(1200px) rotateX(55deg) scale(1.6) translateY(-5%)" : "scale(1)",
-              transformOrigin: "center center",
-            }} />
+            <GoogleMapEmbed
+              ambulanceLoc={location && inIndia(location.lat, location.lng)
+                ? { lat: location.lat, lng: location.lng, label: "Driver location" }
+                : null}
+              pickupLoc={route && inIndia(Number(route.pickup_lat), Number(route.pickup_lng))
+                ? { lat: Number(route.pickup_lat), lng: Number(route.pickup_lng), label: route.pickup_location || "Pickup" }
+                : null}
+              destinationLoc={route && inIndia(Number(route.dest_lat), Number(route.dest_lng))
+                ? { lat: Number(route.dest_lat), lng: Number(route.dest_lng), name: route.destination || "Hospital" }
+                : null}
+              height="100%"
+            />
             {!isOnline && (
               <div style={{ position: "absolute", inset: 0, background: "rgba(8,6,12,0.72)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>
                 <div style={{ fontSize: 48 }}>🚑</div>

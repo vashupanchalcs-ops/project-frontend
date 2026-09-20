@@ -5,7 +5,7 @@ from .models import Hospital, HospitalStaff
 class HospitalStaffInline(admin.TabularInline):
     model = HospitalStaff
     extra = 0
-    fields = ["full_name", "role", "specialization", "contact_number", "years_experience", "is_on_call", "is_active"]
+    fields = ["full_name", "role", "staff_id", "registration_number", "specialization", "contact_number", "years_experience", "is_on_call", "is_active"]
     show_change_link = True
 
 
@@ -29,14 +29,14 @@ class HospitalAdmin(admin.ModelAdmin):
 
 @admin.register(HospitalStaff)
 class HospitalStaffAdmin(admin.ModelAdmin):
-    list_display = ["id", "hospital", "full_name", "role", "specialization", "years_experience", "is_on_call", "is_active"]
-    search_fields = ["full_name", "email", "contact_number", "specialization", "hospital__name"]
+    list_display = ["id", "hospital", "full_name", "role", "staff_id", "registration_number", "specialization", "years_experience", "is_on_call", "is_active"]
+    search_fields = ["full_name", "staff_id", "registration_number", "email", "contact_number", "specialization", "hospital__name"]
     list_filter = ["hospital", "role", "is_on_call", "is_active"]
     list_editable = ["is_on_call", "is_active"]
     autocomplete_fields = ["hospital"]
     readonly_fields = ["created_at", "updated_at"]
     fieldsets = (
-        ("Staff Profile", {"fields": ("hospital", "full_name", "role", "specialization", "years_experience")} ),
+        ("Staff Profile", {"fields": ("hospital", "full_name", "role", "staff_id", "registration_number", "specialization", "years_experience")} ),
         ("Contact & Availability", {"fields": ("contact_number", "email", "is_on_call", "is_active")} ),
         ("Profile Media", {"fields": ("photo_data", "banner_data")} ),
         ("Audit", {"fields": ("created_at", "updated_at")} ),

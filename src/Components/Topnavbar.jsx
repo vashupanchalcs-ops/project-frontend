@@ -44,9 +44,17 @@ const PANEL_PAGES = {
     { label: "Change Request", path: "/driver-dashboard?tab=change-request", keywords: "ambulance change" },
     { label: "Request Chat", path: "/DriverRequestChat", keywords: "chat support admin" },
     { label: "Voice Reports", path: "/driver/voice-reports", keywords: "mic speech transcript report hospital" },
+    { label: "Live Video", path: "/driver/live-video", keywords: "video call consultation doctor team patient" },
     { label: "Ambulances", path: "/Ambulances", keywords: "fleet list" },
     { label: "Hospitals", path: "/Hospitals", keywords: "hospital destination" },
     { label: "Live Track", path: "/driver-dashboard?tab=map", keywords: "map route tracking" },
+  ],
+  staff: [
+    { label: "Staff Home", path: "/staff/home", keywords: "dashboard hospital" },
+    { label: "Assigned Cases", path: "/staff/cases", keywords: "patients beds care" },
+    { label: "Patient Photos", path: "/staff/patient-condition", keywords: "images condition reports" },
+    { label: "Live Video", path: "/staff/live-video", keywords: "video call consultation doctor team patient" },
+    { label: "My Profile", path: "/staff/profile", keywords: "staff registration role" },
   ],
   user: [
     { label: "Home", path: "/" },
@@ -56,6 +64,16 @@ const PANEL_PAGES = {
     { label: "AI Assistant", path: "/UserChatbot", keywords: "chat help" },
     { label: "Live Track", path: "/LiveTracking", keywords: "map booking route" },
   ],
+};
+
+const dedupeNotifications = (items) => {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : []).filter((item) => {
+    const key = `${item?.id || ""}-${item?.title || ""}-${item?.message || ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const Topnavbar = () => {
@@ -111,7 +129,7 @@ const Topnavbar = () => {
     if (role !== "user" && role !== null && role !== "") return;
     // role "user" ya logged-in non-admin non-driver
     const userEmail = email;
-    fetch("${BASE}/api/bookings/")
+    fetch(`${BASE}/api/bookings/`)
       .then(r => r.json())
       .then(data => {
         // Sirf is user ki bookings
@@ -203,7 +221,7 @@ const Topnavbar = () => {
   // ── DRIVER notifications ──
   const fetchDriverNotifications = () => {
     if (role !== "driver") return;
-    fetch("${BASE}/api/bookings/")
+    fetch(`${BASE}/api/bookings/`)
       .then(r => r.json())
       .then(data => {
         const mine = data.filter(b =>
@@ -222,7 +240,7 @@ const Topnavbar = () => {
             read: b.status === "completed", status: b.status,
           })),
         ].slice(0, 8);
-        setNotifs(dedupe(allNotifs));
+        setNotifs(dedupeNotifications(allNotifs));
         setUnread(allNotifs.filter(n => !n.read).length);
       })
       .catch(() => {
@@ -236,10 +254,10 @@ const Topnavbar = () => {
   // ── ADMIN notifications ──
   const fetchAdminNotifications = () => {
     if (role !== "admin") return;
-    fetch("${BASE}/api/bookings/")
+    fetch(`${BASE}/api/bookings/`)
       .then(r => r.json())
       .then(data => {
-        setNotifs(dedupe(data.slice(0, 8)));
+        setNotifs(dedupeNotifications(data.slice(0, 8)));
         setUnread(data.filter(b => !b.is_read).length);
       })
       .catch(() => {});
@@ -248,7 +266,7 @@ const Topnavbar = () => {
   const fetchHospitalNotifications = () => {
     if (role !== "hospital") return;
     const hospitalEmail = (email || "").toLowerCase();
-    fetch("${BASE}/api/bookings/")
+    fetch(`${BASE}/api/bookings/`)
       .then((r) => r.json())
       .then((data) => {
         const mine = (Array.isArray(data) ? data : [])
@@ -272,16 +290,32 @@ const Topnavbar = () => {
       .catch(() => {});
   };
 
+  const fetchStaffNotifications = () => {
+    if (role !== "staff") return;
+    const staffId = localStorage.getItem("staff_id") || "";
+    fetch(`${BASE}/api/staff/notifications/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error("staff notifications unavailable")))
+      .then((data) => {
+        const list = Array.isArray(data?.notifications) ? data.notifications : [];
+        const key = `staff_notif_read_${staffId || email}`;
+        const readIds = JSON.parse(localStorage.getItem(key) || "[]");
+        setNotifs(list);
+        setUnread(list.filter((item) => !readIds.includes(item.id)).length);
+      })
+      .catch(() => { setNotifs([]); setUnread(0); });
+  };
+
   const fetchUnread = () => {
     if (role === "driver")      fetchDriverNotifications();
     else if (role === "admin")  fetchAdminNotifications();
     else if (role === "hospital") fetchHospitalNotifications();
+    else if (role === "staff") fetchStaffNotifications();
     else                        fetchUserNotifications();
   };
 
   const fetchCallAlert = () => {
     if (role !== "admin") return;
-    fetch("${BASE}/api/bookings/voice/call-alert/")
+    fetch(`${BASE}/api/bookings/voice/call-alert/`)
       .then((r) => r.json())
       .then((d) =>
         setCallAlert({
@@ -339,7 +373,7 @@ const Topnavbar = () => {
     if (!q) return;
     setSearchLoading(true);
     setShowSearchDrop(true);
-    const roleKey = role === "admin" || role === "hospital" || role === "driver" ? role : "user";
+    const roleKey = role === "admin" || role === "hospital" || role === "driver" || role === "staff" ? role : "user";
     const match = (...vals) => vals.some((v) => String(v || "").toLowerCase().includes(q));
     const pageResults = (PANEL_PAGES[roleKey] || []).filter((p) => match(p.label, p.path, p.keywords || "")).slice(0, 8);
     const next = { ...EMPTY_SEARCH_RESULTS, pages: pageResults };
@@ -349,7 +383,7 @@ const Topnavbar = () => {
         const [ambRes, hospRes, bookingRes] = await Promise.all([
           fetch("http://127.0.0.1:8000/api/ambulances/"),
           fetch("http://127.0.0.1:8000/api/hospitals/"),
-          fetch("${BASE}/api/bookings/"),
+          fetch(`${BASE}/api/bookings/`),
         ]);
         const [ambData, hospData, bookingData] = await Promise.all([ambRes.json(), hospRes.json(), bookingRes.json()]);
         next.ambulances = (Array.isArray(ambData) ? ambData : []).filter((a) => match(a.ambulance_number, a.driver, a.location, a.model, a.status)).slice(0, 6);
@@ -358,7 +392,7 @@ const Topnavbar = () => {
       } else if (roleKey === "driver") {
         const [ambRes, bookingRes] = await Promise.all([
           fetch("http://127.0.0.1:8000/api/ambulances/"),
-          fetch("${BASE}/api/bookings/"),
+          fetch(`${BASE}/api/bookings/`),
         ]);
         const [ambData, bookingData] = await Promise.all([ambRes.json(), bookingRes.json()]);
         next.ambulances = (Array.isArray(ambData) ? ambData : [])
@@ -381,11 +415,20 @@ const Topnavbar = () => {
           next.bookings = queue.filter((b) => match(`#${b.booking_id}`, b.patient_name, b.pickup_location, b.destination, b.ambulance_number, b.hospital_response, b.hospital_response_note)).slice(0, 6);
           next.staff = staff.filter((s) => match(s.full_name, s.role, s.specialization, s.contact_number, s.email)).slice(0, 6);
         }
+      } else if (roleKey === "staff") {
+        const staffId = localStorage.getItem("staff_id") || "";
+        const dashRes = await fetch(`${BASE}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`);
+        const dashboard = dashRes.ok ? await dashRes.json() : null;
+        next.hospitals = [dashboard?.hospital].filter((h) => h && match(h.name, h.address, h.status));
+        next.staff = [dashboard?.staff].filter((s) => s && match(s.full_name, s.role, s.specialization, s.staff_id, s.registration_number));
+        next.bookings = (Array.isArray(dashboard?.cases) ? dashboard.cases : [])
+          .filter((b) => match(`#${b.id}`, b.patient_name, b.patient_condition, b.assigned_bed_number, b.status))
+          .slice(0, 6);
       } else {
         const [ambRes, hospRes, bookingRes] = await Promise.all([
           fetch("http://127.0.0.1:8000/api/ambulances/"),
           fetch("http://127.0.0.1:8000/api/hospitals/"),
-          fetch("${BASE}/api/bookings/"),
+          fetch(`${BASE}/api/bookings/`),
         ]);
         const [ambData, hospData, bookingData] = await Promise.all([ambRes.json(), hospRes.json(), bookingRes.json()]);
         next.ambulances = (Array.isArray(ambData) ? ambData : []).filter((a) => match(a.ambulance_number, a.driver, a.location, a.status)).slice(0, 5);
@@ -410,7 +453,7 @@ const Topnavbar = () => {
     setShowDrop(d => !d);
     if (!showDrop) {
       if (role === "admin") {
-        fetch("${BASE}/api/bookings/mark-read/", { method:"POST" }).then(() => setUnread(0)).catch(()=>{});
+        fetch(`${BASE}/api/bookings/mark-read/`, { method:"POST" }).then(() => setUnread(0)).catch(()=>{});
       } else if (role === "driver") {
         const notifKey = `dr_notif_${email}`;
         const stored   = JSON.parse(localStorage.getItem(notifKey) || "[]");
@@ -418,6 +461,11 @@ const Topnavbar = () => {
         setUnread(0);
       } else if (role === "hospital") {
         const notifKey = `hospital_notif_read_${(email || "").toLowerCase()}`;
+        const allIds = notifications.map((n) => n.id);
+        localStorage.setItem(notifKey, JSON.stringify(allIds));
+        setUnread(0);
+      } else if (role === "staff") {
+        const notifKey = `staff_notif_read_${localStorage.getItem("staff_id") || email}`;
         const allIds = notifications.map((n) => n.id);
         localStorage.setItem(notifKey, JSON.stringify(allIds));
         setUnread(0);
@@ -435,6 +483,10 @@ const Topnavbar = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
+    localStorage.removeItem("staff_id");
+    localStorage.removeItem("staff_role");
+    localStorage.removeItem("hospital_name");
+    localStorage.removeItem("registration_number");
     // Keep hospital_id and saved hospital data so the next login restores the
     // same Django-backed hospital profile instead of showing an empty form.
     window.location.reload();
@@ -447,6 +499,7 @@ const Topnavbar = () => {
     if (role === "driver") navigate("/");
     else if (role === "admin") navigate("/Requests");
     else if (role === "hospital") navigate("/hospital/queue");
+    else if (role === "staff") navigate("/staff/home");
     else navigate("/MyBookings");
   };
 
@@ -682,6 +735,7 @@ const Topnavbar = () => {
         .nf-role-badge-admin { background: #ffffff; color: #fff; border-color: #ffffff; }
         .nf-role-badge-hospital { background: rgba(37,99,235,0.16); color: #2563eb; border-color: rgba(37,99,235,0.38); }
         .nf-role-badge-driver { background: rgba(22,163,74,0.16); color: #16a34a; border-color: rgba(22,163,74,0.38); }
+        .nf-role-badge-staff { background: rgba(18,111,30,0.12); color: #126f1e; border-color: rgba(18,111,30,0.35); }
         .nf-avatar-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
         .nf-avatar { width: 34px; height: 34px; border-radius: 50%; background: #2a2a2a; border: 2px solid var(--sr-accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
         .nf-avatar-wrap:hover .nf-avatar { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15); }
@@ -1050,6 +1104,7 @@ const Topnavbar = () => {
                   {role === "driver" ? "🔔 My Notifications"
                    : role === "admin" ? "🔔 Notifications"
                    : role === "hospital" ? "🏥 Hospital Alerts"
+                   : role === "staff" ? "🩺 Staff Alerts"
                    : "🔔 My Bookings"}
                 </span>
                 <span className="nf-drop-count">{notifications.length} items</span>
@@ -1058,9 +1113,9 @@ const Topnavbar = () => {
                 {notifications.length === 0 ? (
                     <div className="nf-drop-empty">
                       <div className="nf-drop-empty-icon">🔔</div>
-                      {role === "admin" || role === "driver" || role === "hospital" ? "No notifications" : "No bookings yet"}
+                      {role === "admin" || role === "driver" || role === "hospital" || role === "staff" ? "No notifications" : "No bookings yet"}
                     </div>
-                ) : role !== "admin" && role !== "driver" && role !== "hospital" ? (
+                ) : role !== "admin" && role !== "driver" && role !== "hospital" && role !== "staff" ? (
                   // ── USER: Booking status cards ──
                   notifications.map((n, i) => {
                     const ss = getStatusStyle(n.status);
@@ -1086,6 +1141,14 @@ const Topnavbar = () => {
                       </div>
                     );
                   })
+                ) : role === "staff" ? (
+                  notifications.map((n, i) => (
+                    <div key={i} className="nf-user-notif" onClick={() => handleNotifClick(n)}>
+                      <div className="nf-user-notif-top"><div className="nf-user-notif-title">{n.title}</div><div className="nf-user-notif-time">{n.timestamp ? new Date(n.timestamp).toLocaleString("en-IN", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : ""}</div></div>
+                      <div className="nf-user-notif-msg">{n.message}</div>
+                      <span className="nf-user-notif-badge" style={{ background:"#e8f7e9", color:"#126f1e", borderColor:"#a9d9af" }}>Allocated to you</span>
+                    </div>
+                  ))
                 ) : (
                   // ── ADMIN / DRIVER: original cards ──
                   notifications.map((n, i) => (
@@ -1114,10 +1177,11 @@ const Topnavbar = () => {
               </div>
               <div className="nf-drop-footer">
                 <button className="nf-drop-footer-btn"
-                  onClick={() => { setShowDrop(false); navigate(role==="driver" ? "/" : role==="admin" ? "/Requests" : role==="hospital" ? "/hospital/queue" : "/Ambulances"); }}>
+                  onClick={() => { setShowDrop(false); navigate(role==="driver" ? "/" : role==="admin" ? "/Requests" : role==="hospital" ? "/hospital/queue" : role==="staff" ? "/staff/home" : "/Ambulances"); }}>
                   {role === "driver" ? " View Dashboard →"
                    : role === "admin" ? "View All Bookings →"
                    : role === "hospital" ? "Open Emergency Queue →"
+                   : role === "staff" ? "Open Staff Dashboard →"
                    : "View My Bookings →"}
                 </button>
               </div>
@@ -1132,6 +1196,7 @@ const Topnavbar = () => {
               {role === "admin" && <span className="nf-role-badge nf-role-badge-admin">Admin</span>}
               {role === "hospital" && <span className="nf-role-badge nf-role-badge-hospital">Hospital</span>}
               {role === "driver" && <span className="nf-role-badge nf-role-badge-driver">Driver</span>}
+              {role === "staff" && <span className="nf-role-badge nf-role-badge-staff">{localStorage.getItem("staff_role") || "Staff"} · {localStorage.getItem("hospital_name") || "Hospital"}</span>}
               <button type="button" className="nf-logout-link" onClick={logoutUser}>Logout</button>
               <div className="nf-avatar-wrap" ref={profileRef} onClick={() => setShowProfileMenu(m => !m)}>
                 <div className="nf-avatar">

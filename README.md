@@ -34,7 +34,7 @@ Deploy the `Backend` app first and get a live backend URL.
 
 - Root directory: `Backend`
 - Build command: `pip install -r requirements.txt && python manage.py collectstatic --noinput`
-- Start command: `gunicorn ambulance_tracker.wsgi:application`
+- Start command: `python manage.py migrate --noinput && gunicorn ambulance_tracker.wsgi:application`
 
 Set environment variables:
 - `DJANGO_SECRET_KEY=<strong-random-secret>`

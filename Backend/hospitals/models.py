@@ -52,6 +52,11 @@ class HospitalStaff(models.Model):
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="staff")
     full_name = models.CharField(max_length=120)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="doctor")
+    # Human-readable identifiers are assigned by the hospital portal. The
+    # password is stored only as a Django hash, never in plain text.
+    staff_id = models.CharField(max_length=80, blank=True, default="", db_index=True)
+    registration_number = models.CharField(max_length=100, blank=True, default="", db_index=True)
+    password_hash = models.CharField(max_length=128, blank=True, default="")
     specialization = models.CharField(max_length=120, blank=True, default="")
     contact_number = models.CharField(max_length=20, blank=True, default="")
     email = models.EmailField(blank=True, default="")

@@ -5,9 +5,6 @@ import App from "./App";
 import "./index.css";
 import "./Layout.css";
 import { ThemeProvider } from "./ThemeContext.jsx";
-import { loadGoogleMapsScript } from "./utils/googleMaps";
-
-loadGoogleMapsScript().catch(() => {});
 
 // Keep legacy API calls working in production while individual screens are
 // migrated away from their old localhost URLs. Local Vite must stay connected

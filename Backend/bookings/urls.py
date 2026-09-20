@@ -1,4 +1,6 @@
 from django.urls import path
+from django.urls import path
+
 from . import views
 from . import voice_sms_views
 
@@ -16,6 +18,8 @@ urlpatterns = [
     path("",             views.booking_list),
     path("unread/",      views.unread_count),
     path("mark-read/",   views.mark_all_read),
+    path("driver-assigned/", views.driver_assigned_bookings),
+    path("<int:booking_id>/photos/", views.booking_photos),
     path("chat/threads/", views.chat_threads),
     path("<int:booking_id>/chat/thread/", views.booking_chat_thread),
     path("chat/threads/<int:thread_id>/messages/", views.chat_messages),

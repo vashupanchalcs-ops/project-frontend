@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import UserBookingMap from "../Components/UserBookingMap";
-import useLeaflet, { DELHI, makePinIcon, fetchRoadRoute, LIGHT_TILE } from "../hooks/useLeaflet";
+import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 
 const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
@@ -35,7 +35,7 @@ const fallbackHospitalCoord = (hospital) => {
   ].filter(Boolean).join(" ");
   const normalized = normalizePlace(locationText);
   return HOSPITAL_LOCATION_FALLBACKS.find(({ terms }) => terms.some((term) => normalized.includes(term)))
-    || { lat: DELHI.lat, lng: DELHI.lng };
+    || null;
 };
 
 // Multi-query Nominatim fallback
@@ -73,7 +73,7 @@ async function resolveHospitalCoord(hospital) {
     address ? `${searchName}, ${address}, India` : null,
     `${searchName} Delhi NCR, India`,
     `${searchName}, India`,
-  ])) || fallbackHospitalCoord(hospital);
+  ])) || fallbackHospitalCoord(hospital) || null;
 }
 
 const buildBookingFromState = (state) => {
@@ -97,13 +97,12 @@ const buildBookingFromState = (state) => {
   };
 };
 
-// ── HospitalLiveMap — uses local override map instead of hook's stale map ────
+// Hospital details opened from the user/driver hospital list use the same
+// Google embedded map as the rest of the project.
 const HospitalLiveMap = ({ hospital, onClose }) => {
-  const mapRef     = useRef(null);
-  const leafletReady = useLeaflet();
   const [driverLoc, setDriverLoc] = useState(null);
   const [hospCoord, setHospCoord] = useState(null);
-  const [routeError, setRouteError] = useState("");
+  const [resolvingHospital, setResolvingHospital] = useState(true);
 
   // Keep a live position while this map is open rather than using a stale
   // one-shot coordinate.
@@ -118,51 +117,23 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
 
   // Resolve hospital coordinates using our fixed logic
   useEffect(() => {
+    let active = true;
+    setResolvingHospital(true);
     resolveHospitalCoord(hospital).then((coord) => {
+      if (!active) return;
       if (coord) setHospCoord(coord);
+      setResolvingHospital(false);
     });
+    return () => { active = false; };
   }, [hospital]);
-
-  useEffect(() => {
-    if (!leafletReady || !window.L || !mapRef.current || !hospCoord) return;
-    const L = window.L;
-    const m = L.map(mapRef.current, { zoomControl: false });
-    L.tileLayer(LIGHT_TILE, { maxZoom: 19, attribution: "© Google Maps" }).addTo(m);
-
-    L.marker([hospCoord.lat, hospCoord.lng], { icon: makePinIcon("#00d4aa", "🏥") })
-      .addTo(m)
-      .bindPopup(`<div style="font-weight:700;">${hospital.name || "Hospital"}</div>`)
-      .openPopup();
-
-    if (driverLoc) {
-      L.marker([driverLoc.lat, driverLoc.lng], { icon: makePinIcon("#f7c948", "📍") })
-        .addTo(m)
-        .bindPopup("Your Location");
-      fetchRoadRoute([driverLoc, hospCoord])
-        .then((pts) => {
-          if (pts?.length > 1) {
-            setRouteError("");
-            L.polyline(pts, { color: "#126f1e", weight: 6, opacity: 0.9 }).addTo(m);
-            m.fitBounds(L.latLngBounds(pts), { padding: [60, 60] });
-          } else {
-            setRouteError("Road route is unavailable. Check your connection and try again.");
-            m.fitBounds(L.latLngBounds([driverLoc, hospCoord]), { padding: [60, 60] });
-          }
-        })
-        .catch(() => {
-          setRouteError("Road route is unavailable. Check your connection and try again.");
-          m.fitBounds(L.latLngBounds([driverLoc, hospCoord]), { padding: [60, 60] });
-        });
-    } else {
-      m.setView([hospCoord.lat, hospCoord.lng], 15);
-    }
-
-    return () => m.remove();
-  }, [leafletReady, hospCoord, driverLoc, hospital]);
 
   return (
     <div style={{ position: "relative", height: "100vh", width: "100%", background: "#f5f5f5" }}>
-      <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+      <GoogleMapEmbed
+        pickupLoc={driverLoc ? { ...driverLoc, label: "Your location" } : null}
+        destinationLoc={hospCoord ? { ...hospCoord, name: hospital.name || "Hospital" } : null}
+        height="100%"
+      />
       <button
         onClick={onClose}
         style={{
@@ -190,17 +161,7 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
           Tracking Hospital Location
         </div>
       </div>
-      {routeError && (
-        <div style={{
-          position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 999,
-          background: "#fff", color: "#111", padding: "10px 14px", borderRadius: 10,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.2)", fontSize: 12, fontWeight: 700,
-        }}>
-          {routeError}
-        </div>
-      )}
-
-      {!hospCoord && (
+      {resolvingHospital && (
         <div style={{
           position: "absolute", inset: 0, display: "flex", alignItems: "center",
           justifyContent: "center", background: "rgba(245,245,245,0.9)", zIndex: 99,
@@ -213,6 +174,11 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
             }} />
             <p style={{ color: "rgba(17,17,17,0.5)", fontSize: 13 }}>Locating hospital…</p>
           </div>
+        </div>
+      )}
+      {!resolvingHospital && !hospCoord && (
+        <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 99, background: "#fff", borderRadius: 10, padding: "10px 14px", fontSize: 12, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.18)" }}>
+          Hospital location is not available.
         </div>
       )}
       <style>{`@keyframes dir-spin { to { transform: rotate(360deg); } }`}</style>

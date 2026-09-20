@@ -3,8 +3,8 @@ import { useState } from 'react';
 import {
   ChevronsRight, Truck, Building2, BarChart2, Headphones, Sparkles,
   ClipboardList, ListChecks, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
-  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, Mic, FileText,
-  BedDouble, UserCheck,
+  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, FileText, Image, Images,
+  BedDouble, UserCheck, Video,
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -49,12 +49,21 @@ const driverNavItems = [
   { to: "/",                                   icon: Navigation,    label: "Home"           },
   { to: "/driver-dashboard?tab=bookings",     icon: ClipboardList, label: "My Bookings",   dot: true, tab: "bookings" },
   { to: "/driver/insurance-form",              icon: ShieldCheck,   label: "Insurance Form", dot: true },
-  { to: "/driver/voice-reports",               icon: Mic,           label: "Voice Reports", dot: true },
+  { to: "/driver/voice-reports",               icon: Image,         label: "Patient Photos", dot: true },
+  { to: "/driver/live-video",                  icon: Video,         label: "Live Video", dot: true },
   { to: "/driver/guidance",                    icon: BookOpen,      label: "Guidance", dot: true },
   { to: "/driver-dashboard?tab=change-request", icon: Repeat,      label: "Change Request", tab: "change-request" },
   { to: "/DriverRequestChat",                   icon: MessageSquareWarning, label: "Request Chat", dot: true },
   { to: "/Hospitals",                          icon: Building2,     label: "Hospitals"      },
   { to: "/driver-dashboard?tab=map",          icon: Route,         label: "Live Track",    tab: "map" },
+];
+
+const staffNavItems = [
+  { to: "/staff/home",    icon: House,        label: "Staff Home" },
+  { to: "/staff/cases",   icon: ClipboardList, label: "Assigned Cases", dot: true },
+  { to: "/staff/patient-condition", icon: Images, label: "Patient Photos", dot: true },
+  { to: "/staff/live-video", icon: Video, label: "Live Video", dot: true },
+  { to: "/staff/profile", icon: CircleUserRound, label: "My Profile" },
 ];
 
 const Leftsidebar = () => {
@@ -66,6 +75,7 @@ const Leftsidebar = () => {
     role === "admin"  ? adminNavItems  :
     role === "hospital" ? hospitalNavItems :
     role === "driver" ? driverNavItems :
+    role === "staff" ? staffNavItems :
     userNavItems;
 
   const pendingCount = (() => {

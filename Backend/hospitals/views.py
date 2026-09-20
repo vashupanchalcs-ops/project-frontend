@@ -3,8 +3,10 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.conf import settings
 from django.db.models import Q
+from django.contrib.auth.hashers import make_password, check_password
 from hospitals.models import Hospital, HospitalStaff, HospitalBed
 from bookings.models import Booking
+from bookings.views import booking_to_dict
 from ambulance.models import Ambulance
 import json
 
@@ -54,6 +56,8 @@ def staff_to_dict(s):
         "hospital_id": s.hospital_id,
         "full_name": s.full_name,
         "role": s.role,
+        "staff_id": getattr(s, "staff_id", ""),
+        "registration_number": getattr(s, "registration_number", ""),
         "specialization": s.specialization,
         "contact_number": s.contact_number,
         "email": s.email,
@@ -67,7 +71,6 @@ def staff_to_dict(s):
         "created_at": s.created_at.isoformat(),
         "updated_at": s.updated_at.isoformat(),
     }
-
 
 
 def bed_to_dict(bed):
@@ -275,7 +278,7 @@ def assign_bed_to_booking(request, hospital_id):
     if selected:
         payload = [{"id": s.id, "full_name": s.full_name, "role": s.role, "specialization": s.specialization, "contact_number": s.contact_number, "years_experience": s.years_experience} for s in selected]
         for s in selected:
-            s.is_active, s.is_busy, s.assigned_booking_id = False, True, booking.id
+            s.is_active, s.is_busy, s.assigned_booking_id = True, True, booking.id
             s.save(update_fields=["is_active", "is_busy", "assigned_booking_id", "updated_at"])
         booking.assigned_doctors_json = json.dumps(payload)
         booking.assigned_doctor_names = ", ".join(s.full_name for s in selected)
@@ -323,7 +326,7 @@ def assign_staff_team(request, hospital_id):
     HospitalStaff.objects.filter(assigned_booking_id=booking.id).update(is_active=True, is_busy=False, assigned_booking_id=None)
     payload = [{"id": s.id, "full_name": s.full_name, "role": s.role, "specialization": s.specialization, "contact_number": s.contact_number, "years_experience": s.years_experience} for s in team]
     for s in team:
-        s.is_active = False
+        s.is_active = True
         s.is_busy = True
         s.assigned_booking_id = booking.id
         s.save(update_fields=["is_active", "is_busy", "assigned_booking_id", "updated_at"])
@@ -755,13 +758,32 @@ def hospital_staff_list(request, hospital_id):
         data = _safe_json(request)
         if data is None:
             return JsonResponse({"error": "Invalid JSON body"}, status=400)
+        full_name = str(data.get("full_name", "")).strip()
+        email = str(data.get("email", "")).strip().lower()
+        staff_id_value = str(data.get("staff_id", "")).strip()
+        registration_number = str(data.get("registration_number", "")).strip()
+        if not full_name or not email or not staff_id_value or not registration_number:
+            return JsonResponse({"error": "Name, email, Staff ID and Reg. No. are required"}, status=400)
+        role = str(data.get("role", "doctor")).lower()
+        if role not in dict(HospitalStaff.ROLE_CHOICES):
+            return JsonResponse({"error": "Invalid staff role"}, status=400)
+        duplicate = HospitalStaff.objects.filter(
+            Q(staff_id__iexact=staff_id_value) | Q(registration_number__iexact=registration_number)
+        ).exists()
+        if duplicate:
+            return JsonResponse({"error": "Staff ID or Reg. No. is already assigned to another staff member"}, status=409)
         staff = HospitalStaff.objects.create(
             hospital=hospital,
-            full_name=data.get("full_name", "").strip(),
-            role=data.get("role", "doctor"),
+            full_name=full_name,
+            role=role,
+            staff_id=staff_id_value,
+            registration_number=registration_number,
+            # The hospital creates the staff identity only. Staff set their
+            # password themselves during signup after Gmail OTP verification.
+            password_hash="",
             specialization=data.get("specialization", ""),
             contact_number=data.get("contact_number", ""),
-            email=data.get("email", ""),
+            email=email,
             photo_data=data.get("photo_data", ""),
             banner_data=data.get("banner_data", ""),
             is_on_call=bool(data.get("is_on_call", False)),
@@ -797,7 +819,19 @@ def hospital_staff_detail(request, hospital_id, staff_id):
         if "contact_number" in data:
             staff.contact_number = data["contact_number"]
         if "email" in data:
-            staff.email = data["email"]
+            staff.email = str(data["email"]).strip().lower()
+        if "staff_id" in data or "registration_number" in data:
+            next_staff_id = str(data.get("staff_id", staff.staff_id)).strip()
+            next_registration_number = str(data.get("registration_number", staff.registration_number)).strip()
+            if not next_staff_id or not next_registration_number:
+                return JsonResponse({"error": "Staff ID and Reg. No. cannot be empty"}, status=400)
+            duplicate = HospitalStaff.objects.filter(
+                Q(staff_id__iexact=next_staff_id) | Q(registration_number__iexact=next_registration_number)
+            ).exclude(id=staff.id).exists()
+            if duplicate:
+                return JsonResponse({"error": "Staff ID or Reg. No. is already assigned to another staff member"}, status=409)
+            staff.staff_id = next_staff_id
+            staff.registration_number = next_registration_number
         if "photo_data" in data:
             staff.photo_data = data["photo_data"]
         if "banner_data" in data:
@@ -816,3 +850,193 @@ def hospital_staff_detail(request, hospital_id, staff_id):
         return JsonResponse({"status": "deleted"})
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+def _staff_auth_payload(staff):
+    return {
+        "valid": True,
+        "role": "staff",
+        "staff_role": staff.role,
+        "staff": staff_to_dict(staff),
+        "hospital": hospital_to_dict(staff.hospital),
+        "hospital_id": staff.hospital_id,
+        "hospital_name": staff.hospital.name,
+        "staff_id": staff.staff_id,
+        "registration_number": staff.registration_number,
+        "name": staff.full_name,
+        "email": staff.email,
+    }
+
+
+@csrf_exempt
+def staff_signup(request):
+    """Set a staff password after the frontend has verified Gmail OTP."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    data = _safe_json(request) or {}
+    email = str(data.get("email", "")).strip().lower()
+    staff_id = str(data.get("staff_id", "")).strip()
+    registration_number = str(data.get("registration_number", "")).strip()
+    password = str(data.get("password", ""))
+    if not all((email, staff_id, registration_number)):
+        return JsonResponse({"error": "Email, Staff ID and Registration No. are required"}, status=400)
+    if len(password) < 6:
+        return JsonResponse({"error": "Password must be at least 6 characters"}, status=400)
+
+    staff = HospitalStaff.objects.select_related("hospital").filter(
+        email__iexact=email,
+        staff_id__iexact=staff_id,
+        registration_number__iexact=registration_number,
+        is_active=True,
+    ).first()
+    if not staff:
+        return JsonResponse({"error": "Staff details do not match the hospital records"}, status=401)
+    if not staff.hospital.is_active:
+        return JsonResponse({"error": "This hospital account is currently inactive"}, status=403)
+    if staff.password_hash:
+        return JsonResponse({"error": "Staff account is already set up. Please use Sign In."}, status=409)
+
+    # The first request validates the hospital-issued identity before the
+    # frontend sends Gmail OTP. Password is stored only after OTP succeeds.
+    if data.get("verify_only"):
+        return JsonResponse({"valid": True, "otp_required": True})
+
+    staff.password_hash = make_password(password)
+    staff.save(update_fields=["password_hash", "updated_at"])
+    return JsonResponse(_staff_auth_payload(staff))
+
+
+@csrf_exempt
+def staff_login(request):
+    """Authenticate a hospital staff member using hospital-issued credentials."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    data = _safe_json(request) or {}
+    email = str(data.get("email", "")).strip().lower()
+    staff_id = str(data.get("staff_id", "")).strip()
+    registration_number = str(data.get("registration_number", "")).strip()
+    password = str(data.get("password", ""))
+    if not all((email, staff_id, registration_number, password)):
+        return JsonResponse({"error": "Email, Staff ID, Registration No. and password are required"}, status=400)
+
+    staff = HospitalStaff.objects.select_related("hospital").filter(
+        email__iexact=email,
+        staff_id__iexact=staff_id,
+        registration_number__iexact=registration_number,
+        is_active=True,
+    ).first()
+    if not staff or not staff.password_hash or not check_password(password, staff.password_hash):
+        return JsonResponse({"error": "Staff details or password do not match hospital records"}, status=401)
+    if not staff.hospital.is_active:
+        return JsonResponse({"error": "This hospital account is currently inactive"}, status=403)
+
+    return JsonResponse(_staff_auth_payload(staff))
+
+
+@csrf_exempt
+def staff_dashboard(request):
+    """Return the signed-in staff profile and only cases assigned to them."""
+    if request.method != "GET":
+        return JsonResponse({"error": "GET only"}, status=405)
+    staff_id = str(request.GET.get("staff_id", "")).strip()
+    email = str(request.GET.get("email", "")).strip().lower()
+    if not staff_id or not email:
+        return JsonResponse({"error": "staff_id and email are required"}, status=400)
+    staff = HospitalStaff.objects.select_related("hospital").filter(
+        staff_id__iexact=staff_id,
+        email__iexact=email,
+        is_active=True,
+    ).first()
+    if not staff:
+        return JsonResponse({"error": "Staff account not found or inactive"}, status=404)
+
+    case_filter = Q(assigned_hospital_id=staff.hospital_id)
+    if staff.hospital.email:
+        case_filter |= Q(assigned_hospital_email__iexact=staff.hospital.email)
+    if staff.hospital.name:
+        case_filter |= Q(assigned_hospital_name__iexact=staff.hospital.name) | Q(destination__iexact=staff.hospital.name)
+
+    cases = []
+    for booking in Booking.objects.filter(case_filter).order_by("-id")[:200]:
+        team = []
+        try:
+            parsed = json.loads(getattr(booking, "assigned_doctors_json", "[]") or "[]")
+            team = parsed if isinstance(parsed, list) else []
+        except (TypeError, ValueError):
+            team = []
+        assigned = any(
+            str(member.get("id", "")) == str(staff.id)
+            or str(member.get("staff_id", "")).lower() == staff.staff_id.lower()
+            or str(member.get("full_name", member.get("name", ""))).strip().lower() == staff.full_name.strip().lower()
+            for member in team if isinstance(member, dict)
+        )
+        assigned = assigned or staff.assigned_booking_id == booking.id
+        if not assigned and staff.full_name:
+            assigned = staff.full_name.strip().lower() in str(getattr(booking, "assigned_doctor_names", "")).lower()
+        if not assigned:
+            continue
+        row = booking_to_dict(booking)
+        row["assigned_team"] = team
+        row["staff_role"] = staff.role
+        cases.append(row)
+
+    active_cases = [item for item in cases if item.get("status") not in {"completed", "cancelled"}]
+    urgent_cases = [item for item in active_cases if any(
+        token in f"{item.get('patient_condition', '')} {item.get('vitals_summary', '')}".lower()
+        for token in ("critical", "cardiac", "stroke", "trauma", "icu", "emergency")
+    )]
+    completed_cases = [item for item in cases if item.get("status") == "completed"]
+    team_members = sum(len(item.get("assigned_team") or []) for item in cases)
+    return JsonResponse({
+        "staff": staff_to_dict(staff),
+        "hospital": hospital_to_dict(staff.hospital),
+        "summary": {
+            "assigned_cases": len(cases),
+            "active_cases": len(active_cases),
+            "urgent_cases": len(urgent_cases),
+            "bed_allocated_cases": sum(1 for item in cases if item.get("assigned_bed_number")),
+            "completed_cases": len(completed_cases),
+            "team_members": team_members,
+            "new_allocations": sum(1 for item in active_cases if item.get("doctors_assigned_at")),
+        },
+        "cases": cases,
+    })
+
+
+@csrf_exempt
+def staff_notifications(request):
+    """Return allocation alerts for every staff member on a booking team."""
+    if request.method != "GET":
+        return JsonResponse({"error": "GET only"}, status=405)
+    staff_id = str(request.GET.get("staff_id", "")).strip()
+    email = str(request.GET.get("email", "")).strip().lower()
+    staff = HospitalStaff.objects.select_related("hospital").filter(staff_id__iexact=staff_id, email__iexact=email, is_active=True).first()
+    if not staff:
+        return JsonResponse({"error": "Staff account not found or inactive"}, status=404)
+    hospital_filter = Q(assigned_hospital_id=staff.hospital_id)
+    if staff.hospital.email:
+        hospital_filter |= Q(assigned_hospital_email__iexact=staff.hospital.email)
+    if staff.hospital.name:
+        hospital_filter |= Q(assigned_hospital_name__iexact=staff.hospital.name) | Q(destination__iexact=staff.hospital.name)
+    notifications = []
+    for booking in Booking.objects.filter(hospital_filter).order_by("-doctors_assigned_at", "-id")[:100]:
+        try:
+            team = json.loads(getattr(booking, "assigned_doctors_json", "[]") or "[]")
+        except (TypeError, ValueError):
+            team = []
+        assigned = any(isinstance(member, dict) and (str(member.get("id", "")) == str(staff.id) or str(member.get("staff_id", "")).lower() == staff.staff_id.lower() or str(member.get("full_name", member.get("name", ""))).strip().lower() == staff.full_name.strip().lower()) for member in team)
+        if not assigned and staff.assigned_booking_id == booking.id:
+            assigned = True
+        if not assigned and staff.full_name:
+            assigned = staff.full_name.strip().lower() in str(getattr(booking, "assigned_doctor_names", "")).lower()
+        if not assigned:
+            continue
+        notifications.append({
+            "id": f"staff-{staff.id}-booking-{booking.id}",
+            "booking_id": booking.id,
+            "title": f"Booking #{booking.id} is allocated to you",
+            "message": f"{booking.patient_name or booking.booked_by or 'Patient'} · Start the care workflow at {booking.assigned_hospital_name or staff.hospital.name}.",
+            "status": booking.status,
+            "timestamp": getattr(booking, "doctors_assigned_at", None).isoformat() if getattr(booking, "doctors_assigned_at", None) else booking.created_at.isoformat(),
+        })
+    return JsonResponse({"notifications": notifications})

@@ -4,7 +4,7 @@ import { sliceRemainingPath } from "../utils/routeUtils";
 import UnifiedMapHeader from "../Components/UnifiedMapHeader";
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
 import GoogleMapEmbed from "../Components/GoogleMapEmbed";
-import useLeaflet, { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRouteWithManeuvers, LIGHT_TILE, SATELLITE_TILE } from "../hooks/useLeaflet";
+import { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRouteWithManeuvers, LIGHT_TILE, SATELLITE_TILE } from "../hooks/useLeaflet";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 
@@ -130,7 +130,7 @@ const logColor = { info:"#888", success:"#00c853", warn:"#ffaa00", error:"#f4433
 export default function DriverDashboard() {
   const navigate     = useNavigate();
   const locationRouter = useLocation();
-  const leafletReady = useLeaflet();
+  const leafletReady = false;
 
   const driverEmail = localStorage.getItem("user")             || "";
   const driverName  = localStorage.getItem("name")             || "Driver";

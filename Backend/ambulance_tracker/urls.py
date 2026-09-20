@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path, include
 from ambulance import views
 from ambulance.route_views import (
@@ -17,6 +20,7 @@ from ambulance.tracking_views import (
     get_traffic_route,
     update_battery,
 )
+from hospitals import views as hospital_views
 
 urlpatterns = [
     path("", views.home),
@@ -30,6 +34,10 @@ urlpatterns = [
     path("api/logout/",           views.logout_view),
     path("api/auth/contract-validate/", views.validate_contract_access),
     path("api/auth/sync-user/",          views.sync_user),
+    path("api/auth/staff-signup/",       hospital_views.staff_signup),
+    path("api/auth/staff-login/",        hospital_views.staff_login),
+    path("api/staff/dashboard/",         hospital_views.staff_dashboard),
+    path("api/staff/notifications/",     hospital_views.staff_notifications),
 
     # ── AMBULANCE — static paths BEFORE <int:id> ────
     path("api/ambulances/",                       views.ambulance_list),
@@ -63,3 +71,6 @@ urlpatterns = [
     path("api/geocode/",                        geocode_location),
     path("api/geocode/suggest/",                suggest_locations),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

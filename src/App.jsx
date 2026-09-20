@@ -35,6 +35,7 @@ import AdminHospitalDetails  from "./Pages/AdminHospitalDetails";
 import InfoPage              from "./Pages/InfoPage";
 import CallIntakeConsole     from "./Pages/CallIntakeConsole";
 import DriverVoiceReports    from "./Pages/DriverVoiceReports";
+import LiveVideoConsultation from "./Pages/LiveVideoConsultation";
 import HospitalCaseReportView from "./Pages/HospitalCaseReportView";
 import DriverInsuranceForm   from "./Pages/DriverInsuranceForm";
 import HospitalInsuranceView from "./Pages/HospitalInsuranceView";
@@ -43,6 +44,8 @@ import HospitalBeds             from "./Pages/HospitalBeds";
 import HospitalTeamAllocation  from "./Pages/HospitalTeamAllocation";
 import UserCareTeam             from "./Pages/UserCareTeam";
 import CaseManagement            from "./Pages/CaseManagement";
+import HospitalStaffPortal       from "./Pages/HospitalStaffPortal";
+import StaffPatientCondition     from "./Pages/StaffPatientCondition";
 
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
@@ -58,6 +61,12 @@ const HospitalRoute = ({ element }) => {
   const user = localStorage.getItem("user");
   const role = localStorage.getItem("role");
   return user && role === "hospital" ? element : <Navigate to="/" replace />;
+};
+
+const StaffRoute = ({ element }) => {
+  const user = localStorage.getItem("user");
+  const role = localStorage.getItem("role");
+  return user && role === "staff" ? element : <Navigate to="/Login" replace />;
 };
 
 const ConfirmedTrackingRoute = ({ element }) => {
@@ -77,6 +86,7 @@ const DriverAwareRoute = ({ driverElement, defaultElement }) => {
   const user = localStorage.getItem("user");
   if (role === "driver" && user) return driverElement;
   if (role === "hospital" && user) return <Navigate to="/hospital/home" replace />;
+  if (role === "staff" && user) return <Navigate to="/staff/home" replace />;
   return defaultElement;
 };
 
@@ -123,7 +133,7 @@ const App = () => {
   const isMapView = p === "/directions";
 
   // Background polling for confirmed booking (user only)
-  const isUser = role !== "admin" && role !== "driver" && role !== "hospital" && !!localStorage.getItem("user");
+  const isUser = role !== "admin" && role !== "driver" && role !== "hospital" && role !== "staff" && !!localStorage.getItem("user");
   const isDriver = role === "driver" && !!localStorage.getItem("user");
   const driverAmbulanceId = Number(localStorage.getItem("ambulance_id") || "0");
 
@@ -158,6 +168,7 @@ const App = () => {
         <Route path="/DriverChatbot" element={<Navigate to="/DriverRequestChat" replace />} />
         <Route path="/DriverRequestChat" element={<ProtectedRoute element={<DriverRequestChat />} />} />
         <Route path="/driver/voice-reports" element={<ProtectedRoute element={<DriverVoiceReports />} />} />
+        <Route path="/driver/live-video" element={<ProtectedRoute element={<LiveVideoConsultation />} />} />
         <Route path="/driver/insurance-form" element={<ProtectedRoute element={<DriverInsuranceForm />} />} />
         <Route path="/driver/guidance" element={<ProtectedRoute element={<DriverGuidance />} />} />
 
@@ -180,6 +191,14 @@ const App = () => {
         <Route path="/hospital/team-allocation" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/team-allocation/edit" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/beds" element={<HospitalRoute element={<HospitalBeds />} />} />
+
+        {/* Hospital staff */}
+        <Route path="/staff/home" element={<StaffRoute element={<HospitalStaffPortal />} />} />
+        <Route path="/staff/dashboard" element={<StaffRoute element={<HospitalStaffPortal />} />} />
+        <Route path="/staff/cases" element={<StaffRoute element={<HospitalStaffPortal />} />} />
+        <Route path="/staff/patient-condition" element={<StaffRoute element={<StaffPatientCondition />} />} />
+        <Route path="/staff/live-video" element={<StaffRoute element={<LiveVideoConsultation />} />} />
+        <Route path="/staff/profile" element={<StaffRoute element={<HospitalStaffPortal />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />
@@ -1813,6 +1832,106 @@ const App = () => {
           color: #173645 !important;
           box-shadow: none !important;
         }
+        /* Staff portal stays intentionally white even though older shared
+           page selectors apply the dark admin surface globally. */
+        html body #root .staff-portal-root.staff-portal-root {
+          background: #ffffff !important;
+          color: #122118 !important;
+        }
+        html body #root .staff-portal-root.staff-portal-root :is(h1, h2, h3, p, span, div, article, section, aside) {
+          color: inherit !important;
+        }
+        html body #root .staff-portal-root .staff-kicker,
+        html body #root .staff-portal-root .staff-stat-value,
+        html body #root .staff-portal-root .staff-panel-title,
+        html body #root .staff-portal-root .staff-case-status { color: #126f1e !important; }
+        html body #root .staff-portal-root .staff-stat-label { color: #6d7a70 !important; }
+        html body #root .staff-portal-root .staff-stat.red .staff-stat-value { color: #c62828 !important; }
+        html body #root .staff-portal-root .staff-stat.yellow .staff-stat-value { color: #b77900 !important; }
+        html body #root .staff-portal-root .staff-tone.red { color: #a9131c !important; background: #ffe2e4 !important; }
+        html body #root .staff-portal-root .staff-tone.yellow { color: #835800 !important; background: #fff1be !important; }
+        html body #root .staff-portal-root .staff-tone.green { color: #126f1e !important; background: #dff4e2 !important; }
+        html body #root .staff-portal-root .staff-chip { color: #126f1e !important; background: #e8f7e9 !important; }
+        html body #root .staff-portal-root .staff-subtitle,
+        html body #root .staff-portal-root .staff-panel-caption,
+        html body #root .staff-portal-root .staff-identity-meta,
+        html body #root .staff-portal-root .staff-case-meta,
+        html body #root .staff-portal-root .staff-case-condition,
+        html body #root .staff-portal-root .staff-case-bed,
+        html body #root .staff-portal-root .staff-info-row span:first-child { color: #68756c !important; }
+        html body #root .staff-portal-root .staff-title,
+        html body #root .staff-portal-root .staff-identity-name,
+        html body #root .staff-portal-root .staff-case-name,
+        html body #root .staff-portal-root .staff-info h3,
+        html body #root .staff-portal-root .staff-info-row span:last-child { color: #142019 !important; }
+        html body #root .staff-portal-root .staff-panel,
+        html body #root .staff-portal-root .staff-stat,
+        html body #root .staff-portal-root .staff-case { background: #ffffff !important; border-color: #d4dfd6 !important; }
+        html body #root .staff-portal-root .staff-case-list { background: #fbfdfb !important; }
+        html body #root .staff-portal-root .staff-identity { background: #f5fbf6 !important; border-color: #c9e3ce !important; }
+        html body #root .staff-portal-root .staff-action { background: #ffffff !important; color: #12351b !important; border-color: #c8d7cb !important; }
+        html body #root .staff-portal-root .staff-action.primary { background: #126f1e !important; color: #ffffff !important; border-color: #126f1e !important; }
+        html body #root .staff-portal-root .staff-empty { background: #fbfdfb !important; color: #69776c !important; }
+        html body #root .staff-portal-root .staff-error { background: #fff5f5 !important; color: #a62028 !important; }
+        html body #root .condition-photo-card,
+        html body #root .condition-photo-card * { background-color: #ffffff !important; color: #142019 !important; border-color: #c9e0d0 !important; }
+        html body #root .driver-photo-root,
+        html body #root .staff-condition-root { background: #ffffff !important; color: #142019 !important; }
+        /* Live consultation keeps its light clinical workspace above legacy global theme guards. */
+        html body #root .live-consult-root.live-consult-root { background: #f4f7fa !important; color: #172235 !important; }
+        html body #root .live-consult-root :is(h1, h2, h3, p, span, div, label, small) { color: inherit !important; }
+        html body #root .live-consult-root .live-consult-panel { background: #ffffff !important; border: 1px solid #dce5eb !important; color: #172235 !important; border-radius: 10px !important; }
+        html body #root .live-consult-root .live-consult-booking { background: #fbfdff !important; border: 1px solid #dae4eb !important; color: #172235 !important; }
+        html body #root .live-consult-root .live-consult-booking.active { border-color: #087640 !important; }
+        html body #root .live-consult-root .live-consult-stage { background: #0f172a !important; border: 0 !important; }
+        html body #root .live-consult-root .live-consult-stage :is(h2, p, span) { color: inherit !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder { color: #eef4ff !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder p { color: #a9b9ce !important; }
+        html body #root .live-consult-root .live-consult-avatar { background: #1f8b59 !important; color: #ffffff !important; }
+        html body #root .live-consult-root .live-consult-stage-tag { background: rgba(18,29,48,.82) !important; color: #ffffff !important; }
+        html body #root .live-consult-root .live-consult-stage-tag span { color: #ffffff !important; }
+        html body #root .live-consult-root .live-consult-vitals { background: #ffffff !important; border: 1px solid #dce5eb !important; }
+        html body #root .live-consult-root .live-consult-vital-label { color: #8190a3 !important; }
+        html body #root .live-consult-root .live-consult-vital-value { color: #ed2a3a !important; }
+        html body #root .live-consult-root .live-consult-vital:nth-child(2) .live-consult-vital-value { color: #078dcc !important; }
+        html body #root .live-consult-root .live-consult-vital:nth-child(3) .live-consult-vital-value { color: #dc9900 !important; }
+        html body #root .live-consult-root :is(.live-consult-btn, .live-consult-control, .live-consult-booking-open, .live-consult-note-button, .live-consult-image) { box-shadow: none !important; }
+        html body #root .live-consult-root .live-consult-btn { background: #ffffff !important; color: #0e6a3d !important; border: 1px solid #bfd0dc !important; }
+        html body #root .live-consult-root .live-consult-control { background: #e3f4fb !important; color: #078dcc !important; border: 0 !important; }
+        html body #root .live-consult-root .live-consult-control.start,
+        html body #root .live-consult-root .live-consult-booking-open,
+        html body #root .live-consult-root .live-consult-note-button { background: #087640 !important; color: #ffffff !important; border-color: #087640 !important; }
+        html body #root .live-consult-root .live-consult-control.end { background: #fa4047 !important; color: #ffffff !important; }
+        html body #root .live-consult-root .live-consult-image { background: #ffffff !important; color: #607087 !important; border: 1px solid #dce5eb !important; }
+        html body #root .live-consult-root .live-consult-image span { color: #607087 !important; }
+        html body #root .live-consult-root :is(.live-consult-empty, .live-consult-note-saved) { background: #f4f8fb !important; color: #40556a !important; border-color: #c9d5df !important; }
+        html body #root .live-consult-root .live-consult-notes textarea { background: #ffffff !important; color: #26364b !important; border-color: #d4dfe7 !important; }
+        html body #root .live-consult-root .live-consult-preview-card { background: #ffffff !important; border: 1px solid #e3e3e3 !important; border-radius: 12px !important; }
+        html body #root .live-consult-root .live-consult-preview-close { background: #ffffff !important; color: #111111 !important; border: 1px solid #dce5eb !important; }
+        /* Photo/report cards retain their clinical card hierarchy and actionable green buttons. */
+        html body #root .staff-condition-root .staff-condition-card { background: #ffffff !important; border: 1px solid #cfddd2 !important; border-left: 6px solid #23a455 !important; border-radius: 13px !important; box-shadow: 0 5px 18px rgba(31,82,48,.06) !important; }
+        html body #root .staff-condition-root .staff-condition-card.red { border-left-color: #dc2634 !important; }
+        html body #root .staff-condition-root .staff-condition-card.yellow { border-left-color: #e2ab12 !important; }
+        html body #root .staff-condition-root .staff-condition-view,
+        html body #root .staff-condition-root .staff-condition-view:hover { background: #126f1e !important; border: 0 !important; color: #ffffff !important; border-radius: 8px !important; box-shadow: 0 4px 10px rgba(18,111,30,.2) !important; }
+        html body #root .staff-condition-root .staff-condition-view:disabled { background: #b7c9bb !important; color: #ffffff !important; box-shadow: none !important; }
+        html body #root .staff-condition-root .staff-condition-tone.green { background: #ddf5e5 !important; color: #13713c !important; }
+        html body #root .staff-condition-root .staff-condition-tone.red { background: #ffe2e4 !important; color: #ad1d2a !important; }
+        html body #root .staff-condition-root .staff-condition-tone.yellow { background: #fff0bd !important; color: #805700 !important; }
+        html body #root .driver-photo-root .driver-booking { background: #ffffff !important; border: 1px solid #d7e1e9 !important; border-radius: 14px !important; box-shadow: 0 4px 16px rgba(27,52,72,.04) !important; }
+        html body #root .driver-photo-root .driver-booking.red { border-color: #ff8d8d !important; }
+        html body #root .driver-photo-root .driver-booking.yellow { border-color: #ecc65a !important; }
+        html body #root .driver-photo-root .driver-send,
+        html body #root .driver-photo-root .driver-send:hover { background: #087640 !important; border: 0 !important; color: #ffffff !important; border-radius: 8px !important; }
+        html body #root .driver-photo-root .driver-upload { background: #f7fafc !important; border: 1px dashed #a9baca !important; color: #243348 !important; }
+        html body #root .driver-photo-root .driver-select { background: #ffffff !important; color: #243348 !important; border: 1px solid #cad7e2 !important; }
+        html body #root .driver-photo-root .driver-photo-refresh { background: #ffffff !important; color: #14633e !important; border: 1px solid #bfd0df !important; }
+        html body #root .driver-photo-root .driver-hub { background: #f9fcfe !important; border: 1px solid #c7d8e3 !important; }
+        html body #root .driver-photo-root .driver-store,
+        html body #root .driver-photo-root .driver-store:hover { background: #dff4e7 !important; color: #08763d !important; border: 1px solid #9fcfb0 !important; }
+        html body #root .driver-photo-root .driver-existing { background: #f8fbfd !important; border-color: #d8e5ec !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder h2 { color: #eef4ff !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder p { color: #a9b9ce !important; }
       `}</style>
     </>
   );

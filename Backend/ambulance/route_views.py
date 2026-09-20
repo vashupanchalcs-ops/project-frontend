@@ -1,6 +1,7 @@
 import json
 import urllib.request
 import urllib.parse
+import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
@@ -31,6 +32,29 @@ def _geocode(address):
     except Exception:
         pass
     return None
+
+
+@csrf_exempt
+def geocode_location(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+    try:
+        data = json.loads(request.body or b"{}")
+    except (TypeError, ValueError):
+        data = {}
+    query = str(data.get("query", data.get("address", ""))).strip() if isinstance(data, dict) else ""
+    if not query:
+        return JsonResponse({"error": "A location query is required"}, status=400)
+    result = _geocode(f"{query}, India")
+    if not result:
+        return JsonResponse({"error": "Location could not be geocoded"}, status=404)
+    lat, lng = result.split(",", 1)
+    return JsonResponse({"lat": float(lat), "lng": float(lng)})
+
+
+@csrf_exempt
+def suggest_locations(request):
+    return JsonResponse([], safe=False)
 
 
 @csrf_exempt

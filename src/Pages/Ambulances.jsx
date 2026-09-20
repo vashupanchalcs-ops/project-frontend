@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLocation, useNavigate } from "react-router-dom";
-import useLeaflet, {
+import {
   DELHI,
   makePinIcon,
   fetchRoadRoute,
@@ -132,7 +132,7 @@ export default function Ambulances() {
   const [mapLocationStatus, setMapLocationStatus] = useState("idle");
   const [targetHospital, setTargetHospital] = useState(null);
 
-  const leafletReady = useLeaflet();
+  const leafletReady = false;
   const mapRef = useRef(null);
   const mapElRef = useRef(null);
   const routeLineRef = useRef(null);
@@ -1886,7 +1886,7 @@ export default function Ambulances() {
                       ambulanceLoc={
                         selectedAmb && isIndiaLatLng(Number(selectedAmb.latitude), Number(selectedAmb.longitude))
                           ? { lat: Number(selectedAmb.latitude), lng: Number(selectedAmb.longitude), heading: Number(selectedAmb.heading) || 0, speed: selectedAmb.speed || 0 }
-                          : { lat: 28.7059, lng: 77.3274 }
+                          : null
                       }
                       pickupLoc={
                         bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed")

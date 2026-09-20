@@ -88,7 +88,35 @@ class Booking(models.Model):
     is_read          = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.ambulance_number} — {self.booked_by}"
+        return f"{self.ambulance_number} - {self.booked_by}"
+
+
+class PatientConditionPhoto(models.Model):
+    PHOTO_TYPES = [
+        ("ecg", "ECG"),
+        ("patient", "Patient condition"),
+        ("patient_id", "Patient ID"),
+        ("vitals", "Vitals / monitor"),
+        ("documents", "Medical document"),
+        ("other", "Other"),
+    ]
+
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="condition_photos")
+    photo_type = models.CharField(max_length=30, choices=PHOTO_TYPES, default="patient")
+    instruction = models.CharField(max_length=300, blank=True, default="")
+    image = models.FileField(upload_to="condition_photos/%Y/%m/%d/")
+    original_name = models.CharField(max_length=255, blank=True, default="")
+    content_type = models.CharField(max_length=100, blank=True, default="")
+    uploader_role = models.CharField(max_length=30, default="driver")
+    uploader_name = models.CharField(max_length=120, blank=True, default="")
+    uploader_email = models.EmailField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.get_photo_type_display()} for Booking #{self.booking_id}"
 
 
 class BookingChatThread(models.Model):
