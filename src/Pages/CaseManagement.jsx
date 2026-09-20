@@ -207,7 +207,62 @@ export default function CaseManagement({ scope = "hospital" }) {
     <main className={`cm-root ${isAdmin ? "cm-admin" : "cm-hospital"}`}>
       <style>{`
         .cm-root{min-height:100vh;padding:92px 24px 48px 88px;background:#101211;color:#f5f7f4;font-family:Inter,Segoe UI,sans-serif;box-sizing:border-box}.cm-root *{box-sizing:border-box}.cm-shell{max-width:1540px;margin:0 auto}.cm-eyebrow{font-size:11px;letter-spacing:1.2px;font-weight:900;color:#9bd7ad;text-transform:uppercase}.cm-title{margin:7px 0 4px;font-size:clamp(28px,3.5vw,48px);font-weight:900;letter-spacing:-1.2px}.cm-subtitle{margin:0;color:#9ba8a0;font-size:14px}.cm-header{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:20px}.cm-header-actions{display:flex;gap:8px;align-items:center}.cm-header-actions button,.cm-header-actions select{height:38px;border:1px solid #3b4740;border-radius:8px;background:#1b211e;color:#f5f7f4;padding:0 12px;font-weight:800}.cm-header-actions button{cursor:pointer}.cm-search{height:42px;min-width:min(360px,36vw);border:1px solid #3b4740;border-radius:9px;background:#202622;color:#fff;padding:0 13px;outline:none}.cm-search:focus{border-color:#79c98f}.cm-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start}.cm-filters{border:1px solid #303932;background:#171b19;border-radius:10px;padding:14px;position:sticky;top:88px}.cm-filter-heading{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:#d8e2dc}.cm-clear{border:0;background:transparent;color:#a7c8b0;font-size:10px;cursor:pointer}.cm-filter-group{border-top:1px solid #2c342f;padding-top:14px;margin-top:14px}.cm-filter-option{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:transparent;color:#9ba8a0;padding:9px 7px;text-align:left;cursor:pointer;border-radius:6px;font-size:12px}.cm-filter-option:hover,.cm-filter-option.selected{background:#242c27;color:#fff}.cm-filter-count{min-width:22px;text-align:center;border:1px solid #46544a;border-radius:4px;padding:2px 4px;font-size:10px}.cm-main{min-width:0}.cm-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.cm-toolbar-label{font-size:12px;color:#aab6ae}.cm-toolbar-label b{color:#fff}.cm-sort{border:1px solid #3b4740;border-radius:7px;background:#1b211e;color:#fff;padding:8px 10px;font-size:11px;font-weight:800}.cm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}.cm-stat{border:1px solid #303932;background:#171b19;border-radius:9px;padding:13px 14px}.cm-stat-label{font-size:10px;color:#8f9c94;text-transform:uppercase;letter-spacing:.5px}.cm-stat-value{font-size:24px;font-weight:900;margin-top:5px}.cm-stat.red .cm-stat-value{color:#ff5c62}.cm-stat.yellow .cm-stat-value{color:#f2b233}.cm-stat.green .cm-stat-value{color:#43ce72}.cm-list{border:1px solid #303932;border-radius:10px;overflow:hidden;background:#171b19}.cm-list-head{display:grid;grid-template-columns:36px 1.1fr 1fr .8fr 1fr 1.25fr 120px;gap:12px;align-items:center;padding:11px 14px;color:#7f8b84;font-size:9px;letter-spacing:.75px;text-transform:uppercase;border-bottom:1px solid #303932}.cm-case-row{display:grid;grid-template-columns:36px 1.1fr 1fr .8fr 1fr 1.25fr 120px;gap:12px;align-items:center;padding:13px 14px;border-bottom:1px solid #2c342f;min-height:80px;transition:background .15s}.cm-case-row:last-child{border-bottom:0}.cm-case-row:hover{background:#202722}.cm-case-row.tone-red{border-left:3px solid #ef4444}.cm-case-row.tone-yellow{border-left:3px solid #f2b233}.cm-case-row.tone-green{border-left:3px solid #22c55e}.cm-condition-icon{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:900;border:1px solid}.cm-condition-icon.tone-red{background:#531e22;color:#ff6870;border-color:#b93942}.cm-condition-icon.tone-yellow{background:#4b3918;color:#f2c14b;border-color:#a47a20}.cm-condition-icon.tone-green{background:#183d27;color:#4bda7a;border-color:#2c9b52}.cm-type-line{display:flex;align-items:center;gap:7px}.cm-case-type b,.cm-patient b,.cm-bed b,.cm-destination b{font-size:12px;color:#f5f7f4}.cm-case-type small,.cm-patient span,.cm-bed span,.cm-stage span,.cm-stage small,.cm-destination span,.cm-destination small{display:block;color:#8e9b92;font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cm-priority{display:inline-flex;align-items:center;padding:3px 7px;border-radius:3px;color:#101211;font-size:9px;font-weight:900;text-transform:uppercase}.cm-priority.tone-red{background:#ef4444}.cm-priority.tone-yellow{background:#f2b233}.cm-priority.tone-green{background:#22c55e}.cm-bed small{display:block;color:#748178;font-size:9px;letter-spacing:.5px}.cm-bed b{display:block;margin-top:3px}.cm-stage-label{font-size:11px}.cm-stage-label.tone-red{color:#ff656b}.cm-stage-label.tone-yellow{color:#f2b233}.cm-stage-label.tone-green{color:#42d475}.cm-actions{display:flex;justify-content:flex-end;gap:6px}.cm-actions button{border:1px solid #4b584e;background:#252d28;color:#fff;border-radius:6px;min-height:28px;padding:0 8px;font-weight:800;cursor:pointer;font-size:10px}.cm-actions button:hover{border-color:#7acb8e;background:#304236}.cm-actions .cm-open{background:#126f1e;border-color:#126f1e}.cm-empty{padding:48px 18px;text-align:center;color:#8e9b92}.cm-loading{padding:38px 18px;text-align:center;color:#b5c1b8}.cm-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:grid;place-items:center;padding:20px}.cm-modal{width:min(680px,100%);max-height:90vh;overflow:auto;background:#18201b;border:1px solid #506253;border-radius:14px;padding:20px}.cm-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.cm-modal h2{margin:0;font-size:22px}.cm-modal-close{border:0;background:#2d3930;color:#fff;border-radius:7px;padding:7px 10px;cursor:pointer}.cm-modal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:16px}.cm-modal-field{border:1px solid #334238;border-radius:8px;padding:11px}.cm-modal-field small{display:block;color:#8e9b92;font-size:10px;text-transform:uppercase}.cm-modal-field b{display:block;margin-top:5px;font-size:13px}.cm-modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.cm-modal-actions button{border:1px solid #4b584e;background:#126f1e;color:#fff;border-radius:7px;padding:9px 12px;font-weight:800;cursor:pointer}.cm-admin .cm-eyebrow{color:#8bc5ff}.cm-admin .cm-case-row.tone-red{background:linear-gradient(90deg,rgba(110,16,21,.65),rgba(35,22,22,.15))}.cm-admin .cm-case-row.tone-yellow{background:linear-gradient(90deg,rgba(105,77,12,.32),rgba(35,28,18,.08))}.cm-admin .cm-case-row.tone-green{background:linear-gradient(90deg,rgba(16,84,40,.28),rgba(22,32,24,.08))}@media(max-width:1180px){.cm-list-head,.cm-case-row{grid-template-columns:34px 1fr 1fr .75fr 1fr 1fr 100px;gap:8px}.cm-destination{display:none}}@media(max-width:820px){.cm-root{padding:86px 12px 80px}.cm-header{align-items:start;flex-direction:column}.cm-header-actions{width:100%;flex-wrap:wrap}.cm-search{min-width:0;flex:1}.cm-layout{grid-template-columns:1fr}.cm-filters{position:static}.cm-filter-group{display:flex;flex-wrap:wrap;gap:5px}.cm-filter-option{width:auto;gap:7px}.cm-list{overflow-x:auto}.cm-list-head,.cm-case-row{min-width:900px}.cm-stats{grid-template-columns:repeat(2,1fr)}}
-        .cm-admin .cm-eyebrow{color:#9bd7ad!important}
+        .cm-root{background:#fff;color:#17231b}
+        .cm-eyebrow,.cm-admin .cm-eyebrow{color:#126F1E}
+        .cm-title{color:#17231b}
+        .cm-subtitle{color:#60756a}
+        .cm-header-actions button,.cm-header-actions select{background:#fff;color:#17231b;border-color:#b9c8bd}
+        .cm-search{background:#fff;color:#17231b;border-color:#aebdb3}
+        .cm-search::placeholder{color:#7a8a80}
+        .cm-search:focus{border-color:#126F1E}
+        .cm-filters{background:#fff;border-color:#d5e1d8;box-shadow:none}
+        .cm-filter-heading{color:#22362a}
+        .cm-clear{color:#126F1E}
+        .cm-filter-group{border-color:#e0e9e3}
+        .cm-filter-option{color:#5c7063}
+        .cm-filter-option:hover,.cm-filter-option.selected{background:#eaf6ed;color:#126F1E}
+        .cm-filter-count{border-color:#b8cbbd;color:#3e5947}
+        .cm-stat{background:#fff;border-color:#d5e1d8}
+        .cm-stat-label{color:#6a7b70}
+        .cm-stat-value{color:#17231b}
+        .cm-stat.red .cm-stat-value{color:#c62835}
+        .cm-stat.yellow .cm-stat-value{color:#a66b00}
+        .cm-stat.green .cm-stat-value{color:#126F1E}
+        .cm-toolbar-label{color:#5c7063}
+        .cm-toolbar-label b{color:#17231b}
+        .cm-sort{background:#fff;color:#17231b;border-color:#b9c8bd}
+        .cm-list{background:#fff;border-color:#d5e1d8}
+        .cm-list-head{background:#f5faf6;color:#6c7d72;border-color:#d5e1d8}
+        .cm-case-row{background:#fff;border-color:#e0e9e3}
+        .cm-case-row:hover{background:#fbfefb}
+        .cm-case-row.tone-red{border-left-color:#dc2635;background:#fff8f8}
+        .cm-case-row.tone-yellow{border-left-color:#d9a300;background:#fffdf4}
+        .cm-case-row.tone-green{border-left-color:#126F1E;background:#f8fdf9}
+        .cm-condition-icon.tone-red{background:#fff0f1;color:#c62835;border-color:#efa4ab}
+        .cm-condition-icon.tone-yellow{background:#fff8dc;color:#9b6800;border-color:#e7c65e}
+        .cm-condition-icon.tone-green{background:#e8f7eb;color:#126F1E;border-color:#9fd3aa}
+        .cm-case-type b,.cm-patient b,.cm-bed b,.cm-destination b{color:#17231b}
+        .cm-case-type small,.cm-patient span,.cm-bed span,.cm-stage span,.cm-stage small,.cm-destination span,.cm-destination small{color:#6c7d72}
+        .cm-priority.tone-red{background:#ffdfe2;color:#b51f2c}
+        .cm-priority.tone-yellow{background:#fff0b8;color:#865900}
+        .cm-priority.tone-green{background:#d9f2df;color:#126F1E}
+        .cm-bed small{color:#718277}
+        .cm-stage-label.tone-red{color:#c62835}
+        .cm-stage-label.tone-yellow{color:#9b6800}
+        .cm-stage-label.tone-green{color:#126F1E}
+        .cm-actions button{background:#fff;color:#17231b;border-color:#b9c8bd}
+        .cm-actions button:hover{border-color:#126F1E;background:#eaf6ed}
+        .cm-actions .cm-open{background:#126F1E;border-color:#126F1E;color:#fff}
+        .cm-empty,.cm-loading{color:#6c7d72}
+        .cm-modal{background:#fff;color:#17231b;border-color:#cbd9ce;box-shadow:0 18px 45px rgba(18,111,30,.16)}
+        .cm-modal-close{background:#edf5ef;color:#17231b}
+        .cm-modal-field{border-color:#d5e1d8;background:#fbfefb}
+        .cm-modal-field small{color:#6c7d72}
+        .cm-modal-actions button{background:#126F1E;border-color:#126F1E}
+        .cm-admin .cm-stats{display:none}
+        .cm-admin .cm-case-row.tone-red{background:#fff8f8}
+        .cm-admin .cm-case-row.tone-yellow{background:#fffdf4}
+        .cm-admin .cm-case-row.tone-green{background:#f8fdf9}
       `}</style>
       <div className="cm-shell">
         <header className="cm-header">
@@ -231,17 +286,26 @@ export default function CaseManagement({ scope = "hospital" }) {
 
         <div className="cm-layout">
           <aside className="cm-filters">
-            <div className="cm-filter-heading"><span>CASE TYPE</span><button className="cm-clear" onClick={() => { setConditionFilter("all"); setPriorityFilter("all"); }}>CLEAR</button></div>
+            <div className="cm-filter-heading"><span>{isAdmin ? "CONDITION" : "CASE TYPE"}</span><button className="cm-clear" onClick={() => { setConditionFilter("all"); setPriorityFilter("all"); }}>CLEAR</button></div>
             {Object.entries(conditionCounts).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => <button key={type} className={`cm-filter-option ${conditionFilter === type ? "selected" : ""}`} onClick={() => setConditionFilter(type)}><span>{type}</span><span className="cm-filter-count">{count}</span></button>)}
             {!Object.keys(conditionCounts).length && <div className="cm-empty" style={{ padding: "12px 0", textAlign: "left", fontSize: 11 }}>No case types</div>}
-            <div className="cm-filter-group">
-              <div className="cm-filter-heading"><span>CALL STATUS</span><button className="cm-clear" onClick={() => setStageFilter("all")}>CLEAR</button></div>
-              {Object.entries(stageCounts).map(([stage, count]) => <button key={stage} className={`cm-filter-option ${stageFilter === stage ? "selected" : ""}`} onClick={() => setStageFilter(stage)}><span>{stage}</span><span className="cm-filter-count">{count}</span></button>)}
-            </div>
-            <div className="cm-filter-group">
-              <div className="cm-filter-heading"><span>PRIORITY</span></div>
-              {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
-            </div>
+            {isAdmin ? (
+              <div className="cm-filter-group">
+                <div className="cm-filter-heading"><span>STATUS</span><button className="cm-clear" onClick={() => setPriorityFilter("all")}>CLEAR</button></div>
+                {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
+              </div>
+            ) : (
+              <>
+                <div className="cm-filter-group">
+                  <div className="cm-filter-heading"><span>CALL STATUS</span><button className="cm-clear" onClick={() => setStageFilter("all")}>CLEAR</button></div>
+                  {Object.entries(stageCounts).map(([stage, count]) => <button key={stage} className={`cm-filter-option ${stageFilter === stage ? "selected" : ""}`} onClick={() => setStageFilter(stage)}><span>{stage}</span><span className="cm-filter-count">{count}</span></button>)}
+                </div>
+                <div className="cm-filter-group">
+                  <div className="cm-filter-heading"><span>PRIORITY</span></div>
+                  {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
+                </div>
+              </>
+            )}
           </aside>
 
           <section className="cm-main">

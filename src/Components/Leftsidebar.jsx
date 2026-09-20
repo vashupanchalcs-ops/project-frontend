@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import {
   ChevronsRight, Truck, Building2, BarChart2, Headphones, Sparkles,
-  ClipboardList, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
+  ClipboardList, ListChecks, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
   Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, Mic, FileText,
   BedDouble, UserCheck,
 } from 'lucide-react';
@@ -14,7 +14,7 @@ const adminNavItems = [
   { to: "/HospitalResponses",    icon: ShieldCheck,   label: "Hospital Response" },
   { to: "/HospitalPartnerDetails", icon: BookOpen,    label: "Hospital Details" },
   { to: "/Analytics",            icon: Activity,      label: "Analytics"        },
-  { to: "/ManageCases",          icon: ClipboardList, label: "Manage Cases"     },
+  { to: "/ManageCases",          icon: ListChecks,    label: "Manage Cases"     },
   { to: "/Requests",             icon: ClipboardList, label: "Requests"         },
   { to: "/CallIntakeConsole",    icon: PhoneCall,     label: "Call Intake"      },
   { to: "/DriverChangeRequests", icon: Headphones, label: "Driver Support", dot: true },
@@ -24,7 +24,7 @@ const adminNavItems = [
 
 const hospitalNavItems = [
   { to: "/hospital/home",          icon: Building2,         label: "Hospital Home" },
-  { to: "/hospital/manage-cases",  icon: ClipboardList,     label: "Manage Cases" },
+  { to: "/hospital/manage-cases",  icon: ListChecks,        label: "Manage Cases" },
   { to: "/hospital/responses",     icon: ShieldCheck,       label: "Hospital Response", dot: true },
   { to: "/hospital/beds",          icon: BedDouble,         label: "Bed Management", dot: true },
   { to: "/hospital/team-allocation", icon: UserCheck,         label: "Team Allocation" },
