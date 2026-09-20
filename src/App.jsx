@@ -210,6 +210,8 @@ const App = () => {
 
       {/* Rendered after page styles so every route shares the same application surface. */}
       <style>{`
+        html body #root .team-allocation button { background: #ffffff !important; color: #173645 !important; border-color: #c9d9d5 !important; }
+        html body #root .team-allocation button:hover { background: #e5f7ef !important; color: #087f72 !important; border-color: #087f72 !important; }
         #root,
         body { background: #101211 !important; color: #f6f5f0 !important; }
 
