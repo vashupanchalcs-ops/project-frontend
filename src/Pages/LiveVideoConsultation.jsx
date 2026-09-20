@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, CameraOff, CheckCircle2, Clock3, Image as ImageIcon, Maximize2, Mic, MicOff, PhoneCall, PhoneOff, RefreshCw, Send, Video, VideoOff, X } from "lucide-react";
 
-const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const getTone = (booking) => {
