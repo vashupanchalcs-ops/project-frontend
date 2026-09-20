@@ -1790,6 +1790,9 @@ const App = () => {
           color: #ffffff !important;
           box-shadow: none !important;
         }
+        html body #root .team-allocation-page .patient-banner {
+          background: #126F1E !important;
+        }
         html body #root .team-allocation-page .staff-role {
           background: #e5f7ed !important;
           color: #126f1e !important;

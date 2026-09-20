@@ -1143,7 +1143,7 @@ export default function HospitalBeds() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 24, background: "#124f4a", color: "#ffffff", borderRadius: 14, padding: "18px 20px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center" }}>
+                <div style={{ marginTop: 24, background: "#126F1E", color: "#ffffff", borderRadius: 14, padding: "18px 20px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: 17, fontWeight: 900 }}>{selectedBed.patient_name || "Emergency patient"}</div>
                     <div style={{ marginTop: 4, color: "#c7e6de", fontSize: 12 }}>{selectedBed.medical_condition || "Clinical care"}</div>
@@ -1337,7 +1337,7 @@ export default function HospitalBeds() {
                     <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", fontSize: 12 }}>
                       <div style={{ fontWeight: 800, color: "#166534" }}>👨‍⚕️ {selectedBed.attending_doctor || "Emergency Care Team"}</div>
                       <div style={{ color: "#475569", marginTop: 2 }}>Specialist Support • Shift On Duty</div>
-                      {selectedBed.status !== "available" && <button onClick={() => setShowAllocatedTeam(true)} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#145044", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
+                      {selectedBed.status !== "available" && <button onClick={() => setShowAllocatedTeam(true)} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#126F1E", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
                     </div>
                   </div>
                 </>
