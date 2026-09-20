@@ -36,12 +36,22 @@ export default function HospitalBeds() {
   const [filterType, setFilterType] = useState("all"); // all, general, icu
   const [updating, setUpdating] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showAllocatedTeam, setShowAllocatedTeam] = useState(false);
 
   // Allocation Mode states
   const [targetBooking, setTargetBooking] = useState(null);
   const [pendingBookings, setPendingBookings] = useState([]);
   const [selectedBookingIdForBed, setSelectedBookingIdForBed] = useState(urlBookingId || "");
   const icuHubRef = useRef(null);
+
+  const allocatedTeam = useMemo(() => {
+    let parsed = [];
+    try { parsed = JSON.parse(selectedBed?.assigned_staff_json || "[]"); } catch { parsed = []; }
+    if (!Array.isArray(parsed) || !parsed.length) {
+      parsed = String(selectedBed?.attending_doctor || "").split(",").map((full_name, index) => ({ full_name: full_name.trim(), role: index === 0 ? "doctor" : "care team", specialization: "Assigned care" })).filter((item) => item.full_name);
+    }
+    return parsed;
+  }, [selectedBed]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -1243,6 +1253,7 @@ export default function HospitalBeds() {
                     <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", fontSize: 12 }}>
                       <div style={{ fontWeight: 800, color: "#166534" }}>👨‍⚕️ {selectedBed.attending_doctor || "Emergency Care Team"}</div>
                       <div style={{ color: "#475569", marginTop: 2 }}>Specialist Support • Shift On Duty</div>
+                      {allocatedTeam.length > 0 && <button onClick={() => setShowAllocatedTeam(true)} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#145044", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
                     </div>
                   </div>
                 </>
@@ -1483,6 +1494,17 @@ export default function HospitalBeds() {
                 Close Drawer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {showAllocatedTeam && selectedBed && (
+        <div onClick={() => setShowAllocatedTeam(false)} style={{ position: "fixed", inset: 0, zIndex: 10050, background: "rgba(15,23,42,.58)", display: "grid", placeItems: "center", padding: 20 }}>
+          <div onClick={(event) => event.stopPropagation()} style={{ width: "min(760px, 100%)", maxHeight: "90vh", overflow: "auto", background: "#eff6f5", borderRadius: 18, padding: 24, color: "#173645" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><div style={{ color: "#087f72", fontSize: 11, fontWeight: 900, letterSpacing: ".6px" }}>ALLOCATED BED · LIVE TEAM</div><h2 style={{ margin: "5px 0" }}>Care team for Bed {selectedBed.bed_number}</h2><div style={{ color: "#668087", fontSize: 12 }}>{selectedBed.patient_name || "Emergency patient"} · {selectedBed.medical_condition || "Clinical care"}</div></div><button onClick={() => setShowAllocatedTeam(false)} style={{ border: 0, background: "#fff", borderRadius: 8, fontSize: 20, cursor: "pointer" }}>×</button></div>
+            <div style={{ marginTop: 18, background: "#e5f7ed", border: "1px solid #a9dfc7", borderRadius: 12, padding: 13, color: "#12644f", fontWeight: 800 }}>✓ Team allocated · assigned to this patient and bed</div>
+            <h3 style={{ margin: "20px 0 10px" }}>Assigned multidisciplinary team <span style={{ float: "right", fontSize: 11, color: "#087f72" }}>{allocatedTeam.length} MEMBERS</span></h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>{allocatedTeam.map((member, index) => <div key={`${member.id || member.full_name}-${index}`} style={{ background: "#fff", border: "1px solid #c9e3da", borderRadius: 14, padding: 15 }}><div style={{ display: "inline-block", padding: "4px 8px", borderRadius: 999, background: "#d9f3e8", color: "#145044", fontSize: 10, fontWeight: 900, textTransform: "uppercase" }}>{member.role || "Care team"}</div><div style={{ marginTop: 10, fontWeight: 900 }}>{member.full_name || member.name}</div><div style={{ marginTop: 5, color: "#668087", fontSize: 12 }}>{member.specialization || "General care"}</div>{member.years_experience != null && <div style={{ marginTop: 4, color: "#668087", fontSize: 11 }}>{member.years_experience} years experience</div>}{member.contact_number && <div style={{ marginTop: 7, color: "#087f72", fontSize: 11 }}>☎ {member.contact_number}</div>}</div>)}</div>
+            <button onClick={() => setShowAllocatedTeam(false)} style={{ marginTop: 20, border: 0, borderRadius: 9, padding: "11px 18px", background: "#145044", color: "#fff", fontWeight: 900, cursor: "pointer" }}>Close team view</button>
           </div>
         </div>
       )}
