@@ -274,12 +274,16 @@ def assign_staff_team(request, hospital_id):
     except Booking.DoesNotExist:
         return JsonResponse({"error": "Booking not found for this hospital"}, status=404)
 
+    requested_ids = {int(x) for x in (data.get("staff_ids") or []) if str(x).isdigit()}
     staff_qs = HospitalStaff.objects.filter(hospital_id=hospital_id, is_active=True, is_busy=False)
     condition = f"{booking.patient_condition} {booking.vitals_summary} {booking.destination}".lower()
     specialty_terms = [term for term in ("cardio", "neuro", "trauma", "orthopedic", "respiratory", "emergency", "icu") if term in condition]
     team = []
     for role in ("doctor", "nurse", "technician", "support"):
         candidates = list(staff_qs.filter(role=role))
+        requested = [s for s in candidates if s.id in requested_ids]
+        if requested:
+            candidates = requested
         if not candidates:
             continue
         candidates.sort(key=lambda s: (sum(term in (s.specialization or "").lower() for term in specialty_terms) * 100 + (s.is_on_call * 25) + (s.years_experience * 3)), reverse=True)

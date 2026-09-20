@@ -25,7 +25,7 @@ const hospitalNavItems = [
   { to: "/hospital/home",          icon: Building2,         label: "Hospital Home" },
   { to: "/hospital/responses",     icon: ShieldCheck,       label: "Hospital Response", dot: true },
   { to: "/hospital/beds",          icon: BedDouble,         label: "Bed Management", dot: true },
-  { to: "/hospital/assign-doctor", icon: UserCheck,         label: "Staff Allocation" },
+  { to: "/hospital/team-allocation", icon: UserCheck,         label: "Team Allocation" },
   { to: "/hospital/reports",       icon: BookOpen,          label: "Case Reports", dot: true },
   { to: "/hospital/live-track",    icon: MapPinned,         label: "Live Map", dot: true },
   { to: "/hospital/resources",     icon: BriefcaseBusiness, label: "Resources & Beds" },
@@ -38,6 +38,7 @@ const userNavItems = [
   { to: "/Ambulances",  icon: PlayCircle,label: "Ambulances"  },
   { to: "/Hospitals",   icon: Send,      label: "Hospitals"   },
   { to: "/MyBookings",  icon: Search,    label: "My Bookings" },
+  { to: "/MyCareTeam",  icon: Users,     label: "My Care Team" },
   { to: "/UserChatbot", icon: Plus,      label: "AI Assistant" },
   { to: "/LiveTracking",icon: Compass,   label: "Live Track"  },
 ];

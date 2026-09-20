@@ -513,6 +513,9 @@ export function MyBookings() {
                             )}
                           </div>
                         )}
+                        {b.assigned_doctor_names && (
+                          <button onClick={() => navigate("/MyCareTeam")} style={{ gridColumn: "1 / -1", marginTop: 8, padding: "9px 12px", border: 0, borderRadius: 8, background: "#087f72", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>
+                        )}
                       </div>
                     </div>
                     {b.hospital_response === "not_ready" && (

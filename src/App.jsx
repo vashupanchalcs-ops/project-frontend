@@ -40,6 +40,8 @@ import DriverInsuranceForm   from "./Pages/DriverInsuranceForm";
 import HospitalInsuranceView from "./Pages/HospitalInsuranceView";
 import HospitalDoctorAssignment from "./Pages/HospitalDoctorAssignment";
 import HospitalBeds             from "./Pages/HospitalBeds";
+import HospitalTeamAllocation  from "./Pages/HospitalTeamAllocation";
+import UserCareTeam             from "./Pages/UserCareTeam";
 
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
@@ -173,12 +175,14 @@ const App = () => {
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalDoctorAssignment />} />} />
+        <Route path="/hospital/team-allocation" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/beds" element={<HospitalRoute element={<HospitalBeds />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />
         <Route path="/Hospitals" element={<ProtectedRoute element={<Hospitals />} />} />
         <Route path="/MyBookings" element={<ProtectedRoute element={<MyBookings />} />} />
+        <Route path="/MyCareTeam" element={<ProtectedRoute element={<UserCareTeam />} />} />
         <Route path="/cases/:bookingId" element={<ProtectedRoute element={<CaseDetails />} />} />
         <Route path="/UserChatbot" element={<ProtectedRoute element={<UserChatbot />} />} />
         <Route path="/info/:section" element={<ProtectedRoute element={<InfoPage />} />} />
