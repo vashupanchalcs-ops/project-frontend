@@ -1001,7 +1001,7 @@ export default function Login() {
 
         .auth-roles {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -1508,6 +1508,7 @@ export default function Login() {
           .auth-brand { font-size: 26px; }
           .auth-right { padding: 24px 18px; }
           .auth-step-title { font-size: 28px; }
+          .auth-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         /* Keep the YiCare mark visible against the dark authentication header. */
