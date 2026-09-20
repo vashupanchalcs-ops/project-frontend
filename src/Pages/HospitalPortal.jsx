@@ -3706,7 +3706,7 @@ export default function HospitalPortal() {
                         <input className="hp-input" value={staffForm.specialization} onChange={(e) => setStaffForm((f) => ({ ...f, specialization: e.target.value }))} placeholder="Specialization" />
                         <input className="hp-input" value={staffForm.contact_number} onChange={(e) => setStaffForm((f) => ({ ...f, contact_number: e.target.value }))} placeholder="Contact number" />
                         <input className="hp-input" value={staffForm.email} onChange={(e) => setStaffForm((f) => ({ ...f, email: e.target.value }))} placeholder="Email" />
-                        <input className="hp-input" type="number" value={staffForm.years_experience} onChange={(e) => setStaffForm((f) => ({ ...f, years_experience: Number(e.target.value) }))} placeholder="Experience (years)" />
+                        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, fontWeight: 800, color: "#334155" }}>Experience (years)<input className="hp-input" type="number" min="0" value={staffForm.years_experience} onChange={(e) => setStaffForm((f) => ({ ...f, years_experience: Number(e.target.value) }))} placeholder="Enter years of experience" /></label>
                         <select className="hp-select" value={staffForm.is_active ? "available" : "unavailable"} onChange={(e) => setStaffForm((f) => ({ ...f, is_active: e.target.value === "available" }))}>
                           <option value="available">Available</option>
                           <option value="unavailable">Unavailable</option>

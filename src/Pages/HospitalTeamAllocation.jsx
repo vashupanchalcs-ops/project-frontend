@@ -18,6 +18,12 @@ export default function HospitalTeamAllocation() {
   const condition = `${booking?.patient_condition || ""} ${booking?.vitals_summary || ""}`.toLowerCase();
   const ranked = useMemo(() => Object.fromEntries(roles.map(role => [role, staff.filter(s => s.role === role && s.is_active !== false && !s.is_busy).sort((a, b) => ((b.is_on_call ? 25 : 0) + (b.years_experience || 0) * 3 + (condition.includes(String(b.specialization || "").toLowerCase()) ? 100 : 0)) - ((a.is_on_call ? 25 : 0) + (a.years_experience || 0) * 3 + (condition.includes(String(a.specialization || "").toLowerCase()) ? 100 : 0))).slice(0, 5)])), [staff, condition]);
   const toggle = (role, id) => setSelected(v => ({ ...v, [role]: v[role] === id ? null : id }));
+  const goReview = () => {
+    const next = { ...selected };
+    roles.forEach(role => { if (!next[role] && ranked[role]?.[0]) next[role] = ranked[role][0].id; });
+    if (!Object.values(next).some(Boolean)) { setNotice("No available staff found for this booking."); return; }
+    setSelected(next); setNotice(""); setStep(2);
+  };
   const allocate = async () => { const ids = Object.values(selected).filter(Boolean); if (!booking || !ids.length) return; setSaving(true); const res = await fetch(`${BASE}/api/hospitals/${hospitalId}/staff-team/assign/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_id: booking.id, staff_ids: ids }) }); const data = await res.json(); setSaving(false); setNotice(res.ok ? "Team allocated and bed record updated." : (data.error || "Unable to allocate team")); if (res.ok) { setBookings(v => v.map(b => b.id === booking.id ? { ...b, assigned_doctor_names: data.team.map(x => x.full_name).join(", "), assigned_doctor_specializations: data.team.map(x => `${x.role}: ${x.specialization || "General"}`).join(", ") } : b)); setStep(3); } };
   if (loading) return <div style={{ padding: 100 }}>Loading team allocation hub…</div>;
   return <main className="team-allocation" style={{ marginLeft: 64, padding: "96px 28px 40px", minHeight: "100vh", background: "#eef5f4", color: "#173645" }}>
