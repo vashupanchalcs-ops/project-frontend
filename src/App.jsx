@@ -215,6 +215,9 @@ const App = () => {
         html body #root .team-allocation-page .staff-role { background: #d9f3e8 !important; color: #145044 !important; }
         html body #root .team-allocation-page .team-btn.primary { background: #145044 !important; color: #ffffff !important; }
         html body #root .team-allocation-page .staff-check { accent-color: #145044 !important; }
+        html body #root .team-allocation-page button.team-btn.primary:hover { background: #145044 !important; color: #ffffff !important; }
+        html body #root .team-allocation-page .staff-card:hover { background: #fffdf0 !important; border-color: #f2b233 !important; }
+        html body #root .team-allocation-page .staff-card.selected { background: #e5f7ed !important; border-color: #145044 !important; }
         #root,
         body { background: #101211 !important; color: #f6f5f0 !important; }
 
