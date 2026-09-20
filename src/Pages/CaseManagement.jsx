@@ -1,7 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "");
+const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
+const CASE_CACHE_PREFIX = "swiftrescue_case_management_v2";
+
+const readCaseCache = (key) => {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(key) || "[]");
+    return Array.isArray(cached) ? cached : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeCaseCache = (key, value) => {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // The API remains the source of truth when browser storage is unavailable.
+  }
+};
 
 const conditionMeta = (value) => {
   const text = String(value || "").toLowerCase();
@@ -71,7 +89,7 @@ const safeDate = (value) => {
   return Number.isNaN(date.getTime()) ? "Recent case" : date.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 };
 
-function CaseRow({ item, scope, onOpen, onDelete, deleting }) {
+function CaseRow({ item, scope, onOpen }) {
   const navigate = useNavigate();
   const condition = conditionMeta(item.patient_condition);
   const priority = priorityMeta(item);
@@ -107,7 +125,6 @@ function CaseRow({ item, scope, onOpen, onDelete, deleting }) {
         <small>{hasTeam ? `${teamCount} team member${teamCount === 1 ? "" : "s"} allocated` : "Care team pending"}</small>
       </div>
       <div className="cm-actions">
-        <button className="cm-delete" onClick={(event) => { event.stopPropagation(); onDelete(item); }} disabled={deleting} title="Delete case">{deleting ? "…" : "⌫"}</button>
         <button className="cm-open" onClick={() => navigate(openPath)}>{scope === "hospital" ? "Manage" : "Open"}</button>
       </div>
     </article>
@@ -117,8 +134,13 @@ function CaseRow({ item, scope, onOpen, onDelete, deleting }) {
 export default function CaseManagement({ scope = "hospital" }) {
   const navigate = useNavigate();
   const isAdmin = scope === "admin";
-  const [cases, setCases] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const hospitalIdentity = isAdmin
+    ? "admin"
+    : localStorage.getItem("hospital_id") || localStorage.getItem("hospital_name") || localStorage.getItem("name") || "unknown";
+  const cacheKey = `${CASE_CACHE_PREFIX}:${scope}:${hospitalIdentity}`;
+  const initialCases = readCaseCache(cacheKey);
+  const [cases, setCases] = useState(initialCases);
+  const [loading, setLoading] = useState(initialCases.length === 0);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [conditionFilter, setConditionFilter] = useState("all");
@@ -126,37 +148,59 @@ export default function CaseManagement({ scope = "hospital" }) {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [selected, setSelected] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [toast, setToast] = useState(null);
+  const activeRequest = useRef(null);
 
   const loadCases = async (silent = false) => {
-    if (!silent) setLoading(true);
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
     try {
-      const bookingsResponse = await fetch(`${BASE}/api/bookings/`);
-      const allBookings = bookingsResponse.ok ? asArray(await bookingsResponse.json(), ["results", "bookings"]) : [];
-      let visible = allBookings;
-      if (!isAdmin) {
-        const hospitalId = localStorage.getItem("hospital_id");
-        const hospitalName = String(localStorage.getItem("name") || "").trim().toLowerCase();
-        visible = allBookings.filter((item) => {
-          const idMatch = hospitalId && String(item.assigned_hospital_id) === String(hospitalId);
-          const name = String(item.assigned_hospital_name || "").trim().toLowerCase();
-          return idMatch || (hospitalName && name === hospitalName);
-        });
-        if (!visible.length && hospitalId) {
-          const dashboardResponse = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/`);
-          if (dashboardResponse.ok) {
-            const dashboard = await dashboardResponse.json();
-            visible = asArray(dashboard?.queue, ["results"]);
-          }
+      let visible = [];
+      const request = (url) => fetch(url, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      const hospitalId = localStorage.getItem("hospital_id");
+      let dashboardLoaded = false;
+
+      // Hospital dashboard already applies the correct id/email/name fallback
+      // and is much smaller than downloading every booking in the network.
+      if (!isAdmin && hospitalId) {
+        const dashboardResponse = await request(`${BASE}/api/hospitals/${encodeURIComponent(hospitalId)}/dashboard/`);
+        if (dashboardResponse.ok) {
+          const dashboard = await dashboardResponse.json();
+          visible = asArray(dashboard?.queue, ["results"]);
+          dashboardLoaded = true;
         }
       }
-      setCases(visible.map(normalizeCase).filter((item) => item.id != null));
+
+      if (isAdmin || !dashboardLoaded) {
+        const bookingsResponse = await request(`${BASE}/api/bookings/`);
+        const allBookings = bookingsResponse.ok ? asArray(await bookingsResponse.json(), ["results", "bookings"]) : [];
+        visible = isAdmin ? allBookings : allBookings.filter((item) => {
+          const hospitalName = String(
+            localStorage.getItem("hospital_name") || localStorage.getItem("name") || ""
+          ).trim().toLowerCase();
+          const idMatch = hospitalId && String(item.assigned_hospital_id) === String(hospitalId);
+          const name = String(item.assigned_hospital_name || item.destination || "").trim().toLowerCase();
+          return idMatch || (hospitalName && name === hospitalName);
+        });
+      }
+
+      const normalized = visible.map(normalizeCase).filter((item) => item.id != null);
+      setCases(normalized);
+      writeCaseCache(cacheKey, normalized);
       setError("");
     } catch (loadError) {
-      if (!silent) setError(loadError.message || "Unable to load cases");
+      if (loadError?.name !== "AbortError" && cases.length === 0 && !silent) {
+        setError(loadError.message || "Unable to load cases");
+      }
     } finally {
-      if (!silent) setLoading(false);
+      if (activeRequest.current === controller) {
+        activeRequest.current = null;
+        setLoading(false);
+      }
     }
   };
 
@@ -165,14 +209,11 @@ export default function CaseManagement({ scope = "hospital" }) {
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") loadCases(true);
     }, 10000);
-    return () => clearInterval(timer);
-  }, [scope]);
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const timer = setTimeout(() => setToast(null), 3200);
-    return () => clearTimeout(timer);
-  }, [toast]);
+    return () => {
+      clearInterval(timer);
+      activeRequest.current?.abort();
+    };
+  }, [scope, cacheKey]);
 
   const conditionCounts = useMemo(() => cases.reduce((counts, item) => {
     const type = conditionMeta(item.patient_condition).type;
@@ -223,30 +264,6 @@ export default function CaseManagement({ scope = "hospital" }) {
 
   const openCase = (item) => setSelected(item);
 
-  const deleteCase = async (item) => {
-    if (!item?.id || deletingId) return;
-    setDeletingId(item.id);
-    setError("");
-    try {
-      const response = await fetch(`${BASE}/api/bookings/${item.id}/`, { method: "DELETE" });
-      if (!response.ok) {
-        let detail = "Unable to delete this case";
-        try {
-          const payload = await response.json();
-          detail = payload?.detail || payload?.error || detail;
-        } catch {}
-        throw new Error(detail);
-      }
-      setCases((current) => current.filter((caseItem) => String(caseItem.id) !== String(item.id)));
-      setSelected((current) => current && String(current.id) === String(item.id) ? null : current);
-      setToast({ type: "success", message: `Case #${item.id} deleted successfully` });
-    } catch (deleteError) {
-      setToast({ type: "error", message: deleteError.message || "Unable to delete this case" });
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   return (
     <main className={`cm-root ${isAdmin ? "cm-admin" : "cm-hospital"}`}>
       <style>{`
@@ -296,9 +313,6 @@ export default function CaseManagement({ scope = "hospital" }) {
         .cm-stage-label.tone-green{color:#126F1E}
         .cm-actions button{background:#fff;color:#17231b;border-color:#b9c8bd}
         .cm-actions button:hover{border-color:#126F1E;background:#eaf6ed}
-        .cm-actions .cm-delete{background:#dc2635;border-color:#dc2635;color:#fff;min-width:32px}
-        .cm-actions .cm-delete:hover{background:#b51f2c;border-color:#b51f2c}
-        .cm-actions .cm-delete:disabled{opacity:.65;cursor:wait}
         .cm-actions .cm-open{background:#126F1E;border-color:#126F1E;color:#fff}
         .cm-filter-option.selected .cm-filter-count{color:inherit;border-color:currentColor}
         .cm-filter-option.tone-filter-red.selected{background:#c9152d;color:#fff}
@@ -322,7 +336,6 @@ export default function CaseManagement({ scope = "hospital" }) {
         .cm-toast-success{border-color:#8bc99a}.cm-toast-success::before{content:"✓";display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#d9f2df;color:#126F1E;font-weight:900}.cm-toast-error{border-color:#efabb1}.cm-toast-error::before{content:"!";display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#ffdfe2;color:#b51f2c;font-weight:900}
         @media(max-width:820px){.cm-toast{right:12px;top:86px;min-width:0;max-width:calc(100vw - 24px)}}
       `}</style>
-      {toast && <div className={`cm-toast cm-toast-${toast.type}`} role="status">{toast.message}</div>}
       <div className="cm-shell">
         <header className="cm-header">
           <div>
@@ -374,7 +387,7 @@ export default function CaseManagement({ scope = "hospital" }) {
               {loading && <div className="cm-loading">Loading assigned cases...</div>}
               {!loading && error && <div className="cm-empty">{error}</div>}
               {!loading && !error && !filteredCases.length && <div className="cm-empty">No cases match the selected filters.</div>}
-              {!loading && !error && filteredCases.map((item) => <CaseRow key={item.id} item={item} scope={scope} onOpen={openCase} onDelete={deleteCase} deleting={String(deletingId) === String(item.id)} />)}
+              {!loading && !error && filteredCases.map((item) => <CaseRow key={item.id} item={item} scope={scope} onOpen={openCase} />)}
             </div>
           </section>
         </div>
