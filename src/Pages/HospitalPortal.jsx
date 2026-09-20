@@ -326,6 +326,25 @@ export default function HospitalPortal() {
       });
       const created = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(created.error || "Unable to add staff");
+      // Show the server-returned row immediately. Revalidation continues in
+      // the background so a slow Render database never blocks the new card.
+      setStaff((current) => [
+        created,
+        ...current.filter((member) => String(member.id) !== String(created.id)),
+      ]);
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+          ...cached,
+          hospital: hospital || cached.hospital,
+          staff: [
+            created,
+            ...(Array.isArray(cached.staff) ? cached.staff : []).filter(
+              (member) => String(member.id) !== String(created.id),
+            ),
+          ],
+        }));
+      } catch {}
       setCreatedStaffCredentials(created);
       setStaffForm({
         full_name: "",
@@ -342,7 +361,7 @@ export default function HospitalPortal() {
         is_active: true,
       });
       setShowAddStaffForm(false);
-      await fetchHospitalDashboard();
+      void fetchHospitalDashboard({ silent: true });
     } catch (error) {
       setErr(error?.message || "Unable to add staff");
     }

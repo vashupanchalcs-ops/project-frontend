@@ -66,10 +66,23 @@ const PANEL_PAGES = {
   ],
 };
 
+const normalizeNotification = (item, index = 0) => {
+  const source = item && typeof item === "object" ? item : {};
+  const bookingId = source.booking_id ?? source.bookingId ?? source.id;
+  const fallbackType = String(source.type || "update").replace(/[_-]+/g, " ").trim();
+  return {
+    ...source,
+    id: source.id ?? `notification-${bookingId ?? index}`,
+    title: source.title || source.heading || (bookingId ? `Booking #${bookingId}` : "Hospital update"),
+    message: source.message || source.body || source.description || source.pickup_location || "New update available",
+    status: source.status || source.type || fallbackType || "update",
+  };
+};
+
 const dedupeNotifications = (items) => {
   const seen = new Set();
-  return (Array.isArray(items) ? items : []).filter((item) => {
-    const key = `${item?.id || ""}-${item?.title || ""}-${item?.message || ""}`;
+  return (Array.isArray(items) ? items : []).map(normalizeNotification).filter((item) => {
+    const key = `${item.id || ""}-${item.title || ""}-${item.message || ""}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -282,7 +295,7 @@ const Topnavbar = () => {
             timestamp: b.created_at || new Date().toISOString(),
             read: false,
           }));
-        setNotifs(mine);
+        setNotifs(dedupeNotifications(mine));
         const notifKey = `hospital_notif_read_${hospitalEmail}`;
         const readIds = JSON.parse(localStorage.getItem(notifKey) || "[]");
         setUnread(mine.filter((n) => !readIds.includes(n.id)).length);
@@ -299,7 +312,7 @@ const Topnavbar = () => {
         const list = Array.isArray(data?.notifications) ? data.notifications : [];
         const key = `staff_notif_read_${staffId || email}`;
         const readIds = JSON.parse(localStorage.getItem(key) || "[]");
-        setNotifs(list);
+        setNotifs(dedupeNotifications(list));
         setUnread(list.filter((item) => !readIds.includes(item.id)).length);
       })
       .catch(() => { setNotifs([]); setUnread(0); });
@@ -1156,20 +1169,24 @@ const Topnavbar = () => {
                       <div className="nf-drop-item-top">
                         <span className="nf-drop-amb">
                           {role === "driver"
-                            ? (n.title || `${n.ambulance_number || "Notification"}`)
-                            : ` ${n.ambulance_number}`}
+                            ? n.title
+                            : role === "hospital"
+                            ? n.title
+                            : (n.ambulance_number || n.title || "Notification")}
                         </span>
                         <span className="nf-drop-time">{n.created_at || (n.timestamp ? new Date(n.timestamp).toLocaleTimeString("en-IN", {hour:"2-digit",minute:"2-digit"}) : "")}</span>
                       </div>
                       {role === "driver"
-                        ? <div className="nf-drop-loc">{n.message || n.pickup_location}</div>
+                        ? <div className="nf-drop-loc">{n.message || n.pickup_location || "New driver update"}</div>
+                        : role === "hospital"
+                        ? <div className="nf-drop-loc">{n.message || n.pickup_location || "New hospital alert"}</div>
                         : <>
-                            <div className="nf-drop-loc"> {n.pickup_location}</div>
-                            <div className="nf-drop-user">{n.booked_by}</div>
+                            <div className="nf-drop-loc"> {n.pickup_location || n.message || "New booking update"}</div>
+                            <div className="nf-drop-user">{n.booked_by || "System update"}</div>
                           </>
                       }
                       <span className={`nf-drop-status ${n.status==="confirmed"?"nf-drop-status-confirmed":""}`}>
-                        {n.status || n.type}
+                        {n.status || n.type || "Update"}
                       </span>
                     </div>
                   ))

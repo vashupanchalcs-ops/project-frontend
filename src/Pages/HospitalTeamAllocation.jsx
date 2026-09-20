@@ -10,6 +10,20 @@ const asArray = (value, keys = []) => {
   return [];
 };
 
+const normalizeBooking = (item) => (
+  item && typeof item === "object"
+    ? { ...item, id: item.id ?? item.booking_id }
+    : null
+);
+
+const readPortalCache = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+  } catch {
+    return null;
+  }
+};
+
 const roleFromValue = (value) => {
   const text = String(value || "").toLowerCase();
   return ROLES.find((role) => text === role || text.includes(role)) || "support";
@@ -41,35 +55,84 @@ export default function HospitalTeamAllocation() {
   const navigate = useNavigate();
   const requestedBookingId = new URLSearchParams(search).get("booking_id") || "";
   const editMode = pathname.endsWith("/edit") || new URLSearchParams(search).get("edit") === "1";
-  const [bookings, setBookings] = useState([]);
-  const [staff, setStaff] = useState([]);
+  const cachedPortal = readPortalCache();
+  const cachedHospitalId = cachedPortal?.hospital?.id || cachedPortal?.hospital?.hospital_id || "";
+  const [bookings, setBookings] = useState(() => (
+    asArray(cachedPortal?.queue, ["bookings", "results"]).map(normalizeBooking).filter((item) => item?.id)
+  ));
+  const [staff, setStaff] = useState(() => asArray(cachedPortal?.staff, ["results", "staff", "members"]));
   const [bookingId, setBookingId] = useState(requestedBookingId);
   const [selected, setSelected] = useState({});
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
-  const hospitalId = localStorage.getItem("hospital_id");
+  const hospitalId = localStorage.getItem("hospital_id") || String(cachedHospitalId || "");
   const activeBookingId = bookingId || requestedBookingId;
   const booking = useMemo(() => bookings.find((item) => String(item.id) === String(activeBookingId)) || (!activeBookingId ? bookings[0] || null : null), [bookings, activeBookingId]);
   const savedTeam = useMemo(() => parseSavedTeam(booking), [booking]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetch(`${BASE}/api/bookings/`).then((response) => response.ok ? response.json() : []),
-      fetch(`${BASE}/api/hospitals/${hospitalId}/staff/`).then((response) => response.ok ? response.json() : []),
-    ]).then(([rawRows, people]) => {
+    const controller = new AbortController();
+    const load = async () => {
+      let dashboard = null;
+      let dashboardOk = false;
+      let people = [];
+      let staffOk = false;
+      let rawRows = [];
+
+      if (hospitalId) {
+        const [dashboardResponse, staffResponse] = await Promise.all([
+          fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/`, { cache: "no-store", signal: controller.signal }),
+          fetch(`${BASE}/api/hospitals/${hospitalId}/staff/`, { cache: "no-store", signal: controller.signal }),
+        ]);
+        dashboardOk = dashboardResponse.ok;
+        staffOk = staffResponse.ok;
+        if (dashboardResponse.ok) dashboard = await dashboardResponse.json();
+        if (staffResponse.ok) people = await staffResponse.json();
+        rawRows = asArray(dashboard?.queue, ["bookings", "results"]);
+      }
+
+      // Use the fast, hospital-scoped dashboard response first. The global
+      // endpoint remains a compatibility fallback for older records.
+      if (!rawRows.length) {
+        const bookingsResponse = await fetch(`${BASE}/api/bookings/`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (bookingsResponse.ok) rawRows = await bookingsResponse.json();
+      }
+
       if (cancelled) return;
-      const rows = Array.isArray(rawRows) ? rawRows : (rawRows?.results || rawRows?.bookings || []);
-      const hospitalRows = rows.filter((item) => !hospitalId || String(item.assigned_hospital_id) === String(hospitalId));
+      const rows = (Array.isArray(rawRows) ? rawRows : (rawRows?.results || rawRows?.bookings || []))
+        .map(normalizeBooking)
+        .filter((item) => item?.id);
+      const dashboardRows = asArray(dashboard?.queue, ["bookings", "results"])
+        .map(normalizeBooking)
+        .filter((item) => item?.id);
+      const hospitalRows = dashboardRows.length
+        ? dashboardRows
+        : rows.filter((item) => !hospitalId || String(item.assigned_hospital_id) === String(hospitalId));
       const requested = rows.find((item) => String(item.id) === String(requestedBookingId));
       const filtered = hospitalRows.length ? hospitalRows : (requested ? [requested] : hospitalRows);
       setBookings(filtered);
-      setStaff(asArray(people, ["results", "staff", "members"]));
+      const loadedStaff = asArray(people, ["results", "staff", "members"]);
+      setStaff(staffOk ? loadedStaff : asArray(cachedPortal?.staff, ["results", "staff", "members"]));
       const selectedBooking = filtered.find((item) => String(item.id) === String(requestedBookingId));
       setBookingId(String((selectedBooking || filtered[0])?.id || ""));
-    }).catch(() => setNotice("Unable to load allocation data."));
-    return () => { cancelled = true; };
+      if (!dashboardOk && !filtered.length && !people.length) {
+        setNotice("Unable to load allocation data. Please retry.");
+      } else {
+        setNotice("");
+      }
+    };
+    load().catch((error) => {
+      if (!cancelled && error?.name !== "AbortError") setNotice("Unable to load allocation data. Please retry.");
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [hospitalId, requestedBookingId]);
 
   const ranked = useMemo(() => {

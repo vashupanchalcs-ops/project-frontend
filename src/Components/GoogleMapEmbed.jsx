@@ -73,7 +73,7 @@ export default function GoogleMapEmbed({
         height="100%"
         style={{ border: 0, display: "block", borderRadius: 10 }}
         allowFullScreen
-        loading="lazy"
+        loading="eager"
         referrerPolicy="no-referrer-when-downgrade"
       />
       {pickup && (
