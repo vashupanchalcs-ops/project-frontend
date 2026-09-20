@@ -3050,7 +3050,7 @@ export default function HospitalPortal() {
                               style={{ background: q.assigned_doctor_names ? "#0f766e" : "#166534", color: "#fff" }}
                               onClick={() => navigate(`/hospital/team-allocation?booking_id=${q.booking_id}`)}
                             >
-                              👨‍⚕️ {q.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
+                              👨‍⚕️ {q.assigned_doctor_names ? "Edit allocated team" : "Assign Staff"}
                             </button>
                           )}
                           <button
@@ -3246,7 +3246,7 @@ export default function HospitalPortal() {
                                   }}
                                   onClick={() => navigate(`/hospital/team-allocation?booking_id=${q.booking_id}`)}
                                 >
-                                  👨‍⚕️ {q.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
+                                  👨‍⚕️ {q.assigned_doctor_names ? "Edit allocated team" : "Assign Staff"}
                                 </button>
 
                                 {/* Allocate Bed Button — navigates to Bed Management Console to choose specific bed */}
@@ -3368,7 +3368,7 @@ export default function HospitalPortal() {
                             style={{ marginTop: 8, background: q.assigned_doctor_names ? "#0f766e" : "#166534" }}
                             onClick={() => navigate(`/hospital/team-allocation?booking_id=${q.booking_id}`)}
                           >
-                            👨‍⚕️ {q.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
+                            👨‍⚕️ {q.assigned_doctor_names ? "Edit allocated team" : "Assign Staff"}
                           </button>
                           <button
                             className="hp-btn primary"
