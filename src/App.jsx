@@ -102,6 +102,13 @@ const App = () => {
       localStorage.setItem("role", "admin");
     }
   }, [email]);
+  // Prefetch critical data + keep Render backend alive (prevents 30s cold starts)
+  useEffect(() => {
+    import("./utils/apiService").then(({ prefetchAll, startKeepalive }) => {
+      prefetchAll();
+      startKeepalive();
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -1883,15 +1890,16 @@ const App = () => {
         html body #root .live-consult-root .live-consult-panel { background: #ffffff !important; border: 1px solid #dce5eb !important; color: #172235 !important; border-radius: 10px !important; }
         html body #root .live-consult-root .live-consult-booking { background: #fbfdff !important; border: 1px solid #dae4eb !important; color: #172235 !important; }
         html body #root .live-consult-root .live-consult-booking.active { border-color: #087640 !important; }
-        html body #root .live-consult-root .live-consult-stage { background: #0f172a !important; border: 0 !important; }
+        html body #root .live-consult-root .live-consult-stage { background: #f7fafc !important; border: 1px solid #dce5eb !important; }
         html body #root .live-consult-root .live-consult-stage :is(h2, p, span) { color: inherit !important; }
-        html body #root .live-consult-root .live-consult-stage-placeholder { color: #eef4ff !important; }
-        html body #root .live-consult-root .live-consult-stage-placeholder p { color: #a9b9ce !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder { color: #172235 !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder p { color: #64748b !important; }
         html body #root .live-consult-root .live-consult-avatar { background: #1f8b59 !important; color: #ffffff !important; }
-        html body #root .live-consult-root .live-consult-stage-tag { background: rgba(18,29,48,.82) !important; color: #ffffff !important; }
-        html body #root .live-consult-root .live-consult-stage-tag span { color: #ffffff !important; }
-        html body #root .live-consult-root .live-consult-vitals { background: #ffffff !important; border: 1px solid #dce5eb !important; }
-        html body #root .live-consult-root .live-consult-vital-label { color: #8190a3 !important; }
+        html body #root .live-consult-root .live-consult-stage-tag { background: rgba(255,255,255,.94) !important; color: #172235 !important; border: 1px solid #dce5eb !important; }
+        html body #root .live-consult-root .live-consult-stage-tag span { color: #172235 !important; }
+        html body #root .live-consult-root .live-consult-vitals { background: linear-gradient(135deg,#eaf6ff,#f7fbff) !important; border: 1px solid #b9d7ea !important; border-radius: 14px !important; box-shadow: 0 8px 20px rgba(48,108,145,.08) !important; }
+        html body #root .live-consult-root .live-consult-vital { border-right-color: #cfe2ef !important; }
+        html body #root .live-consult-root .live-consult-vital-label { color: #5c7890 !important; }
         html body #root .live-consult-root .live-consult-vital-value { color: #ed2a3a !important; }
         html body #root .live-consult-root .live-consult-vital:nth-child(2) .live-consult-vital-value { color: #078dcc !important; }
         html body #root .live-consult-root .live-consult-vital:nth-child(3) .live-consult-vital-value { color: #dc9900 !important; }
@@ -1930,8 +1938,8 @@ const App = () => {
         html body #root .driver-photo-root .driver-store,
         html body #root .driver-photo-root .driver-store:hover { background: #dff4e7 !important; color: #08763d !important; border: 1px solid #9fcfb0 !important; }
         html body #root .driver-photo-root .driver-existing { background: #f8fbfd !important; border-color: #d8e5ec !important; }
-        html body #root .live-consult-root .live-consult-stage-placeholder h2 { color: #eef4ff !important; }
-        html body #root .live-consult-root .live-consult-stage-placeholder p { color: #a9b9ce !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder h2 { color: #172235 !important; }
+        html body #root .live-consult-root .live-consult-stage-placeholder p { color: #64748b !important; }
       `}</style>
     </>
   );

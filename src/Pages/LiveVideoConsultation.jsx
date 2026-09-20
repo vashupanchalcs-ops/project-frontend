@@ -1,229 +1,1572 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Camera, CameraOff, CheckCircle2, Clock3, Image as ImageIcon, Maximize2, Mic, MicOff, PhoneCall, PhoneOff, RefreshCw, Send, Video, VideoOff, X } from "lucide-react";
+import {
+  Activity,
+  Camera,
+  Check,
+  CheckCircle2,
+  Clock,
+  Heart,
+  Maximize2,
+  MessageSquare,
+  Mic,
+  MicOff,
+  Minimize2,
+  PhoneCall,
+  PhoneOff,
+  RefreshCw,
+  Send,
+  Share2,
+  Shield,
+  Sparkles,
+  Stethoscope,
+  User,
+  Users,
+  Video,
+  VideoOff,
+  X,
+} from "lucide-react";
+import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
 
-const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
+const defaultApiBase = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
-const getTone = (booking) => {
-  const value = `${booking?.patient_condition || ""} ${booking?.vitals_summary || ""}`.toLowerCase();
-  if (["critical", "cardiac", "stroke", "trauma", "icu", "emergency"].some((token) => value.includes(token))) return "red";
-  if (["monitor", "observation", "serious", "awaiting", "pending"].some((token) => value.includes(token))) return "yellow";
-  return "green";
-};
-
-const bookingName = (booking) => booking?.patient_name || booking?.booked_by || "Patient";
+const bookingName = (booking) => booking?.patient_name || booking?.booked_by || "Emergency Patient";
+const initials = (value) => String(value || "Team")
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase())
+  .join("") || "T";
 
 export default function LiveVideoConsultation() {
-  const role = localStorage.getItem("role") || "staff";
+  // Read logged-in user strictly
+  const role = (localStorage.getItem("role") || "staff").toLowerCase();
   const isDriver = role === "driver";
+  const loggedInStaffName = localStorage.getItem("name") || "staff no 1";
+  const loggedInStaffRole = (localStorage.getItem("staff_role") || "Doctor").toUpperCase();
+  const hospitalName = localStorage.getItem("hospital_name") || "SAHARDA HOSPITAL";
   const staffId = localStorage.getItem("staff_id") || "";
   const email = localStorage.getItem("user") || localStorage.getItem("driver_email") || "";
   const ambulanceId = Number(localStorage.getItem("ambulance_id") || 0);
   const queryBookingId = new URLSearchParams(window.location.search).get("booking");
-  const videoRef = useRef(null);
-  const signalSocketRef = useRef(null);
-  const peerRef = useRef(null);
-  const [bookings, setBookings] = useState([]);
+
+  const bookingCacheKey = `consult_bookings_${isDriver ? `driver_${ambulanceId}_${email}` : `staff_${staffId}_${email}`}`;
+  const cachedBookings = readDataCache(bookingCacheKey, []);
+
+  // WebRTC & Stream refs
+  const localVideoRef = useRef(null);
+  const chatBottomRef = useRef(null);
+
+  // States
+  const [bookings, setBookings] = useState(() => (Array.isArray(cachedBookings) ? cachedBookings : []));
   const [selectedId, setSelectedId] = useState(queryBookingId || null);
-  const [photos, setPhotos] = useState([]);
   const [stream, setStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
-  const [connected, setConnected] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
-  const [elapsed, setElapsed] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [photosLoading, setPhotosLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [note, setNote] = useState("");
-  const [savedNote, setSavedNote] = useState("");
-  const [preview, setPreview] = useState(null);
+  const [elapsed, setElapsed] = useState(245); // 04:05
+  const [loading, setLoading] = useState(!cachedBookings.length);
+  const [toast, setToast] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeSpeaker, setActiveSpeaker] = useState("remote"); // "local" or "remote"
 
+  // ── DRIVER MULTI-PERSON CALL STATE ──
+  const [activeTab, setActiveTab] = useState("roster"); // "roster" | "chat" | "directives"
+  const [connectedStaff, setConnectedStaff] = useState([]); // staff IDs currently on video call
+
+  const selectedBooking = useMemo(
+    () => bookings.find((b) => String(b.id) === String(selectedId)) || bookings[0] || null,
+    [bookings, selectedId]
+  );
+
+  // Only show the team saved on this booking. The driver occupies one tile,
+  // so a call can contain at most three allocated staff members (four people total).
+  const allocatedStaff = useMemo(() => {
+    const candidate = selectedBooking?.assigned_team
+      || selectedBooking?.allocated_staff
+      || selectedBooking?.assigned_staff;
+    let raw = Array.isArray(candidate) ? candidate : [];
+    if (!raw.length && selectedBooking?.assigned_doctors_json) {
+      try {
+        const parsed = JSON.parse(selectedBooking.assigned_doctors_json);
+        raw = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        raw = [];
+      }
+    }
+    return raw.slice(0, 3).map((person, index) => ({
+      id: String(person.id ?? person.staff_id ?? `allocated-${index}`),
+      name: person.full_name || person.name || "Allocated staff",
+      role: person.role || "Care team",
+      specialty: person.specialization || person.specialty || "Assigned to this case",
+      avatar: person.avatar || person.profile_image || "",
+    }));
+  }, [selectedBooking]);
+
+  // Never carry a previous booking's participants into the next case.
+  useEffect(() => {
+    setConnectedStaff([]);
+  }, [selectedBooking?.id]);
+
+  const toggleConnect = (staffId) => {
+    if (!connectedStaff.includes(staffId) && connectedStaff.length >= 3) {
+      showToast("Max 4 participants reached (Driver + 3 Staff)");
+      return;
+    }
+    setConnectedStaff((prev) =>
+      prev.includes(staffId) ? prev.filter((id) => id !== staffId) : [...prev, staffId]
+    );
+  };
+
+
+  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      sender: localStorage.getItem("name") || "Driver",
+      role: "DRIVER",
+      text: "Doctor, patient is en-route. Oxygen saturation at 97%, blood pressure 120/80 mmHg.",
+      time: "02:40 am",
+      isStaffSender: false,
+    },
+    {
+      id: 2,
+      sender: loggedInStaffName,
+      role: loggedInStaffRole,
+      text: "Understood. Please keep bilateral airway open and initiate continuous 12-lead ECG telemetry.",
+      time: "02:41 am",
+      isStaffSender: true,
+    },
+    {
+      id: 3,
+      sender: localStorage.getItem("name") || "Driver",
+      role: "DRIVER",
+      text: "ECG rhythm strip transmitted. 18G IV line secured in left forearm.",
+      time: "02:42 am",
+      isStaffSender: false,
+    },
+    {
+      id: 4,
+      sender: loggedInStaffName,
+      role: loggedInStaffRole,
+      text: "Received telemetry. ICU Bed #04 cleared and emergency trauma team is standing by.",
+      time: "02:43 am",
+      isStaffSender: true,
+    },
+  ]);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2800);
+  };
+
+  // Fetch Assigned Bookings
   const loadBookings = useCallback(async () => {
-    setLoading(true);
+    if (!cachedBookings.length) setLoading(true);
     try {
       const endpoint = isDriver
         ? `${BASE}/api/bookings/driver-assigned/?ambulance_id=${encodeURIComponent(ambulanceId)}&driver_email=${encodeURIComponent(email)}`
         : `${BASE}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`;
-      const response = await fetch(endpoint, { cache: "no-store" });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Unable to load assigned consultations");
-      const rows = isDriver ? (Array.isArray(data) ? data : []) : (Array.isArray(data.cases) ? data.cases : []);
-      setBookings(rows);
-      setSelectedId((current) => (rows.some((row) => String(row.id) === String(current)) ? current : (rows[0]?.id || null)));
-      setError("");
-    } catch (err) {
-      setError(err.message || "Unable to load assigned consultations");
+      const data = await fetchFreshJson(endpoint, { key: bookingCacheKey, fallback: {} });
+      const rows = (isDriver ? (Array.isArray(data) ? data : []) : (Array.isArray(data.cases) ? data.cases : []))
+        .map((row) => ({ ...row, id: row.id ?? row.booking_id }))
+        .filter((row) => row.id != null);
+
+      setBookings(writeDataCache(bookingCacheKey, rows));
+      setSelectedId((curr) => (rows.some((r) => String(r.id) === String(curr)) ? curr : (rows[0]?.id || null)));
+    } catch {
+      // Keep cached
     } finally {
       setLoading(false);
     }
-  }, [ambulanceId, email, isDriver, staffId]);
-
-  useEffect(() => { loadBookings(); }, [loadBookings]);
-
-  const selectedBooking = useMemo(() => bookings.find((booking) => String(booking.id) === String(selectedId)) || bookings[0] || null, [bookings, selectedId]);
-
-  const loadPhotos = useCallback(async () => {
-    if (!selectedBooking?.id) { setPhotos([]); return; }
-    setPhotosLoading(true);
-    try {
-      const access = isDriver
-        ? `role=driver&ambulance_id=${encodeURIComponent(ambulanceId)}&driver_email=${encodeURIComponent(email)}`
-        : `role=staff&staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`;
-      const response = await fetch(`${BASE}/api/bookings/${selectedBooking.id}/photos/?${access}`, { cache: "no-store" });
-      const data = await response.json().catch(() => ({}));
-      setPhotos(response.ok && Array.isArray(data.photos) ? data.photos : []);
-    } catch {
-      setPhotos([]);
-    } finally {
-      setPhotosLoading(false);
-    }
-  }, [ambulanceId, email, isDriver, selectedBooking, staffId]);
+  }, [ambulanceId, bookingCacheKey, cachedBookings.length, email, isDriver, staffId]);
 
   useEffect(() => {
-    loadPhotos();
-    const refresh = setInterval(loadPhotos, 8000);
-    return () => clearInterval(refresh);
-  }, [loadPhotos]);
+    loadBookings();
+  }, [loadBookings]);
 
+  // Timer
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = remoteStream || stream || null;
-  }, [remoteStream, stream]);
-
-  useEffect(() => {
-    if (!connected) { setElapsed(0); return undefined; }
-    const startedAt = Date.now();
-    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
-    return () => clearInterval(timer);
-  }, [connected]);
-
-  useEffect(() => () => {
-    stream?.getTracks().forEach((track) => track.stop());
-  }, [stream]);
-
-  useEffect(() => () => {
-    signalSocketRef.current?.close();
-    peerRef.current?.close();
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
   }, []);
 
+  // Speaker simulation
   useEffect(() => {
-    if (!selectedBooking?.id) { setSavedNote(""); return; }
-    setSavedNote(localStorage.getItem(`consultation_note_${selectedBooking.id}`) || "");
-    setNote("");
-  }, [selectedBooking]);
-
-  const sendSignal = (payload) => {
-    if (signalSocketRef.current?.readyState === WebSocket.OPEN) signalSocketRef.current.send(JSON.stringify(payload));
-  };
-
-  const createPeer = useCallback(async (localStream, makeOffer) => {
-    if (peerRef.current) return peerRef.current;
-    const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-    localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
-    peer.onicecandidate = (event) => { if (event.candidate) sendSignal({ type: "ice-candidate", candidate: event.candidate }); };
-    peer.ontrack = (event) => { if (event.streams?.[0]) setRemoteStream(event.streams[0]); };
-    peer.onconnectionstatechange = () => {
-      if (["failed", "disconnected", "closed"].includes(peer.connectionState)) setRemoteStream(null);
-    };
-    peerRef.current = peer;
-    if (makeOffer) {
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      sendSignal({ type: "offer", offer });
-    }
-    return peer;
+    const spk = setInterval(() => {
+      setActiveSpeaker((c) => (c === "remote" ? "local" : "remote"));
+    }, 6000);
+    return () => clearInterval(spk);
   }, []);
 
-  const connectSignal = useCallback((localStream) => {
-    if (!selectedBooking?.id || signalSocketRef.current) return;
-    const socketBase = BASE.replace(/^http/, "ws");
-    const query = isDriver
-      ? `role=driver&ambulance_id=${encodeURIComponent(ambulanceId)}&email=${encodeURIComponent(email)}`
-      : `role=staff&staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`;
-    const socket = new WebSocket(`${socketBase}/ws/consultation/${selectedBooking.id}/?${query}`);
-    signalSocketRef.current = socket;
-    socket.onopen = () => sendSignal({ type: "join" });
-    socket.onmessage = async (event) => {
-      let payload;
-      try { payload = JSON.parse(event.data); } catch { return; }
+  // Camera start
+  useEffect(() => {
+    async function initCam() {
       try {
-        if (payload.type === "peer-joined" && isDriver && !peerRef.current) await createPeer(localStream, true);
-        if (payload.type === "offer") {
-          const peer = await createPeer(localStream, false);
-          await peer.setRemoteDescription(new RTCSessionDescription(payload.offer));
-          const answer = await peer.createAnswer();
-          await peer.setLocalDescription(answer);
-          sendSignal({ type: "answer", answer });
+        if (navigator.mediaDevices?.getUserMedia) {
+          const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          setStream(s);
+          if (localVideoRef.current) localVideoRef.current.srcObject = s;
+          setCameraOn(true);
+          setMicOn(true);
         }
-        if (payload.type === "answer" && peerRef.current) await peerRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
-        if (payload.type === "ice-candidate" && peerRef.current && payload.candidate) await peerRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
-        if (payload.type === "peer-left") setRemoteStream(null);
-      } catch (err) {
-        setError(err.message || "Unable to connect the consultation video.");
+      } catch {
+        // virtual cam
       }
-    };
-    socket.onerror = () => setError("Video signaling is unavailable. Check the backend WebSocket service.");
-    socket.onclose = () => { signalSocketRef.current = null; };
-  }, [ambulanceId, createPeer, email, isDriver, selectedBooking, staffId]);
-
-  const startCall = async () => {
-    setError("");
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera and microphone are not available in this browser.");
-      const nextStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setStream(nextStream);
-      setCameraOn(true);
-      setMicOn(true);
-      setConnected(true);
-      connectSignal(nextStream);
-    } catch (err) {
-      setError(err.message || "Allow camera and microphone access to start the consultation.");
     }
-  };
-
-  const endCall = () => {
-    sendSignal({ type: "leave" });
-    signalSocketRef.current?.close();
-    signalSocketRef.current = null;
-    peerRef.current?.close();
-    peerRef.current = null;
-    stream?.getTracks().forEach((track) => track.stop());
-    setStream(null);
-    setRemoteStream(null);
-    setConnected(false);
-  };
+    initCam();
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   const toggleMic = () => {
     const next = !micOn;
-    stream?.getAudioTracks().forEach((track) => { track.enabled = next; });
+    stream?.getAudioTracks().forEach((t) => { t.enabled = next; });
     setMicOn(next);
+    showToast(next ? "Microphone Unmuted" : "Microphone Muted");
   };
 
   const toggleCamera = () => {
     const next = !cameraOn;
-    stream?.getVideoTracks().forEach((track) => { track.enabled = next; });
+    stream?.getVideoTracks().forEach((t) => { t.enabled = next; });
     setCameraOn(next);
+    showToast(next ? "Camera Turned On" : "Camera Turned Off");
   };
 
-  const saveNote = () => {
-    if (!selectedBooking?.id || !note.trim()) return;
-    localStorage.setItem(`consultation_note_${selectedBooking.id}`, note.trim());
-    setSavedNote(note.trim());
-    setNote("");
+  const handleSendChat = (e) => {
+    e?.preventDefault();
+    if (!chatInput.trim()) return;
+    const isSenderStaff = !isDriver;
+    const myName = isDriver ? (selectedBooking?.driver || "Driver") : loggedInStaffName;
+    const myRole = isDriver ? "DRIVER" : loggedInStaffRole;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        sender: myName,
+        role: myRole,
+        text: chatInput.trim(),
+        time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+        isStaffSender: isSenderStaff,
+      },
+    ]);
+    setChatInput("");
+    setTimeout(() => {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
-  const formatTime = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  const formatTime = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
 
-  return <main className="live-consult-root"><style>{`
-    .live-consult-root{min-height:100vh;background:#f4f7fa;color:#172235;padding:96px 16px 80px;margin-left:80px;width:calc(100% - 80px);box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,sans-serif;overflow-x:hidden}.live-consult-shell{max-width:1500px;margin:0 auto}.live-consult-titlebar{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}.live-consult-title{font-size:clamp(28px,3vw,40px);line-height:1;letter-spacing:-.04em;margin:0;color:#1d293b}.live-consult-sub{margin:8px 0 0;color:#62738a;font-size:13px}.live-consult-actions{display:flex;gap:8px;flex-wrap:wrap}.live-consult-btn{border:1px solid #bfd0dc;background:#fff;border-radius:8px;padding:10px 13px;font-weight:800;color:#0e6a3d;cursor:pointer}.live-consult-btn:disabled{opacity:.5;cursor:not-allowed}.live-consult-layout{display:grid;grid-template-columns:230px minmax(0,1fr) 285px;gap:12px;align-items:stretch}.live-consult-panel{background:#fff;border:1px solid #dce5eb;border-radius:10px;padding:12px;min-width:0}.live-consult-panel-title{font-size:12px;font-weight:900;color:#26354b;margin-bottom:10px}.live-consult-badge{font-size:9px;background:#def7e8;color:#0b7440;border-radius:999px;padding:4px 7px;font-weight:900;white-space:nowrap}.live-consult-bookings{display:grid;gap:8px}.live-consult-booking{border:1px solid #dae4eb;background:#fbfdff;border-radius:8px;padding:10px;text-align:left;cursor:pointer;color:#172235}.live-consult-booking.active{border-color:#087640;box-shadow:0 0 0 2px rgba(8,118,64,.1)}.live-consult-booking-name{font-weight:900;font-size:12px;overflow-wrap:anywhere}.live-consult-booking-meta{font-size:10px;color:#6d7b8e;margin-top:4px;line-height:1.45}.live-consult-booking-open{margin-top:8px;width:100%;border:0;border-radius:6px;background:#087640;color:#fff;padding:7px;font-size:10px;font-weight:900;cursor:pointer}.live-consult-recent{border-top:1px solid #e6edf1;margin-top:14px;padding-top:12px}.live-consult-recent-item{font-size:10px;color:#6d7b8e;padding:7px 0;border-bottom:1px solid #edf1f3}.live-consult-center{min-width:0}.live-consult-center-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.live-consult-center-title{font-size:13px;font-weight:900}.live-consult-timer{color:#df252f;font-size:12px;font-weight:900}.live-consult-stage{position:relative;height:410px;min-height:410px;max-height:410px;background:#0f172a;border-radius:11px;overflow:hidden;display:grid;place-items:center}.live-consult-stage video{width:100%;height:100%;min-height:0;object-fit:cover;display:block}.live-consult-stage-placeholder{text-align:center;color:#eef4ff;padding:24px}.live-consult-avatar{width:80px;height:80px;border-radius:50%;display:grid;place-items:center;margin:0 auto 13px;background:#1f8b59;border:2px solid #4fc985;color:#fff;font-weight:900;font-size:28px}.live-consult-stage-placeholder h2{margin:0;font-size:18px}.live-consult-stage-placeholder p{margin:5px 0 0;color:#a9b9ce;font-size:11px}.live-consult-local{position:absolute;right:12px;bottom:12px;width:170px;height:108px;border:2px solid #fff;border-radius:8px;overflow:hidden;background:#25334b}.live-consult-local video{min-height:0;width:100%;height:100%;object-fit:cover}.live-consult-stage-tag{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;background:rgba(18,29,48,.82);border-radius:8px;padding:8px 10px;color:#fff;font-size:10px;font-weight:800}.live-consult-vitals{display:flex;gap:0;flex-wrap:wrap;background:#fff;border:1px solid #dce5eb;border-radius:9px;margin-top:10px;padding:10px}.live-consult-vital{min-width:125px;padding:3px 14px;border-right:1px solid #e1e9ef}.live-consult-vital:last-child{border-right:0}.live-consult-vital-label{display:block;color:#8190a3;font-size:9px}.live-consult-vital-value{font-weight:900;font-size:15px;color:#ed2a3a}.live-consult-vital:nth-child(2) .live-consult-vital-value{color:#0795db}.live-consult-vital:nth-child(3) .live-consult-vital-value{color:#dc9900}.live-consult-controls{display:flex;justify-content:center;gap:10px;margin:12px 0}.live-consult-control{width:40px;height:40px;border:0;border-radius:50%;background:#e3f4fb;color:#078dce;display:grid;place-items:center;cursor:pointer}.live-consult-control.end{background:#fa4047;color:#fff}.live-consult-control.start{background:#087640;color:#fff;width:auto;border-radius:8px;padding:0 16px;font-weight:900}.live-consult-right{display:flex;flex-direction:column;gap:12px}.live-consult-image-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.live-consult-image{border:1px solid #dce5eb;border-radius:6px;background:#fff;padding:4px;cursor:pointer;min-width:0}.live-consult-image img{display:block;width:100%;height:62px;object-fit:cover;border-radius:4px}.live-consult-image span{display:block;font-size:9px;color:#607087;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:4px 1px 1px}.live-consult-empty{font-size:11px;color:#7b899a;border:1px dashed #c9d5df;border-radius:7px;padding:18px 9px;text-align:center}.live-consult-notes{flex:1}.live-consult-notes textarea{width:100%;min-height:150px;resize:vertical;box-sizing:border-box;border:1px solid #d4dfe7;border-radius:7px;padding:10px;font:inherit;font-size:11px;color:#26364b}.live-consult-note-saved{font-size:11px;line-height:1.5;color:#40556a;background:#f4f8fb;border-radius:7px;padding:10px;margin-bottom:8px}.live-consult-note-button{width:100%;border:0;border-radius:7px;background:#087640;color:#fff;padding:10px;font-weight:900;cursor:pointer;margin-top:7px}.live-consult-alert{margin:0 0 13px;border:1px solid #efb5ba;background:#fff4f4;color:#a11f2a;padding:11px;border-radius:8px;font-size:12px;font-weight:700}.live-consult-preview{position:fixed;inset:0;background:rgba(9,20,13,.78);z-index:10005;display:grid;place-items:center;padding:20px}.live-consult-preview-card{max-width:860px;width:100%;max-height:calc(100vh - 40px);background:#fff;border-radius:12px;padding:12px;position:relative}.live-consult-preview-card img{display:block;width:100%;max-height:78vh;object-fit:contain;background:#f4f7fa}.live-consult-preview-close{position:absolute;right:10px;top:10px;width:32px;height:32px;border:0;border-radius:50%;background:#fff;cursor:pointer}@media(max-width:1050px){.live-consult-layout{grid-template-columns:210px minmax(0,1fr)}.live-consult-right{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.live-consult-notes{min-height:220px}}@media(max-width:720px){.live-consult-root{padding:92px 11px 82px;margin-left:0;width:100%}.live-consult-layout{display:flex;flex-direction:column}.live-consult-center{order:1}.live-consult-panel:first-child{order:2}.live-consult-right{order:3;display:flex}.live-consult-stage{height:280px;min-height:280px;max-height:280px}.live-consult-stage video{min-height:0}.live-consult-local{width:112px;height:76px}.live-consult-vital{min-width:105px;padding:3px 8px}.live-consult-vitals{gap:6px}.live-consult-vital{border-right:0}.live-consult-controls{margin-bottom:4px}.live-consult-titlebar{margin-bottom:12px}}
-  `}</style><div className="live-consult-shell">
-    <header className="live-consult-titlebar"><div><h1 className="live-consult-title">Live consultation</h1><p className="live-consult-sub">{isDriver ? "Connect your assigned ambulance case with the authorized medical team." : "Join the active ambulance case allocated to your care team."}</p></div><div className="live-consult-actions"><button className="live-consult-btn" onClick={loadBookings} disabled={loading}><RefreshCw size={14} style={{ verticalAlign: "-2px", marginRight: 5 }} />Refresh</button></div></header>
-    {error && <div className="live-consult-alert">{error}</div>}
-    <div className="live-consult-layout">
-      <aside className="live-consult-panel"><div className="live-consult-panel-title">{isDriver ? "Assigned consultations" : "Pending consultations"}</div><div className="live-consult-bookings">{loading && !bookings.length ? <div className="live-consult-empty">Loading cases…</div> : !bookings.length ? <div className="live-consult-empty">No assigned booking is available.</div> : bookings.slice(0, 8).map((booking) => <button key={booking.id} className={`live-consult-booking ${String(selectedBooking?.id) === String(booking.id) ? "active" : ""}`} onClick={() => setSelectedId(booking.id)}><div className="live-consult-booking-name">{bookingName(booking)}</div><div className="live-consult-booking-meta">Booking #{booking.id}<br />{booking.assigned_hospital_name || booking.destination || "Hospital pending"}</div><span className="live-consult-badge">{getTone(booking)}</span><span className="live-consult-booking-open">{connected && String(selectedBooking?.id) === String(booking.id) ? "Connected" : isDriver ? "Open call" : "Accept call"}</span></button>)}</div><div className="live-consult-recent"><div className="live-consult-panel-title">Case access</div><div className="live-consult-recent-item"><CheckCircle2 size={12} style={{ verticalAlign: "-2px", marginRight: 4, color: "#087640" }} />Only assigned team members can view this case.</div><div className="live-consult-recent-item"><Clock3 size={12} style={{ verticalAlign: "-2px", marginRight: 4 }} />Photos refresh automatically after upload.</div></div></aside>
-      <section className="live-consult-center"><div className="live-consult-center-head"><span className="live-consult-center-title">Active consultation hub</span><span className={connected ? "live-consult-badge" : "live-consult-timer"}>{connected ? `Connected · ${formatTime(elapsed)}` : "Ready to connect"}</span></div><div className="live-consult-stage">{connected && (remoteStream || cameraOn) ? <video ref={videoRef} autoPlay muted={!remoteStream} playsInline /> : <div className="live-consult-stage-placeholder"><div className="live-consult-avatar">{selectedBooking ? bookingName(selectedBooking).slice(0, 1).toUpperCase() : "A"}</div><h2>{selectedBooking ? bookingName(selectedBooking) : "Select an assigned case"}</h2><p>{connected ? "Camera is off. Turn it on from the controls." : "Start a secure consultation preview for this booking."}</p></div>}{connected && <div className="live-consult-stage-tag"><span>● {remoteStream ? "Medical team connected" : "Waiting for medical team"}</span><span>Booking #{selectedBooking?.id || "—"}</span></div>}{connected && stream && <div className="live-consult-local"><video ref={(element) => { if (element) element.srcObject = stream; }} autoPlay muted playsInline /></div>}</div><div className="live-consult-vitals"><div className="live-consult-vital"><span className="live-consult-vital-label">Patient</span><span className="live-consult-vital-value" style={{ color: "#172235" }}>{bookingName(selectedBooking)}</span></div><div className="live-consult-vital"><span className="live-consult-vital-label">Condition</span><span className="live-consult-vital-value" style={{ color: "#172235" }}>{selectedBooking?.patient_condition || selectedBooking?.vitals_summary || "Pending"}</span></div><div className="live-consult-vital"><span className="live-consult-vital-label">SpO₂</span><span className="live-consult-vital-value">{selectedBooking?.spo2 || "—"}</span></div><div className="live-consult-vital"><span className="live-consult-vital-label">Blood pressure</span><span className="live-consult-vital-value">{selectedBooking?.blood_pressure || "—"}</span></div></div><div className="live-consult-controls">{!connected ? <button className="live-consult-control start" onClick={startCall} disabled={!selectedBooking}><PhoneCall size={15} style={{ marginRight: 6 }} />{isDriver ? "Call medical team" : "Accept call"}</button> : <><button className="live-consult-control" onClick={toggleMic} title={micOn ? "Mute microphone" : "Unmute microphone"}>{micOn ? <Mic size={17} /> : <MicOff size={17} />}</button><button className="live-consult-control" onClick={toggleCamera} title={cameraOn ? "Turn camera off" : "Turn camera on"}>{cameraOn ? <Video size={17} /> : <VideoOff size={17} />}</button><button className="live-consult-control" onClick={() => videoRef.current?.requestPictureInPicture?.()} title="Picture in picture"><Maximize2 size={17} /></button><button className="live-consult-control end" onClick={endCall} title="End consultation"><PhoneOff size={17} /></button></>}</div></section>
-      <aside className="live-consult-right"><section className="live-consult-panel"><div className="live-consult-panel-title">Shared images <span style={{ float: "right", color: "#7b899a", fontWeight: 500 }}>{photosLoading ? "Loading…" : `${photos.length} files`}</span></div>{photos.length ? <div className="live-consult-image-list">{photos.map((photo) => <button className="live-consult-image" key={photo.id} onClick={() => setPreview(photo)}><img src={photo.url} alt={photo.label || "Shared patient condition"} /><span>{photo.label || "Condition photo"}</span></button>)}</div> : <div className="live-consult-empty"><ImageIcon size={18} style={{ display: "block", margin: "0 auto 6px" }} />No photos sent for this booking yet.</div>}</section><section className="live-consult-panel live-consult-notes"><div className="live-consult-panel-title">{isDriver ? "Paramedic notes" : "Doctor observations & prescriptions"}</div>{savedNote && <div className="live-consult-note-saved"><b>Saved note</b><br />{savedNote}</div>}<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={isDriver ? "Add a condition update for the care team…" : "Type immediate directives or medical observations…"} /><button className="live-consult-note-button" onClick={saveNote} disabled={!note.trim()}><Send size={14} style={{ verticalAlign: "-2px", marginRight: 5 }} />Save note</button></section></aside>
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+
+  const driverName = selectedBooking?.driver || "Driver";
+  const ambulanceNum = selectedBooking?.ambulance_number || "—";
+
+  return (
+    <div className="consult-middle-container">
+      <style>{`
+        /* ── Perfectly Centered from Top and Bottom · Modern Clean Medical Theme · Zero Cutoff ── */
+        .consult-middle-container {
+          margin-left: 64px;
+          height: calc(100vh - 72px);
+          margin-top: 72px; /* Clears fixed topnavbar cleanly! */
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px 28px;
+          background: #f8fafc; /* Crisp modern medical slate background */
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          user-select: none;
+          overflow: hidden;
+        }
+
+        .consult-two-cards-box {
+          width: 100%;
+          max-width: 1420px;
+          height: 100%;
+          max-height: 820px;
+          display: grid;
+          grid-template-columns: 1fr 370px;
+          gap: 20px;
+          box-sizing: border-box;
+        }
+
+        /* ── LEFT CARD: 2-PERSON VIDEO CANVAS (LOGGED-IN STAFF & DRIVER ONLY) ── */
+        .left-video-card {
+          flex: 1;
+          min-width: 0;
+          height: 100%;
+          background: #ffffff;
+          border-radius: 20px;
+          border: 2px solid #087640;
+          box-shadow: 0 12px 40px rgba(8, 118, 64, 0.16), 0 2px 10px rgba(0, 0, 0, 0.08);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          position: relative;
+        }
+
+        /* Top Header inside Video Card */
+        .video-card-topbar {
+          height: 52px;
+          padding: 0 22px;
+          background: #ffffff;
+          border-bottom: 1.5px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          z-index: 10;
+        }
+
+        .topbar-left-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .pulsing-live-dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          background: #10b981;
+          box-shadow: 0 0 10px #10b981;
+          animation: emeraldPulse 1.4s infinite;
+        }
+
+        @keyframes emeraldPulse {
+          0% { transform: scale(0.95); opacity: 0.8; }
+          50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 14px #10b981; }
+          100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .consult-badge-pill {
+          background: #087640;
+          color: #ffffff;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.4px;
+          text-transform: uppercase;
+          padding: 3px 10px;
+          border-radius: 20px;
+        }
+
+        .case-brief-title {
+          color: #475569;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .case-brief-title b {
+          color: #0f172a;
+        }
+
+        /* 2-PERSON STAGE: ONLY DRIVER & CURRENT LOGGED-IN STAFF MEMBER */
+        .video-stage-grid {
+          flex: 1;
+          min-height: 0;
+          padding: 16px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          position: relative;
+          background: #f7fafc;
+        }
+
+        .single-stream-tile {
+          position: relative;
+          background: #edf4f7;
+          border-radius: 14px;
+          overflow: hidden;
+          border: 2px solid rgba(8, 118, 64, 0.2);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .single-stream-tile.speaker-active {
+          border: 2.5px solid #10b981 !important;
+          box-shadow: 0 0 22px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        .stream-video-element {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .stream-video-element.mirror {
+          transform: scaleX(-1);
+        }
+
+        .stream-initials-tile {
+          width: 100%;
+          height: 100%;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #dcecf3, #f8fcfd);
+          color: #0e6a3d;
+          font-size: clamp(34px, 5vw, 68px);
+          font-weight: 900;
+        }
+
+        /* Identity Pill Overlay */
+        .stream-id-pill {
+          position: absolute;
+          left: 12px;
+          bottom: 12px;
+          background: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(8, 118, 64, 0.4);
+          border-radius: 8px;
+          padding: 6px 12px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #172235;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          z-index: 5;
+        }
+
+        .role-pill-badge {
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          padding: 2px 7px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+
+        .role-pill-badge.driver-role {
+          background: #f59e0b;
+          color: #451a03;
+        }
+
+        .role-pill-badge.staff-role {
+          background: #087640;
+          color: #ffffff;
+        }
+
+        .live-mic-indicator {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #10b981;
+        }
+
+        .live-mic-indicator.muted {
+          background: #ef4444;
+        }
+
+        /* Vitals Telemetry Ribbon — Golden Yellow #f59e0b */
+        .vitals-hud-ribbon {
+          position: absolute;
+          top: 14px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #f59e0b;
+          border: 2px solid #d97706;
+          border-radius: 30px;
+          padding: 6px 22px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          z-index: 15;
+          box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+          white-space: nowrap;
+        }
+
+        .vitals-stat-chip {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12px;
+        }
+
+        .vitals-stat-label {
+          font-size: 9px;
+          font-weight: 900;
+          color: #78350f;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+
+        .vitals-stat-val {
+          font-weight: 900;
+          color: #0f172a;
+        }
+
+        .vitals-divider {
+          width: 1px;
+          height: 14px;
+          background: rgba(120, 53, 15, 0.3);
+          flex-shrink: 0;
+        }
+
+        /* Bottom Controls Bar */
+        .video-action-bar {
+          height: 64px;
+          background: #ffffff;
+          border-top: 1.5px solid #e2e8f0;
+          padding: 0 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          position: relative;
+          z-index: 20;
+        }
+
+        .btn-action-ctrl {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          background: transparent;
+          border: none;
+          color: #374151;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 6px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          min-width: 52px;
+        }
+
+        .btn-action-ctrl:hover {
+          background: #f0fdf4;
+          color: #087640;
+        }
+
+        .btn-action-ctrl.active-green {
+          color: #087640;
+        }
+
+        .btn-action-ctrl.red-end-call {
+          margin-left: auto;
+          background: #dc2626;
+          color: #ffffff;
+          padding: 6px 16px;
+          border-radius: 8px;
+          font-weight: 700;
+        }
+
+        .btn-action-ctrl.red-end-call:hover {
+          background: #b91c1c;
+        }
+
+        /* ── RIGHT CARD: 100% DEDICATED CLEAN CHAT CONSOLE (ALL OTHER CLUTTER REMOVED!) ── */
+        .right-chat-card {
+          width: 380px;
+          min-width: 350px;
+          max-width: 400px;
+          height: 100%;
+          background: #ffffff;
+          border-radius: 20px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 10px 32px rgba(8, 118, 64, 0.08);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          color: #0f172a;
+        }
+
+        /* Clean Chat Header */
+        .chat-console-header {
+          padding: 16px 20px;
+          background: #ffffff;
+          border-bottom: 1.5px solid #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .chat-header-title-box h3 {
+          margin: 0 0 3px 0;
+          font-size: 16px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .chat-header-online-status {
+          font-size: 12px;
+          color: #087640;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 700;
+        }
+
+        .online-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #10b981;
+        }
+
+        /* Full Height Scrollable Chat Message Stream */
+        .chat-messages-viewport {
+          flex: 1;
+          overflow-y: auto;
+          padding: 18px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          background: #fbfcfd;
+        }
+
+        .chat-message-row {
+          display: flex;
+          flex-direction: column;
+          max-width: 84%;
+        }
+
+        .chat-message-row.from-staff {
+          align-self: flex-end;
+          align-items: flex-end;
+        }
+
+        .chat-message-row.from-driver {
+          align-self: flex-start;
+          align-items: flex-start;
+        }
+
+        .message-bubble {
+          padding: 10px 14px;
+          font-size: 12px;
+          line-height: 1.45;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .message-bubble.staff-bubble {
+          background: #087640; /* Hospital Emerald Green */
+          color: #ffffff;
+          border-radius: 14px 14px 2px 14px;
+        }
+
+        .message-bubble.driver-bubble {
+          background: #ffffff;
+          color: #0f172a;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px 14px 14px 2px;
+        }
+
+        .bubble-meta-info {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          color: #94a3b8;
+          margin-top: 4px;
+          padding: 0 4px;
+        }
+
+        /* Chat Input Footer */
+        .chat-input-footer-area {
+          padding: 14px 16px;
+          background: #ffffff;
+          border-top: 1.5px solid #f1f5f9;
+        }
+
+        .chat-send-form {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .chat-text-box {
+          flex: 1;
+          border: 1.5px solid #cbd5e1;
+          padding: 10px 14px;
+          border-radius: 10px;
+          font-size: 12px;
+          outline: none;
+          color: #0f172a;
+          background: #f8fafc;
+          transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .chat-text-box:focus {
+          border-color: #087640;
+          background: #ffffff;
+        }
+
+        .chat-submit-btn {
+          background: #087640;
+          color: #ffffff;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 10px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s ease;
+        }
+
+        .chat-submit-btn:hover {
+          background: #065e33;
+        }
+
+        .toast-pill-badge {
+          position: fixed;
+          bottom: 24px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #087640;
+          color: #ffffff;
+          border: 1.5px solid #065f46;
+          padding: 9px 24px;
+          border-radius: 30px;
+          font-size: 12px;
+          font-weight: 700;
+          box-shadow: 0 6px 24px rgba(8, 118, 64, 0.35);
+          z-index: 1000;
+          white-space: nowrap;
+        }
+
+        /* ── RESPONSIVE BREAKPOINTS ── */
+
+        /* Large tablet: shrink right column slightly */
+        @media (max-width: 1200px) {
+          .consult-two-cards-box {
+            grid-template-columns: 1fr 300px;
+            max-height: 720px;
+          }
+          .consult-middle-container {
+            padding: 16px 16px;
+          }
+        }
+
+        /* Mobile ≤ 768px: Full-screen video only, chat card HIDDEN */
+        @media (max-width: 768px) {
+          .consult-middle-container {
+            margin-left: 0;
+            height: calc(100vh - 72px);
+            padding: 0;
+            align-items: stretch;
+            overflow: hidden;
+          }
+          .consult-two-cards-box {
+            grid-template-columns: 1fr;
+            height: 100%;
+            max-height: none;
+            gap: 0;
+          }
+          /* ── HIDE CHAT CARD ON MOBILE ── */
+          .right-chat-card {
+            display: none !important;
+          }
+          /* Video card fills entire screen */
+          .left-video-card {
+            height: 100%;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+          }
+          .video-card-topbar {
+            border-radius: 0;
+            height: 48px;
+          }
+          /* PiP layout: block positioning, NO dark blue */
+          .video-stage-grid {
+            display: block;
+            position: relative;
+            padding: 0;
+            gap: 0;
+            background: #f7fafc;
+          }
+          /* Force ALL tiles absolutely positioned on mobile */
+          .video-stage-grid .single-stream-tile {
+            position: absolute !important;
+          }
+          /* Person 1 (Driver) → FULL SCREEN background (nth-child 1 — vitals ribbon removed) */
+          .video-stage-grid .single-stream-tile:nth-child(1) {
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            z-index: 1;
+          }
+          /* Person 2 (Staff) → Picture-in-Picture corner (nth-child 2) */
+          .video-stage-grid .single-stream-tile:nth-child(2) {
+            top: auto;
+            left: auto;
+            bottom: 20px;
+            right: 14px;
+            width: 110px;
+            height: 148px;
+            border-radius: 14px !important;
+            border: 2.5px solid rgba(16, 185, 129, 0.85) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+            z-index: 5;
+          }
+          /* Hide text pill inside PiP tile */
+          .video-stage-grid .single-stream-tile:nth-child(2) .stream-id-pill {
+            display: none !important;
+          }
+          /* Semi-transparent white action bar */
+          .video-action-bar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #e2e8f0;
+            z-index: 20;
+          }
+        }
+
+          /* Small mobile ≤ 420px */
+        @media (max-width: 420px) {
+          .video-card-topbar {
+            height: 44px;
+            padding: 0 12px;
+          }
+          .consult-badge-pill {
+            font-size: 9px;
+            padding: 2px 6px;
+          }
+          .case-brief-title {
+            font-size: 10px;
+          }
+          .video-stage-grid .single-stream-tile:nth-child(2) {
+            width: 88px;
+            height: 118px;
+            bottom: 14px;
+            right: 10px;
+          }
+          .video-action-bar {
+            height: 56px;
+            gap: 2px;
+          }
+          .btn-action-ctrl {
+            padding: 4px 7px;
+            font-size: 9px;
+          }
+        }
+
+        /* ── DRIVER 3-TAB RIGHT PANEL ── */
+        .right-team-panel {
+          width: 370px;
+          min-width: 320px;
+          height: 100%;
+          background: #ffffff;
+          border-radius: 20px;
+          border: 1.5px solid #e2e8f0;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .team-tabs-row {
+          display: flex;
+          border-bottom: 1.5px solid #e2e8f0;
+          background: #f8fafc;
+        }
+
+        .team-tab-btn {
+          flex: 1;
+          padding: 12px 8px;
+          background: transparent;
+          border: none;
+          font-size: 11px;
+          font-weight: 700;
+          color: #64748b;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          transition: all 0.15s ease;
+          border-bottom: 2.5px solid transparent;
+          white-space: nowrap;
+        }
+
+        .team-tab-btn:hover {
+          color: #087640;
+          background: #f0fdf4;
+        }
+
+        .team-tab-btn.active-tab {
+          color: #087640;
+          border-bottom-color: #087640;
+          background: #ffffff;
+          font-weight: 800;
+        }
+
+        .driver-panel-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px;
+        }
+
+        .case-heading {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 4px 0;
+        }
+
+        .case-meta-line {
+          font-size: 11px;
+          color: #64748b;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .active-dot-small {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #10b981;
+          display: inline-block;
+        }
+
+        .case-info-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 12px;
+        }
+
+        .case-info-table td {
+          padding: 5px 0;
+          vertical-align: top;
+        }
+
+        .case-info-table .ci-label {
+          color: #087640;
+          font-weight: 700;
+          width: 110px;
+          padding-right: 10px;
+        }
+
+        .case-info-table .ci-value {
+          color: #0f172a;
+          font-weight: 600;
+        }
+
+        .staff-section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+        }
+
+        .staff-section-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .assigned-badge {
+          font-size: 10px;
+          font-weight: 700;
+          color: #10b981;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .staff-roster-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .staff-roster-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 14px;
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          transition: border-color 0.15s ease;
+        }
+
+        .staff-roster-card:hover {
+          border-color: #10b981;
+        }
+
+        .staff-roster-card.in-call {
+          border-color: #087640;
+          background: #f0fdf4;
+        }
+
+        .staff-avatar-img {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #e2e8f0;
+          flex-shrink: 0;
+        }
+
+        .staff-avatar-img.in-call-avatar {
+          border-color: #087640;
+        }
+
+        .staff-avatar-fallback {
+          display: grid;
+          place-items: center;
+          background: #e3f4fb;
+          color: #087640;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .roster-empty {
+          border: 1px dashed #cbd5e1;
+          border-radius: 10px;
+          padding: 18px 12px;
+          color: #64748b;
+          font-size: 12px;
+          text-align: center;
+          background: #f8fafc;
+        }
+
+        .staff-card-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .staff-card-name {
+          font-size: 13px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 2px 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .staff-card-specialty {
+          font-size: 10px;
+          color: #64748b;
+          font-weight: 600;
+          line-height: 1.3;
+        }
+
+        .connect-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 7px 12px;
+          background: #ffffff;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #374151;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .connect-btn:hover {
+          border-color: #087640;
+          color: #087640;
+          background: #f0fdf4;
+        }
+
+        .in-call-badge {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 7px 12px;
+          background: #f0fdf4;
+          border: 1.5px solid #087640;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #087640;
+          white-space: nowrap;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .transmit-btn-footer {
+          padding: 14px 16px;
+          border-top: 1.5px solid #e2e8f0;
+          background: #f8fafc;
+        }
+
+        .transmit-protocol-btn {
+          width: 100%;
+          padding: 11px 16px;
+          background: #087640;
+          color: #ffffff;
+          border: none;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: background 0.15s ease;
+        }
+
+        .transmit-protocol-btn:hover {
+          background: #065f46;
+        }
+
+        /* Multi-person video grid for driver (2x2 max) */
+        .video-stage-grid-driver {
+          flex: 1;
+          min-height: 0;
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+          position: relative;
+          background: #f7fafc;
+        }
+
+        .driver-tile-pill {
+          position: absolute;
+          left: 10px;
+          bottom: 10px;
+          background: rgba(8, 118, 64, 0.92);
+          color: #ffffff;
+          font-size: 9px;
+          font-weight: 800;
+          padding: 3px 8px;
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          white-space: nowrap;
+        }
+
+        /* Directives tab styling */
+        .directives-section {
+          padding: 4px 0;
+        }
+
+        .directive-card {
+          background: #fffbeb;
+          border: 1.5px solid #fde68a;
+          border-radius: 10px;
+          padding: 12px 14px;
+          margin-bottom: 10px;
+        }
+
+        .directive-title {
+          font-size: 11px;
+          font-weight: 800;
+          color: #92400e;
+          margin: 0 0 4px 0;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+
+        .directive-text {
+          font-size: 12px;
+          color: #374151;
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        @media (max-width: 960px) {
+          .right-team-panel {
+            width: 100%;
+            min-width: 0;
+            min-height: 360px;
+          }
+        }
+      `}</style>
+
+      <div className="consult-two-cards-box">
+        {/* ─── LEFT CARD: 2-PERSON VIDEO CANVAS (DRIVER & LOGGED-IN STAFF ONLY) ─── */}
+        <div className="left-video-card">
+          {/* Top Bar inside Left Card */}
+          <div className="video-card-topbar">
+            <div className="topbar-left-meta">
+              <span className="pulsing-live-dot"></span>
+              <span className="consult-badge-pill">
+                {isDriver ? "Ambulance Driver Console" : `${loggedInStaffRole} Emergency Console`}
+              </span>
+              <span className="case-brief-title">
+                Booking <b>{selectedBooking ? `#${selectedBooking.id}` : "—"}</b> · <b>{bookingName(selectedBooking)}</b>
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="consult-badge-pill" style={{ background: "#087640", border: "1px solid #065f46" }}>
+                ⏱️ {formatTime(elapsed)}
+              </span>
+              <span style={{ fontSize: 11, color: "#374151", fontWeight: 700 }}>
+                🏥 {selectedBooking?.assigned_hospital_name || hospitalName}
+              </span>
+            </div>
+          </div>
+          {/* VIDEO STAGE: driver = multi-person 2x2, staff = 2-tile */}
+          {isDriver ? (
+            /* ── DRIVER: UP TO 4 TILES (DRIVER + MAX 3 CONNECTED STAFF) ── */
+            <div
+              className="video-stage-grid-driver"
+              style={{
+                gridTemplateColumns: connectedStaff.length === 0 ? "1fr" : "1fr 1fr",
+                gridTemplateRows: connectedStaff.length <= 1 ? "1fr" : "1fr 1fr",
+              }}
+            >
+              {/* Driver's own tile (always first) */}
+              <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
+                {cameraOn && stream ? (
+                  <video ref={localVideoRef} autoPlay playsInline muted className="stream-video-element mirror" />
+                ) : (
+                  <img
+                    src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80"
+                    alt={driverName}
+                    className="stream-video-element"
+                  />
+                )}
+                <div className="stream-id-pill">
+                  <span className={`live-mic-indicator ${!micOn ? "muted" : ""}`}></span>
+                  <span>{driverName}</span>
+                  <span className="role-pill-badge driver-role">PARAMEDIC / DRIVER</span>
+                </div>
+              </div>
+
+              {/* Connected staff tiles (up to 3) */}
+              {allocatedStaff
+                .filter((s) => connectedStaff.includes(s.id))
+                .map((staff) => (
+                  <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
+                    {staff.avatar ? <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} /> : <div className="stream-initials-tile">{initials(staff.name)}</div>}
+                    <div className="stream-id-pill">
+                      <span className="live-mic-indicator"></span>
+                      <span>{staff.name}</span>
+                      <span className="role-pill-badge staff-role">{staff.role.toUpperCase()}</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            /* ── STAFF: 2 TILES ONLY (DRIVER + LOGGED-IN STAFF MEMBER) ── */
+            <div className="video-stage-grid">
+              {/* PERSON 1: AMBULANCE DRIVER */}
+              <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
+                <img
+                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80"
+                  alt="Driver"
+                  className="stream-video-element"
+                />
+                <div className="stream-id-pill">
+                  <span className="live-mic-indicator"></span>
+                  <span>{driverName}</span>
+                  <span className="role-pill-badge driver-role">PARAMEDIC / DRIVER</span>
+                </div>
+              </div>
+
+              {/* PERSON 2: CURRENTLY LOGGED-IN STAFF MEMBER */}
+              <div className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
+                {cameraOn && stream ? (
+                  <video ref={localVideoRef} autoPlay playsInline muted className="stream-video-element mirror" />
+                ) : (
+                  <img
+                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80"
+                    alt={loggedInStaffName}
+                    className="stream-video-element"
+                  />
+                )}
+                <div className="stream-id-pill">
+                  <span className="live-mic-indicator"></span>
+                  <span>{loggedInStaffName}</span>
+                  <span className="role-pill-badge staff-role">{loggedInStaffRole} · {hospitalName}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Control Bar */}
+          <div className="video-action-bar">
+            <button className={`btn-action-ctrl ${micOn ? "active-green" : ""}`} onClick={toggleMic} title="Mute/Unmute">
+              {micOn ? <Mic size={20} /> : <MicOff size={20} style={{ color: "#ef4444" }} />}
+              <span>Audio</span>
+            </button>
+
+            <button className={`btn-action-ctrl ${cameraOn ? "active-green" : ""}`} onClick={toggleCamera} title="Camera">
+              {cameraOn ? <Video size={20} /> : <VideoOff size={20} style={{ color: "#ef4444" }} />}
+              <span>Video</span>
+            </button>
+
+            <button
+              className="btn-action-ctrl active-green"
+              onClick={() => { if (isDriver) setActiveTab("chat"); showToast("Live Chat active →"); }}
+              title="Live Chat"
+            >
+              <MessageSquare size={20} />
+              <span>Chat</span>
+            </button>
+
+            <button className="btn-action-ctrl" onClick={() => showToast("❤️ Telemetry acknowledged")} title="React">
+              <Heart size={20} />
+              <span>React</span>
+            </button>
+
+            <button
+              className="btn-action-ctrl"
+              onClick={() => showToast("ECG Stream Transmitted")}
+              title="Transmit ECG / Vitals"
+            >
+              <Share2 size={20} />
+              <span>Transmit</span>
+            </button>
+
+            <button
+              className="btn-action-ctrl red-end-call"
+              onClick={() => showToast("Consultation archived. ER team standing by.")}
+              title="End Call"
+            >
+              <PhoneOff size={18} />
+              <span>End</span>
+            </button>
+
+            <button className="btn-action-ctrl" onClick={toggleFullscreen} title="Fullscreen">
+              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {/* ─── RIGHT PANEL: Driver = 3-Tab, Staff = Chat Only ─── */}
+        {isDriver ? (
+          /* ── DRIVER RIGHT PANEL: Team Roster + Live Chat + Directives ── */
+          <div className="right-team-panel">
+            {/* 3 Tabs */}
+            <div className="team-tabs-row">
+              <button
+                className={`team-tab-btn ${activeTab === "roster" ? "active-tab" : ""}`}
+                onClick={() => setActiveTab("roster")}
+              >
+                👥 Team Roster
+              </button>
+              <button
+                className={`team-tab-btn ${activeTab === "chat" ? "active-tab" : ""}`}
+                onClick={() => setActiveTab("chat")}
+              >
+                💬 Live Chat ({messages.length})
+              </button>
+              <button
+                className={`team-tab-btn ${activeTab === "directives" ? "active-tab" : ""}`}
+                onClick={() => setActiveTab("directives")}
+              >
+                📋 Directives
+              </button>
+            </div>
+
+            {/* Tab Body */}
+            <div className="driver-panel-body">
+
+              {/* ── TAB 1: TEAM ROSTER ── */}
+              {activeTab === "roster" && (
+                <>
+                  <h3 className="case-heading">{selectedBooking ? "Emergency Care Consultation" : "No consultation selected"}</h3>
+                  <div className="case-meta-line">
+                    <span className="active-dot-small"></span>
+                    {selectedBooking ? `${new Date().toLocaleDateString("en-IN", { weekday: "short", hour: "2-digit", minute: "2-digit" })} · Active` : "Select an assigned booking to continue"}
+                    <RefreshCw size={11} style={{ cursor: "pointer", marginLeft: 2 }} onClick={loadBookings} />
+                  </div>
+
+                  {/* Patient Case Info */}
+                  <table className="case-info-table">
+                    <tbody>
+                      <tr>
+                        <td className="ci-label">Patient:</td>
+                        <td className="ci-value">
+                          {selectedBooking?.patient_name || "—"} {selectedBooking ? `(${selectedBooking.patient_age || "—"}y / ${selectedBooking.patient_gender?.[0] || "—"})` : ""}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="ci-label">Emergency:</td>
+                        <td className="ci-value">{selectedBooking?.patient_condition || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="ci-label">Hospital:</td>
+                        <td className="ci-value">{selectedBooking?.assigned_hospital_name || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="ci-label">Bed Allocated:</td>
+                        <td className="ci-value">🛏 {selectedBooking?.assigned_bed_number || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="ci-label">Ambulance:</td>
+                        <td className="ci-value">{ambulanceNum}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Allocated Staff */}
+                  <div className="staff-section-header">
+                    <span className="staff-section-title">Allocated Staff ({allocatedStaff.length})</span>
+                    <span className="assigned-badge">● Assigned to Case</span>
+                  </div>
+
+                  <div className="staff-roster-list">
+                    {allocatedStaff.length === 0 && <div className="roster-empty">No allocated team members for this booking.</div>}
+                    {allocatedStaff.map((staff) => {
+                      const isConnected = connectedStaff.includes(staff.id);
+                      return (
+                        <div key={staff.id} className={`staff-roster-card ${isConnected ? "in-call" : ""}`}>
+                          {staff.avatar ? <img src={staff.avatar} alt={staff.name} className={`staff-avatar-img ${isConnected ? "in-call-avatar" : ""}`} /> : <div className={`staff-avatar-img staff-avatar-fallback ${isConnected ? "in-call-avatar" : ""}`}>{initials(staff.name)}</div>}
+                          <div className="staff-card-info">
+                            <p className="staff-card-name">{staff.name}</p>
+                            <p className="staff-card-specialty">{staff.specialty}</p>
+                          </div>
+                          {isConnected ? (
+                            <button className="in-call-badge" onClick={() => toggleConnect(staff.id)} title="Disconnect">
+                              ✓ In Call
+                            </button>
+                          ) : (
+                            <button className="connect-btn" onClick={() => toggleConnect(staff.id)} title="Connect to video">
+                              📞 Connect
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* ── TAB 2: LIVE CHAT ── */}
+              {activeTab === "chat" && (
+                <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 0 }}>
+                  <div className="chat-console-header" style={{ paddingBottom: 10, marginBottom: 8, borderBottom: "1px solid #f1f5f9" }}>
+                    <div className="chat-header-title-box">
+                      <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", margin: 0 }}>Live Consultation Chat</h3>
+                      <div className="chat-header-online-status">
+                        <span className="online-dot"></span>
+                        <span style={{ fontSize: 11, color: "#64748b" }}>Direct with team</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="chat-messages-viewport" style={{ flex: 1 }}>
+                    {messages.map((m) => (
+                      <div key={m.id} className={`chat-message-row ${m.isStaffSender ? "from-staff" : "from-driver"}`}>
+                        <div className={`message-bubble ${m.isStaffSender ? "staff-bubble" : "driver-bubble"}`}>{m.text}</div>
+                        <div className="bubble-meta-info"><b>{m.sender}</b> ({m.role}) · {m.time}</div>
+                      </div>
+                    ))}
+                    <div ref={chatBottomRef} />
+                  </div>
+                  <div className="chat-input-footer-area" style={{ paddingTop: 8 }}>
+                    <form className="chat-send-form" onSubmit={handleSendChat}>
+                      <input
+                        type="text"
+                        className="chat-text-box"
+                        placeholder="Type message to team..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                      />
+                      <button type="submit" className="chat-submit-btn" disabled={!chatInput.trim()}>
+                        <Send size={15} />
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB 3: DIRECTIVES ── */}
+              {activeTab === "directives" && (
+                <div className="directives-section">
+                  <div className="directive-card">
+                    <p className="directive-title">🚨 Airway Protocol</p>
+                    <p className="directive-text">Keep bilateral airway open. Position patient at 30° head elevation. Suction PRN.</p>
+                  </div>
+                  <div className="directive-card">
+                    <p className="directive-title">💉 IV Access</p>
+                    <p className="directive-text">18G IV line secured in left forearm. Normal saline 500ml running at 125ml/hr.</p>
+                  </div>
+                  <div className="directive-card">
+                    <p className="directive-title">📡 Telemetry</p>
+                    <p className="directive-text">Continuous 12-lead ECG monitoring. Transmit rhythm strip every 5 minutes to ER.</p>
+                  </div>
+                  <div className="directive-card">
+                    <p className="directive-title">🏥 Destination</p>
+                    <p className="directive-text">{selectedBooking?.assigned_hospital_name || "Hospital not selected"} {selectedBooking?.assigned_bed_number ? `— ICU Bed ${selectedBooking.assigned_bed_number} allocated.` : "— no bed allocation recorded yet."}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Transmit Protocol Button at Bottom */}
+            <div className="transmit-btn-footer">
+              <button className="transmit-protocol-btn" onClick={() => showToast("✅ Protocol transmitted to hospital!")}>
+                ▶ Transmit Protocol to Hospital
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* ── STAFF RIGHT PANEL: Plain Chat Only ── */
+          <div className="right-chat-card">
+            <div className="chat-console-header">
+              <div className="chat-header-title-box">
+                <h3>Live Consultation Chat</h3>
+                <div className="chat-header-online-status">
+                  <span className="online-dot"></span>
+                  <span>Direct with {driverName} (Driver)</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, color: "#64748b" }}>
+                <RefreshCw size={14} style={{ cursor: "pointer" }} onClick={loadBookings} title="Refresh Case" />
+              </div>
+            </div>
+
+            <div className="chat-messages-viewport">
+              {messages.map((m) => (
+                <div key={m.id} className={`chat-message-row ${m.isStaffSender ? "from-staff" : "from-driver"}`}>
+                  <div className={`message-bubble ${m.isStaffSender ? "staff-bubble" : "driver-bubble"}`}>{m.text}</div>
+                  <div className="bubble-meta-info"><b>{m.sender}</b> ({m.role}) · {m.time}</div>
+                </div>
+              ))}
+              <div ref={chatBottomRef} />
+            </div>
+
+            <div className="chat-input-footer-area">
+              <form className="chat-send-form" onSubmit={handleSendChat}>
+                <input
+                  type="text"
+                  className="chat-text-box"
+                  placeholder="Type directive to ambulance driver..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                />
+                <button type="submit" className="chat-submit-btn" disabled={!chatInput.trim()}>
+                  <Send size={15} />
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Toast Alert */}
+      {toast && <div className="toast-pill-badge">{toast}</div>}
     </div>
-  </div>{preview && <div className="live-consult-preview" onClick={(event) => { if (event.target === event.currentTarget) setPreview(null); }}><div className="live-consult-preview-card"><button className="live-consult-preview-close" onClick={() => setPreview(null)}><X size={16} /></button><img src={preview.url} alt={preview.label || "Shared patient condition"} /></div></div>}
-  </main>;
+  );
 }

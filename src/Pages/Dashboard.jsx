@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, Ambulance, ArrowRight, Building2, ClipboardList, MapPinned, ShieldAlert } from "lucide-react";
+import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
 const asArray = (value) => (Array.isArray(value) ? value : []);
@@ -8,30 +9,31 @@ const statusLabel = (value) => String(value || "pending").replaceAll("_", " ");
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [fleet, setFleet] = useState([]);
-  const [hospitals, setHospitals] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [syncing, setSyncing] = useState(true);
+  const [fleet, setFleet] = useState(() => readDataCache("admin_fleet", []));
+  const [hospitals, setHospitals] = useState(() => readDataCache("hospitals_list", []));
+  const [bookings, setBookings] = useState(() => readDataCache("admin_bookings", []));
+  const hasCachedData = fleet.length > 0 || hospitals.length > 0 || bookings.length > 0;
+  const [syncing, setSyncing] = useState(!hasCachedData);
 
-  const refreshDashboard = async () => {
-    setSyncing(true);
+  const refreshDashboard = async ({ silent = false } = {}) => {
+    if (!silent) setSyncing(true);
     try {
       const [fleetResult, hospitalsResult, bookingsResult] = await Promise.allSettled([
-        fetch(`${BASE}/api/ambulances/`).then((r) => (r.ok ? r.json() : [])),
-        fetch(`${BASE}/api/hospitals/`).then((r) => (r.ok ? r.json() : [])),
-        fetch(`${BASE}/api/bookings/`).then((r) => (r.ok ? r.json() : [])),
+        fetchFreshJson(`${BASE}/api/ambulances/`, { key: "admin_fleet", fallback: [] }),
+        fetchFreshJson(`${BASE}/api/hospitals/`, { key: "hospitals_list", fallback: [] }),
+        fetchFreshJson(`${BASE}/api/bookings/`, { key: "admin_bookings", fallback: [] }),
       ]);
-      if (fleetResult.status === "fulfilled") setFleet(asArray(fleetResult.value));
-      if (hospitalsResult.status === "fulfilled") setHospitals(asArray(hospitalsResult.value));
-      if (bookingsResult.status === "fulfilled") setBookings(asArray(bookingsResult.value));
+      if (fleetResult.status === "fulfilled") setFleet(asArray(writeDataCache("admin_fleet", fleetResult.value)));
+      if (hospitalsResult.status === "fulfilled") setHospitals(asArray(writeDataCache("hospitals_list", hospitalsResult.value)));
+      if (bookingsResult.status === "fulfilled") setBookings(asArray(writeDataCache("admin_bookings", bookingsResult.value)));
     } finally {
       setSyncing(false);
     }
   };
 
   useEffect(() => {
-    refreshDashboard();
-    const timer = window.setInterval(refreshDashboard, 30000);
+    refreshDashboard({ silent: hasCachedData });
+    const timer = window.setInterval(() => refreshDashboard({ silent: true }), 30000);
     return () => window.clearInterval(timer);
   }, []);
 

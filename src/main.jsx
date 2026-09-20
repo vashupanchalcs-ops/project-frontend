@@ -5,6 +5,7 @@ import App from "./App";
 import "./index.css";
 import "./Layout.css";
 import { ThemeProvider } from "./ThemeContext.jsx";
+import { installFetchCache } from "./utils/fetchCache.js";
 
 // Keep legacy API calls working in production while individual screens are
 // migrated away from their old localhost URLs. Local Vite must stay connected
@@ -24,6 +25,9 @@ window.fetch = (input, init) => {
   }
   return nativeFetch(input, init);
 };
+
+// Activate global instant cache for fast navigation across all pages without time delay
+installFetchCache();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

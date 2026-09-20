@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
 
 // Deployment v1.0.5 - Pin selected hospital to top and enable full page scrolling with zero cutoff
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend-shlb.onrender.com").replace(/\/+$/, "");
@@ -26,11 +27,24 @@ const DEFAULT_HOSPITALS = [
 
 export default function AdminHospitalDetails() {
   const location = useLocation();
-  const [hospitals, setHospitals] = useState([]);
+  const cachedHospitals = readDataCache("hospitals_list", []);
+  const initialHospitals = Array.isArray(cachedHospitals) && cachedHospitals.length ? cachedHospitals : [];
+  const initialHospitalId = location.state?.hospitalId != null
+    ? location.state.hospitalId
+    : (initialHospitals[0]?.id ?? null);
+  const [hospitals, setHospitals] = useState(initialHospitals);
   const [selectedHospitalId, setSelectedHospitalId] = useState(
-    location.state?.hospitalId != null ? Number(location.state.hospitalId) : null
+    initialHospitalId
   );
-  const [selectedDashboard, setSelectedDashboard] = useState(null);
+  const [selectedDashboard, setSelectedDashboard] = useState(() => (
+    initialHospitalId != null
+      ? readDataCache(`hospital_dashboard_${initialHospitalId}`, null) || {
+          hospital: initialHospitals.find((item) => String(item.id) === String(initialHospitalId)),
+          summary: {},
+          staff: [],
+        }
+      : null
+  ));
   const [pulseTime, setPulseTime] = useState(Date.now());
   const selectedItemRef = useRef(null);
 
@@ -42,22 +56,21 @@ export default function AdminHospitalDetails() {
   }, [selectedHospitalId, hospitals.length]);
 
   useEffect(() => {
-    fetch(`${BASE}/api/hospitals/`)
-      .then((r) => r.json())
+    fetchFreshJson(`${BASE}/api/hospitals/`, { key: "hospitals_list", fallback: [] })
       .then((data) => {
         const rows = Array.isArray(data) ? data : [];
         const list = rows.length ? rows : DEFAULT_HOSPITALS;
         setHospitals(list);
         if (list.length && !selectedHospitalId) {
           const first = list[0];
-          setSelectedHospitalId(Number(first.id));
+          setSelectedHospitalId(first.id);
           setSelectedDashboard({ hospital: first, summary: {}, staff: [] });
         }
       })
       .catch(() => {
         setHospitals(DEFAULT_HOSPITALS);
         if (!selectedHospitalId) {
-          setSelectedHospitalId(Number(DEFAULT_HOSPITALS[0].id));
+          setSelectedHospitalId(DEFAULT_HOSPITALS[0].id);
           setSelectedDashboard({ hospital: DEFAULT_HOSPITALS[0], summary: {}, staff: [] });
         }
       });
@@ -65,9 +78,11 @@ export default function AdminHospitalDetails() {
 
   useEffect(() => {
     if (!selectedHospitalId) return;
-    fetch(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/`)
-      .then((r) => r.json())
-      .then((data) => setSelectedDashboard(data))
+    const key = `hospital_dashboard_${selectedHospitalId}`;
+    const cached = readDataCache(key, null);
+    if (cached) setSelectedDashboard(cached);
+    fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/`, { key, fallback: null })
+      .then((data) => setSelectedDashboard(writeDataCache(key, data)))
       .catch(() => {
         const fallback = hospitals.find((h) => Number(h.id) === Number(selectedHospitalId));
         if (fallback) setSelectedDashboard((current) => current || { hospital: fallback, summary: {}, staff: [] });

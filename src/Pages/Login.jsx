@@ -195,19 +195,25 @@ export default function Login() {
       if (userRecord.hospital_id) localStorage.setItem("hospital_id", String(userRecord.hospital_id));
       if (userRecord.hospital_name) localStorage.setItem("hospital_name", String(userRecord.hospital_name));
     }
-    // Sync regular user to backend database
-    if (userRecord.role === "user" || (!userRecord.role && userRecord.email)) {
-      fetch(`${BASE}/api/auth/sync-user/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: userRecord.email,
-          name: userRecord.name || userRecord.displayName || "",
-          role: "user",
-          phone: userRecord.phone || "",
-        }),
-      }).catch(() => {});
-    }
+    // Sync ALL roles to backend database (UserProfile model)
+    fetch(`${BASE}/api/auth/sync-user/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email:               userRecord.email,
+        name:                userRecord.name || userRecord.displayName || "",
+        role:                userRecord.role || "user",
+        phone:               userRecord.phone || "",
+        ambulance_id:        userRecord.ambulance_id || null,
+        ambulance_number:    userRecord.ambulance_number || "",
+        contract_id:         userRecord.contract_id || "",
+        registration_number: userRecord.registration_number || "",
+        hospital_id:         userRecord.hospital_id || null,
+        hospital_name:       userRecord.hospital_name || "",
+        staff_id:            userRecord.staff_id || "",
+        staff_role:          userRecord.staff_role || "",
+      }),
+    }).catch(() => {});
 
     if (userRecord.role === "driver") navigate("/driver-dashboard", { replace: true });
     else if (userRecord.role === "hospital") navigate("/hospital/home", { replace: true });

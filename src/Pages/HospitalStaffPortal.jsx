@@ -15,6 +15,7 @@ import {
   Stethoscope,
   UserRound,
 } from "lucide-react";
+import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -51,13 +52,15 @@ const formatCaseStatus = (booking) => {
 export default function HospitalStaffPortal() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const staffId = localStorage.getItem("staff_id") || "";
   const email = localStorage.getItem("user") || "";
+  const dashboardCacheKey = `staff_dashboard_${staffId || email}`;
+  const cachedDashboard = readDataCache(dashboardCacheKey, null);
+  const [dashboard, setDashboard] = useState(cachedDashboard);
   const isHomeRoute = pathname === "/staff/home";
   const isProfileRoute = pathname === "/staff/profile";
 
@@ -68,12 +71,13 @@ export default function HospitalStaffPortal() {
       return;
     }
     if (silent) setRefreshing(true);
-    else setLoading(true);
+    else if (!cachedDashboard) setLoading(true);
     try {
-      const response = await fetch(`${BASE}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`);
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Unable to load staff dashboard");
-      setDashboard(data);
+      const data = await fetchFreshJson(
+        `${BASE}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`,
+        { key: dashboardCacheKey, fallback: {} }
+      );
+      setDashboard(writeDataCache(dashboardCacheKey, data));
       setError("");
     } catch (err) {
       setError(err.message || "Unable to load staff dashboard");
@@ -81,10 +85,10 @@ export default function HospitalStaffPortal() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [email, staffId]);
+  }, [cachedDashboard, dashboardCacheKey, email, staffId]);
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard(Boolean(cachedDashboard));
   }, [loadDashboard]);
 
   const staff = dashboard?.staff || {};

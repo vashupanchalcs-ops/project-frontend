@@ -394,8 +394,8 @@ const Topnavbar = () => {
     try {
       if (roleKey === "admin") {
         const [ambRes, hospRes, bookingRes] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/ambulances/"),
-          fetch("http://127.0.0.1:8000/api/hospitals/"),
+          fetch(`${BASE}/api/ambulances/`),
+          fetch(`${BASE}/api/hospitals/`),
           fetch(`${BASE}/api/bookings/`),
         ]);
         const [ambData, hospData, bookingData] = await Promise.all([ambRes.json(), hospRes.json(), bookingRes.json()]);
@@ -404,7 +404,7 @@ const Topnavbar = () => {
         next.bookings = (Array.isArray(bookingData) ? bookingData : []).filter((b) => match(`#${b.id}`, b.booked_by, b.booked_by_email, b.pickup_location, b.destination, b.status, b.ambulance_number, b.assigned_hospital_name)).slice(0, 6);
       } else if (roleKey === "driver") {
         const [ambRes, bookingRes] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/ambulances/"),
+          fetch(`${BASE}/api/ambulances/`),
           fetch(`${BASE}/api/bookings/`),
         ]);
         const [ambData, bookingData] = await Promise.all([ambRes.json(), bookingRes.json()]);
@@ -417,10 +417,10 @@ const Topnavbar = () => {
           .filter((b) => match(`#${b.id}`, b.booked_by, b.pickup_location, b.destination, b.status, b.ambulance_number))
           .slice(0, 6);
       } else if (roleKey === "hospital") {
-        const byEmailRes = await fetch(`http://127.0.0.1:8000/api/hospitals/by-email/?email=${encodeURIComponent(email)}`);
+        const byEmailRes = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(email)}`);
         if (byEmailRes.ok) {
           const hospitalData = await byEmailRes.json();
-          const dashRes = await fetch(`http://127.0.0.1:8000/api/hospitals/${hospitalData.id}/dashboard/`);
+          const dashRes = await fetch(`${BASE}/api/hospitals/${hospitalData.id}/dashboard/`);
           const dashboard = dashRes.ok ? await dashRes.json() : null;
           const queue = Array.isArray(dashboard?.queue) ? dashboard.queue : [];
           const staff = Array.isArray(dashboard?.staff) ? dashboard.staff : [];
@@ -439,8 +439,8 @@ const Topnavbar = () => {
           .slice(0, 6);
       } else {
         const [ambRes, hospRes, bookingRes] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/ambulances/"),
-          fetch("http://127.0.0.1:8000/api/hospitals/"),
+          fetch(`${BASE}/api/ambulances/`),
+          fetch(`${BASE}/api/hospitals/`),
           fetch(`${BASE}/api/bookings/`),
         ]);
         const [ambData, hospData, bookingData] = await Promise.all([ambRes.json(), hospRes.json(), bookingRes.json()]);
