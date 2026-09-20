@@ -1782,6 +1782,30 @@ const App = () => {
           transform: none !important;
         }
         html body #root#root :is(.ad-activity-row, .ad-request, .ad-ready) { gap: 12px !important; }
+        /* Hospital team allocation palette and split bed/team view. */
+        html body #root .team-allocation-page .team-btn.primary,
+        html body #root .team-allocation-page .team-btn.primary:hover {
+          background: #126f1e !important;
+          border-color: #126f1e !important;
+          color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        html body #root .team-allocation-page .staff-role {
+          background: #e5f7ed !important;
+          color: #126f1e !important;
+          border-color: #a9dfc7 !important;
+        }
+        html body #root .beds-team-pane,
+        html body #root .beds-details-drawer {
+          box-shadow: none !important;
+        }
+        html body #root .beds-team-back-button,
+        html body #root .beds-team-back-button:hover {
+          background: #f2b233 !important;
+          border-color: #f2b233 !important;
+          color: #173645 !important;
+          box-shadow: none !important;
+        }
       `}</style>
     </>
   );

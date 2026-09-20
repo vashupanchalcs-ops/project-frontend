@@ -1102,6 +1102,7 @@ export default function HospitalBeds() {
         >
           {showAllocatedTeam && (
             <div
+              className="beds-team-pane"
               onClick={(event) => event.stopPropagation()}
               style={{
                 flex: 1,
@@ -1115,10 +1116,11 @@ export default function HospitalBeds() {
             >
               <div style={{ maxWidth: 980, margin: "0 auto" }}>
                 <button
+                  className="beds-team-back-button"
                   onClick={() => setShowAllocatedTeam(false)}
                   style={{
-                    border: "1px solid #c9d9d5",
-                    background: "#ffffff",
+                    border: "1px solid #f2b233",
+                    background: "#f2b233",
                     color: "#173645",
                     borderRadius: 9,
                     padding: "9px 14px",
@@ -1163,7 +1165,7 @@ export default function HospitalBeds() {
                 {allocatedTeam.length ? (
                   <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
                     {allocatedTeam.map((member, index) => (
-                      <div key={`${member.id || member.full_name}-${index}`} style={{ background: "#ffffff", border: "1px solid #c9e3da", borderRadius: 14, padding: 17, boxShadow: "0 5px 16px rgba(18,79,74,.06)" }}>
+                      <div key={`${member.id || member.full_name}-${index}`} style={{ background: "#ffffff", border: "1px solid #c9e3da", borderRadius: 14, padding: 17, boxShadow: "none" }}>
                         <div style={{ display: "inline-block", padding: "5px 9px", borderRadius: 999, background: "#d9f3e8", color: "#145044", fontSize: 10, fontWeight: 900, textTransform: "uppercase" }}>{member.role || "Care team"}</div>
                         <div style={{ marginTop: 12, fontWeight: 900, fontSize: 15, color: "#173645" }}>{member.full_name || member.name}</div>
                         <div style={{ marginTop: 5, color: "#668087", fontSize: 12 }}>{member.specialization || "General care"}</div>
@@ -1182,13 +1184,14 @@ export default function HospitalBeds() {
             </div>
           )}
           <div
+            className="beds-details-drawer"
             style={{
               width: "100%",
               maxWidth: 540,
               height: "100vh",
               maxHeight: "100vh",
               background: "#ffffff",
-              boxShadow: "-10px 0 35px rgba(0,0,0,0.25)",
+              boxShadow: "none",
               display: "flex",
               flexDirection: "column",
               position: "relative",
