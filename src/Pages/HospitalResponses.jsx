@@ -325,7 +325,10 @@ export default function HospitalResponses() {
                     )}
 
                     {isApproved && b.assigned_doctor_names && (
-                      <button className="hr-view-team" onClick={() => setTeamBooking(b)}>👥 View allocated staff team</button>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                        <button className="hr-view-team" onClick={() => navigate(`/hospital/team-allocation/edit?booking_id=${b.id}`)}>✎ Edit allocated team</button>
+                        <button className="hr-view-team" onClick={() => setTeamBooking(b)}>👥 View allocated staff team</button>
+                      </div>
                     )}
                   </article>
                 );

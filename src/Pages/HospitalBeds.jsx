@@ -210,6 +210,17 @@ export default function HospitalBeds() {
         loadedBeds = generateBedsFromHospital({ id: effectiveHid, name: "Hospital", total_beds: 121, icu_beds: 42, available_beds: 60 });
       }
 
+      // The booking is the source of truth for the complete allocated team.
+      // Refresh older bed records that may contain only a partial staff JSON.
+      if (queue.length && loadedBeds.length) {
+        loadedBeds = loadedBeds.map((bed) => {
+          const booking = queue.find((item) => String(item.booking_id || item.id) === String(bed.assigned_booking_id));
+          return booking?.assigned_doctors_json && booking.assigned_doctor_names
+            ? { ...bed, assigned_staff_json: booking.assigned_doctors_json, attending_doctor: booking.assigned_doctor_names }
+            : bed;
+        });
+      }
+
       setBeds(loadedBeds);
       try {
         sessionStorage.setItem("hospital_beds_cache", JSON.stringify(loadedBeds));

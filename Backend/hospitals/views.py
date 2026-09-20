@@ -234,6 +234,33 @@ def assign_bed_to_booking(request, hospital_id):
     booking.assigned_bed_type = bed.bed_type
     booking.save()
 
+    # Keep the complete team already allocated for this booking. Bed allocation
+    # must not replace it with a smaller auto-selected team.
+    existing_team = []
+    try:
+        parsed_team = _json.loads(booking.assigned_doctors_json or "[]")
+        if isinstance(parsed_team, list):
+            existing_team = parsed_team
+    except Exception:
+        existing_team = []
+    if not existing_team and booking.assigned_doctor_names:
+        names = [name.strip() for name in str(booking.assigned_doctor_names).split(",") if name.strip()]
+        specs = [spec.strip() for spec in str(booking.assigned_doctor_specializations or "").split(",")]
+        existing_team = [
+            {
+                "full_name": name,
+                "role": (spec.split(":", 1)[0].strip() if ":" in spec else "care team"),
+                "specialization": (spec.split(":", 1)[1].strip() if ":" in spec else (spec or "Assigned care")),
+            }
+            for index, name in enumerate(names)
+            for spec in [specs[index] if index < len(specs) else "Assigned care"]
+        ]
+    if existing_team:
+        bed.assigned_staff_json = _json.dumps(existing_team)
+        bed.attending_doctor = booking.assigned_doctor_names or ", ".join(str(member.get("full_name") or member.get("name") or "") for member in existing_team)
+        bed.save(update_fields=["assigned_staff_json", "attending_doctor", "last_status_update"])
+        return JsonResponse({"bed": bed_to_dict(bed), "booking_id": booking_id})
+
     # Automatically attach the best available multidisciplinary team whenever
     # a bed is allocated; the response pages only display the result.
     condition = f"{booking.patient_condition} {booking.vitals_summary} {booking.destination}".lower()
@@ -275,7 +302,9 @@ def assign_staff_team(request, hospital_id):
         return JsonResponse({"error": "Booking not found for this hospital"}, status=404)
 
     requested_ids = {int(x) for x in (data.get("staff_ids") or []) if str(x).isdigit()}
-    staff_qs = HospitalStaff.objects.filter(hospital_id=hospital_id, is_active=True, is_busy=False)
+    staff_qs = HospitalStaff.objects.filter(hospital_id=hospital_id).filter(
+        Q(is_active=True, is_busy=False) | Q(id__in=requested_ids)
+    )
     condition = f"{booking.patient_condition} {booking.vitals_summary} {booking.destination}".lower()
     specialty_terms = [term for term in ("cardio", "neuro", "trauma", "orthopedic", "respiratory", "emergency", "icu") if term in condition]
     team = []

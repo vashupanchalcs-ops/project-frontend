@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "");
 const ROLES = ["doctor", "nurse", "technician", "support"];
 const roleLabel = { doctor: "Doctor", nurse: "Nurse", technician: "Technician", support: "Support" };
+const asArray = (value, keys = []) => {
+  if (Array.isArray(value)) return value;
+  for (const key of keys) if (Array.isArray(value?.[key])) return value[key];
+  return [];
+};
 
 const roleFromValue = (value) => {
   const text = String(value || "").toLowerCase();
@@ -32,8 +37,10 @@ const parseSavedTeam = (booking) => {
 };
 
 export default function HospitalTeamAllocation() {
-  const { search } = useLocation();
+  const { search, pathname } = useLocation();
+  const navigate = useNavigate();
   const requestedBookingId = new URLSearchParams(search).get("booking_id") || "";
+  const editMode = pathname.endsWith("/edit") || new URLSearchParams(search).get("edit") === "1";
   const [bookings, setBookings] = useState([]);
   const [staff, setStaff] = useState([]);
   const [bookingId, setBookingId] = useState(requestedBookingId);
@@ -42,7 +49,8 @@ export default function HospitalTeamAllocation() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const hospitalId = localStorage.getItem("hospital_id");
-  const booking = useMemo(() => bookings.find((item) => String(item.id) === String(bookingId)) || null, [bookings, bookingId]);
+  const activeBookingId = bookingId || requestedBookingId;
+  const booking = useMemo(() => bookings.find((item) => String(item.id) === String(activeBookingId)) || (!activeBookingId ? bookings[0] || null : null), [bookings, activeBookingId]);
   const savedTeam = useMemo(() => parseSavedTeam(booking), [booking]);
 
   useEffect(() => {
@@ -53,11 +61,13 @@ export default function HospitalTeamAllocation() {
     ]).then(([rawRows, people]) => {
       if (cancelled) return;
       const rows = Array.isArray(rawRows) ? rawRows : (rawRows?.results || rawRows?.bookings || []);
-      const filtered = rows.filter((item) => !hospitalId || String(item.assigned_hospital_id) === String(hospitalId));
+      const hospitalRows = rows.filter((item) => !hospitalId || String(item.assigned_hospital_id) === String(hospitalId));
+      const requested = rows.find((item) => String(item.id) === String(requestedBookingId));
+      const filtered = hospitalRows.length ? hospitalRows : (requested ? [requested] : hospitalRows);
       setBookings(filtered);
-      setStaff(Array.isArray(people) ? people : []);
-      const requested = filtered.find((item) => String(item.id) === String(requestedBookingId));
-      setBookingId(String((requested || filtered[0])?.id || ""));
+      setStaff(asArray(people, ["results", "staff", "members"]));
+      const selectedBooking = filtered.find((item) => String(item.id) === String(requestedBookingId));
+      setBookingId(String((selectedBooking || filtered[0])?.id || ""));
     }).catch(() => setNotice("Unable to load allocation data."));
     return () => { cancelled = true; };
   }, [hospitalId, requestedBookingId]);
@@ -85,7 +95,7 @@ export default function HospitalTeamAllocation() {
       setStep(1);
       return;
     }
-    if (savedTeam.length) {
+    if (savedTeam.length && !editMode) {
       setSelected(savedSelection);
       setStep(3);
     } else {
@@ -93,7 +103,7 @@ export default function HospitalTeamAllocation() {
       setStep(1);
     }
     setNotice("");
-  }, [booking?.id, savedTeam.length, JSON.stringify(savedSelection)]);
+  }, [booking?.id, savedTeam.length, JSON.stringify(savedSelection), editMode]);
 
   const selectedMembers = Object.entries(selected)
     .map(([role, id]) => ({ role, member: staff.find((person) => String(person.id) === String(id)) }))
@@ -135,13 +145,16 @@ export default function HospitalTeamAllocation() {
           body: JSON.stringify({ assign_doctors: team }),
         });
       }
-      if (!response.ok) throw new Error("Team allocation could not be saved. Please retry.");
+      let responseData = {};
+      try { responseData = await response.json(); } catch {}
+      if (!response.ok) throw new Error(responseData.error || "Team allocation could not be saved. Please retry.");
+      const savedTeamPayload = Array.isArray(responseData.team) && responseData.team.length ? responseData.team : team;
       const saved = {
-        assigned_doctor_names: team.map((person) => person.full_name).join(", "),
-        assigned_doctor_specializations: team.map((person) => `${roleLabel[person.role]}: ${person.specialization}`).join(", "),
-        assigned_doctors_json: JSON.stringify(team),
+        assigned_doctor_names: savedTeamPayload.map((person) => person.full_name).join(", "),
+        assigned_doctor_specializations: savedTeamPayload.map((person) => `${roleLabel[roleFromValue(person.role)]}: ${person.specialization || "General"}`).join(", "),
+        assigned_doctors_json: JSON.stringify(savedTeamPayload),
       };
-      setBookings((rows) => rows.map((row) => row.id === booking.id ? { ...row, ...saved } : row));
+      setBookings((rows) => rows.map((row) => String(row.id) === String(booking.id) ? { ...row, ...saved } : row));
       setNotice("Team allocated successfully. Booking and bed assignment are updated.");
       setStep(3);
     } catch (error) {
@@ -175,9 +188,9 @@ export default function HospitalTeamAllocation() {
               {ROLES.map((role) => <div key={role}><div className="role-heading"><b>{roleLabel[role]}</b><small>Top 5 available · select 1</small></div><div className="staff-grid">{(ranked[role] || []).map((member) => <label className={`staff-card ${selected[role] === member.id ? "selected" : ""}`} key={member.id}><input className="staff-check" type="checkbox" checked={selected[role] === member.id} onChange={() => toggle(role, member)} /><span className="staff-role">{roleLabel[role]}</span><div className="staff-name">{member.full_name}</div><div className="staff-meta">{member.specialization || "General"}</div><div className="staff-meta">{member.years_experience || 0} years · {member.is_on_call ? "On call" : "Available"}</div></label>)}</div></div>)}
             </>}
             {step === 2 && <div className="review-grid"><div className="review-card">{selectedMembers.map(({ role, member }) => <div className="review-row" key={role}><span className="review-role">{roleLabel[role]}</span><div><b>{member.full_name}</b><div className="staff-meta">{member.specialization || "General"} · {member.years_experience || 0} years experience</div></div><span className="selected-chip">Confirmed available</span></div>)}</div><div className="allocated-state"><b>Clinical coverage validated</b><p>Selected members will be notified and reserved for this booking.</p></div></div>}
-            {step === 3 && <div className="allocated-state"><h3>✓ Team allocated · preparing for departure</h3><p>{selectedMembers.length ? selectedMembers.map(({ role, member }) => `${member.full_name} (${roleLabel[role]})`).join(" · ") : savedTeam.map((member) => `${member.full_name || member.name} (${roleLabel[roleFromValue(member.role)]})`).join(" · ")}</p><p>Team details have been saved to the booking and allocated bed.</p></div>}
+            {step === 3 && <div className="allocated-state"><h3>✓ Team allocated · preparing for departure</h3><p>{savedTeam.length ? savedTeam.map((member) => `${member.full_name || member.name} (${roleLabel[roleFromValue(member.role)]})`).join(" · ") : selectedMembers.map(({ role, member }) => `${member.full_name} (${roleLabel[role]})`).join(" · ")}</p><p>Team details have been saved to the booking and allocated bed.</p></div>}
             {notice && <p style={{ color: notice.includes("success") ? "#126F1E" : "#b77900", background: notice.includes("success") ? "#e5f7ed" : "#fff6d6", padding: "10px 12px", borderRadius: 10, fontWeight: 800 }}>{notice}</p>}
-            <div className="team-actions">{step === 3 && <button className="team-btn secondary" onClick={() => setStep(1)}>✎ Edit allocated team</button>}{step === 2 && <button className="team-btn secondary" onClick={() => setStep(1)}>← Back to selection</button>}{step === 1 && <button className="team-btn primary" onClick={review}>Review team →</button>}{step === 2 && <button className="team-btn primary" disabled={saving} onClick={allocate}>{saving ? "Saving…" : "Save team changes"}</button>}</div>
+            <div className="team-actions">{step === 3 && <button className="team-btn secondary" onClick={() => navigate(`/hospital/team-allocation/edit?booking_id=${booking.id}`)}>✎ Edit allocated team</button>}{step === 2 && <button className="team-btn secondary" onClick={() => setStep(1)}>← Back to selection</button>}{step === 1 && <button className="team-btn primary" onClick={review}>Review team →</button>}{step === 2 && <button className="team-btn primary" disabled={saving} onClick={allocate}>{saving ? "Saving…" : "Save team changes"}</button>}</div>
           </>}
         </section>
       </div>
