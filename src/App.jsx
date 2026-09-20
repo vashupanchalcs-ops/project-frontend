@@ -42,6 +42,7 @@ import HospitalDoctorAssignment from "./Pages/HospitalDoctorAssignment";
 import HospitalBeds             from "./Pages/HospitalBeds";
 import HospitalTeamAllocation  from "./Pages/HospitalTeamAllocation";
 import UserCareTeam             from "./Pages/UserCareTeam";
+import CaseManagement            from "./Pages/CaseManagement";
 
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
@@ -174,6 +175,7 @@ const App = () => {
         <Route path="/hospital/cases" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/manage-cases" element={<HospitalRoute element={<CaseManagement scope="hospital" />} />} />
         <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/team-allocation" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/team-allocation/edit" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
@@ -204,6 +206,7 @@ const App = () => {
         <Route path="/AdminChatControl" element={<AdminRoute element={<AdminChatControl />} />} />
         <Route path="/HospitalPartnerDetails" element={<AdminRoute element={<AdminHospitalDetails />} />} />
         <Route path="/CallIntakeConsole" element={<AdminRoute element={<CallIntakeConsole />} />} />
+        <Route path="/ManageCases" element={<AdminRoute element={<CaseManagement scope="admin" />} />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

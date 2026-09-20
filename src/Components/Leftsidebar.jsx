@@ -14,6 +14,7 @@ const adminNavItems = [
   { to: "/HospitalResponses",    icon: ShieldCheck,   label: "Hospital Response" },
   { to: "/HospitalPartnerDetails", icon: BookOpen,    label: "Hospital Details" },
   { to: "/Analytics",            icon: Activity,      label: "Analytics"        },
+  { to: "/ManageCases",          icon: ClipboardList, label: "Manage Cases"     },
   { to: "/Requests",             icon: ClipboardList, label: "Requests"         },
   { to: "/CallIntakeConsole",    icon: PhoneCall,     label: "Call Intake"      },
   { to: "/DriverChangeRequests", icon: Headphones, label: "Driver Support", dot: true },
@@ -23,6 +24,7 @@ const adminNavItems = [
 
 const hospitalNavItems = [
   { to: "/hospital/home",          icon: Building2,         label: "Hospital Home" },
+  { to: "/hospital/manage-cases",  icon: ClipboardList,     label: "Manage Cases" },
   { to: "/hospital/responses",     icon: ShieldCheck,       label: "Hospital Response", dot: true },
   { to: "/hospital/beds",          icon: BedDouble,         label: "Bed Management", dot: true },
   { to: "/hospital/team-allocation", icon: UserCheck,         label: "Team Allocation" },
