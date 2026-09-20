@@ -1775,9 +1775,9 @@ export default function HospitalPortal() {
           border: 1px solid #fde68a;
         }
         .hp-eta-badge.transit {
-          background: #dbeafe;
-          color: #1e40af;
-          border: 1px solid #bfdbfe;
+          background: #e8f5e9;
+          color: #126F1E;
+          border: 1px solid #a9dfc7;
         }
         .hp-eta-timeline {
           display: flex;
@@ -2478,10 +2478,11 @@ export default function HospitalPortal() {
         }
         .hp-report-grid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: minmax(0, 1fr);
           gap: 10px;
         }
         .hp-report-card {
+          width: 100%;
           border: 1px solid rgba(17,17,17,0.12);
           border-radius: 16px;
           background: linear-gradient(160deg, #ffffff 0%, #f8faeb 100%);
@@ -3086,9 +3087,9 @@ export default function HospitalPortal() {
                             <button
                               className="hp-btn ok"
                               style={{
-                                background: "#0284c7",
+                                background: "#126F1E",
                                 color: "#ffffff",
-                                borderColor: "#0369a1",
+                                borderColor: "#0d5717",
                                 fontWeight: 800,
                                 padding: "6px 14px",
                                 borderRadius: "8px",
@@ -3159,8 +3160,8 @@ export default function HospitalPortal() {
                             <div style={{
                               marginTop: 8,
                               padding: "8px 10px",
-                              background: q.assigned_bed_type === "icu" ? "#eff6ff" : "#fefce8",
-                              border: `1px solid ${q.assigned_bed_type === "icu" ? "#93c5fd" : "#fde047"}`,
+                              background: q.assigned_bed_type === "icu" ? "#e8f5e9" : "#fefce8",
+                              border: `1px solid ${q.assigned_bed_type === "icu" ? "#126F1E" : "#fde047"}`,
                               borderRadius: 8,
                               fontSize: 11,
                               display: "flex",
@@ -3168,7 +3169,7 @@ export default function HospitalPortal() {
                               justifyContent: "space-between"
                             }}>
                               <div>
-                                <span style={{ color: q.assigned_bed_type === "icu" ? "#1d4ed8" : "#854d0e", fontWeight: 700 }}>
+                                <span style={{ color: q.assigned_bed_type === "icu" ? "#126F1E" : "#854d0e", fontWeight: 700 }}>
                                   🛏️ Assigned Bed:
                                 </span> <b>{q.assigned_bed_number}</b> ({q.assigned_bed_type?.toUpperCase() || "GENERAL"})
                               </div>
@@ -3177,7 +3178,7 @@ export default function HospitalPortal() {
                                 fontWeight: 800,
                                 padding: "2px 6px",
                                 borderRadius: 999,
-                                background: q.assigned_bed_type === "icu" ? "#1d4ed8" : "#ca8a04",
+                                background: q.assigned_bed_type === "icu" ? "#126F1E" : "#ca8a04",
                                 color: "#fff"
                               }}>
                                 {q.assigned_bed_type === "icu" ? "ICU BED" : "RESERVED"}
@@ -3253,9 +3254,9 @@ export default function HospitalPortal() {
                                   <button
                                     className="hp-btn ok"
                                     style={{
-                                      background: "#2563eb",
+                                      background: "#126F1E",
                                       color: "#ffffff",
-                                      borderColor: "#1d4ed8",
+                                      borderColor: "#0d5717",
                                       fontWeight: 800,
                                       padding: "6px 12px",
                                       borderRadius: "8px",
@@ -3307,9 +3308,9 @@ export default function HospitalPortal() {
                                   <button
                                     className="hp-btn ok"
                                     style={{
-                                      background: "#0284c7",
+                                      background: "#126F1E",
                                       color: "#ffffff",
-                                      borderColor: "#0369a1",
+                                      borderColor: "#0d5717",
                                       fontWeight: 800,
                                       padding: "6px 12px",
                                       borderRadius: "8px",
@@ -3930,7 +3931,7 @@ export default function HospitalPortal() {
                               ) : (
                                 <button
                                   className="hp-btn ok"
-                                  style={{ background: "#0284c7", color: "#fff", borderColor: "#0369a1", padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "6px", cursor: "pointer" }}
+                                  style={{ background: "#126F1E", color: "#fff", borderColor: "#0d5717", padding: "4px 10px", fontSize: "11px", fontWeight: 700, borderRadius: "6px", cursor: "pointer" }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     markPatientReached(c.booking_id);
@@ -3989,7 +3990,7 @@ export default function HospitalPortal() {
                             ) : (
                               <button
                                 className="hp-btn ok"
-                                style={{ background: "#0284c7", color: "#ffffff", borderColor: "#0369a1", fontWeight: 800, padding: "8px 16px", borderRadius: "8px", cursor: "pointer" }}
+                                style={{ background: "#126F1E", color: "#ffffff", borderColor: "#0d5717", fontWeight: 800, padding: "8px 16px", borderRadius: "8px", cursor: "pointer" }}
                                 onClick={() => markPatientReached(openCase.booking_id)}
                               >
                                 🏥 Click to Confirm Patient Reached

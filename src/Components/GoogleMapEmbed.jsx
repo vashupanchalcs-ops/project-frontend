@@ -68,7 +68,7 @@ export default function GoogleMapEmbed({
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
       />
-      {pickup && (() => { const live = !String(pickup.label || "").includes("pending"); const color = live ? "#16a34a" : "#dc2626"; return <div title="User location" style={{ position: "absolute", top: 16, left: 16, zIndex: 3, display: "flex", alignItems: "center", gap: 7, padding: "7px 10px", borderRadius: 999, background: "rgba(255,255,255,.95)", border: `1px solid ${color}`, color, fontSize: 11, fontWeight: 800 }}><span style={{ width: 10, height: 10, borderRadius: "50%", background: color, boxShadow: `0 0 0 3px ${live ? "#dcfce7" : "#fee2e2"}` }} /> {live ? "User location available" : "User location access pending"}</div>; })()}
+      {pickup && (() => { const live = !String(pickup.label || "").includes("pending"); const color = live ? "#126F1E" : "#f2b233"; return <div title="User location" style={{ position: "absolute", top: 16, right: 16, left: "auto", zIndex: 3, display: "flex", alignItems: "center", gap: 7, padding: "7px 10px", borderRadius: 999, background: "rgba(255,255,255,.95)", border: `1px solid ${color}`, color, fontSize: 11, fontWeight: 800 }}><span style={{ width: 10, height: 10, borderRadius: "50%", background: color, boxShadow: `0 0 0 3px ${live ? "#e5f7ed" : "#fff3df"}` }} /> {live ? "User location available" : "User location access pending"}</div>; })()}
       {loading && (
         <div style={{ position: "absolute", top: 10, left: 12, zIndex: 2, background: "rgba(255,255,255,0.95)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 700 }}>
           Loading Google Maps route...
