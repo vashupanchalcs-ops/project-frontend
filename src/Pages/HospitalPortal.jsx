@@ -3047,7 +3047,7 @@ export default function HospitalPortal() {
                             <button
                               className="hp-btn primary"
                               style={{ background: q.assigned_doctor_names ? "#0f766e" : "#166534", color: "#fff" }}
-                              onClick={() => navigate(`/hospital/assign-doctor?booking_id=${q.booking_id}`)}
+                              onClick={() => navigate(`/hospital/team-allocation?booking_id=${q.booking_id}`)}
                             >
                               👨‍⚕️ {q.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
                             </button>
@@ -3243,7 +3243,7 @@ export default function HospitalPortal() {
                                     fontSize: "11px",
                                     cursor: "pointer",
                                   }}
-                                  onClick={() => navigate(`/hospital/assign-doctor?booking_id=${q.booking_id}`)}
+                                  onClick={() => navigate(`/hospital/team-allocation?booking_id=${q.booking_id}`)}
                                 >
                                   👨‍⚕️ {q.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
                                 </button>
@@ -3365,7 +3365,7 @@ export default function HospitalPortal() {
                           <button
                             className="hp-btn primary"
                             style={{ marginTop: 8, background: q.assigned_doctor_names ? "#0f766e" : "#166534" }}
-                            onClick={() => navigate(`/hospital/assign-doctor?booking_id=${q.booking_id}`)}
+                            onClick={() => navigate(`/hospital/team-allocation?booking_id=${q.booking_id}`)}
                           >
                             👨‍⚕️ {q.assigned_doctor_names ? "Manage / Re-assign Staff" : "Assign Staff"}
                           </button>

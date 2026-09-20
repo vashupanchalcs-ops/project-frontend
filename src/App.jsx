@@ -174,7 +174,7 @@ const App = () => {
         <Route path="/hospital/cases" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
-        <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalDoctorAssignment />} />} />
+        <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/team-allocation" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/beds" element={<HospitalRoute element={<HospitalBeds />} />} />
 
