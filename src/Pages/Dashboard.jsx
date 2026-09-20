@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, Ambulance, ArrowRight, Building2, ClipboardList, MapPinned, ShieldAlert } from "lucide-react";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const statusLabel = (value) => String(value || "pending").replaceAll("_", " ");
 

@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 
 // Deployment v1.0.5 - Pin selected hospital to top and enable full page scrolling with zero cutoff
-const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
+const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend-shlb.onrender.com").replace(/\/+$/, "");
 
 // Keep the partner screen useful while the API is unavailable or has no seeded rows.
 const DEFAULT_HOSPITALS = [

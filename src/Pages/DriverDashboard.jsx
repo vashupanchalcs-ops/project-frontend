@@ -10,7 +10,7 @@ import gsap from "gsap";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : (import.meta.env.VITE_API_BASE_URL || "https://aarogya-backend.onrender.com");
+  : (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend-shlb.onrender.com");
 const BASE          = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const PING_INTERVAL = 5000;
 const POLL_INTERVAL = 8000;
