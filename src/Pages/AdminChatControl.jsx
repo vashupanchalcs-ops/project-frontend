@@ -129,7 +129,7 @@ export default function AdminChatControl() {
           flexDirection: "column",
         }}
       >
-        <h1 style={{ margin: "0 0 8px", fontSize: isMobile ? 24 : 34 }}>AI Chat Control Center</h1>
+        <h1 style={{ margin: "0 0 8px", fontSize: isMobile ? 24 : 34 }}>Aarogya AI Chat Control Center</h1>
         <p style={{ margin: "0 0 12px", color: "#555", fontSize: isMobile ? 14 : 16 }}>
           Booking-wise user cards. Select any card to control chatbot updates professionally.
         </p>
@@ -290,7 +290,7 @@ export default function AdminChatControl() {
               <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 10 }}>Notifications</div>
               {chatMessages.slice(-10).reverse().map((m) => (
                 <div key={m.id} style={{ padding: "8px 0", borderBottom: "1px solid #eee" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{m.sender_name || m.sender_role}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{String(m.sender_name || m.sender_role).replace(/SwiftRescue/gi, "Aarogya")}</div>
                   <div style={{ fontSize: 12, color: "#555" }}>{String(m.message || "").slice(0, 80)}</div>
                 </div>
               ))}

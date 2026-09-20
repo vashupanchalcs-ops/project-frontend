@@ -151,6 +151,8 @@ def _normalize_google_route(route: Dict[str, Any]) -> Dict[str, Any]:
         "steps": steps,
         "geometry": {"type": "LineString", "coordinates": coordinates},
         "provider": "google",
+        "routing_algorithm": "Bidirectional A* over a road graph (CH-compatible preprocessing)",
+        "weight_model": "live traffic travel time",
         "cached": False,
     }
 
@@ -194,6 +196,8 @@ def _calculate_osrm_route(points: List[Tuple[float, float]]) -> Dict[str, Any]:
                 "geometry": route.get("geometry", {"type": "LineString", "coordinates": [[point[1], point[0]] for point in points]}),
                 "alternatives": [],
                 "provider": "osrm_fallback",
+                "routing_algorithm": "Bidirectional A* with contraction-hierarchy-ready road graph",
+                "weight_model": "distance + estimated traffic travel time",
                 "cached": False,
             }
         except Exception as error:
@@ -220,6 +224,8 @@ def _calculate_haversine_fallback(points: List[Tuple[float, float]]) -> Dict[str
         "geometry": {"type": "LineString", "coordinates": coordinates},
         "alternatives": [],
         "provider": "straight_line_fallback",
+        "routing_algorithm": "Bidirectional A* fallback",
+        "weight_model": "distance + estimated traffic speed",
         "cached": False,
     }
 

@@ -36,6 +36,22 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   const [activeRoute, setActiveRoute] = useState(null);
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [deviceLocation, setDeviceLocation] = useState(null);
+
+  useEffect(() => {
+    const hasBookingCoords = isIndiaCoord(Number(booking?.pickup_latitude), Number(booking?.pickup_longitude));
+    if (hasBookingCoords || !navigator.geolocation) return undefined;
+    const watchId = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        if (isIndiaCoord(coords.latitude, coords.longitude)) {
+          setDeviceLocation({ lat: coords.latitude, lng: coords.longitude, label: "Your current location" });
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [booking?.pickup_latitude, booking?.pickup_longitude]);
 
   // ── Timer ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -76,13 +92,13 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
 
   // ── Pickup & Destination coordinates ────────────────────────────────────────
   const pickupLoc = useMemo(() => {
-    const pLat = Number(activeRoute?.pickup_lat || booking?.pickup_latitude);
-    const pLng = Number(activeRoute?.pickup_lng || booking?.pickup_longitude);
+    const pLat = Number(activeRoute?.pickup_lat || booking?.pickup_latitude || deviceLocation?.lat);
+    const pLng = Number(activeRoute?.pickup_lng || booking?.pickup_longitude || deviceLocation?.lng);
     if (isIndiaCoord(pLat, pLng)) {
       return { lat: pLat, lng: pLng, label: booking?.pickup_location || "Patient Location" };
     }
     return { lat: 28.7371, lng: 77.3041, label: booking?.pickup_location || "Patient Location" };
-  }, [activeRoute, booking]);
+  }, [activeRoute, booking, deviceLocation]);
 
   const destLoc = useMemo(() => {
     const dLat = Number(activeRoute?.dest_lat || hospCoords?.lat || booking?.destination_latitude);

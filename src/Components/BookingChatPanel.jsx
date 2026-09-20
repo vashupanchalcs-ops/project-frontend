@@ -743,7 +743,7 @@ export default function BookingChatPanel({
           const mine = m.sender_role === role;
           return (
             <div key={m.id} className={`chat-msg ${mine ? "mine" : "other"}`}>
-              <div><b>{m.sender_name || m.sender_role}</b></div>
+              <div><b>{String(m.sender_name || m.sender_role).replace(/SwiftRescue/gi, "Aarogya")}</b></div>
               <div>{m.message}</div>
               <div className="chat-meta">
                 {new Date(m.created_at).toLocaleTimeString()} {mine ? "· sent" : ""}

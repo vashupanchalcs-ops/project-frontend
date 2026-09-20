@@ -234,7 +234,78 @@ def assign_bed_to_booking(request, hospital_id):
     booking.assigned_bed_type = bed.bed_type
     booking.save()
 
+    # Automatically attach the best available multidisciplinary team whenever
+    # a bed is allocated; the response pages only display the result.
+    condition = f"{booking.patient_condition} {booking.vitals_summary} {booking.destination}".lower()
+    terms = [term for term in ("cardio", "neuro", "trauma", "orthopedic", "respiratory", "emergency", "icu") if term in condition]
+    selected = []
+    available = HospitalStaff.objects.filter(hospital_id=hospital_id, is_active=True, is_busy=False)
+    for role in ("doctor", "nurse", "technician", "support"):
+        candidates = list(available.filter(role=role))
+        if candidates:
+            candidates.sort(key=lambda s: (sum(t in (s.specialization or "").lower() for t in terms) * 100 + (s.is_on_call * 25) + s.years_experience * 3), reverse=True)
+            selected.append(candidates[0])
+    if selected:
+        payload = [{"id": s.id, "full_name": s.full_name, "role": s.role, "specialization": s.specialization, "contact_number": s.contact_number, "years_experience": s.years_experience} for s in selected]
+        for s in selected:
+            s.is_active, s.is_busy, s.assigned_booking_id = False, True, booking.id
+            s.save(update_fields=["is_active", "is_busy", "assigned_booking_id", "updated_at"])
+        booking.assigned_doctors_json = json.dumps(payload)
+        booking.assigned_doctor_names = ", ".join(s.full_name for s in selected)
+        booking.assigned_doctor_specializations = ", ".join(f"{s.role}: {s.specialization or 'General'}" for s in selected)
+        booking.assigned_doctor_contacts = ", ".join(s.contact_number for s in selected if s.contact_number)
+        booking.doctors_assigned_at = timezone.now()
+        booking.save(update_fields=["assigned_doctors_json", "assigned_doctor_names", "assigned_doctor_specializations", "assigned_doctor_contacts", "doctors_assigned_at"])
+        bed.assigned_staff_json = json.dumps(payload)
+        bed.attending_doctor = booking.assigned_doctor_names
+        bed.save(update_fields=["assigned_staff_json", "attending_doctor", "last_status_update"])
+
     return JsonResponse({"bed": bed_to_dict(bed), "booking_id": booking_id})
+
+
+@csrf_exempt
+def assign_staff_team(request, hospital_id):
+    """Build the best available multidisciplinary team for a booking."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    data = _safe_json(request) or {}
+    try:
+        booking = Booking.objects.get(id=data.get("booking_id"), assigned_hospital_id=hospital_id)
+    except Booking.DoesNotExist:
+        return JsonResponse({"error": "Booking not found for this hospital"}, status=404)
+
+    staff_qs = HospitalStaff.objects.filter(hospital_id=hospital_id, is_active=True, is_busy=False)
+    condition = f"{booking.patient_condition} {booking.vitals_summary} {booking.destination}".lower()
+    specialty_terms = [term for term in ("cardio", "neuro", "trauma", "orthopedic", "respiratory", "emergency", "icu") if term in condition]
+    team = []
+    for role in ("doctor", "nurse", "technician", "support"):
+        candidates = list(staff_qs.filter(role=role))
+        if not candidates:
+            continue
+        candidates.sort(key=lambda s: (sum(term in (s.specialization or "").lower() for term in specialty_terms) * 100 + (s.is_on_call * 25) + (s.years_experience * 3)), reverse=True)
+        team.append(candidates[0])
+
+    if not team:
+        return JsonResponse({"error": "No available hospital staff found"}, status=409)
+    HospitalStaff.objects.filter(assigned_booking_id=booking.id).update(is_active=True, is_busy=False, assigned_booking_id=None)
+    payload = [{"id": s.id, "full_name": s.full_name, "role": s.role, "specialization": s.specialization, "contact_number": s.contact_number, "years_experience": s.years_experience} for s in team]
+    for s in team:
+        s.is_active = False
+        s.is_busy = True
+        s.assigned_booking_id = booking.id
+        s.save(update_fields=["is_active", "is_busy", "assigned_booking_id", "updated_at"])
+    booking.assigned_doctors_json = json.dumps(payload)
+    booking.assigned_doctor_names = ", ".join(s.full_name for s in team)
+    booking.assigned_doctor_specializations = ", ".join(f"{s.role}: {s.specialization or 'General'}" for s in team)
+    booking.assigned_doctor_contacts = ", ".join(s.contact_number for s in team if s.contact_number)
+    booking.doctors_assigned_at = timezone.now()
+    booking.save(update_fields=["assigned_doctors_json", "assigned_doctor_names", "assigned_doctor_specializations", "assigned_doctor_contacts", "doctors_assigned_at"])
+    bed = HospitalBed.objects.filter(id=booking.assigned_bed_id).first() if booking.assigned_bed_id else None
+    if bed:
+        bed.assigned_staff_json = json.dumps(payload)
+        bed.attending_doctor = booking.assigned_doctor_names
+        bed.save(update_fields=["assigned_staff_json", "attending_doctor", "last_status_update"])
+    return JsonResponse({"team": payload, "booking_id": booking.id, "bed": bed_to_dict(bed) if bed else None})
 
 
 @csrf_exempt

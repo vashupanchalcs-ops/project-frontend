@@ -499,7 +499,7 @@ export function MyBookings() {
                         {b.assigned_doctor_names && (
                           <div style={{ gridColumn: "1 / -1", marginTop: 8, padding: "10px 14px", background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 10, fontSize: 13 }}>
                             <div style={{ color: "#166534", fontWeight: 800, display: "flex", alignItems: "center", gap: 6 }}>
-                              👨‍⚕️ Assigned Doctor(s): {b.assigned_doctor_names}
+                              👥 Allocated Care Team: {b.assigned_doctor_names}
                             </div>
                             {b.assigned_doctor_specializations && (
                               <div style={{ color: "#374151", fontSize: 12, marginTop: 3 }}>

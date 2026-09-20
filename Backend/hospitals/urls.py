@@ -10,6 +10,7 @@ urlpatterns = [
     path("<int:hospital_id>/staff/<int:staff_id>/", views.hospital_staff_detail),
     path("<int:hospital_id>/beds/",         views.hospital_beds),
     path("<int:hospital_id>/beds/assign/",  views.assign_bed_to_booking),
+    path("<int:hospital_id>/staff-team/assign/", views.assign_staff_team),
     path("<int:hospital_id>/beds/switch-icu/", views.switch_to_icu_bed),
     path("beds/<int:bed_id>/",              views.hospital_bed_detail),
     path("<str:id>/",                     views.hospital_detail),

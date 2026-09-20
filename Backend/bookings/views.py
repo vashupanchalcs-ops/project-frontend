@@ -170,7 +170,7 @@ def _push_system_chat(booking, message, message_type="update", metadata="", targ
     BookingChatMessage.objects.create(
         thread=thread,
         sender_role="system",
-        sender_name="SwiftRescue AI",
+        sender_name="Aarogya AI",
         message_type=message_type,
         message=message,
         metadata=json.dumps(meta),

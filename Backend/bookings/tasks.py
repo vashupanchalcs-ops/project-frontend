@@ -38,7 +38,7 @@ def generate_ai_reply_task(thread_id, prompt, role):
     msg = BookingChatMessage.objects.create(
         thread=thread,
         sender_role="system",
-        sender_name="SwiftRescue AI",
+        sender_name="Aarogya AI",
         message_type="update",
         message=text,
         metadata=json.dumps({"source": "celery_ai_task"}),

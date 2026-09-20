@@ -18,6 +18,7 @@ export default function HospitalResponses() {
   const [ambulances, setAmbulances] = useState([]);
   const [loading, setLoading] = useState(cachedBookings.length === 0);
   const [actionLoading, setActionLoading] = useState(null);
+  const [teamBooking, setTeamBooking] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
 
   const showToast = (msg) => {
@@ -214,7 +215,7 @@ export default function HospitalResponses() {
       <div className="hr-root">
         <div className="hr-wrap">
           <h1 className="hr-title">Hospital Responses</h1>
-          <div className="hr-sub">Approved emergency cases with doctor allocations and real-time bed management.</div>
+          <div className="hr-sub">Approved emergency cases with allocated bed and multidisciplinary care team details.</div>
 
           {loading && hospitalAssigned.length === 0 ? (
             <div className="hr-empty">Loading...</div>
@@ -323,70 +324,8 @@ export default function HospitalResponses() {
                       </div>
                     )}
 
-                    {/* Action Buttons for Approved Bookings */}
-                    {isApproved && (
-                      <div className="hr-actions">
-                        {/* Assign Staff Button */}
-                        <button
-                          onClick={() => navigate(`/hospital/assign-doctor?booking_id=${b.id}`)}
-                          style={{
-                            background: b.assigned_doctor_names ? "#0f766e" : "#166534",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 8,
-                            padding: "8px 14px",
-                            fontSize: 12,
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          👨‍⚕️ {b.assigned_doctor_names ? "Manage Staff" : "Assign Staff"}
-                        </button>
-
-                        {/* Allocate Bed Button — navigates to Bed Management Console to choose specific bed */}
-                        {!b.assigned_bed_number ? (
-                          <button
-                            onClick={() => navigate(`/hospital/beds?booking_id=${b.id}&type=${b.icu_required ? "icu" : "general"}`)}
-                            style={{
-                              background: "#2563eb",
-                              color: "#fff",
-                              border: "none",
-                              borderRadius: 8,
-                              padding: "8px 14px",
-                              fontSize: 12,
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                            }}
-                          >
-                            🛏️ Allocate Bed
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => navigate(`/hospital/beds?booking_id=${b.id}&type=${b.icu_required ? "icu" : "general"}`)}
-                            style={{
-                              background: "#f1f5f9",
-                              color: "#334155",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: 8,
-                              padding: "8px 12px",
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            🔄 Change Bed
-                          </button>
-                        )}
-                      </div>
+                    {isApproved && b.assigned_doctor_names && (
+                      <button className="hr-view-team" onClick={() => setTeamBooking(b)}>👥 View allocated staff team</button>
                     )}
                   </article>
                 );
@@ -395,6 +334,16 @@ export default function HospitalResponses() {
           )}
         </div>
       </div>
+      {teamBooking && (
+        <div onClick={() => setTeamBooking(null)} style={{ position: "fixed", inset: 0, zIndex: 20, background: "rgba(15,23,42,.45)", display: "grid", placeItems: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 22, width: "min(560px, 100%)", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
+            <h2 style={{ margin: "0 0 6px" }}>Allocated care team · Booking #{teamBooking.id}</h2>
+            <p style={{ color: "#64748b", marginTop: 0 }}>Selected by specialization, availability, on-call status and experience.</p>
+            <div style={{ display: "grid", gap: 8 }}>{String(teamBooking.assigned_doctor_names).split(", ").map((name, i) => <div key={name} style={{ padding: 10, border: "1px solid #bbf7d0", borderRadius: 10, background: "#f0fdf4" }}><b>{name}</b><div style={{ fontSize: 12, color: "#475569" }}>{String(teamBooking.assigned_doctor_specializations || "").split(", ")[i] || "Care team member"}</div></div>)}</div>
+            <button onClick={() => setTeamBooking(null)} style={{ marginTop: 16, padding: "9px 16px", border: 0, borderRadius: 8, background: "#166534", color: "#fff", fontWeight: 800 }}>Close</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
