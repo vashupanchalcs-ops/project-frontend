@@ -304,6 +304,10 @@ export default function CaseManagement({ scope = "hospital" }) {
         .cm-filter-option.tone-filter-red.selected{background:#c9152d;color:#fff}
         .cm-filter-option.tone-filter-yellow.selected{background:#f2b233;color:#17231b}
         .cm-filter-option.tone-filter-green.selected{background:#35ad52;color:#fff}
+        html body #root .cm-root .cm-filter-option.tone-filter-red.selected{background:#c9152d!important;color:#fff!important;border-color:#c9152d!important}
+        html body #root .cm-root .cm-filter-option.tone-filter-yellow.selected{background:#f2b233!important;color:#17231b!important;border-color:#f2b233!important}
+        html body #root .cm-root .cm-filter-option.tone-filter-green.selected{background:#35ad52!important;color:#fff!important;border-color:#35ad52!important}
+        html body #root .cm-root .cm-filter-option.selected .cm-filter-count{color:inherit!important;border-color:currentColor!important}
         .cm-empty,.cm-loading{color:#6c7d72}
         .cm-modal{background:#fff;color:#17231b;border-color:#cbd9ce;box-shadow:0 18px 45px rgba(18,111,30,.16)}
         .cm-modal-close{background:#edf5ef;color:#17231b}

@@ -119,14 +119,16 @@ export default function CaseDetails() {
         .cd-field.wide { grid-column:1 / -1; }
         .cd-label { font-size:9px; font-weight:900; color:rgba(17,17,17,0.5); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px; }
         .cd-value { font-size:13px; color:#111; line-height:1.35; word-break:break-word; white-space:pre-wrap; }
-        .cd-bill-total { display:flex; align-items:center; justify-content:space-between; gap:12px; border-radius:14px; padding:16px; background:#111; color:#fff; margin-bottom:12px; }
-        .cd-bill-total strong { font-size:30px; letter-spacing:0; }
+        .cd-bill-total { display:flex; align-items:center; justify-content:space-between; gap:12px; border-radius:14px; padding:16px; background:#126F1E; color:#fff; margin-bottom:12px; }
+        .cd-bill-total strong { font-size:30px; letter-spacing:0; color:#fff; }
         .cd-line { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(20,20,20,0.08); padding:10px 0; font-size:13px; }
         .cd-line:last-child { border-bottom:none; }
         .cd-muted { color:rgba(17,17,17,0.62); font-size:12px; line-height:1.45; }
         .cd-empty { background:#fff; border:1px dashed rgba(20,20,20,0.2); border-radius:16px; padding:32px; text-align:center; color:rgba(17,17,17,0.65); }
         @media (max-width:900px) { .cd-root { padding-left:14px; padding-bottom:86px; } .cd-grid { grid-template-columns:1fr; } .cd-title { font-size:30px; } }
         @media (max-width:560px) { .cd-top { flex-direction:column; } .cd-fields { grid-template-columns:1fr; } .cd-status { white-space:normal; } }
+        html body #root .cd-root .cd-bill-total{background:#126F1E!important;color:#fff!important;border-color:#126F1E!important}
+        html body #root .cd-root .cd-bill-total span, html body #root .cd-root .cd-bill-total strong{color:#fff!important}
       `}</style>
 
       <main className="cd-root">
