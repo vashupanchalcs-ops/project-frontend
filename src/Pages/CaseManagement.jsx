@@ -71,7 +71,7 @@ const safeDate = (value) => {
   return Number.isNaN(date.getTime()) ? "Recent case" : date.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 };
 
-function CaseRow({ item, scope, onOpen }) {
+function CaseRow({ item, scope, onOpen, onDelete, deleting }) {
   const navigate = useNavigate();
   const condition = conditionMeta(item.patient_condition);
   const priority = priorityMeta(item);
@@ -107,7 +107,7 @@ function CaseRow({ item, scope, onOpen }) {
         <small>{hasTeam ? `${teamCount} team member${teamCount === 1 ? "" : "s"} allocated` : "Care team pending"}</small>
       </div>
       <div className="cm-actions">
-        <button onClick={() => onOpen(item)} title="Open case">⋯</button>
+        <button className="cm-delete" onClick={(event) => { event.stopPropagation(); onDelete(item); }} disabled={deleting} title="Delete case">{deleting ? "…" : "⌫"}</button>
         <button className="cm-open" onClick={() => navigate(openPath)}>{scope === "hospital" ? "Manage" : "Open"}</button>
       </div>
     </article>
@@ -126,6 +126,7 @@ export default function CaseManagement({ scope = "hospital" }) {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [selected, setSelected] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const loadCases = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -184,7 +185,19 @@ export default function CaseManagement({ scope = "hospital" }) {
       .filter((item) => {
         const condition = conditionMeta(item.patient_condition);
         const stage = stageMeta(item);
-        const haystack = [item.id, item.patient_name, item.patient_condition, item.pickup_location, item.assigned_hospital_name, item.ambulance_number, item.assigned_bed_number].join(" ").toLowerCase();
+        const haystack = [
+          item.id,
+          `booking ${item.id}`,
+          item.patient_name,
+          item.patient_condition,
+          item.pickup_location,
+          item.assigned_hospital_name,
+          item.assigned_hospital_address,
+          item.ambulance_number,
+          item.assigned_bed_number,
+          item.assigned_bed_type,
+          item.assigned_doctor_names,
+        ].filter(Boolean).join(" ").toLowerCase();
         return (!query || haystack.includes(query)) && (conditionFilter === "all" || condition.type === conditionFilter) && (stageFilter === "all" || stage.label === stageFilter) && (priorityFilter === "all" || priorityMeta(item).tone === priorityFilter);
       })
       .sort((a, b) => sortBy === "type"
@@ -202,6 +215,29 @@ export default function CaseManagement({ scope = "hospital" }) {
   };
 
   const openCase = (item) => setSelected(item);
+
+  const deleteCase = async (item) => {
+    if (!item?.id || !window.confirm(`Delete case #${item.id} for ${item.patient_name || "this patient"}?`)) return;
+    setDeletingId(item.id);
+    setError("");
+    try {
+      const response = await fetch(`${BASE}/api/bookings/${item.id}/`, { method: "DELETE" });
+      if (!response.ok) {
+        let detail = "Unable to delete this case";
+        try {
+          const payload = await response.json();
+          detail = payload?.detail || payload?.error || detail;
+        } catch {}
+        throw new Error(detail);
+      }
+      setCases((current) => current.filter((caseItem) => String(caseItem.id) !== String(item.id)));
+      setSelected((current) => current && String(current.id) === String(item.id) ? null : current);
+    } catch (deleteError) {
+      setError(deleteError.message || "Unable to delete this case");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <main className={`cm-root ${isAdmin ? "cm-admin" : "cm-hospital"}`}>
@@ -252,7 +288,14 @@ export default function CaseManagement({ scope = "hospital" }) {
         .cm-stage-label.tone-green{color:#126F1E}
         .cm-actions button{background:#fff;color:#17231b;border-color:#b9c8bd}
         .cm-actions button:hover{border-color:#126F1E;background:#eaf6ed}
+        .cm-actions .cm-delete{background:#dc2635;border-color:#dc2635;color:#fff;min-width:32px}
+        .cm-actions .cm-delete:hover{background:#b51f2c;border-color:#b51f2c}
+        .cm-actions .cm-delete:disabled{opacity:.65;cursor:wait}
         .cm-actions .cm-open{background:#126F1E;border-color:#126F1E;color:#fff}
+        .cm-filter-option.selected .cm-filter-count{color:inherit;border-color:currentColor}
+        .cm-filter-option.tone-filter-red.selected{background:#c9152d;color:#fff}
+        .cm-filter-option.tone-filter-yellow.selected{background:#f2b233;color:#17231b}
+        .cm-filter-option.tone-filter-green.selected{background:#35ad52;color:#fff}
         .cm-empty,.cm-loading{color:#6c7d72}
         .cm-modal{background:#fff;color:#17231b;border-color:#cbd9ce;box-shadow:0 18px 45px rgba(18,111,30,.16)}
         .cm-modal-close{background:#edf5ef;color:#17231b}
@@ -292,7 +335,7 @@ export default function CaseManagement({ scope = "hospital" }) {
             {isAdmin ? (
               <div className="cm-filter-group">
                 <div className="cm-filter-heading"><span>STATUS</span><button className="cm-clear" onClick={() => setPriorityFilter("all")}>CLEAR</button></div>
-                {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
+                {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option tone-filter-${tone} ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
               </div>
             ) : (
               <>
@@ -302,7 +345,7 @@ export default function CaseManagement({ scope = "hospital" }) {
                 </div>
                 <div className="cm-filter-group">
                   <div className="cm-filter-heading"><span>PRIORITY</span></div>
-                  {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
+                  {["red", "yellow", "green"].map((tone) => <button key={tone} className={`cm-filter-option tone-filter-${tone} ${priorityFilter === tone ? "selected" : ""}`} onClick={() => setPriorityFilter(priorityFilter === tone ? "all" : tone)}><span>{tone[0].toUpperCase() + tone.slice(1)}</span><span className="cm-filter-count">{cases.filter((item) => priorityMeta(item).tone === tone).length}</span></button>)}
                 </div>
               </>
             )}
@@ -315,7 +358,7 @@ export default function CaseManagement({ scope = "hospital" }) {
               {loading && <div className="cm-loading">Loading assigned cases...</div>}
               {!loading && error && <div className="cm-empty">{error}</div>}
               {!loading && !error && !filteredCases.length && <div className="cm-empty">No cases match the selected filters.</div>}
-              {!loading && !error && filteredCases.map((item) => <CaseRow key={item.id} item={item} scope={scope} onOpen={openCase} />)}
+              {!loading && !error && filteredCases.map((item) => <CaseRow key={item.id} item={item} scope={scope} onOpen={openCase} onDelete={deleteCase} deleting={String(deletingId) === String(item.id)} />)}
             </div>
           </section>
         </div>
