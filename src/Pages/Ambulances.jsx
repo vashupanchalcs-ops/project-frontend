@@ -509,11 +509,10 @@ export default function Ambulances() {
       bounds.extend([ambPos.lat, ambPos.lng]);
     }
 
-    if (mapLocation) {
-      layerRef.current.user = L.marker([mapLocation.lat, mapLocation.lng], { icon: makePinIcon("#f59a23", "📍") }).addTo(map);
-      layerRef.current.user.bindPopup("Your location");
-      bounds.extend([mapLocation.lat, mapLocation.lng]);
-    }
+    // Use the device location for route calculations only. Do not render a
+    // second user pin/label on top of the map; the route and ambulance marker
+    // are sufficient for every role.
+    if (mapLocation) bounds.extend([mapLocation.lat, mapLocation.lng]);
 
     // Attempt to load route if there's an active booking for this ambulance
     const activeBooking = bookings.find(b => b.ambulance_id === selectedAmb.id && String(b.status).toLowerCase() === "confirmed");
