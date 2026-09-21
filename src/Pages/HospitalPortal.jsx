@@ -228,7 +228,9 @@ export default function HospitalPortal() {
       }
       rememberHospitalSession({ ...hospitalData, id: hospitalId });
 
-      const dashRes = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/`);
+      const dashRes = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/?_=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (!dashRes.ok) throw new Error("Unable to load hospital dashboard");
       const dashboard = await dashRes.json();
 
@@ -1074,16 +1076,31 @@ export default function HospitalPortal() {
       return;
     }
     try {
-      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/${editingStaffId}/`, {
+      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/${editingStaffId}/?_=${Date.now()}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editStaffForm),
       });
-      if (!res.ok) throw new Error("Unable to update staff");
+      const updatedStaff = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(updatedStaff.error || "Unable to update staff");
+      // Render the server-confirmed row immediately; do not wait for the
+      // background dashboard poll to repaint the edited Staff ID/Reg. No.
+      setStaff((current) => current.map((member) => (
+        String(member.id) === String(updatedStaff.id) ? updatedStaff : member
+      )));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+          ...cached,
+          staff: Array.isArray(cached.staff)
+            ? cached.staff.map((member) => String(member.id) === String(updatedStaff.id) ? updatedStaff : member)
+            : [updatedStaff],
+        }));
+      } catch {}
       setEditingStaffId(null);
       await fetchHospitalDashboard({ silent: true });
-    } catch {
-      setErr("Unable to update staff");
+    } catch (error) {
+      setErr(error.message || "Unable to update staff");
     }
   };
 

@@ -181,8 +181,8 @@ export default function HospitalBeds() {
       const effectiveHid = hid || 2; // Default to AIIMS (id: 2) if still unresolved
 
       const [bedsRes, hospRes] = await Promise.all([
-        fetch(`${BASE}/api/hospitals/${effectiveHid}/beds/`).catch(() => null),
-        fetch(`${BASE}/api/hospitals/${effectiveHid}/dashboard/`).catch(() => null),
+        fetch(`${BASE}/api/hospitals/${effectiveHid}/beds/?_=${Date.now()}`, { cache: "no-store" }).catch(() => null),
+        fetch(`${BASE}/api/hospitals/${effectiveHid}/dashboard/?_=${Date.now()}`, { cache: "no-store" }).catch(() => null),
       ]);
 
       let finalHosp = null;
@@ -333,12 +333,23 @@ export default function HospitalBeds() {
 
     // 2. Send patch to backend silently
     try {
-      await fetch(`${BASE}/api/hospitals/beds/${bedId}/`, {
+      const response = await fetch(`${BASE}/api/hospitals/beds/${bedId}/?_=${Date.now()}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch {}
+      const savedBed = await response.json().catch(() => null);
+      if (!response.ok || !savedBed?.id) throw new Error(savedBed?.error || "Unable to update bed");
+      setSelectedBed(savedBed);
+      setBeds((current) => current.map((bed) => bed.id === savedBed.id ? savedBed : bed));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("hospital_beds_cache") || "[]");
+        sessionStorage.setItem("hospital_beds_cache", JSON.stringify(cached.map((bed) => bed.id === savedBed.id ? savedBed : bed)));
+      } catch {}
+    } catch (error) {
+      showToast(error.message || "Unable to update bed", "error");
+      await fetchBeds(true);
+    }
     setUpdating(false);
   };
 
