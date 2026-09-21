@@ -138,7 +138,14 @@ export default function DriverDashboard() {
   const ambNumber   = localStorage.getItem("ambulance_number") || "—";
 
   const [driverPhone,   setDriverPhone]  = useState(localStorage.getItem("phone") || "");
-  const [ambulance,     setAmbulance]    = useState(null);
+  const [ambulance,     setAmbulance]    = useState(() => {
+    try {
+      const list = JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
+      return list.find((a) => a.id === ambId) || null;
+    } catch {
+      return null;
+    }
+  });
   const [liveBatteryPct, setLiveBatteryPct] = useState(null);
   const cachedDriverBookings = (() => {
     try {
@@ -156,8 +163,20 @@ export default function DriverDashboard() {
   const [notifAllowed,  setNotifAllowed] = useState(Notification.permission === "granted");
   const [log,           setLog]          = useState([]);
   const [tab,           setTab]          = useState("map");
-  const [allAmbs,       setAllAmbs]      = useState([]);
-  const [allHospitals,  setAllHospitals] = useState([]);
+  const [allAmbs,       setAllAmbs]      = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [allHospitals,  setAllHospitals] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("hospitals_list_cache") || "[]");
+    } catch {
+      return [];
+    }
+  });
   const [changeReqAmb,  setChangeReqAmb] = useState(null);
   const [selectedTransferBooking, setSelectedTransferBooking] = useState(null);
   const [effectiveAmbId, setEffectiveAmbId] = useState(ambId || 0);

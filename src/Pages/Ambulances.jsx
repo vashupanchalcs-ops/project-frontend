@@ -107,7 +107,14 @@ export default function Ambulances() {
     }
   })();
   const [ambulances, setAmbulances] = useState(cachedAmbs);
-  const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState(() => {
+    try {
+      const b = sessionStorage.getItem("ambulances_bookings_cache") || sessionStorage.getItem("admin_bookings");
+      return b ? JSON.parse(b) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAmb, setSelectedAmb] = useState(null);

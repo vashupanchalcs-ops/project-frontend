@@ -2,14 +2,15 @@ import { Ambulance, ArrowRight, MapPin } from "lucide-react";
 import AMBULANCE_IMAGE from "../assets/ambulance.jpg";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { readFetchCache } from "../utils/fetchCache";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
 // Image imported above via Vite asset pipeline (src/assets/ambulance.jpg)
 
 export default function UserHome() {
   const navigate = useNavigate();
-  const [ambulances, setAmbulances] = useState([]);
-  const [hospitals, setHospitals] = useState([]);
+  const [ambulances, setAmbulances] = useState(() => readFetchCache(`${BASE}/api/ambulances/`) ?? []);
+  const [hospitals, setHospitals] = useState(() => readFetchCache(`${BASE}/api/hospitals/`) ?? []);
 
   useEffect(() => {
     let active = true;

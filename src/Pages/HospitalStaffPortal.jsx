@@ -52,15 +52,14 @@ const formatCaseStatus = (booking) => {
 export default function HospitalStaffPortal() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
-
   const staffId = localStorage.getItem("staff_id") || "";
   const email = localStorage.getItem("user") || "";
   const dashboardCacheKey = `staff_dashboard_${staffId || email}`;
   const cachedDashboard = readDataCache(dashboardCacheKey, null);
   const [dashboard, setDashboard] = useState(cachedDashboard);
+  const [loading, setLoading] = useState(!cachedDashboard);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
   const isHomeRoute = pathname === "/staff/home";
   const isProfileRoute = pathname === "/staff/profile";
 

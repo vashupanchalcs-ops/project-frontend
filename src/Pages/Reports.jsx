@@ -10,9 +10,24 @@ const COLORS = ["#22c55e", "#ef4444", "#f59a23", "#3b82f6"];
 const statusColor = { available: "#22c55e", en_route: "#f59a23", busy: "#ef4444", offline: "#6b7280" };
 
 const Reports = () => {
-  const [bookings,   setBookings]   = useState([]);
-  const [ambulances, setAmbulances] = useState([]);
-  const [hospitals,  setHospitals]  = useState([]);
+  const [bookings,   setBookings]   = useState(() => {
+    try {
+      const b = sessionStorage.getItem("admin_bookings") || sessionStorage.getItem("admin_requests_cache");
+      return b ? JSON.parse(b) : [];
+    } catch { return []; }
+  });
+  const [ambulances, setAmbulances] = useState(() => {
+    try {
+      const a = sessionStorage.getItem("ambulances_list_cache");
+      return a ? JSON.parse(a) : [];
+    } catch { return []; }
+  });
+  const [hospitals,  setHospitals]  = useState(() => {
+    try {
+      const h = sessionStorage.getItem("hospitals_list_cache");
+      return h ? JSON.parse(h) : [];
+    } catch { return []; }
+  });
   const [trackedAmb, setTrackedAmb] = useState(null);
   const rootRef = useRef(null);
 

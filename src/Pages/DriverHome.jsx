@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { readFetchCache } from "../utils/fetchCache";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,9 +17,12 @@ export default function DriverHome() {
   const driverEmail = localStorage.getItem("user") || "";
   const ambId = parseInt(localStorage.getItem("ambulance_id") || "0");
 
-  const [ambulance, setAmbulance] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [hospitals, setHospitals] = useState([]);
+  const [ambulance, setAmbulance] = useState(() => {
+    const list = readFetchCache(`${BASE}/api/ambulances/`);
+    return Array.isArray(list) ? (list.find((a) => a.id === ambId) || null) : null;
+  });
+  const [bookings, setBookings] = useState(() => readFetchCache(`${BASE}/api/bookings/`) ?? []);
+  const [hospitals, setHospitals] = useState(() => readFetchCache(`${BASE}/api/hospitals/`) ?? []);
 
   useEffect(() => {
     fetch(`${BASE}/api/ambulances/`)

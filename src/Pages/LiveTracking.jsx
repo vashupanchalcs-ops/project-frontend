@@ -13,9 +13,16 @@ const defaultApiBase = import.meta.env.DEV
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function LiveTracking() {
-  const [booking, setBooking] = useState(null);
-  const [allBookings, setAllBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cachedConfirmed = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("active_confirmed_booking") || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const [booking, setBooking] = useState(cachedConfirmed);
+  const [allBookings, setAllBookings] = useState(cachedConfirmed ? [cachedConfirmed] : []);
+  const [loading, setLoading] = useState(!cachedConfirmed);
   const [noActive, setNoActive] = useState(false);
 
   const navigate = useNavigate();

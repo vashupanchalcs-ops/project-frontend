@@ -28,11 +28,18 @@ export default function StaffPatientCondition() {
   const email = localStorage.getItem("user") || "";
   const hospitalName = localStorage.getItem("hospital_name") || "Saharda Hospital";
 
-  const [cases, setCases] = useState([]);
+  const [cases, setCases] = useState(() => {
+    try {
+      const s = sessionStorage.getItem("staff_patient_cases_cache");
+      return s ? JSON.parse(s) : [];
+    } catch {
+      return [];
+    }
+  });
   const [photosByCase, setPhotosByCase] = useState({});
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedCaseId, setSelectedCaseId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Photo gallery slider state for active core case
   const [photoPage, setPhotoPage] = useState(0);
@@ -218,6 +225,7 @@ export default function StaffPatientCondition() {
         });
         setCases(mapped);
         setSelectedCaseId(mapped[0].id);
+        try { sessionStorage.setItem("staff_patient_cases_cache", JSON.stringify(mapped)); } catch {}
       } else {
         setCases(defaultIncomingCases);
         setSelectedCaseId(defaultIncomingCases[0].id);

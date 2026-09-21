@@ -129,7 +129,12 @@ export default function HospitalPortal() {
   const activeTab = getTabFromPath(location.pathname);
   const cachedPortal = (() => {
     try {
-      return JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+      const portal = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+      if (portal?.hospital) return portal;
+      // Fallback: rebuild minimal portal from hospital_info_cache
+      const hosp = JSON.parse(sessionStorage.getItem("hospital_info_cache") || "null");
+      if (hosp) return { hospital: hosp, queue: [], staff: [], summary: null };
+      return null;
     } catch {
       return null;
     }
