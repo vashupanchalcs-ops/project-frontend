@@ -30,6 +30,7 @@ const PANEL_PAGES = {
   ],
   hospital: [
     { label: "Hospital Home", path: "/hospital/home", keywords: "overview services beds" },
+    { label: "Hospital Payments", path: "/hospital/payments", keywords: "payments invoices billing amount due" },
     { label: "Hospital Response", path: "/hospital/responses", keywords: "approve reject ready cases" },
     { label: "Case Reports", path: "/hospital/reports", keywords: "reports handover files" },
     { label: "View Case Report", path: "/hospital/reports", keywords: "view report transcript modified report" },

@@ -47,6 +47,7 @@ import UserCareTeam             from "./Pages/UserCareTeam";
 import CaseManagement            from "./Pages/CaseManagement";
 import HospitalStaffPortal       from "./Pages/HospitalStaffPortal";
 import StaffPatientCondition     from "./Pages/StaffPatientCondition";
+import HospitalPayments          from "./Pages/HospitalPayments";
 
 const AdminRoute = ({ element }) => {
   const role = localStorage.getItem("role");
@@ -202,6 +203,7 @@ const App = () => {
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/manage-cases" element={<HospitalRoute element={<CaseManagement scope="hospital" />} />} />
+        <Route path="/hospital/payments" element={<HospitalRoute element={<HospitalPayments />} />} />
         <Route path="/hospital/assign-doctor" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/team-allocation" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />
         <Route path="/hospital/team-allocation/edit" element={<HospitalRoute element={<HospitalTeamAllocation />} />} />

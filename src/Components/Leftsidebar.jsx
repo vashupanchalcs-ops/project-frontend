@@ -4,7 +4,7 @@ import {
   ChevronsRight, Truck, Building2, BarChart2, Headphones, Sparkles,
   ClipboardList, ListChecks, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
   Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, FileText, Image, Images,
-  BedDouble, UserCheck, Video, UsersRound, ContactRound,
+  BedDouble, UserCheck, Video, UsersRound, ContactRound, CreditCard,
 } from 'lucide-react';
 
 const adminNavItems = [
@@ -25,6 +25,7 @@ const adminNavItems = [
 const hospitalNavItems = [
   { to: "/hospital/home",          icon: Building2,         label: "Hospital Home" },
   { to: "/hospital/manage-cases",  icon: ListChecks,        label: "Manage Cases" },
+  { to: "/hospital/payments",      icon: CreditCard,         label: "Payments" },
   { to: "/hospital/responses",     icon: ShieldCheck,       label: "Hospital Response", dot: true },
   { to: "/hospital/beds",          icon: BedDouble,         label: "Bed Management", dot: true },
   { to: "/hospital/team-allocation", icon: UserCheck,         label: "Team Allocation" },
