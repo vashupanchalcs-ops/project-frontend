@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import axios from "axios";
 
-const API_URL = `${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/update-battery/`;
+const API_URL = `${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/update-battery/`;
 const FALLBACK_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function DriverBatteryTracker({ ambulanceId }) {

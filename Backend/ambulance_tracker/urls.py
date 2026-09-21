@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib import admin
+from django.http import JsonResponse
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
@@ -25,6 +26,7 @@ from hospitals import views as hospital_views
 urlpatterns = [
     path("", views.home),
     path("admin/", admin.site.urls),
+    path("api/health/", lambda req: JsonResponse({"status": "ok", "service": "aarogya"})),
 
     # ── OTP & AUTH ──────────────────────────────────
     path("api/send-otp/",         views.send_otp),
