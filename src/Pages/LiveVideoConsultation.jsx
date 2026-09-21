@@ -58,6 +58,9 @@ export default function LiveVideoConsultation() {
   // WebRTC & Stream refs
   const localVideoRef = useRef(null);
   const chatBottomRef = useRef(null);
+  const signalSocketRef = useRef(null);
+  const peerConnectionsRef = useRef(new Map());
+  const clientIdRef = useRef(globalThis.crypto?.randomUUID?.() || `consult-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
   // States
   const [bookings, setBookings] = useState(() => (Array.isArray(cachedBookings) ? cachedBookings : []));
@@ -70,6 +73,9 @@ export default function LiveVideoConsultation() {
   const [toast, setToast] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState("remote"); // "local" or "remote"
+  const [callRequests, setCallRequests] = useState([]);
+  const [remoteParticipants, setRemoteParticipants] = useState({});
+  const [callJoined, setCallJoined] = useState(isDriver);
 
   // ── DRIVER MULTI-PERSON CALL STATE ──
   const [activeTab, setActiveTab] = useState("roster"); // "roster" | "chat" | "directives"
@@ -97,6 +103,7 @@ export default function LiveVideoConsultation() {
     }
     return raw.slice(0, 3).map((person, index) => ({
       id: String(person.id ?? person.staff_id ?? `allocated-${index}`),
+      contractId: person.staff_id || person.staff_contract_id || "",
       name: person.full_name || person.name || "Allocated staff",
       role: person.role || "Care team",
       specialty: person.specialization || person.specialty || "Assigned to this case",
@@ -107,17 +114,8 @@ export default function LiveVideoConsultation() {
   // Never carry a previous booking's participants into the next case.
   useEffect(() => {
     setConnectedStaff([]);
+    setCallJoined(isDriver);
   }, [selectedBooking?.id]);
-
-  const toggleConnect = (staffId) => {
-    if (!connectedStaff.includes(staffId) && connectedStaff.length >= 3) {
-      showToast("Max 4 participants reached (Driver + 3 Staff)");
-      return;
-    }
-    setConnectedStaff((prev) =>
-      prev.includes(staffId) ? prev.filter((id) => id !== staffId) : [...prev, staffId]
-    );
-  };
 
 
   const [chatInput, setChatInput] = useState("");
@@ -161,6 +159,95 @@ export default function LiveVideoConsultation() {
     setTimeout(() => setToast(""), 2800);
   };
 
+  const requestForStaff = useCallback((staff) => (
+    callRequests.find((item) => String(item.staff_profile_id) === String(staff.id)) || null
+  ), [callRequests]);
+
+  const loadCallRequests = useCallback(async () => {
+    if (!selectedBooking?.id) {
+      setCallRequests([]);
+      return;
+    }
+    const params = isDriver
+      ? `role=driver&booking_id=${encodeURIComponent(selectedBooking.id)}&ambulance_id=${encodeURIComponent(ambulanceId)}&driver_email=${encodeURIComponent(email)}`
+      : `role=staff&booking_id=${encodeURIComponent(selectedBooking.id)}&staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`;
+    try {
+      const response = await fetch(`${BASE}/api/bookings/video-call/requests/?${params}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Unable to load video call requests");
+      const rows = Array.isArray(data.requests) ? data.requests : [];
+      setCallRequests(rows);
+      if (!isDriver && rows.some((item) => item.status === "accepted")) setCallJoined(true);
+    } catch {
+      // A temporary notification/API failure should not hide already rendered call members.
+    }
+  }, [ambulanceId, email, isDriver, selectedBooking?.id, staffId]);
+
+  useEffect(() => {
+    loadCallRequests();
+    const timer = setInterval(loadCallRequests, 3500);
+    return () => clearInterval(timer);
+  }, [loadCallRequests]);
+
+  useEffect(() => {
+    setConnectedStaff(callRequests
+      .filter((item) => item.status === "accepted")
+      .map((item) => String(item.staff_profile_id)));
+  }, [callRequests]);
+
+  const sendVideoRequest = async (staff) => {
+    if (!selectedBooking?.id) return;
+    const current = requestForStaff(staff);
+    if (current?.status === "accepted") {
+      showToast(`${staff.name} is already in this group call`);
+      return;
+    }
+    if (callRequests.filter((item) => item.status === "accepted").length >= 3) {
+      showToast("Maximum members added (Driver + 3 Staff)");
+      return;
+    }
+    try {
+      const response = await fetch(`${BASE}/api/bookings/video-call/requests/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: selectedBooking.id,
+          staff_id: staff.id,
+          ambulance_id: ambulanceId,
+          driver_email: email,
+          driver_name: selectedBooking.driver || localStorage.getItem("name") || "Driver",
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Unable to send video call request");
+      setCallRequests((prev) => [data, ...prev.filter((item) => item.id !== data.id && item.staff_profile_id !== data.staff_profile_id)]);
+      showToast(`Video call request sent to ${staff.name}`);
+    } catch (err) {
+      showToast(err.message || "Video call request failed");
+    }
+  };
+
+  const respondToVideoRequest = async (request, action) => {
+    try {
+      const response = await fetch(`${BASE}/api/bookings/video-call/requests/${request.id}/respond/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, staff_id: staffId, email }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Unable to respond to video call");
+      setCallRequests((prev) => prev.map((item) => item.id === data.id ? data : item));
+      if (action === "accept") {
+        setCallJoined(true);
+        showToast("You joined the group video call");
+      } else {
+        showToast("Video call request declined");
+      }
+    } catch (err) {
+      showToast(err.message || "Unable to respond to video call");
+    }
+  };
+
   // Fetch Assigned Bookings
   const loadBookings = useCallback(async () => {
     if (!cachedBookings.length) setLoading(true);
@@ -185,6 +272,113 @@ export default function LiveVideoConsultation() {
   useEffect(() => {
     loadBookings();
   }, [loadBookings]);
+
+  const sendSignal = useCallback((payload) => {
+    if (signalSocketRef.current?.readyState === WebSocket.OPEN) {
+      signalSocketRef.current.send(JSON.stringify(payload));
+    }
+  }, []);
+
+  const removePeer = useCallback((remoteId) => {
+    const peer = peerConnectionsRef.current.get(remoteId);
+    peer?.close();
+    peerConnectionsRef.current.delete(remoteId);
+    setRemoteParticipants((prev) => {
+      const next = { ...prev };
+      delete next[remoteId];
+      return next;
+    });
+  }, []);
+
+  const createPeer = useCallback(async (remoteId, localStream, makeOffer) => {
+    if (!localStream || typeof RTCPeerConnection === "undefined") return null;
+    const existing = peerConnectionsRef.current.get(remoteId);
+    if (existing) return existing;
+    const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
+    peer.onicecandidate = (event) => {
+      if (event.candidate) sendSignal({ type: "ice-candidate", target_id: remoteId, candidate: event.candidate });
+    };
+    peer.ontrack = (event) => {
+      const remoteStream = event.streams?.[0];
+      if (!remoteStream) return;
+      setRemoteParticipants((prev) => ({
+        ...prev,
+        [remoteId]: { ...(prev[remoteId] || {}), stream: remoteStream },
+      }));
+    };
+    peer.onconnectionstatechange = () => {
+      if (["failed", "disconnected", "closed"].includes(peer.connectionState)) removePeer(remoteId);
+    };
+    peerConnectionsRef.current.set(remoteId, peer);
+    if (makeOffer) {
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      sendSignal({ type: "offer", target_id: remoteId, offer });
+    }
+    return peer;
+  }, [removePeer, sendSignal]);
+
+  const connectSignaling = useCallback((localStream) => {
+    if (!selectedBooking?.id || !localStream || signalSocketRef.current || typeof WebSocket === "undefined") return;
+    const socketBase = BASE.replace(/^http/, "ws");
+    const query = isDriver
+      ? `role=driver&ambulance_id=${encodeURIComponent(ambulanceId)}&email=${encodeURIComponent(email)}&participant_id=${encodeURIComponent(email)}&client_id=${encodeURIComponent(clientIdRef.current)}`
+      : `role=staff&staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}&participant_id=${encodeURIComponent(staffId)}&client_id=${encodeURIComponent(clientIdRef.current)}`;
+    const socket = new WebSocket(`${socketBase}/ws/consultation/${selectedBooking.id}/?${query}`);
+    signalSocketRef.current = socket;
+    socket.onopen = () => sendSignal({ type: "join" });
+    socket.onmessage = async (event) => {
+      let payload;
+      try { payload = JSON.parse(event.data); } catch { return; }
+      const remoteId = payload.sender_id;
+      if (!remoteId || remoteId === clientIdRef.current) return;
+      try {
+        if (payload.type === "peer-joined") {
+          setRemoteParticipants((prev) => ({
+            ...prev,
+            [remoteId]: { ...(prev[remoteId] || {}), role: payload.role, participantId: payload.participant_id },
+          }));
+          if (clientIdRef.current < remoteId) await createPeer(remoteId, localStream, true);
+        }
+        if (payload.type === "offer" && payload.target_id === clientIdRef.current) {
+          const peer = await createPeer(remoteId, localStream, false);
+          await peer.setRemoteDescription(new RTCSessionDescription(payload.offer));
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          sendSignal({ type: "answer", target_id: remoteId, answer });
+        }
+        if (payload.type === "answer" && payload.target_id === clientIdRef.current) {
+          const peer = peerConnectionsRef.current.get(remoteId);
+          if (peer) await peer.setRemoteDescription(new RTCSessionDescription(payload.answer));
+        }
+        if (payload.type === "ice-candidate" && payload.target_id === clientIdRef.current) {
+          const peer = peerConnectionsRef.current.get(remoteId);
+          if (peer && payload.candidate) await peer.addIceCandidate(new RTCIceCandidate(payload.candidate));
+        }
+        if (payload.type === "peer-left") removePeer(remoteId);
+      } catch (err) {
+        showToast(err.message || "Unable to connect this video participant");
+      }
+    };
+    socket.onerror = () => showToast("Video signaling is unavailable");
+    socket.onclose = () => { signalSocketRef.current = null; };
+  }, [ambulanceId, createPeer, email, isDriver, removePeer, selectedBooking?.id, sendSignal, staffId]);
+
+  const closeSignaling = useCallback(() => {
+    sendSignal({ type: "leave" });
+    signalSocketRef.current?.close();
+    signalSocketRef.current = null;
+    peerConnectionsRef.current.forEach((peer) => peer.close());
+    peerConnectionsRef.current.clear();
+    setRemoteParticipants({});
+  }, [sendSignal]);
+
+  useEffect(() => {
+    if (selectedBooking?.id && stream && (isDriver || callJoined)) connectSignaling(stream);
+  }, [callJoined, connectSignaling, isDriver, selectedBooking?.id, stream]);
+
+  useEffect(() => () => closeSignaling(), [closeSignaling, selectedBooking?.id]);
 
   // Timer
   useEffect(() => {
@@ -220,6 +414,10 @@ export default function LiveVideoConsultation() {
       stream?.getTracks().forEach((t) => t.stop());
     };
   }, []);
+
+  useEffect(() => {
+    if (localVideoRef.current) localVideoRef.current.srcObject = stream || null;
+  }, [stream]);
 
   const toggleMic = () => {
     const next = !micOn;
@@ -275,6 +473,12 @@ export default function LiveVideoConsultation() {
 
   const driverName = selectedBooking?.driver || "Driver";
   const ambulanceNum = selectedBooking?.ambulance_number || "—";
+  const participantForStaff = (staff) => {
+    const request = requestForStaff(staff);
+    const participantId = request?.staff_contract_id || staff.contractId;
+    return Object.values(remoteParticipants).find((participant) => String(participant.participantId || "") === String(participantId || ""));
+  };
+  const pendingStaffRequest = !isDriver ? callRequests.find((item) => item.status === "pending") : null;
 
   return (
     <div className="consult-middle-container">
@@ -591,6 +795,51 @@ export default function LiveVideoConsultation() {
           color: #0f172a;
         }
 
+        .video-call-request-card {
+          margin: 12px;
+          padding: 14px;
+          display: grid;
+          gap: 6px;
+          background: #f0fdf4;
+          border: 1px solid #a7d9b8;
+          border-radius: 14px;
+          color: #172235;
+          font-size: 12px;
+        }
+
+        .video-call-request-kicker {
+          color: #087640;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+
+        .video-call-request-card span {
+          color: #64748b;
+          line-height: 1.4;
+        }
+
+        .video-call-request-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+        }
+
+        .request-accept-btn,
+        .request-reject-btn {
+          flex: 1;
+          border: 0;
+          border-radius: 8px;
+          padding: 8px 10px;
+          font-size: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .request-accept-btn { background: #087640; color: #ffffff; }
+        .request-reject-btn { background: #ffffff; color: #9f1239; border: 1px solid #f1b5c2; }
+
         /* Clean Chat Header */
         .chat-console-header {
           padding: 16px 20px;
@@ -758,31 +1007,30 @@ export default function LiveVideoConsultation() {
           }
         }
 
-        /* Mobile ≤ 768px: Full-screen video only, chat card HIDDEN */
+        /* Mobile ≤ 768px: keep video controls and team actions reachable by scrolling */
         @media (max-width: 768px) {
           .consult-middle-container {
             margin-left: 0;
-            height: calc(100vh - 72px);
-            padding: 0;
+            height: auto;
+            min-height: calc(100vh - 72px);
+            padding: 0 0 110px;
             align-items: stretch;
-            overflow: hidden;
+            overflow: visible;
           }
           .consult-two-cards-box {
             grid-template-columns: 1fr;
-            height: 100%;
+            height: auto;
+            min-height: 0;
             max-height: none;
-            gap: 0;
+            gap: 12px;
           }
-          /* ── HIDE CHAT CARD ON MOBILE ── */
-          .right-chat-card {
-            display: none !important;
-          }
-          /* Video card fills entire screen */
+          /* Video card fills the first viewport; roster/chat follows below it. */
           .left-video-card {
-            height: 100%;
-            border-radius: 0;
-            border: none;
-            box-shadow: none;
+            height: calc(100vh - 154px);
+            min-height: 520px;
+            border-radius: 16px;
+            border: 2px solid #087640;
+            box-shadow: 0 8px 24px rgba(8, 118, 64, 0.12);
           }
           .video-card-topbar {
             border-radius: 0;
@@ -831,6 +1079,26 @@ export default function LiveVideoConsultation() {
             backdrop-filter: blur(10px);
             border-top: 1px solid #e2e8f0;
             z-index: 20;
+          }
+          .right-chat-card,
+          .right-team-panel {
+            display: flex !important;
+            width: 100%;
+            min-width: 0;
+            height: auto;
+            min-height: 420px;
+            max-height: none;
+            border-radius: 16px;
+            overflow: visible;
+          }
+          .driver-panel-body {
+            max-height: none;
+            overflow: visible;
+          }
+          .team-tab-btn {
+            min-height: 48px;
+            font-size: 10px;
+            padding: 10px 5px;
           }
         }
 
@@ -1092,6 +1360,14 @@ export default function LiveVideoConsultation() {
           background: #f0fdf4;
         }
 
+        .connect-btn.request-pending,
+        .connect-btn.request-pending:hover {
+          color: #64748b;
+          border-color: #cbd5e1;
+          background: #f8fafc;
+          cursor: wait;
+        }
+
         .in-call-badge {
           display: flex;
           align-items: center;
@@ -1255,16 +1531,17 @@ export default function LiveVideoConsultation() {
               {/* Connected staff tiles (up to 3) */}
               {allocatedStaff
                 .filter((s) => connectedStaff.includes(s.id))
-                .map((staff) => (
-                  <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
-                    {staff.avatar ? <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} /> : <div className="stream-initials-tile">{initials(staff.name)}</div>}
+                .map((staff) => {
+                  const participant = participantForStaff(staff);
+                  return <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
+                    {participant?.stream ? <video ref={(element) => { if (element) element.srcObject = participant.stream; }} autoPlay playsInline className="stream-video-element" /> : staff.avatar ? <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} /> : <div className="stream-initials-tile">{initials(staff.name)}</div>}
                     <div className="stream-id-pill">
                       <span className="live-mic-indicator"></span>
                       <span>{staff.name}</span>
                       <span className="role-pill-badge staff-role">{staff.role.toUpperCase()}</span>
                     </div>
-                  </div>
-                ))}
+                  </div>;
+                })}
             </div>
           ) : (
             /* ── STAFF: 2 TILES ONLY (DRIVER + LOGGED-IN STAFF MEMBER) ── */
@@ -1423,13 +1700,14 @@ export default function LiveVideoConsultation() {
                   {/* Allocated Staff */}
                   <div className="staff-section-header">
                     <span className="staff-section-title">Allocated Staff ({allocatedStaff.length})</span>
-                    <span className="assigned-badge">● Assigned to Case</span>
+                    <span className="assigned-badge">Group call: {1 + connectedStaff.length}/4</span>
                   </div>
 
                   <div className="staff-roster-list">
                     {allocatedStaff.length === 0 && <div className="roster-empty">No allocated team members for this booking.</div>}
                     {allocatedStaff.map((staff) => {
-                      const isConnected = connectedStaff.includes(staff.id);
+                      const request = requestForStaff(staff);
+                      const isConnected = request?.status === "accepted" || connectedStaff.includes(staff.id);
                       return (
                         <div key={staff.id} className={`staff-roster-card ${isConnected ? "in-call" : ""}`}>
                           {staff.avatar ? <img src={staff.avatar} alt={staff.name} className={`staff-avatar-img ${isConnected ? "in-call-avatar" : ""}`} /> : <div className={`staff-avatar-img staff-avatar-fallback ${isConnected ? "in-call-avatar" : ""}`}>{initials(staff.name)}</div>}
@@ -1438,12 +1716,16 @@ export default function LiveVideoConsultation() {
                             <p className="staff-card-specialty">{staff.specialty}</p>
                           </div>
                           {isConnected ? (
-                            <button className="in-call-badge" onClick={() => toggleConnect(staff.id)} title="Disconnect">
+                            <button className="in-call-badge" onClick={() => showToast(`${staff.name} is in the group call`)} title="Participant connected">
                               ✓ In Call
                             </button>
+                          ) : request?.status === "pending" ? (
+                            <button className="connect-btn request-pending" disabled title="Waiting for staff acceptance">
+                              ⏳ Requested
+                            </button>
                           ) : (
-                            <button className="connect-btn" onClick={() => toggleConnect(staff.id)} title="Connect to video">
-                              📞 Connect
+                            <button className="connect-btn" onClick={() => sendVideoRequest(staff)} title="Send video call request">
+                              📞 Request call
                             </button>
                           )}
                         </div>
@@ -1524,6 +1806,17 @@ export default function LiveVideoConsultation() {
         ) : (
           /* ── STAFF RIGHT PANEL: Plain Chat Only ── */
           <div className="right-chat-card">
+            {pendingStaffRequest && (
+              <div className="video-call-request-card">
+                <div className="video-call-request-kicker">Incoming video call</div>
+                <strong>{pendingStaffRequest.driver_name || "Ambulance driver"} is requesting you</strong>
+                <span>Booking #{pendingStaffRequest.booking_id} · join the group consultation.</span>
+                <div className="video-call-request-actions">
+                  <button className="request-accept-btn" onClick={() => respondToVideoRequest(pendingStaffRequest, "accept")}>Accept</button>
+                  <button className="request-reject-btn" onClick={() => respondToVideoRequest(pendingStaffRequest, "reject")}>Decline</button>
+                </div>
+              </div>
+            )}
             <div className="chat-console-header">
               <div className="chat-header-title-box">
                 <h3>Live Consultation Chat</h3>

@@ -512,7 +512,7 @@ const Topnavbar = () => {
     if (role === "driver") navigate("/");
     else if (role === "admin") navigate("/Requests");
     else if (role === "hospital") navigate("/hospital/queue");
-    else if (role === "staff") navigate("/staff/home");
+    else if (role === "staff") navigate(n?.type === "video_call_request" && n?.booking_id ? `/staff/live-video?booking=${encodeURIComponent(n.booking_id)}` : "/staff/home");
     else navigate("/MyBookings");
   };
 
@@ -1159,7 +1159,7 @@ const Topnavbar = () => {
                     <div key={i} className="nf-user-notif" onClick={() => handleNotifClick(n)}>
                       <div className="nf-user-notif-top"><div className="nf-user-notif-title">{n.title}</div><div className="nf-user-notif-time">{n.timestamp ? new Date(n.timestamp).toLocaleString("en-IN", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : ""}</div></div>
                       <div className="nf-user-notif-msg">{n.message}</div>
-                      <span className="nf-user-notif-badge" style={{ background:"#e8f7e9", color:"#126f1e", borderColor:"#a9d9af" }}>Allocated to you</span>
+                      <span className="nf-user-notif-badge" style={{ background: n.type === "video_call_request" ? "#eaf2ff" : "#e8f7e9", color: n.type === "video_call_request" ? "#1557a6" : "#126f1e", borderColor: n.type === "video_call_request" ? "#b8d2f7" : "#a9d9af" }}>{n.type === "video_call_request" ? "Video call request" : "Allocated to you"}</span>
                     </div>
                   ))
                 ) : (

@@ -646,14 +646,15 @@ export default function StaffPatientCondition() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 24px;
+          padding: 16px;
+          box-sizing: border-box;
         }
 
         .lightbox-panel-box {
-          width: 780px; /* FIXED WIDTH */
+          width: min(780px, 96vw);
           max-width: 92vw;
-          height: 560px; /* FIXED HEIGHT */
-          max-height: 88vh;
+          height: min(720px, calc(100vh - 32px));
+          max-height: calc(100vh - 32px);
           background: #ffffff;
           border-radius: 24px; /* ROUNDED CARD */
           overflow: hidden;
@@ -672,6 +673,9 @@ export default function StaffPatientCondition() {
           font-size: 14px;
           font-weight: 800;
           color: #0f172a;
+          flex: 0 0 auto;
+          min-height: 52px;
+          box-sizing: border-box;
         }
 
         .lightbox-big-img-frame {
@@ -700,6 +704,8 @@ export default function StaffPatientCondition() {
           justify-content: space-between;
           flex-wrap: wrap;
           gap: 8px;
+          flex: 0 0 auto;
+          box-sizing: border-box;
         }
 
         /* ── RESPONSIVE BREAKPOINTS ── */
@@ -746,9 +752,35 @@ export default function StaffPatientCondition() {
             height: 85px;
           }
           .lightbox-panel-box {
-            width: 98vw;
-            height: 70vh;
+            width: calc(100vw - 20px);
+            height: calc(100vh - 20px);
+            max-height: calc(100vh - 20px);
             border-radius: 16px;
+          }
+          .lightbox-panel-head {
+            padding: 12px 14px;
+            min-height: 48px;
+            font-size: 12px;
+          }
+          .lightbox-nav-footer {
+            padding: 10px;
+            align-items: stretch;
+          }
+          .lightbox-nav-footer > span {
+            width: 100%;
+            line-height: 1.4;
+          }
+          .lightbox-nav-footer > div {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+          }
+          .lightbox-nav-footer button {
+            min-height: 40px;
+            font-size: 11px;
+          }
+          .lightbox-nav-footer button:last-child {
+            grid-column: 1 / -1;
           }
           .incoming-grid-layout {
             grid-template-columns: 1fr;
