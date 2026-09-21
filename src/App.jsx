@@ -42,6 +42,7 @@ import HospitalInsuranceView from "./Pages/HospitalInsuranceView";
 import HospitalDoctorAssignment from "./Pages/HospitalDoctorAssignment";
 import HospitalBeds             from "./Pages/HospitalBeds";
 import HospitalTeamAllocation  from "./Pages/HospitalTeamAllocation";
+import HospitalStaffManagement  from "./Pages/HospitalStaffManagement";
 import UserCareTeam             from "./Pages/UserCareTeam";
 import CaseManagement            from "./Pages/CaseManagement";
 import HospitalStaffPortal       from "./Pages/HospitalStaffPortal";
@@ -195,7 +196,8 @@ const App = () => {
         <Route path="/hospital/live-track" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/tracking" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/resources" element={<HospitalRoute element={<HospitalPortal />} />} />
-        <Route path="/hospital/staff" element={<HospitalRoute element={<HospitalPortal />} />} />
+        <Route path="/hospital/staff" element={<HospitalRoute element={<HospitalStaffManagement />} />} />
+        <Route path="/hospital/employees" element={<HospitalRoute element={<HospitalStaffManagement directoryOnly />} />} />
         <Route path="/hospital/cases" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
