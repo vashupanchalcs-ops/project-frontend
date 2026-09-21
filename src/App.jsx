@@ -199,8 +199,9 @@ const App = () => {
         <Route path="/hospital/resources" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/staff" element={<HospitalRoute element={<HospitalStaffManagement />} />} />
         <Route path="/hospital/employees" element={<HospitalRoute element={<HospitalStaffManagement directoryOnly />} />} />
-        <Route path="/hospital/cases" element={<HospitalRoute element={<HospitalPortal />} />} />
-        <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<HospitalPortal />} />} />
+        {/* Legacy case links now land on the replacement Payments page. */}
+        <Route path="/hospital/cases" element={<HospitalRoute element={<Navigate to="/hospital/payments" replace />} />} />
+        <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<Navigate to="/hospital/payments" replace />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/manage-cases" element={<HospitalRoute element={<CaseManagement scope="hospital" />} />} />
         <Route path="/hospital/payments" element={<HospitalRoute element={<HospitalPayments />} />} />

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ChevronDown, CreditCard, MoreHorizontal, RefreshCw, Search, SlidersHorizontal, Star } from "lucide-react";
 
 const defaultApiBase = import.meta.env.DEV
@@ -54,13 +53,15 @@ const calculateHospitalBill = (booking) => {
 const paymentStatus = (booking) => {
   const raw = String(booking?.payment_status || booking?.invoice_status || "").toLowerCase();
   if (["paid", "settled", "completed"].includes(raw) || booking?.status === "completed") return "Paid";
+  if (raw === "draft") return "Draft";
+  if (raw === "overdue") return "Overdue";
   if (["cancelled", "canceled", "void"].includes(raw) || booking?.status === "cancelled") return "Cancelled";
   return "Due";
 };
 
 export default function HospitalPayments() {
-  const navigate = useNavigate();
   const [hospital, setHospital] = useState(null);
+  const [hospitalId, setHospitalId] = useState(Number(localStorage.getItem("hospital_id") || 0));
   const [bookings, setBookings] = useState([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -70,6 +71,9 @@ export default function HospitalPayments() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [lastSyncedAt, setLastSyncedAt] = useState("");
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  const [editForm, setEditForm] = useState({ payment_status: "due", payment_total: "", payment_amount_due: "", payment_note: "" });
+  const [saving, setSaving] = useState(false);
 
   const loadPayments = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
@@ -87,6 +91,7 @@ export default function HospitalPayments() {
       if (!hospitalId) throw new Error("Hospital profile not configured for this account");
 
       localStorage.setItem("hospital_id", String(hospitalId));
+      setHospitalId(hospitalId);
       const response = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/?_=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Payment records could not be loaded");
       const data = await response.json();
@@ -106,8 +111,8 @@ export default function HospitalPayments() {
   const invoices = useMemo(() => bookings.map((booking) => {
     const bill = calculateHospitalBill(booking);
     const status = paymentStatus(booking);
-    const total = Number(booking?.total_amount ?? booking?.current_bill ?? bill.total);
-    const amountDue = Number(booking?.amount_due ?? (status === "Paid" ? 0 : total));
+    const total = Number(booking?.payment_total ?? booking?.total_amount ?? booking?.current_bill ?? bill.total);
+    const amountDue = Number(booking?.payment_amount_due ?? booking?.amount_due ?? (status === "Paid" ? 0 : total));
     const customer = booking?.patient_name || booking?.booked_by || "Unknown patient";
     return {
       ...booking,
@@ -139,6 +144,55 @@ export default function HospitalPayments() {
   const visibleInvoices = filteredInvoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const activeFilterCount = Number(statusFilter !== "all") + Number(dateFilter !== "all") + Number(Boolean(query.trim()));
 
+  const openEditor = (invoice) => {
+    setEditingInvoice(invoice);
+    setEditForm({
+      payment_status: invoice.status.toLowerCase(),
+      payment_total: String(invoice.total),
+      payment_amount_due: String(invoice.amountDue),
+      payment_note: String(invoice.payment_note || ""),
+    });
+    setError("");
+  };
+
+  const savePayment = async (event) => {
+    event.preventDefault();
+    const total = Number(editForm.payment_total);
+    const amountDue = Number(editForm.payment_amount_due);
+    if (!Number.isFinite(total) || total < 0 || !Number.isFinite(amountDue) || amountDue < 0 || amountDue > total) {
+      setError("Enter valid payment amounts. Amount due cannot be greater than total.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`${BASE}/api/hospitals/${hospitalId}/payments/${editingInvoice.booking_id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payment_status: editForm.payment_status,
+          payment_total: total,
+          payment_amount_due: amountDue,
+          payment_note: editForm.payment_note,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || "Payment could not be updated");
+      }
+      const updated = await response.json();
+      setBookings((current) => current.map((booking) => Number(booking.booking_id) === Number(editingInvoice.booking_id)
+        ? { ...booking, ...updated, payment_status: editForm.payment_status, payment_total: total, payment_amount_due: amountDue, payment_note: editForm.payment_note }
+        : booking));
+      setEditingInvoice(null);
+      setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+    } catch (requestError) {
+      setError(requestError?.message || "Payment could not be updated");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <main className="hospital-payments-page">
       <style>{`
@@ -150,6 +204,8 @@ export default function HospitalPayments() {
         .payments-panel{border:1px solid #b9d7bf;border-radius:16px;background:#fff;overflow:hidden}.payments-panel-head{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #cfe0d1;padding:18px 20px}.payments-panel-head h1{margin:0;font-size:22px;letter-spacing:-.03em}.payments-panel-head p{margin:5px 0 0;color:#64748b;font-size:13px}.payments-count{border:1px solid #f59e0b;border-radius:8px;background:#fff4df;min-width:110px;padding:10px 14px;text-align:center;color:#111827}.payments-count b{display:block;font-size:22px;line-height:1}.payments-count span{display:block;margin-top:5px;font-size:10px;font-weight:850;text-transform:uppercase}
         .payments-controls{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid #edf1ed;flex-wrap:wrap}.payments-filter-button{display:inline-flex;align-items:center;gap:7px;border:1px solid #dce5dd;border-radius:9px;background:#fff;padding:9px 12px;font-weight:800;color:#334155}.payments-filter-count{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#2563eb;color:#fff;font-size:11px}.payments-select-wrap{position:relative}.payments-select{appearance:none;border:1px solid #dce5dd;border-radius:9px;background:#fff;color:#334155;padding:9px 32px 9px 11px;font:inherit;font-size:12px;font-weight:750}.payments-select-wrap svg{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:#64748b}.payments-search{display:flex;align-items:center;gap:8px;margin-left:auto;width:min(270px,100%);border:1px solid #dce5dd;border-radius:9px;padding:8px 10px;color:#64748b}.payments-search input{width:100%;border:0;outline:0;background:transparent;font:inherit;font-size:12px;color:#111827}
         .payments-table-wrap{overflow-x:auto}.payments-table{width:100%;min-width:900px;border-collapse:collapse;font-size:13px}.payments-table th{height:42px;padding:0 12px;text-align:left;background:#fafcfb;color:#64748b;border-bottom:1px solid #e6eee7;font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}.payments-table td{height:58px;padding:9px 12px;border-bottom:1px solid #eef2ef;vertical-align:middle;color:#334155}.payments-table tbody tr:hover{background:#fbfefb}.payments-table th:first-child,.payments-table td:first-child{width:42px;padding-left:20px;padding-right:4px}.payments-table th:last-child,.payments-table td:last-child{width:52px;padding-right:20px;text-align:right}.payments-star{border:0;background:transparent;color:#cbd5e1;padding:4px;cursor:pointer}.payments-star:hover{color:#f59e0b}.payments-number{font-weight:850;color:#1f2937}.payments-status{display:inline-flex;align-items:center;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:850}.payments-status.paid{background:#e6f7ef;color:#14804a}.payments-status.due{background:#fff4df;color:#a16207}.payments-status.cancelled{background:#f1f5f9;color:#64748b}.payments-customer{display:flex;align-items:center;gap:9px;min-width:160px}.payments-avatar{display:grid;place-items:center;flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:900}.payments-customer-name{font-weight:750;color:#1f2937}.payments-customer-detail{margin-top:2px;color:#94a3b8;font-size:10px;white-space:nowrap}.payments-money{font-weight:750;color:#334155;white-space:nowrap}.payments-due{color:#a16207}.payments-actions{border:0;background:transparent;color:#64748b;padding:6px;cursor:pointer}.payments-actions:hover{color:#111827}.payments-empty{padding:54px 20px;text-align:center;color:#64748b}.payments-error{margin:16px 20px 0;border:1px solid #fecaca;border-radius:9px;background:#fff1f2;color:#b91c1c;padding:11px 13px;font-size:12px;font-weight:700}.payments-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;color:#64748b;font-size:12px}.payments-pagination{display:flex;align-items:center;gap:9px}.payments-page-button{border:1px solid #dce5dd;border-radius:7px;background:#fff;color:#334155;padding:6px 10px;cursor:pointer}.payments-page-button:disabled{opacity:.45;cursor:not-allowed}.payments-page-number{font-weight:800;color:#334155}
+        .payments-status.draft{background:#f1f5f9;color:#475569}.payments-status.overdue{background:#fce7f3;color:#be185d}
+        .payments-drawer-overlay{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.38);display:flex;justify-content:flex-end}.payments-drawer{width:min(470px,100%);height:100%;overflow:auto;background:#fff;box-shadow:-20px 0 55px rgba(15,23,42,.2);padding:26px}.payments-drawer-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:1px solid #e5e7eb;padding-bottom:18px;margin-bottom:20px}.payments-drawer-head h2{margin:0;font-size:22px}.payments-drawer-head p{margin:5px 0 0;color:#64748b;font-size:12px}.payments-drawer-close{border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:7px 11px;font-size:20px;line-height:1;cursor:pointer}.payments-form{display:grid;gap:16px}.payments-form label{display:grid;gap:7px;color:#334155;font-size:12px;font-weight:800}.payments-form input,.payments-form select,.payments-form textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:11px 12px;background:#fff;color:#111827;font:inherit;font-size:13px}.payments-form textarea{min-height:92px;resize:vertical}.payments-drawer-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px;padding-top:16px;border-top:1px solid #e5e7eb}.payments-drawer-actions button{border:1px solid #cbd5e1;border-radius:8px;padding:10px 15px;font-weight:850;cursor:pointer;background:#fff}.payments-drawer-actions .save{border-color:#f59e0b;background:#f59e0b;color:#111827}
         @media(max-width:720px){.hospital-payments-page{padding-left:64px}.payments-wrap{padding:14px 10px 76px}.payments-toolbar{align-items:flex-start;flex-direction:column}.payments-toolbar-meta{width:100%;justify-content:space-between}.payments-panel-head{align-items:flex-start;flex-direction:column}.payments-count{align-self:stretch}.payments-search{margin-left:0;flex:1 1 100%;width:100%}.payments-footer{align-items:flex-start;flex-direction:column}}
       `}</style>
 
@@ -177,7 +233,7 @@ export default function HospitalPayments() {
             <span className="payments-filter-button"><SlidersHorizontal size={14} /> Filter <span className="payments-filter-count">{activeFilterCount}</span></span>
             <div className="payments-select-wrap">
               <select className="payments-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter payment status">
-                <option value="all">All statuses</option><option value="paid">Paid</option><option value="due">Due</option><option value="cancelled">Cancelled</option>
+                <option value="all">All statuses</option><option value="paid">Paid</option><option value="draft">Draft</option><option value="due">Due</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option>
               </select><ChevronDown size={14} />
             </div>
             <div className="payments-select-wrap">
@@ -202,7 +258,7 @@ export default function HospitalPayments() {
                     <td><div className="payments-customer"><span className="payments-avatar">{initials(invoice.customer)}</span><span><span className="payments-customer-name">{invoice.customer}</span><span className="payments-customer-detail">{invoice.patient_contact_number || invoice.booked_by_email || `${invoice.daysAdmitted} day${invoice.daysAdmitted === 1 ? "" : "s"} admitted`}</span></span></div></td>
                     <td className="payments-money">{formatMoney(invoice.total)}</td>
                     <td className={`payments-money ${invoice.amountDue > 0 ? "payments-due" : ""}`}>{formatMoney(invoice.amountDue)}</td>
-                    <td><button className="payments-actions" type="button" onClick={() => navigate(`/hospital/cases/${invoice.booking_id}`)} title="Open case"><MoreHorizontal size={18} /></button></td>
+                    <td><button className="payments-actions" type="button" onClick={() => openEditor(invoice)} title="Edit payment"><MoreHorizontal size={18} /></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -215,6 +271,19 @@ export default function HospitalPayments() {
           </div>
         </section>
       </div>
+
+      {editingInvoice && <div className="payments-drawer-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setEditingInvoice(null); }}>
+        <aside className="payments-drawer" role="dialog" aria-modal="true" aria-label="Edit payment">
+          <div className="payments-drawer-head"><div><h2>Edit payment</h2><p>{editingInvoice.invoiceNumber} · {editingInvoice.customer}</p></div><button className="payments-drawer-close" type="button" onClick={() => setEditingInvoice(null)} disabled={saving}>×</button></div>
+          <form className="payments-form" onSubmit={savePayment}>
+            <label>Status<select value={editForm.payment_status} onChange={(event) => setEditForm((current) => ({ ...current, payment_status: event.target.value }))}><option value="draft">Draft</option><option value="due">Due</option><option value="paid">Paid</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option></select></label>
+            <label>Total amount<input type="number" min="0" step="1" value={editForm.payment_total} onChange={(event) => setEditForm((current) => ({ ...current, payment_total: event.target.value }))} /></label>
+            <label>Amount due<input type="number" min="0" step="1" value={editForm.payment_amount_due} onChange={(event) => setEditForm((current) => ({ ...current, payment_amount_due: event.target.value }))} /></label>
+            <label>Payment note<textarea value={editForm.payment_note} onChange={(event) => setEditForm((current) => ({ ...current, payment_note: event.target.value }))} placeholder="Add a payment or billing note" /></label>
+            <div className="payments-drawer-actions"><button type="button" onClick={() => setEditingInvoice(null)} disabled={saving}>Cancel</button><button className="save" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
+          </form>
+        </aside>
+      </div>}
     </main>
   );
 }

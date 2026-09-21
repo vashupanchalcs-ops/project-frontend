@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   ChevronsRight, Truck, Building2, BarChart2, Headphones, Sparkles,
   ClipboardList, ListChecks, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
-  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, FileText, Image, Images,
+  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, Image, Images,
   BedDouble, UserCheck, Video, UsersRound, ContactRound, CreditCard,
 } from 'lucide-react';
 
@@ -34,7 +34,6 @@ const hospitalNavItems = [
   { to: "/hospital/resources",     icon: BriefcaseBusiness, label: "Resources & Beds" },
   { to: "/hospital/staff",         icon: Users,             label: "Staff Management" },
   { to: "/hospital/employees",     icon: ContactRound,       label: "Employment Directory" },
-  { to: "/hospital/cases",         icon: FileText,          label: "Cases" },
 ];
 
 const userNavItems = [

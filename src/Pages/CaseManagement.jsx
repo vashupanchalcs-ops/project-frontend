@@ -96,7 +96,7 @@ function CaseRow({ item, scope, onOpen }) {
   const stage = stageMeta(item);
   const hasTeam = item.assigned_team_members?.length > 0;
   const teamCount = item.assigned_team_members?.length || 0;
-  const openPath = scope === "hospital" ? `/hospital/cases/${item.id}` : `/cases/${item.id}`;
+  const openPath = scope === "hospital" ? `/hospital/payments?booking_id=${item.id}` : `/cases/${item.id}`;
 
   return (
     <article className={`cm-case-row tone-${priority.tone}`} onDoubleClick={() => onOpen(item)}>
@@ -407,7 +407,7 @@ export default function CaseManagement({ scope = "hospital" }) {
               <div className="cm-modal-field" style={{ gridColumn: "1 / -1" }}><small>Clinical notes</small><b>{selected.vitals_summary || "No clinical notes available"}</b></div>
             </div>
             <div className="cm-modal-actions">
-              <button onClick={() => navigate(isAdmin ? `/cases/${selected.id}` : `/hospital/cases/${selected.id}`)}>Open full case</button>
+              <button onClick={() => navigate(isAdmin ? `/cases/${selected.id}` : `/hospital/payments?booking_id=${selected.id}`)}>Open payment</button>
               {selected.assigned_bed_number && <button onClick={() => navigate(`/hospital/beds?booking_id=${selected.id}&type=${selected.assigned_bed_type || "general"}`)}>View bed</button>}
               {selected.assigned_team_members?.length > 0 && <button onClick={() => navigate(`/hospital/team-allocation/edit?booking_id=${selected.id}`)}>View care team</button>}
             </div>
