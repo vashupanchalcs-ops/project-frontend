@@ -72,16 +72,6 @@ function roleMeta(role) {
   return ROLE_META[String(role || "other").toLowerCase()] || ROLE_META.other;
 }
 
-function initials(name) {
-  return String(name || "Staff")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "S";
-}
-
 function formatDate(value) {
   if (!value) return "Not recorded";
   const date = new Date(value);
@@ -295,15 +285,6 @@ export default function HospitalStaffManagement({ directoryOnly = false }) {
         </div>
       </header>
 
-      <section className="hsm-hero">
-        <div>
-          <span className="hsm-hero-kicker">HOSPITAL EMPLOYEE OVERVIEW</span>
-          <h2>{directoryOnly ? "Your people, clearly organised" : "Meet your hospital team"}</h2>
-          <p>{directoryOnly ? "Track every employee's department, position and availability from one live view." : "Staff cards make it easy to review profiles before assigning emergency duties."}</p>
-        </div>
-        <div className="hsm-hero-mark"><BriefcaseBusiness size={30} /></div>
-      </section>
-
       <section className="hsm-stats">
         <Stat label="Total employees" value={stats.total} detail="Registered hospital staff" icon={<UsersRound size={18} />} />
         <Stat label="Active now" value={stats.active} detail="Available in the portal" tone="green" icon={<Check size={18} />} />
@@ -321,6 +302,17 @@ export default function HospitalStaffManagement({ directoryOnly = false }) {
 
       {directoryOnly && directoryTab !== "employees" ? (
         <DirectorySummary tab={directoryTab} rows={departmentRows} staff={staff} />
+      ) : directoryOnly ? (
+        <>
+          <section className="hsm-toolbar">
+            <label className="hsm-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search employees, staff ID, email or specialty" /></label>
+            <label className="hsm-select"><Filter size={16} /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Off duty</option></select><ChevronDown size={15} /></label>
+            <span className="hsm-result-count">{visibleStaff.length} of {staff.length} employees</span>
+          </section>
+          {error && <div className="hsm-alert hsm-alert-error">{error}</div>}
+          {notice && <div className="hsm-alert hsm-alert-success"><Check size={16} /> {notice}</div>}
+          {loading ? <div className="hsm-empty">Loading staff records…</div> : visibleStaff.length === 0 ? <div className="hsm-empty">No staff records match this view.</div> : <EmployeeTable rows={visibleStaff} onEdit={openEdit} onToggle={toggleStatus} />}
+        </>
       ) : (
         <>
           <section className="hsm-toolbar">
@@ -337,7 +329,7 @@ export default function HospitalStaffManagement({ directoryOnly = false }) {
           {notice && <div className="hsm-alert hsm-alert-success"><Check size={16} /> {notice}</div>}
           {loading ? <div className="hsm-empty">Loading staff records…</div> : visibleStaff.length === 0 ? <div className="hsm-empty">No staff records match this view.</div> : (
             <section className="hsm-grid">
-              {visibleStaff.map((member) => <StaffCard key={member.id} member={member} directoryOnly={directoryOnly} onEdit={openEdit} onToggle={toggleStatus} onRemove={removeStaff} />)}
+              {visibleStaff.map((member) => <StaffCard key={member.id} member={member} onEdit={openEdit} onToggle={toggleStatus} onRemove={removeStaff} />)}
             </section>
           )}
         </>
@@ -359,7 +351,6 @@ function StaffCard({ member, onEdit, onToggle, onRemove }) {
       <span className="hsm-role-chip" style={{ color: meta.color, background: meta.soft }}>{meta.singular}</span>
       <div className="hsm-card-menu"><button aria-label="Edit staff" onClick={() => onEdit(member)}><Edit3 size={15} /></button><button aria-label="Remove staff" onClick={() => onRemove(member)}><Trash2 size={15} /></button></div>
     </div>
-    <div className="hsm-avatar" style={{ borderColor: meta.color, color: meta.color, background: meta.soft }}>{initials(member.full_name)}</div>
     <div className="hsm-card-body">
       <h3>{member.full_name || "Unnamed staff"}</h3>
       <p className="hsm-handle">@{member.role || "staff"}</p>
@@ -412,17 +403,40 @@ function DirectorySummary({ tab, rows, staff }) {
   return <section className="hsm-summary-grid">{rows.map((row) => <article key={row.key} className="hsm-summary-card"><div className="hsm-summary-icon" style={{ color: row.color, background: row.soft }}><BriefcaseBusiness size={19} /></div><div><h3>{tab === "positions" ? row.singular : row.label}</h3><p>{row.total} employee{row.total === 1 ? "" : "s"} · {row.active} active</p></div><span style={{ color: row.color }}>{row.active}/{row.total}</span></article>)}</section>;
 }
 
+function EmployeeTable({ rows, onEdit, onToggle }) {
+  return <div className="hsm-table-wrap">
+    <table className="hsm-table">
+      <thead><tr><th><input type="checkbox" aria-label="Select all employees" disabled /></th><th>Employee</th><th>Department</th><th>Email</th><th>Employment</th><th>Specialization</th><th>Shift</th><th>Experience</th><th>Contact</th><th>Actions</th></tr></thead>
+      <tbody>{rows.map((member) => {
+        const meta = roleMeta(member.role);
+        return <tr key={member.id}>
+          <td><input type="checkbox" aria-label={`Select ${member.full_name}`} /></td>
+          <td><div className="hsm-employee-name"><strong>{member.full_name || "Unnamed staff"}</strong><small>{member.staff_id || "Staff ID pending"}</small></div></td>
+          <td><span className="hsm-department-pill" style={{ color: meta.color, background: meta.soft }}><i style={{ background: meta.color }} />{meta.singular}</span></td>
+          <td>{member.email || "Not added"}</td>
+          <td><span className={`hsm-employment-pill ${member.is_active ? "active" : "inactive"}`}><i />{member.is_active ? "Active" : "Inactive"}</span></td>
+          <td>{member.specialization || "General care"}</td>
+          <td>{SHIFT_LABELS[member.shift] || "Day"}{member.is_on_call ? " · on call" : ""}</td>
+          <td>{Number(member.years_experience || 0)} yrs</td>
+          <td>{member.contact_number || "Not added"}</td>
+          <td><div className="hsm-table-actions"><button onClick={() => onEdit(member)} aria-label={`Edit ${member.full_name}`}><Edit3 size={14} /></button><button onClick={() => onToggle(member)} aria-label={`Toggle ${member.full_name} status`}><ShieldCheck size={14} /></button></div></td>
+        </tr>;
+      })}</tbody>
+    </table>
+  </div>;
+}
+
 const STYLES = `
   .hsm-page{min-height:100vh;padding:88px 32px 48px 96px;background:#f6f8f7;color:#0f172a;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-  .hsm-topbar{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;background:#fff;border:1px solid #b9d7c3;border-radius:16px;padding:22px 24px;margin-bottom:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
-  .hsm-eyebrow{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#166534}.hsm-topbar h1{margin:7px 0 5px;font-size:28px;line-height:1.08;letter-spacing:-.035em}.hsm-topbar p,.hsm-hero p{margin:0;color:#64748b;font-size:14px}.hsm-actions{display:flex;gap:10px;flex-shrink:0}.hsm-btn{border:1px solid #cbd5e1;border-radius:9px;padding:10px 15px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:750;cursor:pointer;background:#fff;color:#0f172a}.hsm-btn:disabled{opacity:.6;cursor:wait}.hsm-btn-primary{background:#f59e0b;border-color:#f59e0b;color:#111827}.hsm-btn-light:hover{border-color:#94a3b8;background:#f8fafc}
-  .hsm-hero{display:flex;justify-content:space-between;align-items:center;gap:24px;background:linear-gradient(110deg,#fff 0%,#fff 60%,#eefbf2 100%);border:1px solid #d4e5d8;border-radius:20px;padding:28px 32px;margin-bottom:18px}.hsm-hero-kicker{font-size:12px;font-weight:850;letter-spacing:.13em;color:#166534}.hsm-hero h2{margin:8px 0 8px;font-size:34px;letter-spacing:-.04em}.hsm-hero p{max-width:720px;font-size:16px;line-height:1.6}.hsm-hero-mark{width:70px;height:70px;border-radius:20px;display:grid;place-items:center;background:#dcfce7;color:#15803d;flex-shrink:0}
+  .hsm-topbar{display:flex;justify-content:space-between;gap:24px;align-items:center;background:#fff;border:1px solid #b9d7c3;border-radius:16px;padding:14px 24px;margin-bottom:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+  .hsm-eyebrow{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#166534}.hsm-topbar h1{margin:4px 0 3px;font-size:25px;line-height:1.08;letter-spacing:-.035em}.hsm-topbar p{margin:0;color:#64748b;font-size:13px}.hsm-actions{display:flex;gap:10px;flex-shrink:0}.hsm-btn{border:1px solid #cbd5e1;border-radius:9px;padding:10px 15px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:14px;font-weight:750;cursor:pointer;background:#fff;color:#0f172a}.hsm-btn:disabled{opacity:.6;cursor:wait}.hsm-btn-primary{background:#f59e0b;border-color:#f59e0b;color:#111827}.hsm-btn-light:hover{border-color:#94a3b8;background:#f8fafc}
   .hsm-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.hsm-stat{display:flex;align-items:flex-start;gap:12px;background:#fff;border:1px solid #dbe5df;border-radius:15px;padding:17px}.hsm-stat-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:#f3e8ff;color:#7e22ce}.hsm-stat strong{display:block;font-size:25px;line-height:1}.hsm-stat span{display:block;margin-top:4px;font-size:12px;font-weight:800;color:#334155}.hsm-stat small{display:block;margin-top:5px;color:#94a3b8;font-size:11px}.hsm-stat-green .hsm-stat-icon{color:#15803d;background:#dcfce7}.hsm-stat-amber .hsm-stat-icon{color:#b45309;background:#fef3c7}.hsm-stat-blue .hsm-stat-icon{color:#1d4ed8;background:#dbeafe}
   .hsm-directory-tabs,.hsm-filter-tabs{display:flex;gap:0;align-items:center;border-bottom:1px solid #d9e2dc;margin-bottom:16px;overflow-x:auto}.hsm-directory-tabs button,.hsm-filter-tabs button{white-space:nowrap;border:0;background:transparent;padding:13px 16px;color:#64748b;font-weight:750;cursor:pointer;border-bottom:2px solid transparent}.hsm-directory-tabs button.is-active,.hsm-filter-tabs button.is-active{color:#111827;border-color:#f59e0b}.hsm-filter-tabs button span{margin-left:6px;color:#94a3b8;font-size:11px}
   .hsm-toolbar{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #dbe5df;border-radius:15px;padding:12px;margin-bottom:14px}.hsm-search{display:flex;align-items:center;gap:8px;flex:1;color:#94a3b8}.hsm-search input{border:0;outline:0;width:100%;font-size:14px;color:#0f172a;background:transparent}.hsm-select{position:relative;display:flex;align-items:center;gap:7px;color:#64748b;border:1px solid #dbe5df;border-radius:9px;padding:9px 10px}.hsm-select select{border:0;appearance:none;outline:0;padding-right:15px;background:transparent;color:#334155;font-weight:700}.hsm-result-count{font-size:12px;color:#64748b;font-weight:700;white-space:nowrap;padding:0 8px}.hsm-alert{display:flex;align-items:center;gap:8px;border-radius:10px;padding:11px 13px;margin:0 0 14px;font-size:13px;font-weight:650}.hsm-alert-error{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}.hsm-alert-success{background:#ecfdf5;border:1px solid #a7f3d0;color:#047857}
-  .hsm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.hsm-card{position:relative;background:#fff;border:1px solid #dbe5df;border-radius:16px;overflow:hidden;box-shadow:0 8px 25px rgba(15,23,42,.035)}.hsm-card-top{height:58px;padding:14px 15px;display:flex;justify-content:space-between}.hsm-role-chip{height:25px;display:inline-flex;align-items:center;border-radius:999px;padding:0 10px;font-size:11px;font-weight:850}.hsm-card-menu{display:flex;gap:6px}.hsm-card-menu button,.hsm-icon-btn{width:31px;height:31px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;display:grid;place-items:center;color:#475569;cursor:pointer}.hsm-card-menu button:hover{color:#b91c1c;border-color:#fca5a5}.hsm-avatar{width:66px;height:66px;border-radius:50%;border:3px solid;margin:-33px 0 0 20px;display:grid;place-items:center;font-size:23px;font-weight:900;box-shadow:0 7px 15px rgba(15,23,42,.12);position:relative}.hsm-card-body{padding:12px 20px 18px}.hsm-card h3{margin:0;font-size:20px;letter-spacing:-.025em;line-height:1.15}.hsm-handle{margin:5px 0 12px;color:#64748b;font-size:13px}.hsm-status-line{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12px}.hsm-status-dot{width:9px;height:9px;border-radius:50%;display:inline-block}.hsm-status-dot.active{background:#22c55e;box-shadow:0 0 0 4px #dcfce7}.hsm-status-dot.inactive{background:#ef4444;box-shadow:0 0 0 4px #fee2e2}.hsm-status-line button{margin-left:auto;border:0;background:transparent;color:#64748b;font-size:11px;cursor:pointer;text-decoration:underline}.hsm-details{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:17px 0 15px;padding-top:15px;border-top:1px solid #edf2ef}.hsm-details div{min-width:0}.hsm-details dt{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;font-weight:800}.hsm-details dd{margin:3px 0 0;color:#334155;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hsm-contact{display:grid;gap:6px;color:#64748b;font-size:11px}.hsm-contact span{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hsm-card-footer{border-top:1px solid #edf2ef;margin-top:15px;padding-top:12px;display:flex;align-items:center;justify-content:space-between;color:#94a3b8;font-size:10px}.hsm-card-footer button{display:flex;align-items:center;gap:3px;border:0;background:transparent;color:#475569;font-weight:800;cursor:pointer}
+  .hsm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.hsm-card{position:relative;background:#fff;border:1px solid #dbe5df;border-radius:16px;overflow:hidden;box-shadow:0 8px 25px rgba(15,23,42,.035)}.hsm-card-top{height:54px;padding:14px 15px;display:flex;justify-content:space-between}.hsm-role-chip{height:25px;display:inline-flex;align-items:center;border-radius:999px;padding:0 10px;font-size:11px;font-weight:850}.hsm-card-menu{display:flex;gap:6px}.hsm-card-menu button,.hsm-icon-btn{width:31px;height:31px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;display:grid;place-items:center;color:#475569;cursor:pointer}.hsm-card-menu button:hover{color:#b91c1c;border-color:#fca5a5}.hsm-card-body{padding:17px 20px 18px}.hsm-card h3{margin:0;font-size:20px;letter-spacing:-.025em;line-height:1.15}.hsm-handle{margin:5px 0 12px;color:#64748b;font-size:13px}.hsm-status-line{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12px}.hsm-status-dot{width:9px;height:9px;border-radius:50%;display:inline-block}.hsm-status-dot.active{background:#22c55e;box-shadow:0 0 0 4px #dcfce7}.hsm-status-dot.inactive{background:#ef4444;box-shadow:0 0 0 4px #fee2e2}.hsm-status-line button{margin-left:auto;border:0;background:transparent;color:#64748b;font-size:11px;cursor:pointer;text-decoration:underline}.hsm-details{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:17px 0 15px;padding-top:15px;border-top:1px solid #edf2ef}.hsm-details div{min-width:0}.hsm-details dt{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;font-weight:800}.hsm-details dd{margin:3px 0 0;color:#334155;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hsm-contact{display:grid;gap:6px;color:#64748b;font-size:11px}.hsm-contact span{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hsm-card-footer{border-top:1px solid #edf2ef;margin-top:15px;padding-top:12px;display:flex;align-items:center;justify-content:space-between;color:#94a3b8;font-size:10px}.hsm-card-footer button{display:flex;align-items:center;gap:3px;border:0;background:transparent;color:#475569;font-weight:800;cursor:pointer}
+  .hsm-table-wrap{background:#fff;border:1px solid #dbe5df;border-radius:15px;overflow:auto}.hsm-table{border-collapse:collapse;width:100%;min-width:1050px;font-size:12px}.hsm-table th{padding:12px 11px;text-align:left;background:#f8faf9;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}.hsm-table td{padding:13px 11px;border-top:1px solid #edf2ef;color:#334155;white-space:nowrap}.hsm-table tr:hover td{background:#fbfefc}.hsm-table input{accent-color:#f59e0b}.hsm-employee-name{display:grid;gap:3px}.hsm-employee-name strong{font-size:13px;color:#0f172a}.hsm-employee-name small{color:#94a3b8;font-size:10px}.hsm-department-pill,.hsm-employment-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 8px;font-weight:800;font-size:11px}.hsm-department-pill i,.hsm-employment-pill i{width:7px;height:7px;border-radius:50%;display:block}.hsm-employment-pill.active{background:#dcfce7;color:#15803d}.hsm-employment-pill.active i{background:#22c55e}.hsm-employment-pill.inactive{background:#fee2e2;color:#b91c1c}.hsm-employment-pill.inactive i{background:#ef4444}.hsm-table-actions{display:flex;gap:5px}.hsm-table-actions button{width:28px;height:28px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#475569;display:grid;place-items:center;cursor:pointer}.hsm-table-actions button:hover{border-color:#f59e0b;color:#b45309}
   .hsm-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:15px;padding:55px;text-align:center;color:#64748b}.hsm-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.hsm-summary-card{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #dbe5df;border-radius:14px;padding:18px}.hsm-summary-icon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center}.hsm-summary-card h3{margin:0;font-size:15px}.hsm-summary-card p{margin:5px 0 0;color:#64748b;font-size:12px}.hsm-summary-card>span{margin-left:auto;font-size:13px;font-weight:850}.hsm-review{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #dbe5df;border-radius:15px;padding:24px;color:#475569}.hsm-review h2{margin:0 0 5px;color:#0f172a;font-size:20px}.hsm-review p{margin:0;font-size:13px;line-height:1.5}.hsm-review>strong{margin-left:auto;white-space:nowrap;color:#166534}
   .hsm-drawer-overlay{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.35);display:flex;justify-content:flex-end}.hsm-drawer{width:min(460px,100vw);height:100%;background:#fff;box-shadow:-15px 0 45px rgba(15,23,42,.2);display:flex;flex-direction:column}.hsm-drawer-head{padding:25px 24px 18px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;gap:14px}.hsm-drawer-head h2{margin:8px 0 5px;font-size:23px;letter-spacing:-.03em}.hsm-drawer-head p{margin:0;color:#64748b;font-size:12px;line-height:1.5}.hsm-form{padding:20px 24px 28px;overflow:auto}.hsm-form-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hsm-field{display:grid;gap:6px;margin-bottom:13px}.hsm-field span{font-size:11px;font-weight:800;color:#334155}.hsm-field input,.hsm-field select,.hsm-field textarea{box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px 11px;background:#fff;color:#0f172a;font:inherit;font-size:13px;outline:0}.hsm-field textarea{resize:vertical}.hsm-field input:focus,.hsm-field select:focus,.hsm-field textarea:focus{border-color:#f59e0b;box-shadow:0 0 0 3px #fef3c7}.hsm-checkbox{display:flex;align-items:center;gap:8px;min-height:39px;margin-top:14px;color:#334155;font-size:12px;font-weight:700}.hsm-checkbox input{accent-color:#f59e0b}.hsm-active-check{padding:10px 11px;border:1px solid #dbe5df;border-radius:8px;background:#f8fafc;margin:2px 0 13px}.hsm-drawer-foot{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:9px;background:#fff;border-top:1px solid #e2e8f0;padding:16px 0 0;margin-top:5px}.hsm-spin{animation:hsm-spin 1s linear infinite}@keyframes hsm-spin{to{transform:rotate(360deg)}}
   @media(max-width:1100px){.hsm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hsm-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hsm-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media(max-width:720px){.hsm-page{padding:78px 14px 30px 78px}.hsm-topbar{display:block}.hsm-actions{margin-top:16px}.hsm-hero h2{font-size:27px}.hsm-hero-mark{display:none}.hsm-stats,.hsm-grid,.hsm-summary-grid{grid-template-columns:1fr}.hsm-toolbar{display:block}.hsm-select{margin-top:10px}.hsm-result-count{display:block;margin-top:10px;padding:0}.hsm-form-two{grid-template-columns:1fr}}
+  @media(max-width:720px){.hsm-page{padding:78px 14px 30px 78px}.hsm-topbar{display:block}.hsm-actions{margin-top:16px}.hsm-stats,.hsm-grid,.hsm-summary-grid{grid-template-columns:1fr}.hsm-toolbar{display:block}.hsm-select{margin-top:10px}.hsm-result-count{display:block;margin-top:10px;padding:0}.hsm-form-two{grid-template-columns:1fr}}
 `;
