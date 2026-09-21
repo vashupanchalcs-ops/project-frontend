@@ -137,7 +137,13 @@ export default function HospitalResponses() {
           color: #111;
           font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
         }
-        .hr-wrap { padding: 22px; }
+        .hr-wrap {
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 22px 24px;
+          box-sizing: border-box;
+        }
         .hr-title { font-size: 34px; font-weight: 900; margin: 0 0 8px; }
         .hr-sub { color: rgba(17,17,17,0.66); margin-bottom: 16px; font-size: 14px; }
         .hr-grid {

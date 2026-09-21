@@ -1597,7 +1597,13 @@ export default function HospitalPortal() {
           overflow: hidden;
           padding-bottom: 20px;
         }
-        .hp-wrap { max-width: 1420px; margin: 0 auto; padding: 20px 20px 84px; }
+        .hp-wrap {
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 20px 24px 84px;
+          box-sizing: border-box;
+        }
         .hp-hero {
           border: 1px solid rgba(17,17,17,0.14);
           border-radius: 22px;

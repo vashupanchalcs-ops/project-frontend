@@ -983,7 +983,7 @@ export default function HospitalBeds() {
         </div>
 
         {/* ── SECTION 1: GENERAL WARD BEDS GRID ────────────────────────────── */}
-        <div style={{ display: visibleGeneralBeds.length ? "block" : "none", background: "#ffffff", borderRadius: "16px 16px 0 0", border: "1px solid #e2e8f0", padding: 20, marginBottom: 0, boxShadow: "0 4px 16px rgba(0,0,0,0.03)" }}>
+        <div style={{ width: "100%", boxSizing: "border-box", marginLeft: 0, marginRight: 0, display: visibleGeneralBeds.length ? "block" : "none", background: "#ffffff", borderRadius: "16px 16px 0 0", border: "1px solid #e2e8f0", padding: 20, marginBottom: 0, boxShadow: "0 4px 16px rgba(0,0,0,0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
@@ -1073,6 +1073,10 @@ export default function HospitalBeds() {
           ref={icuHubRef}
           id="icu-hub"
           style={{
+            width: "100%",
+            boxSizing: "border-box",
+            marginLeft: 0,
+            marginRight: 0,
             display: visibleIcuBeds.length ? "block" : "none",
             background: "#ffffff",
             borderRadius: "0 0 16px 16px",
