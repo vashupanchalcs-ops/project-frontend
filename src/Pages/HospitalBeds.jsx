@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { BedDouble, ShieldAlert, Activity, CheckCircle, Clock, User, Phone, Heart, Calendar, Stethoscope, X, RefreshCw, AlertCircle, ArrowLeft } from "lucide-react";
+import { BedDouble, ShieldAlert, Activity, CheckCircle, Clock, User, Phone, Heart, Calendar, Stethoscope, Search, X, RefreshCw, AlertCircle, ArrowLeft } from "lucide-react";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -45,6 +45,8 @@ export default function HospitalBeds() {
   const [updating, setUpdating] = useState(false);
   const [toast, setToast] = useState(null);
   const [showAllocatedTeam, setShowAllocatedTeam] = useState(false);
+  const [allocatedTeamFilter, setAllocatedTeamFilter] = useState("all");
+  const [allocatedTeamSearch, setAllocatedTeamSearch] = useState("");
   const [bedSearch, setBedSearch] = useState("");
   const [bedStatusFilter, setBedStatusFilter] = useState("all");
   const [bedTypeFilter, setBedTypeFilter] = useState("all");
@@ -63,6 +65,18 @@ export default function HospitalBeds() {
     }
     return parsed;
   }, [selectedBed]);
+
+  const visibleAllocatedTeam = useMemo(() => {
+    const query = allocatedTeamSearch.trim().toLowerCase();
+    return allocatedTeam.filter((member) => {
+      const isActive = member.is_active !== false;
+      const matchesStatus = allocatedTeamFilter === "all"
+        || (allocatedTeamFilter === "active" && isActive)
+        || (allocatedTeamFilter === "absent" && !isActive);
+      const searchable = [member.full_name, member.name, member.email, member.role, member.specialization, member.contact_number].join(" ").toLowerCase();
+      return matchesStatus && (!query || searchable.includes(query));
+    });
+  }, [allocatedTeam, allocatedTeamFilter, allocatedTeamSearch]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -1224,10 +1238,10 @@ export default function HospitalBeds() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 24, background: "#1e293b", color: "#ffffff", borderRadius: 14, padding: "18px 20px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center" }}>
+                <div style={{ marginTop: 24, background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 14, padding: "18px 20px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: 17, fontWeight: 900 }}>{selectedBed.patient_name || "Emergency patient"}</div>
-                    <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 12 }}>{selectedBed.medical_condition || "Clinical care"}</div>
+                    <div style={{ marginTop: 4, color: "#64748b", fontSize: 12 }}>{selectedBed.medical_condition || "Clinical care"}</div>
                   </div>
                   <span style={{ background: "#f2b233", color: "#173645", borderRadius: 999, padding: "6px 11px", fontSize: 10, fontWeight: 900, textTransform: "uppercase", whiteSpace: "nowrap" }}>
                     {selectedBed.status === "occupied" ? "Occupied" : "Reserved / booked"}
@@ -1238,12 +1252,25 @@ export default function HospitalBeds() {
                   ✓ Team allocated · assigned to this patient and bed
                 </div>
 
-                <div style={{ marginTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Assigned multidisciplinary team</h2>
-                  <span style={{ color: "#64748b", fontSize: 11, fontWeight: 900 }}>{allocatedTeam.length} MEMBERS</span>
+                <div style={{ marginTop: 26, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Members</h2>
+                    <div style={{ marginTop: 4, color: "#64748b", fontSize: 12 }}>Assigned multidisciplinary team</div>
+                  </div>
+                  <span style={{ color: "#64748b", fontSize: 11, fontWeight: 900 }}>{visibleAllocatedTeam.length} OF {allocatedTeam.length} MEMBERS</span>
                 </div>
 
-                {allocatedTeam.length ? (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "inline-flex", padding: 3, gap: 3, background: "#f1f5f9", borderRadius: 9 }}>
+                    {[["all", "All"], ["active", "Active"], ["absent", "Absent"]].map(([key, label]) => <button key={key} onClick={() => setAllocatedTeamFilter(key)} style={{ border: 0, borderRadius: 7, padding: "7px 12px", background: allocatedTeamFilter === key ? "#ffffff" : "transparent", color: "#334155", fontWeight: 800, cursor: "pointer", boxShadow: allocatedTeamFilter === key ? "0 1px 4px rgba(15,23,42,.12)" : "none" }}>{label}</button>)}
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto", minWidth: 210, border: "1px solid #cbd5e1", borderRadius: 8, padding: "7px 10px", background: "#ffffff", color: "#94a3b8" }}>
+                    <Search size={15} />
+                    <input value={allocatedTeamSearch} onChange={(event) => setAllocatedTeamSearch(event.target.value)} placeholder="Search members" style={{ width: "100%", border: 0, outline: 0, fontSize: 12, color: "#334155" }} />
+                  </label>
+                </div>
+
+                {visibleAllocatedTeam.length ? (
                   <div style={{ marginTop: 12, overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: 12, background: "#ffffff" }}>
                     <div style={{ minWidth: 820 }}>
                       <div style={{ display: "grid", gridTemplateColumns: "44px minmax(180px,1.35fr) minmax(190px,1.4fr) 118px 102px 84px 36px", gap: 12, alignItems: "center", padding: "11px 14px", background: "#f8fafc", color: "#64748b", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".05em" }}>
@@ -1255,13 +1282,13 @@ export default function HospitalBeds() {
                         <span>Experience</span>
                         <span />
                       </div>
-                    {allocatedTeam.map((member, index) => (
+                    {visibleAllocatedTeam.map((member, index) => (
                       <div key={`${member.id || member.full_name}-${index}`} style={{ display: "grid", gridTemplateColumns: "44px minmax(180px,1.35fr) minmax(190px,1.4fr) 118px 102px 84px 36px", gap: 12, alignItems: "center", padding: "12px 14px", borderTop: "1px solid #edf2f7", color: "#334155", fontSize: 12 }}>
                         <div style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", background: "#e2e8f0", color: "#334155", fontWeight: 900, fontSize: 11 }}>{teamInitials(member)}</div>
                         <div style={{ minWidth: 0 }}><div style={{ fontWeight: 850, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.full_name || member.name || "Staff member"}</div><div style={{ marginTop: 3, color: "#64748b", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.specialization || "General care"}</div></div>
                         <div style={{ minWidth: 0 }}><div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.email || "Email not added"}</div><div style={{ marginTop: 3, color: "#64748b", fontSize: 11 }}>{member.contact_number || "Contact not added"}</div></div>
                         <span style={{ display: "inline-flex", width: "fit-content", maxWidth: "100%", padding: "5px 8px", borderRadius: 999, background: "#f1f5f9", color: "#334155", fontSize: 10, fontWeight: 900, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.role || "Care team"}</span>
-                        <span style={{ display: "inline-flex", width: "fit-content", padding: "5px 8px", borderRadius: 999, background: member.is_active === false ? "#f1f5f9" : "#eff6ff", color: member.is_active === false ? "#64748b" : "#1d4ed8", fontSize: 10, fontWeight: 900 }}>{member.is_active === false ? "Inactive" : "Assigned"}</span>
+                        <span style={{ display: "inline-flex", width: "fit-content", padding: "5px 8px", borderRadius: 999, background: "#f1f5f9", color: "#334155", fontSize: 10, fontWeight: 900 }}>{member.is_active === false ? "Inactive" : "Assigned"}</span>
                         <span style={{ color: "#475569", whiteSpace: "nowrap" }}>{member.years_experience != null ? `${member.years_experience} yrs` : "—"}</span>
                         <button aria-label={`View ${member.full_name || member.name || "staff"}`} style={{ width: 28, height: 28, border: "1px solid #cbd5e1", borderRadius: 7, background: "#fff", color: "#475569", fontWeight: 900, cursor: "pointer" }}>•••</button>
                       </div>
@@ -1430,7 +1457,7 @@ export default function HospitalBeds() {
                     <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 10, padding: "10px 14px", fontSize: 12 }}>
                       <div style={{ fontWeight: 800, color: "#334155" }}>👨‍⚕️ {selectedBed.attending_doctor || "Emergency Care Team"}</div>
                       <div style={{ color: "#475569", marginTop: 2 }}>Specialist Support • Shift On Duty</div>
-                      {selectedBed.status !== "available" && <button onClick={() => setShowAllocatedTeam(true)} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#334155", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
+                      {selectedBed.status !== "available" && <button onClick={() => { setAllocatedTeamFilter("all"); setAllocatedTeamSearch(""); setShowAllocatedTeam(true); }} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#334155", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
                     </div>
                   </div>
                 </>
