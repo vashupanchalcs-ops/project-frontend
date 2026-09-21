@@ -1170,18 +1170,6 @@ export default function HospitalBeds() {
 
               </div>
 
-        {/* Detailed inventory, matching the operational reference layout */}
-        <div style={{ width: "100%", maxWidth: "none", margin: "0 0 28px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, overflowX: "auto", boxSizing: "border-box" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div><h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Detailed inventory</h2><div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Click a row to view patient and allocated team details</div></div>
-            <span style={{ color: "#64748b", fontSize: 12, fontWeight: 700 }}>Showing {visibleBeds.length} of {beds.length}</span>
-          </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760, fontSize: 12 }}>
-            <thead><tr style={{ textAlign: "left", color: "#64748b", borderBottom: "1px solid #e2e8f0" }}>{["Bed / Ward", "Type", "Status", "Patient", "Admission / update", "Actions"].map((h) => <th key={h} style={{ padding: "10px 8px" }}>{h}</th>)}</tr></thead>
-            <tbody>{visibleBeds.slice(0, 100).map((bed) => { const c = getStatusColor(bed.status); return <tr key={`inventory-${bed.id}`} onClick={() => setSelectedBed(bed)} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer" }}><td style={{ padding: "10px 8px", fontWeight: 800 }}>{bed.bed_number}<div style={{ color: "#64748b", fontWeight: 500 }}>{bed.wing || "—"}</div></td><td style={{ padding: "10px 8px" }}>{bed.bed_type === "icu" ? "ICU" : "Standard"}</td><td style={{ padding: "10px 8px" }}><span style={{ color: c.text, background: c.lightBg, borderRadius: 999, padding: "4px 9px", fontWeight: 800 }}>{bed.status === "reserved" ? "Booked" : c.label}</span></td><td style={{ padding: "10px 8px" }}>{bed.patient_name || "Unassigned"}</td><td style={{ padding: "10px 8px", color: "#64748b" }}>{bed.last_status_update ? new Date(bed.last_status_update).toLocaleString() : "—"}</td><td style={{ padding: "10px 8px", color: "#0284c7", fontWeight: 800 }}>View →</td></tr>; })}</tbody>
-          </table>
-        </div>
-
       {/* ── DETAILS MODAL / SLIDE-OVER (Matches Image 5 verbatim) ──────────── */}
       {selectedBed && (
         <div
