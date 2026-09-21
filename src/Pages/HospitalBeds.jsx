@@ -4,7 +4,7 @@ import { BedDouble, ShieldAlert, Activity, CheckCircle, Clock, User, Phone, Hear
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : "https://swiftrescue-backend.onrender.com";
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function HospitalBeds() {
@@ -37,6 +37,9 @@ export default function HospitalBeds() {
   const [updating, setUpdating] = useState(false);
   const [toast, setToast] = useState(null);
   const [showAllocatedTeam, setShowAllocatedTeam] = useState(false);
+  const [bedSearch, setBedSearch] = useState("");
+  const [bedStatusFilter, setBedStatusFilter] = useState("all");
+  const [bedTypeFilter, setBedTypeFilter] = useState("all");
 
   // Allocation Mode states
   const [targetBooking, setTargetBooking] = useState(null);
@@ -198,16 +201,23 @@ export default function HospitalBeds() {
       if (bedsRes && bedsRes.ok) {
         const bedsData = await bedsRes.json();
         if (Array.isArray(bedsData) && bedsData.length > 0) {
-          loadedBeds = bedsData;
+          // Ignore stale/legacy summary objects accidentally returned by an
+          // older endpoint. A real bed always has a number and a valid status.
+          loadedBeds = bedsData.filter((bed) =>
+            bed && String(bed.bed_number || "").trim() &&
+            ["available", "reserved", "occupied"].includes(String(bed.status || "").toLowerCase())
+          );
         }
       }
 
-      // If backend bed table returned empty or hasn't seeded yet, synthesize from hospital capacity
+      // If the deployment has not seeded HospitalBed rows yet, show the
+      // hospital's configured capacity in the same row/column layout. Once
+      // the backend returns persisted rows, those records remain authoritative.
       if (loadedBeds.length === 0 && finalHosp) {
         loadedBeds = generateBedsFromHospital(finalHosp, queue);
-      } else if (loadedBeds.length === 0) {
-        // Fallback default AIIMS specs
-        loadedBeds = generateBedsFromHospital({ id: effectiveHid, name: "Hospital", total_beds: 121, icu_beds: 42, available_beds: 60 });
+      }
+      if (loadedBeds.length === 0 && bedsRes && !bedsRes.ok) {
+        throw new Error("Unable to load beds");
       }
 
       // The booking is the source of truth for the complete allocated team.
@@ -279,6 +289,20 @@ export default function HospitalBeds() {
     () => beds.filter((b) => b.bed_type === "icu"),
     [beds]
   );
+
+  const visibleBeds = useMemo(() => {
+    const query = bedSearch.trim().toLowerCase();
+    return beds.filter((bed) => {
+      const matchesText = !query || [bed.bed_number, bed.wing, bed.patient_name, bed.attending_doctor]
+        .some((value) => String(value || "").toLowerCase().includes(query));
+      return matchesText &&
+        (bedStatusFilter === "all" || bed.status === bedStatusFilter) &&
+        (bedTypeFilter === "all" || bed.bed_type === bedTypeFilter);
+    });
+  }, [beds, bedSearch, bedStatusFilter, bedTypeFilter]);
+
+  const visibleGeneralBeds = useMemo(() => visibleBeds.filter((b) => b.bed_type === "general"), [visibleBeds]);
+  const visibleIcuBeds = useMemo(() => visibleBeds.filter((b) => b.bed_type === "icu"), [visibleBeds]);
 
   // Status Actions with OPTIMISTIC UPDATE
   const handleUpdateStatus = async (newStatus) => {
@@ -712,6 +736,18 @@ export default function HospitalBeds() {
           </div>
         )}
 
+        {/* Reference-style search and ward filters */}
+        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 20, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <input value={bedSearch} onChange={(e) => setBedSearch(e.target.value)} placeholder="Search bed, room or patient" style={{ flex: "1 1 260px", minWidth: 220, border: "1px solid #cbd5e1", borderRadius: 7, padding: "10px 12px", fontSize: 13 }} />
+          <select value={bedTypeFilter} onChange={(e) => setBedTypeFilter(e.target.value)} style={{ border: "1px solid #cbd5e1", borderRadius: 7, padding: "10px 12px", fontSize: 13 }}>
+            <option value="all">All wards</option><option value="general">General</option><option value="icu">ICU</option>
+          </select>
+          <select value={bedStatusFilter} onChange={(e) => setBedStatusFilter(e.target.value)} style={{ border: "1px solid #cbd5e1", borderRadius: 7, padding: "10px 12px", fontSize: 13 }}>
+            <option value="all">All statuses</option><option value="available">Available</option><option value="reserved">Booked</option><option value="occupied">Occupied</option>
+          </select>
+          <span style={{ marginLeft: "auto", color: "#64748b", fontSize: 12, fontWeight: 700 }}>{visibleBeds.length} of {beds.length} beds shown</span>
+        </div>
+
         {/* Top KPI Metrics Bar */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 28 }}>
           {/* Total */}
@@ -761,7 +797,7 @@ export default function HospitalBeds() {
         </div>
 
         {/* ── SECTION 3: ANALYTICS & OCCUPANCY CHARTS ──────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, marginBottom: 28 }}>
+        <div style={{ display: "none" }}>
           {/* Chart 1: Bed Status Distribution Bar Chart */}
           <div style={{ background: "#ffffff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 22, boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: "#0f172a", marginBottom: 4 }}>
@@ -914,7 +950,7 @@ export default function HospitalBeds() {
         </div>
 
         {/* ── SECTION 1: GENERAL WARD BEDS GRID ────────────────────────────── */}
-        <div style={{ background: "#ffffff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, marginBottom: 28, boxShadow: "0 4px 16px rgba(0,0,0,0.03)" }}>
+        <div style={{ display: visibleGeneralBeds.length ? "block" : "none", background: "#ffffff", borderRadius: "16px 16px 0 0", border: "1px solid #e2e8f0", padding: 20, marginBottom: 0, boxShadow: "0 4px 16px rgba(0,0,0,0.03)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
@@ -940,8 +976,8 @@ export default function HospitalBeds() {
           {generalBedsList.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No General beds configured.</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 12 }}>
-              {generalBedsList.map((bed) => {
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", gap: 14 }}>
+              {visibleGeneralBeds.map((bed) => {
                 const colors = getStatusColor(bed.status);
                 const isSelected = selectedBed?.id === bed.id;
                 return (
@@ -952,7 +988,8 @@ export default function HospitalBeds() {
                       background: colors.lightBg,
                       border: isSelected ? "2.5px solid #0f172a" : `2px solid ${colors.border}`,
                       borderRadius: 12,
-                      padding: "14px 10px",
+                      minHeight: 108,
+                      padding: "18px 10px",
                       cursor: "pointer",
                       textAlign: "center",
                       transition: "all 0.15s ease-in-out",
@@ -1003,11 +1040,12 @@ export default function HospitalBeds() {
           ref={icuHubRef}
           id="icu-hub"
           style={{
+            display: visibleIcuBeds.length ? "block" : "none",
             background: "#ffffff",
-            borderRadius: 16,
+            borderRadius: "0 0 16px 16px",
             border: targetBooking?.icu_required || urlType === "icu" ? "2.5px solid #dc2626" : "1.5px solid #fca5a5",
             padding: 24,
-            marginBottom: 28,
+            marginBottom: 20,
             boxShadow: targetBooking?.icu_required || urlType === "icu" ? "0 0 25px rgba(220,38,38,0.18)" : "0 4px 16px rgba(239,68,68,0.04)",
             transition: "all 0.3s ease",
           }}
@@ -1034,8 +1072,8 @@ export default function HospitalBeds() {
           {icuBedsList.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>No ICU beds configured.</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
-              {icuBedsList.map((bed) => {
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", gap: 14 }}>
+              {visibleIcuBeds.map((bed) => {
                 const colors = getStatusColor(bed.status);
                 const isSelected = selectedBed?.id === bed.id;
                 return (
@@ -1046,7 +1084,8 @@ export default function HospitalBeds() {
                       background: colors.lightBg,
                       border: isSelected ? "2.5px solid #991b1b" : `2px solid ${colors.border}`,
                       borderRadius: 12,
-                      padding: "16px 12px",
+                      minHeight: 108,
+                      padding: "18px 12px",
                       cursor: "pointer",
                       textAlign: "center",
                       transition: "all 0.15s ease-in-out",
@@ -1093,6 +1132,18 @@ export default function HospitalBeds() {
         </div>
 
               </div>
+
+        {/* Detailed inventory, matching the operational reference layout */}
+        <div style={{ width: "calc(100% - 48px)", maxWidth: 1300, margin: "0 auto 28px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, overflowX: "auto", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div><h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Detailed inventory</h2><div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Click a row to view patient and allocated team details</div></div>
+            <span style={{ color: "#64748b", fontSize: 12, fontWeight: 700 }}>Showing {visibleBeds.length} of {beds.length}</span>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760, fontSize: 12 }}>
+            <thead><tr style={{ textAlign: "left", color: "#64748b", borderBottom: "1px solid #e2e8f0" }}>{["Bed / Ward", "Type", "Status", "Patient", "Admission / update", "Actions"].map((h) => <th key={h} style={{ padding: "10px 8px" }}>{h}</th>)}</tr></thead>
+            <tbody>{visibleBeds.slice(0, 100).map((bed) => { const c = getStatusColor(bed.status); return <tr key={`inventory-${bed.id}`} onClick={() => setSelectedBed(bed)} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer" }}><td style={{ padding: "10px 8px", fontWeight: 800 }}>{bed.bed_number}<div style={{ color: "#64748b", fontWeight: 500 }}>{bed.wing || "—"}</div></td><td style={{ padding: "10px 8px" }}>{bed.bed_type === "icu" ? "ICU" : "Standard"}</td><td style={{ padding: "10px 8px" }}><span style={{ color: c.text, background: c.lightBg, borderRadius: 999, padding: "4px 9px", fontWeight: 800 }}>{bed.status === "reserved" ? "Booked" : c.label}</span></td><td style={{ padding: "10px 8px" }}>{bed.patient_name || "Unassigned"}</td><td style={{ padding: "10px 8px", color: "#64748b" }}>{bed.last_status_update ? new Date(bed.last_status_update).toLocaleString() : "—"}</td><td style={{ padding: "10px 8px", color: "#0284c7", fontWeight: 800 }}>View →</td></tr>; })}</tbody>
+          </table>
+        </div>
 
       {/* ── DETAILS MODAL / SLIDE-OVER (Matches Image 5 verbatim) ──────────── */}
       {selectedBed && (
