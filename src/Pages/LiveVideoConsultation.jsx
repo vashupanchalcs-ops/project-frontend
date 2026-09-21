@@ -478,6 +478,7 @@ export default function LiveVideoConsultation() {
     const participantId = request?.staff_contract_id || staff.contractId;
     return Object.values(remoteParticipants).find((participant) => String(participant.participantId || "") === String(participantId || ""));
   };
+  const driverParticipant = Object.values(remoteParticipants).find((participant) => participant.role === "driver");
   const pendingStaffRequest = !isDriver ? callRequests.find((item) => item.status === "pending") : null;
 
   return (
@@ -1548,11 +1549,11 @@ export default function LiveVideoConsultation() {
             <div className="video-stage-grid">
               {/* PERSON 1: AMBULANCE DRIVER */}
               <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
-                <img
+                {driverParticipant?.stream ? <video ref={(element) => { if (element) element.srcObject = driverParticipant.stream; }} autoPlay playsInline className="stream-video-element" /> : <img
                   src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80"
                   alt="Driver"
                   className="stream-video-element"
-                />
+                />}
                 <div className="stream-id-pill">
                   <span className="live-mic-indicator"></span>
                   <span>{driverName}</span>
