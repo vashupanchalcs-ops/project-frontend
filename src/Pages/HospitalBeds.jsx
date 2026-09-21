@@ -628,7 +628,7 @@ export default function HospitalBeds() {
         </div>
       )}
 
-      <div style={{ maxWidth: 1300, margin: "0 auto", padding: "24px 24px 80px" }}>
+      <div style={{ width: "100%", maxWidth: "none", margin: 0, padding: "20px 18px 72px", boxSizing: "border-box" }}>
         {/* Page Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <div>
@@ -1167,7 +1167,7 @@ export default function HospitalBeds() {
               </div>
 
         {/* Detailed inventory, matching the operational reference layout */}
-        <div style={{ width: "calc(100% - 48px)", maxWidth: 1300, margin: "0 auto 28px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, overflowX: "auto", boxSizing: "border-box" }}>
+        <div style={{ width: "100%", maxWidth: "none", margin: "0 0 28px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20, overflowX: "auto", boxSizing: "border-box" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div><h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Detailed inventory</h2><div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Click a row to view patient and allocated team details</div></div>
             <span style={{ color: "#64748b", fontSize: 12, fontWeight: 700 }}>Showing {visibleBeds.length} of {beds.length}</span>
