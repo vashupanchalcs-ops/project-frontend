@@ -172,6 +172,15 @@ export default function DriverDashboard() {
   const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
   const [is3D, setIs3D] = useState(false);
 
+  // Polling callbacks must read the latest records without depending on
+  // freshly-created arrays/objects. Depending on those values made the
+  // polling effect restart after every response and created an API request
+  // storm on Render.
+  const allAmbsRef = useRef([]);
+  const ambulanceRef = useRef(null);
+  const effectiveAmbIdRef = useRef(ambId || 0);
+  const driverPhoneRef = useRef(driverPhone);
+
   const driverEmbedSrc = useMemo(() => {
     const dLat = location?.lat ?? Number(ambulance?.latitude);
     const dLng = location?.lng ?? Number(ambulance?.longitude);
@@ -441,13 +450,17 @@ export default function DriverDashboard() {
     fetch(`${BASE}/api/ambulances/`)
       .then(r => r.json())
       .then(data => {
-        setAllAmbs(data);
+        const rows = Array.isArray(data) ? data : [];
+        allAmbsRef.current = rows;
+        setAllAmbs(rows);
         fetch(`${BASE}/api/hospitals/`).then(r=>r.json()).then(h=>setAllHospitals(h)).catch(()=>{});
         const mine =
-          data.find(a => Number(a.id) === Number(ambId)) ||
-          data.find(a => String(a.driver_email || "").toLowerCase() === String(driverEmail || "").toLowerCase()) ||
-          data.find(a => String(a.driver || "").toLowerCase() === String(driverName || "").toLowerCase());
+          rows.find(a => Number(a.id) === Number(ambId)) ||
+          rows.find(a => String(a.driver_email || "").toLowerCase() === String(driverEmail || "").toLowerCase()) ||
+          rows.find(a => String(a.driver || "").toLowerCase() === String(driverName || "").toLowerCase());
         if (mine) {
+          ambulanceRef.current = mine;
+          effectiveAmbIdRef.current = Number(mine.id) || 0;
           setAmbulance(mine);
           setEffectiveAmbId(Number(mine.id) || 0);
           localStorage.setItem("ambulance_id", String(mine.id));
@@ -456,6 +469,7 @@ export default function DriverDashboard() {
             const saved = localStorage.getItem("phone");
             if (!saved || saved === "") {
               localStorage.setItem("phone", mine.driver_contact);
+              driverPhoneRef.current = mine.driver_contact;
               setDriverPhone(mine.driver_contact);
             }
           }
@@ -468,18 +482,18 @@ export default function DriverDashboard() {
       .then(r => r.json())
       .then(data => {
         const rows = Array.isArray(data) ? data : (data ? [data] : []);
-        const eId = Number(effectiveAmbId || ambId || 0);
+        const eId = Number(effectiveAmbIdRef.current || ambId || 0);
         const dName = String(driverName || "").toLowerCase().trim();
         const dEmail = String(driverEmail || "").toLowerCase().trim();
-        const dPhone = String((driverPhone || localStorage.getItem("phone") || "")).replace(/\D+/g, "");
-        const ambNo = String(ambulance?.ambulance_number || localStorage.getItem("ambulance_number") || ambNumber || "").toLowerCase().trim();
+        const dPhone = String((driverPhoneRef.current || localStorage.getItem("phone") || "")).replace(/\D+/g, "");
+        const ambNo = String(ambulanceRef.current?.ambulance_number || localStorage.getItem("ambulance_number") || ambNumber || "").toLowerCase().trim();
         const isPlaceholderAmb = !ambNo || ambNo === "amb-0000" || ambNo === "amb-000";
         const mine = rows
           .filter((b) => {
             const byAmb = eId > 0 && Number(b.ambulance_id) === eId;
             const byDriver = dName && String(b.driver || "").toLowerCase().trim() === dName;
             const byAmbNo = !isPlaceholderAmb && ambNo && String(b.ambulance_number || "").toLowerCase().trim() === ambNo;
-            const mappedAmb = allAmbs.find((a) => Number(a.id) === Number(b.ambulance_id));
+            const mappedAmb = allAmbsRef.current.find((a) => Number(a.id) === Number(b.ambulance_id));
             const bookingDriverEmail = String(b.driver_email || mappedAmb?.driver_email || "").toLowerCase().trim();
             const byDriverEmail = dEmail && bookingDriverEmail === dEmail;
             const bPhone = String(b.driver_contact || "").replace(/\D+/g, "");
@@ -561,7 +575,7 @@ export default function DriverDashboard() {
           }
         }
       }).catch(() => {});
-  }, [ambId, effectiveAmbId, driverName, driverEmail, driverPhone, ambulance, ambNumber, allAmbs, leafletReady, loadNotifications]);
+  }, [ambId, driverName, driverEmail, ambNumber, leafletReady, loadNotifications]);
 
   const acceptBooking = async (bookingId) => {
     setMyBookings((prev) =>
