@@ -32,11 +32,11 @@ const Reports = () => {
   const rootRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/bookings/`).then(r => r.json()).then(setBookings).catch(console.log);
-    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`).then(r => r.json()).then(setAmbulances).catch(console.log);
-    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/hospitals/`).then(r => r.json()).then(setHospitals).catch(console.log);
+    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/bookings/`).then(r => r.json()).then(setBookings).catch(console.log);
+    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`).then(r => r.json()).then(setAmbulances).catch(console.log);
+    fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/hospitals/`).then(r => r.json()).then(setHospitals).catch(console.log);
     const interval = setInterval(() => {
-      fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`).then(r => r.json()).then(data => {
+      fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/ambulances/`).then(r => r.json()).then(data => {
         setAmbulances(data);
         setTrackedAmb(prev => {
           if (!prev) return null;

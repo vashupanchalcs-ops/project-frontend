@@ -265,7 +265,7 @@ export const fetchRouteWithManeuvers = async (points, options = {}) => {
 };
 
 // ── Geocoding ─────────────────────────────────────────────────────────────────
-const API_BASE         = (import.meta?.env?.VITE_API_BASE_URL || import.meta?.env?.VITE_API_BASE || "https://swiftrescue-backend.onrender.com").replace(/\/+$/, "");
+const API_BASE         = (import.meta?.env?.VITE_API_BASE_URL || import.meta?.env?.VITE_API_BASE || "https://swiftrescue-backend-shlb.onrender.com").replace(/\/+$/, "");
 const OPENCAGE_API_KEY = (import.meta?.env?.VITE_OPENCAGE_API_KEY || "").trim();
 
 const geocodeCache = new Map();

@@ -37,7 +37,7 @@ const Maps = () => {
     const fetchAll = () => {
       const baseUrl = (
         import.meta.env.VITE_API_BASE_URL || 
-        (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")
+        (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")
       ).replace(/\/+$/, "");
 
       fetch(`${baseUrl}/api/ambulances/`)

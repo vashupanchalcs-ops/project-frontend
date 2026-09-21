@@ -4,7 +4,7 @@ import { Users, UserCheck, Stethoscope, ArrowLeft, ShieldAlert, CheckCircle2, Al
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : "https://swiftrescue-backend.onrender.com";
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const SPECIALIZATION_KEYWORDS = [
@@ -226,12 +226,12 @@ export default function HospitalDoctorAssignment() {
       if (!res.ok) throw new Error("Doctor assignment failed");
 
       showToast(`Successfully assigned ${selectedDoctorsObj.length} doctor(s) to Case #${activeBookingId}!`);
-      // Return to Hub view
+      // Return to Hub view instantly in 100ms
       setTimeout(() => {
         setActiveBookingId(null);
         navigate("/hospital/assign-doctor", { replace: true });
         loadHubData();
-      }, 700);
+      }, 100);
     } catch {
       showToast("Failed to assign doctors. Try again.", "error");
     } finally {

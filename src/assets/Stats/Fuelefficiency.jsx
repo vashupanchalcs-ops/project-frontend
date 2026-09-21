@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 const Fuelefficiency = () => {
   const [beds, setBeds] = useState(0);
   useEffect(() => {
-    const f = () => fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/hospitals/`)
+    const f = () => fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/hospitals/`)
       .then(r => r.json())
       .then(d => setBeds(d.reduce((s, h) => s + (h.available_beds || 0), 0)));
     f(); const i = setInterval(f, 10000); return () => clearInterval(i);

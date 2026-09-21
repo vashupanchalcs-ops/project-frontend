@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import BookingChatPanel from "../Components/BookingChatPanel";
 
-const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function UserChatbot() {

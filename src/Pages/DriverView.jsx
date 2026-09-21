@@ -8,7 +8,7 @@ import {
   SATELLITE_TILE, isIndiaCoord,
 } from "../hooks/useLeaflet";
 
-const BASE          = `${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}`;
+const BASE          = `${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}`;
 const PING_INTERVAL = 5000;
 const POLL_INTERVAL = 8000;
 

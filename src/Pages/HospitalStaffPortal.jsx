@@ -19,7 +19,7 @@ import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCach
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : "https://swiftrescue-backend.onrender.com";
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const roleLabel = (role) => ({

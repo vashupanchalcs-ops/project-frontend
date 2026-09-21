@@ -9,7 +9,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : "https://swiftrescue-backend.onrender.com";
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const statusColors = {
@@ -167,7 +167,14 @@ const Requests = () => {
   };
 
   const deleteBooking = (id) => {
-    fetch(`${BASE}/api/bookings/${id}/`, { method: "DELETE" }).then(fetchBookings);
+    const bid = Number(id);
+    // Instant 0ms optimistic removal from state and cache
+    setBookings((prev) => prev.filter((row) => Number(row.id) !== bid));
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+      sessionStorage.setItem("admin_requests_cache", JSON.stringify(cached.filter((r) => Number(r.id) !== bid)));
+    } catch {}
+    fetch(`${BASE}/api/bookings/${id}/`, { method: "DELETE" }).catch(() => fetchBookings());
   };
 
   const ActionButtons = ({ b }) => {

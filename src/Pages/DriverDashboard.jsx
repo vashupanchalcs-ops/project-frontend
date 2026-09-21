@@ -597,10 +597,19 @@ export default function DriverDashboard() {
   }, [ambId, driverName, driverEmail, ambNumber, leafletReady, loadNotifications]);
 
   const acceptBooking = async (bookingId) => {
+    // 1. Instant 0ms optimistic local update
     setMyBookings((prev) =>
       prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
     );
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
+        cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
+      ));
+    } catch {}
     addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
+
+    // 2. Background patch
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
@@ -616,23 +625,43 @@ export default function DriverDashboard() {
   };
 
   const completeBookingTask = async (bookingId) => {
+    // 1. Instant 0ms optimistic local update
+    setMyBookings((prev) =>
+      prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_task_completed: true, status: "completed" } : b))
+    );
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
+        cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_task_completed: true, status: "completed" } : b))
+      ));
+    } catch {}
+    addLog(`🏁 Booking #${bookingId} task complete`, "success");
+
+    // 2. Background patch
     try {
       await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ driver_task_complete: true }),
       });
-      addLog(`🏁 Booking #${bookingId} task complete`, "success");
       fetchBookings();
     } catch {
       addLog("❌ Task complete update fail", "error");
+      fetchBookings();
     }
   };
 
   const cancelDriverRequest = async (bookingId) => {
-    // 1-Click instant removal so the card disappears immediately from driver view
+    // 1-Click instant 0ms removal from state and cache
     setMyBookings((prev) => prev.filter((b) => Number(b.id) !== Number(bookingId)));
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
+        cached.filter((b) => Number(b.id) !== Number(bookingId))
+      ));
+    } catch {}
     addLog(`❌ Booking #${bookingId} request cancelled by driver`, "warn");
+
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
@@ -656,7 +685,6 @@ export default function DriverDashboard() {
       fetchBookings();
     }
   };
-
   const updateReportDraft = (bookingId, key, value) => {
     setReportDrafts((prev) => ({
       ...prev,

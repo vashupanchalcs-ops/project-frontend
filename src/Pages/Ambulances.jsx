@@ -59,7 +59,7 @@ const fallbackSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
 const OPENCAGE_API_KEY = (import.meta?.env?.VITE_OPENCAGE_API_KEY || "").trim();
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : "https://swiftrescue-backend.onrender.com";
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 const PICKUP_LOCATION_FALLBACKS = [
@@ -751,26 +751,46 @@ export default function Ambulances() {
       showToast("Please select an available ambulance", "err");
       return;
     }
+    // 1. Optimistic instant local status update
+    setAmbulances((prev) => prev.map((a) => (a.id === amb.id ? { ...a, status: "en_route" } : a)));
+
+    // 2. Optimistically update admin requests cache
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+      sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+        cached.map((row) => {
+          if (Number(row.id) === bookingId) {
+            return {
+              ...row,
+              ambulance_id: amb.id,
+              ambulance_number: amb.ambulance_number || "",
+              driver: amb.driver || "",
+              driver_contact: amb.driver_contact || "",
+              sent_to_driver: true,
+            };
+          }
+          return row;
+        })
+      ));
+    } catch {}
+
+    // 3. Instant 0ms navigation to Requests
+    navigate("/Requests", {
+      state: { flashMsg: `Booking #${bookingId} assigned to ${amb.ambulance_number}` },
+    });
+
+    // 4. Background network PATCH
     try {
       const payload = reassignBookingId
         ? { reassign_ambulance_id: amb.id, notify_user_reassigned: true }
         : { assign_ambulance_id: amb.id };
-      const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+      await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.error || "Reassignment failed", "err");
-        return;
-      }
-      showToast(reassignBookingId ? "New ambulance reassigned and user notified" : "Ambulance assigned for this booking", "ok");
-      navigate("/Requests", {
-        state: { flashMsg: `Booking #${bookingId} assigned to ${amb.ambulance_number}` },
-      });
-    } catch {
-      showToast("Server error during reassignment", "err");
+    } catch (err) {
+      console.warn("Background ambulance assignment error:", err);
     }
   };
 

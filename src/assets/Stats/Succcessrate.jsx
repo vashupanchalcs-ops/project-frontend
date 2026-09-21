@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 const Successrate = () => {
   const [rate, setRate] = useState(0);
   useEffect(() => {
-    const f = () => fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com")).replace(/\/+$/, "")}/api/bookings/`)
+    const f = () => fetch(`${(import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "")}/api/bookings/`)
       .then(r => r.json())
       .then(d => {
         if (!d.length) return;

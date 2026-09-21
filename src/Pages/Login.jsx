@@ -7,7 +7,7 @@ const ADMIN_EMAIL = "vashupanchal.cs@gmail.com";
 // code in that terminal; deployed builds continue to use the Render backend.
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
-  : "https://swiftrescue-backend.onrender.com";
+  : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const IS_PROD = import.meta.env.PROD;
 const DB_KEY = "sr_users_db";

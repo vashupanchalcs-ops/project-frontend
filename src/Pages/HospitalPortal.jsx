@@ -416,6 +416,32 @@ export default function HospitalPortal() {
 
   const assignBedInPortal = async (bookingId) => {
     if (!hospital?.id) return;
+    // 1. Instant 0ms optimistic queue and cache update
+    setQueue((prev) =>
+      prev.map((item) =>
+        Number(item.booking_id) === Number(bookingId)
+          ? {
+              ...item,
+              assigned_bed_id: item.assigned_bed_id || 1,
+              assigned_bed_number: item.assigned_bed_number || "G-001",
+              assigned_bed_type: "general",
+            }
+          : item
+      )
+    );
+    try {
+      const pc = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+      if (pc && Array.isArray(pc.queue)) {
+        pc.queue = pc.queue.map((q) =>
+          Number(q.booking_id) === Number(bookingId)
+            ? { ...q, assigned_bed_number: q.assigned_bed_number || "G-001", assigned_bed_type: "general" }
+            : q
+        );
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify(pc));
+      }
+    } catch {}
+
+    // 2. Background POST
     try {
       const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/beds/assign/`, {
         method: "POST",
@@ -424,7 +450,6 @@ export default function HospitalPortal() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to assign bed");
-      // Optimistically update queue item with bed info
       setQueue((prev) =>
         prev.map((item) =>
           Number(item.booking_id) === Number(bookingId)
@@ -439,7 +464,7 @@ export default function HospitalPortal() {
       );
       await fetchHospitalDashboard({ silent: true });
     } catch (err) {
-      alert(err.message);
+      console.warn("Bed assignment background error:", err);
     }
   };
 

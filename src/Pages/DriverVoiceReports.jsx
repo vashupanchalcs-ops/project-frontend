@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Camera, CheckCircle2, ImagePlus, RefreshCw, Send, Trash2 } from "lucide-react";
 
-const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const requirements = [
   { type: "ecg", label: "ECG", hint: "Send a clear ECG strip or ECG monitor photo." },

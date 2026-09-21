@@ -55,7 +55,7 @@ const DEFAULT_HOSPITALS = [
   },
 ];
 
-const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
 export default function Hospitals() {
@@ -143,8 +143,35 @@ export default function Hospitals() {
   const assignHospitalToBooking = async (hospital) => {
     if (!assignBookingId) return;
     if (!(hospital?.is_active && hospital?.status !== "closed" && Number(hospital?.available_beds || 0) > 0)) return;
+
+    // 1. Optimistically update admin requests cache immediately
     try {
-      const res = await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
+      const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+      sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+        cached.map((row) => {
+          if (Number(row.id) === Number(assignBookingId)) {
+            return {
+              ...row,
+              assigned_hospital_id: hospital.id,
+              assigned_hospital_name: hospital.name,
+              destination: hospital.name,
+              hospital_response: "pending",
+              hospital_alert_sent: true,
+            };
+          }
+          return row;
+        })
+      ));
+    } catch {}
+
+    // 2. Instant 0ms navigation
+    navigate("/Requests", {
+      state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
+    });
+
+    // 3. Background network PATCH
+    try {
+      await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -152,21 +179,41 @@ export default function Hospitals() {
           send_hospital_alert: true,
         }),
       });
-      if (!res.ok) throw new Error("Assign failed");
-      navigate("/Requests", {
-        state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
-      });
-    } catch {
-      navigate("/Requests", {
-        state: { flashMsg: "Hospital assign failed. Try again." },
-      });
+    } catch (err) {
+      console.warn("Background hospital assignment error:", err);
     }
   };
 
   const reassignUserHospital = async (h) => {
     if (!reselectForBookingId) return;
+
+    // 1. Optimistically update user's booking cache immediately
     try {
-      const res = await fetch(`${BASE}/api/bookings/${reselectForBookingId}/`, {
+      const cached = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+      sessionStorage.setItem("my_bookings_cache", JSON.stringify(
+        cached.map((row) => {
+          if (Number(row.id) === Number(reselectForBookingId)) {
+            return {
+              ...row,
+              assigned_hospital_id: h.id,
+              assigned_hospital_name: h.name,
+              destination: h.name,
+              is_user_selected_hospital: true,
+            };
+          }
+          return row;
+        })
+      ));
+    } catch {}
+
+    // 2. Instant 0ms navigation
+    navigate("/MyBookings", {
+      state: { flashMsg: `Booking #${reselectForBookingId} transferred to ${h.name}. Waiting for hospital approval.` },
+    });
+
+    // 3. Background network PATCH
+    try {
+      await fetch(`${BASE}/api/bookings/${reselectForBookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -176,12 +223,8 @@ export default function Hospitals() {
           is_user_selected_hospital: true,
         }),
       });
-      if (!res.ok) throw new Error("Update failed");
-      navigate("/MyBookings", {
-        state: { flashMsg: `Booking #${reselectForBookingId} transferred to ${h.name}. Waiting for hospital approval.` },
-      });
-    } catch {
-      alert("Failed to transfer hospital. Please try again.");
+    } catch (err) {
+      console.warn("Background hospital transfer error:", err);
     }
   };
 

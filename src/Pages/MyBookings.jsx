@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend.onrender.com";
+const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 gsap.registerPlugin(ScrollTrigger);
 
@@ -93,10 +93,19 @@ export function MyBookings() {
   const deleteBooking = async (id) => {
     const ok = window.confirm("Confirm deletion of completed booking?");
     if (!ok) return;
+    // 1. Instant 0ms optimistic removal from state and cache
+    setBookings((prev) => prev.filter((b) => Number(b.id) !== Number(id)));
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+      sessionStorage.setItem("my_bookings_cache", JSON.stringify(cached.filter((b) => Number(b.id) !== Number(id))));
+    } catch {}
+    // 2. Background DELETE
     try {
       await fetch(`${BASE}/api/bookings/${id}/`, { method: "DELETE" });
       fetchBookings();
-    } catch {}
+    } catch {
+      fetchBookings();
+    }
   };
 
   useEffect(() => {
