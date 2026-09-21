@@ -294,7 +294,22 @@ export default function LiveVideoConsultation() {
     if (!localStream || typeof RTCPeerConnection === "undefined") return null;
     const existing = peerConnectionsRef.current.get(remoteId);
     if (existing) return existing;
-    const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    const peer = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
+      ],
+    });
     localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
     peer.onicecandidate = (event) => {
       if (event.candidate) sendSignal({ type: "ice-candidate", target_id: remoteId, candidate: event.candidate });
@@ -342,6 +357,14 @@ export default function LiveVideoConsultation() {
           if (clientIdRef.current < remoteId) await createPeer(remoteId, localStream, true);
         }
         if (payload.type === "offer" && payload.target_id === clientIdRef.current) {
+          setRemoteParticipants((prev) => ({
+            ...prev,
+            [remoteId]: {
+              ...(prev[remoteId] || {}),
+              role: payload.role || prev[remoteId]?.role || (isDriver ? "staff" : "driver"),
+              participantId: payload.participant_id || prev[remoteId]?.participantId,
+            },
+          }));
           const peer = await createPeer(remoteId, localStream, false);
           await peer.setRemoteDescription(new RTCSessionDescription(payload.offer));
           const answer = await peer.createAnswer();
@@ -349,6 +372,14 @@ export default function LiveVideoConsultation() {
           sendSignal({ type: "answer", target_id: remoteId, answer });
         }
         if (payload.type === "answer" && payload.target_id === clientIdRef.current) {
+          setRemoteParticipants((prev) => ({
+            ...prev,
+            [remoteId]: {
+              ...(prev[remoteId] || {}),
+              role: payload.role || prev[remoteId]?.role || (isDriver ? "staff" : "driver"),
+              participantId: payload.participant_id || prev[remoteId]?.participantId,
+            },
+          }));
           const peer = peerConnectionsRef.current.get(remoteId);
           if (peer) await peer.setRemoteDescription(new RTCSessionDescription(payload.answer));
         }
@@ -396,22 +427,33 @@ export default function LiveVideoConsultation() {
 
   // Camera start
   useEffect(() => {
+    let localStream = null;
     async function initCam() {
       try {
         if (navigator.mediaDevices?.getUserMedia) {
           const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localStream = s;
           setStream(s);
           if (localVideoRef.current) localVideoRef.current.srcObject = s;
           setCameraOn(true);
           setMicOn(true);
         }
-      } catch {
-        // virtual cam
+      } catch (err) {
+        // Camera/mic not available — show toast but don't crash
+        const msg = err?.name === "NotAllowedError"
+          ? "Camera/microphone permission denied. Please allow access and refresh."
+          : err?.name === "NotFoundError"
+          ? "No camera or microphone found on this device."
+          : "Camera could not start. You can still join the call in listen-only mode.";
+        showToast(msg);
+        setCameraOn(false);
+        setMicOn(false);
       }
     }
     initCam();
     return () => {
-      stream?.getTracks().forEach((t) => t.stop());
+      // Use captured localStream, not stale state reference
+      localStream?.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
@@ -476,9 +518,17 @@ export default function LiveVideoConsultation() {
   const participantForStaff = (staff) => {
     const request = requestForStaff(staff);
     const participantId = request?.staff_contract_id || staff.contractId;
-    return Object.values(remoteParticipants).find((participant) => String(participant.participantId || "") === String(participantId || ""));
+    const match = Object.values(remoteParticipants).find((participant) =>
+      (participantId && String(participant.participantId || "").toLowerCase() === String(participantId || "").toLowerCase())
+      || (staff.id && String(participant.participantId || "") === String(staff.id))
+      || (participant.role === "staff" && Object.values(remoteParticipants).length === 1)
+    );
+    return match || Object.values(remoteParticipants).find((p) => p.stream) || null;
   };
-  const driverParticipant = Object.values(remoteParticipants).find((participant) => participant.role === "driver");
+  const driverParticipant = Object.values(remoteParticipants).find((participant) => participant.role === "driver")
+    || Object.values(remoteParticipants).find((participant) => participant.stream)
+    || Object.values(remoteParticipants)[0]
+    || null;
   const pendingStaffRequest = !isDriver ? callRequests.find((item) => item.status === "pending") : null;
 
   return (
@@ -1530,19 +1580,44 @@ export default function LiveVideoConsultation() {
               </div>
 
               {/* Connected staff tiles (up to 3) */}
-              {allocatedStaff
-                .filter((s) => connectedStaff.includes(s.id))
-                .map((staff) => {
-                  const participant = participantForStaff(staff);
-                  return <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
-                    {participant?.stream ? <video ref={(element) => { if (element) element.srcObject = participant.stream; }} autoPlay playsInline className="stream-video-element" /> : staff.avatar ? <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} /> : <div className="stream-initials-tile">{initials(staff.name)}</div>}
+              {allocatedStaff.filter((s) => connectedStaff.includes(s.id)).length > 0 ? (
+                allocatedStaff
+                  .filter((s) => connectedStaff.includes(s.id))
+                  .map((staff) => {
+                    const participant = participantForStaff(staff);
+                    return (
+                      <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
+                        {participant?.stream ? (
+                          <video ref={(element) => { if (element) element.srcObject = participant.stream; }} autoPlay playsInline className="stream-video-element" />
+                        ) : staff.avatar ? (
+                          <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} />
+                        ) : (
+                          <div className="stream-initials-tile">{initials(staff.name)}</div>
+                        )}
+                        <div className="stream-id-pill">
+                          <span className="live-mic-indicator"></span>
+                          <span>{staff.name}</span>
+                          <span className="role-pill-badge staff-role">{staff.role.toUpperCase()}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+              ) : Object.keys(remoteParticipants).length > 0 ? (
+                Object.entries(remoteParticipants).slice(0, 3).map(([remoteId, p]) => (
+                  <div key={remoteId} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
+                    {p.stream ? (
+                      <video ref={(element) => { if (element) element.srcObject = p.stream; }} autoPlay playsInline className="stream-video-element" />
+                    ) : (
+                      <div className="stream-initials-tile">DOC</div>
+                    )}
                     <div className="stream-id-pill">
                       <span className="live-mic-indicator"></span>
-                      <span>{staff.name}</span>
-                      <span className="role-pill-badge staff-role">{staff.role.toUpperCase()}</span>
+                      <span>Hospital Staff</span>
+                      <span className="role-pill-badge staff-role">CARE TEAM</span>
                     </div>
-                  </div>;
-                })}
+                  </div>
+                ))
+              ) : null}
             </div>
           ) : (
             /* ── STAFF: 2 TILES ONLY (DRIVER + LOGGED-IN STAFF MEMBER) ── */
