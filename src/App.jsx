@@ -153,7 +153,13 @@ const App = () => {
       {!isAuth && !isMapView && isUser && <UserLiveTracking />}
       {!isAuth && !isMapView && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
 
-      <Routes>
+      {/*
+       * Remount the active route whenever the URL changes. Several portal
+       * screens share layout/stateful components, so keeping the same route
+       * subtree alive can leave the previous screen visible after a sidebar
+       * navigation (especially when only the query tab changes).
+       */}
+      <Routes location={location} key={`${location.pathname}${location.search}`}>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
         <Route path="/login/help" element={<SignInHelp />} />
