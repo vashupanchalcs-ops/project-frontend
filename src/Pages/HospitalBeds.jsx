@@ -7,6 +7,14 @@ const defaultApiBase = import.meta.env.DEV
   : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 
+const teamInitials = (member) => String(member?.full_name || member?.name || "Staff")
+  .trim()
+  .split(/\s+/)
+  .slice(0, 2)
+  .map((part) => part[0])
+  .join("")
+  .toUpperCase() || "S";
+
 export default function HospitalBeds() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -1205,51 +1213,63 @@ export default function HospitalBeds() {
                 </button>
 
                 <div style={{ marginTop: 30 }}>
-                  <div style={{ color: "#087f72", fontSize: 11, fontWeight: 900, letterSpacing: ".6px" }}>
+                  <div style={{ color: "#475569", fontSize: 11, fontWeight: 900, letterSpacing: ".6px" }}>
                     ALLOCATED BED · LIVE TEAM
                   </div>
-                  <h1 style={{ margin: "6px 0 4px", fontSize: 32, lineHeight: 1.1, color: "#173645" }}>
+                  <h1 style={{ margin: "6px 0 4px", fontSize: 32, lineHeight: 1.1, color: "#0f172a" }}>
                     Assigned care team
                   </h1>
-                  <div style={{ color: "#668087", fontSize: 14 }}>
+                  <div style={{ color: "#64748b", fontSize: 14 }}>
                     Bed {selectedBed.bed_number} · {selectedBed.patient_name || "Emergency patient"}
                   </div>
                 </div>
 
-                <div style={{ marginTop: 24, background: "#126F1E", color: "#ffffff", borderRadius: 14, padding: "18px 20px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center" }}>
+                <div style={{ marginTop: 24, background: "#1e293b", color: "#ffffff", borderRadius: 14, padding: "18px 20px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: 17, fontWeight: 900 }}>{selectedBed.patient_name || "Emergency patient"}</div>
-                    <div style={{ marginTop: 4, color: "#c7e6de", fontSize: 12 }}>{selectedBed.medical_condition || "Clinical care"}</div>
+                    <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 12 }}>{selectedBed.medical_condition || "Clinical care"}</div>
                   </div>
                   <span style={{ background: "#f2b233", color: "#173645", borderRadius: 999, padding: "6px 11px", fontSize: 10, fontWeight: 900, textTransform: "uppercase", whiteSpace: "nowrap" }}>
                     {selectedBed.status === "occupied" ? "Occupied" : "Reserved / booked"}
                   </span>
                 </div>
 
-                <div style={{ marginTop: 24, background: "#e5f7ed", border: "1px solid #a9dfc7", borderRadius: 12, padding: 14, color: "#12644f", fontWeight: 800 }}>
+                <div style={{ marginTop: 24, background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 12, padding: 14, color: "#334155", fontWeight: 800 }}>
                   ✓ Team allocated · assigned to this patient and bed
                 </div>
 
                 <div style={{ marginTop: 26, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <h2 style={{ margin: 0, fontSize: 18, color: "#173645" }}>Assigned multidisciplinary team</h2>
-                  <span style={{ color: "#087f72", fontSize: 11, fontWeight: 900 }}>{allocatedTeam.length} MEMBERS</span>
+                  <h2 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>Assigned multidisciplinary team</h2>
+                  <span style={{ color: "#64748b", fontSize: 11, fontWeight: 900 }}>{allocatedTeam.length} MEMBERS</span>
                 </div>
 
                 {allocatedTeam.length ? (
-                  <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                  <div style={{ marginTop: 12, overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: 12, background: "#ffffff" }}>
+                    <div style={{ minWidth: 820 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "44px minmax(180px,1.35fr) minmax(190px,1.4fr) 118px 102px 84px 36px", gap: 12, alignItems: "center", padding: "11px 14px", background: "#f8fafc", color: "#64748b", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".05em" }}>
+                        <span />
+                        <span>Employee</span>
+                        <span>Contact</span>
+                        <span>Department</span>
+                        <span>Status</span>
+                        <span>Experience</span>
+                        <span />
+                      </div>
                     {allocatedTeam.map((member, index) => (
-                      <div key={`${member.id || member.full_name}-${index}`} style={{ background: "#ffffff", border: "1px solid #c9e3da", borderRadius: 14, padding: 17, boxShadow: "none" }}>
-                        <div style={{ display: "inline-block", padding: "5px 9px", borderRadius: 999, background: "#d9f3e8", color: "#145044", fontSize: 10, fontWeight: 900, textTransform: "uppercase" }}>{member.role || "Care team"}</div>
-                        <div style={{ marginTop: 12, fontWeight: 900, fontSize: 15, color: "#173645" }}>{member.full_name || member.name}</div>
-                        <div style={{ marginTop: 5, color: "#668087", fontSize: 12 }}>{member.specialization || "General care"}</div>
-                        {member.years_experience != null && <div style={{ marginTop: 8, color: "#668087", fontSize: 11 }}>{member.years_experience} years experience</div>}
-                        {member.contact_number && <div style={{ marginTop: 9, color: "#087f72", fontSize: 11 }}>☎ {member.contact_number}</div>}
-                        <div style={{ marginTop: 15, color: "#2f8b68", fontSize: 11, fontWeight: 800 }}>✓ Confirmed available</div>
+                      <div key={`${member.id || member.full_name}-${index}`} style={{ display: "grid", gridTemplateColumns: "44px minmax(180px,1.35fr) minmax(190px,1.4fr) 118px 102px 84px 36px", gap: 12, alignItems: "center", padding: "12px 14px", borderTop: "1px solid #edf2f7", color: "#334155", fontSize: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", background: "#e2e8f0", color: "#334155", fontWeight: 900, fontSize: 11 }}>{teamInitials(member)}</div>
+                        <div style={{ minWidth: 0 }}><div style={{ fontWeight: 850, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.full_name || member.name || "Staff member"}</div><div style={{ marginTop: 3, color: "#64748b", fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.specialization || "General care"}</div></div>
+                        <div style={{ minWidth: 0 }}><div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.email || "Email not added"}</div><div style={{ marginTop: 3, color: "#64748b", fontSize: 11 }}>{member.contact_number || "Contact not added"}</div></div>
+                        <span style={{ display: "inline-flex", width: "fit-content", maxWidth: "100%", padding: "5px 8px", borderRadius: 999, background: "#f1f5f9", color: "#334155", fontSize: 10, fontWeight: 900, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.role || "Care team"}</span>
+                        <span style={{ display: "inline-flex", width: "fit-content", padding: "5px 8px", borderRadius: 999, background: member.is_active === false ? "#f1f5f9" : "#eff6ff", color: member.is_active === false ? "#64748b" : "#1d4ed8", fontSize: 10, fontWeight: 900 }}>{member.is_active === false ? "Inactive" : "Assigned"}</span>
+                        <span style={{ color: "#475569", whiteSpace: "nowrap" }}>{member.years_experience != null ? `${member.years_experience} yrs` : "—"}</span>
+                        <button aria-label={`View ${member.full_name || member.name || "staff"}`} style={{ width: 28, height: 28, border: "1px solid #cbd5e1", borderRadius: 7, background: "#fff", color: "#475569", fontWeight: 900, cursor: "pointer" }}>•••</button>
                       </div>
                     ))}
+                    </div>
                   </div>
                 ) : (
-                  <div style={{ marginTop: 12, background: "#ffffff", border: "1px dashed #c9d9d5", borderRadius: 14, padding: 22, color: "#668087" }}>
+                  <div style={{ marginTop: 12, background: "#ffffff", border: "1px dashed #cbd5e1", borderRadius: 14, padding: 22, color: "#64748b" }}>
                     No allocated staff team is available for this bed yet.
                   </div>
                 )}
@@ -1392,7 +1412,7 @@ export default function HospitalBeds() {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #edf2f7", paddingBottom: 8 }}>
                       <span style={{ fontSize: 12, color: "#64748b" }}>Attending Doctor:</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: "#166534" }}>{selectedBed.attending_doctor || "Dr. Rajesh Sharma"}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#1d4ed8" }}>{selectedBed.attending_doctor || "Dr. Rajesh Sharma"}</span>
                     </div>
                     <div>
                       <span style={{ fontSize: 12, color: "#64748b" }}>Medical Condition:</span>
@@ -1407,10 +1427,10 @@ export default function HospitalBeds() {
                     <div style={{ fontSize: 13, fontWeight: 900, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
                       Assigned Ward Staff
                     </div>
-                    <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", fontSize: 12 }}>
-                      <div style={{ fontWeight: 800, color: "#166534" }}>👨‍⚕️ {selectedBed.attending_doctor || "Emergency Care Team"}</div>
+                    <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 10, padding: "10px 14px", fontSize: 12 }}>
+                      <div style={{ fontWeight: 800, color: "#334155" }}>👨‍⚕️ {selectedBed.attending_doctor || "Emergency Care Team"}</div>
                       <div style={{ color: "#475569", marginTop: 2 }}>Specialist Support • Shift On Duty</div>
-                      {selectedBed.status !== "available" && <button onClick={() => setShowAllocatedTeam(true)} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#126F1E", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
+                      {selectedBed.status !== "available" && <button onClick={() => setShowAllocatedTeam(true)} style={{ marginTop: 9, border: 0, borderRadius: 8, padding: "8px 12px", background: "#334155", color: "#fff", fontWeight: 800, cursor: "pointer" }}>👥 View allocated team</button>}
                     </div>
                   </div>
                 </>
