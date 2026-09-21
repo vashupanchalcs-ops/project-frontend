@@ -68,15 +68,22 @@ const staffNavItems = [
 
 const Leftsidebar = () => {
   const location = useLocation();
-  const role     = localStorage.getItem("role");
+  const rawRole  = localStorage.getItem("role") || "";
+  const role     = rawRole.toLowerCase().trim();
   const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
 
   const navItems =
-    role === "admin"  ? adminNavItems  :
+    role === "admin"    ? adminNavItems    :
     role === "hospital" ? hospitalNavItems :
-    role === "driver" ? driverNavItems :
-    role === "staff" ? staffNavItems :
+    role === "driver"   ? driverNavItems   :
+    role === "staff"    ? staffNavItems    :
     userNavItems;
+
+  const homeHref =
+    role === "admin"    ? "/" :
+    role === "hospital" ? "/hospital/home" :
+    role === "driver"   ? "/driver-dashboard" :
+    role === "staff"    ? "/staff/home" : "/";
 
   const pendingCount = (() => {
     try {
@@ -413,7 +420,7 @@ const Leftsidebar = () => {
 
       {/* Desktop Sidebar */}
       <div className={`lsb-root role-${role || "user"}`}>
-        <Link to="/" className="lsb-logo"><ChevronsRight size={28} /></Link>
+        <Link to={homeHref} className="lsb-logo"><ChevronsRight size={28} /></Link>
         <div className="lsb-nav">
           {navItems.map((item, index) => {
             const Icon         = item.icon;

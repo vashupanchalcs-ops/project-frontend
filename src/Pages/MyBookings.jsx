@@ -37,36 +37,58 @@ const FILTERS = ["all", "confirmed", "pending", "completed", "cancelled"];
 
 export function MyBookings() {
   const rootRef = useRef(null);
+  const location = useLocation();
+  const email    = localStorage.getItem("user") || "";
+  const name     = localStorage.getItem("name") || "";
+  const stateBookingId = Number(location.state?.bookingId || 0);
+
   const cachedBookings = (() => {
     try {
-      return JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+      const list = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+      if (location.state?.newBooking && !list.some(b => b.id === location.state.newBooking.id)) {
+        list.unshift(location.state.newBooking);
+      }
+      return list;
     } catch {
-      return [];
+      return location.state?.newBooking ? [location.state.newBooking] : [];
     }
   })();
   const [bookings, setBookings] = useState(cachedBookings);
   const [loading,  setLoading]  = useState(cachedBookings.length === 0);
   const [filter,   setFilter]   = useState("all");
   const navigate = useNavigate();
-  const location = useLocation();
-  const email    = localStorage.getItem("user") || "";
-  const name     = localStorage.getItem("name") || "";
 
   const fetchBookings = useCallback(async () => {
     try {
       const res  = await fetch(`${BASE}/api/bookings/`);
       const data = await res.json();
+      const normEmail = (email || "").trim().toLowerCase();
+      const normName  = (name || "").trim().toLowerCase();
       const mine = data
-        .filter(b => b.booked_by_email===email || b.user_email===email || b.booked_by===name)
+        .filter(b => {
+          const bEmail = String(b.booked_by_email || b.user_email || "").trim().toLowerCase();
+          const bName  = String(b.booked_by || "").trim().toLowerCase();
+          return (normEmail && bEmail === normEmail) ||
+                 (normName && bName === normName) ||
+                 (stateBookingId > 0 && Number(b.id) === stateBookingId);
+        })
         .sort((a, b) => b.id - a.id);
-      setBookings(mine);
-      try { sessionStorage.setItem("my_bookings_cache", JSON.stringify(mine)); } catch {}
-      const confirmed = mine.find(b => b.status==="confirmed" && b.sent_to_driver);
+
+      // Keep stateBookingId at top if freshly booked
+      if (mine.length > 0) {
+        setBookings(mine);
+        try { sessionStorage.setItem("my_bookings_cache", JSON.stringify(mine)); } catch {}
+      } else if (cachedBookings.length > 0) {
+        setBookings(cachedBookings);
+      }
+      const confirmed = (mine.length > 0 ? mine : cachedBookings).find(b => b.status==="confirmed" && b.sent_to_driver);
       if (confirmed) localStorage.setItem("active_confirmed_booking", JSON.stringify(confirmed));
       else           localStorage.removeItem("active_confirmed_booking");
-    } catch {}
+    } catch {
+      if (cachedBookings.length > 0) setBookings(cachedBookings);
+    }
     setLoading(false);
-  }, [email, name]);
+  }, [email, name, stateBookingId, cachedBookings]);
 
   const deleteBooking = async (id) => {
     const ok = window.confirm("Confirm deletion of completed booking?");

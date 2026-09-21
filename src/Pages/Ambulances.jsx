@@ -166,6 +166,14 @@ export default function Ambulances() {
 
   useEffect(() => () => clearPickupWatch(), []);
 
+  // Auto-open booking modal when navigated from home page with ?book=1
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("book") === "1" && isUser && !showModal) {
+      setShowModal(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const query = form.pickup_address.trim();
     const manualEntryRequired = form.booking_for_other || locationMode === "manual" || locationPermission === "denied";
@@ -698,17 +706,33 @@ export default function Ambulances() {
         setShowModal(false);
         const bookedHospitalName = targetHospital?.name;
         setTargetHospital(null);
+
+        // Instantly prepend new booking to my_bookings_cache so MyBookings shows it without delay
+        if (created?.id) {
+          try {
+            const existing = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+            const newBooking = {
+              ...created,
+              id: created.id,
+              status: created.status || "pending",
+              booked_by: localStorage.getItem("name") || "",
+              booked_by_email: localStorage.getItem("user") || "",
+            };
+            const updated = [newBooking, ...existing.filter(b => b.id !== created.id)];
+            sessionStorage.setItem("my_bookings_cache", JSON.stringify(updated));
+          } catch {}
+        }
+
         window.dispatchEvent(new Event("new-booking"));
-        setTimeout(() => {
-          navigate("/MyBookings", {
-            state: {
-              flashMsg: bookedHospitalName
-                ? `Emergency booking for ${bookedHospitalName} is active. Live tracking is available.`
-                : `Emergency booking #${created?.id || ""} is submitted. Live tracking is available.`,
-              bookingId: created?.id,
-            },
-          });
-        }, 900);
+        navigate("/MyBookings", {
+          state: {
+            flashMsg: bookedHospitalName
+              ? `Emergency booking for ${bookedHospitalName} is active. Live tracking is available.`
+              : `Emergency booking #${created?.id || ""} is submitted. Live tracking is available.`,
+            bookingId: created?.id,
+          },
+        });
+
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(err.error || "Booking failed. Try again.", "err");

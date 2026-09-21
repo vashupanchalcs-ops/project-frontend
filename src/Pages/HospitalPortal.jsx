@@ -304,6 +304,18 @@ export default function HospitalPortal() {
 
   const updateResources = async () => {
     if (!hospital?.id) return;
+    // 1. Optimistic instant UI update in 0ms
+    setHospital(prev => prev ? ({ ...prev, ...resourceForm }) : prev);
+    setResourceEditMode(false);
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+      sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+        ...cached,
+        hospital: { ...(cached.hospital || {}), ...resourceForm }
+      }));
+    } catch {}
+
+    // 2. Background patch without freezing UI
     try {
       const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/resources/`, {
         method: "PATCH",
@@ -311,12 +323,11 @@ export default function HospitalPortal() {
         body: JSON.stringify(resourceForm),
       });
       if (!res.ok) throw new Error("Resource update failed");
-      // Clear cache after successful save so server stays source of truth
       try { localStorage.removeItem(RESOURCE_CACHE_KEY); } catch {}
-      await fetchHospitalDashboard();
-      setResourceEditMode(false);
+      void fetchHospitalDashboard({ silent: true });
     } catch {
-      setErr("Resource update failed");
+      setErr("Resource update failed in background. Retrying sync...");
+      void fetchHospitalDashboard({ silent: true });
     }
   };
 
@@ -1075,32 +1086,35 @@ export default function HospitalPortal() {
       setErr("Staff ID and Registration No. are required. Please enter both before saving.");
       return;
     }
+    // 1. Optimistic instant UI update in 0ms - immediately update staff card and close edit modal
+    const sid = editingStaffId;
+    const optimisticStaff = { id: sid, ...editStaffForm };
+    setStaff((current) => current.map((member) => String(member.id) === String(sid) ? { ...member, ...optimisticStaff } : member));
     try {
-      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/${editingStaffId}/?_=${Date.now()}`, {
+      const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+      sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+        ...cached,
+        staff: Array.isArray(cached.staff)
+          ? cached.staff.map((member) => String(member.id) === String(sid) ? { ...member, ...optimisticStaff } : member)
+          : [optimisticStaff],
+      }));
+    } catch {}
+    setEditingStaffId(null);
+
+    // 2. Background PATCH request
+    try {
+      const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/staff/${sid}/?_=${Date.now()}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editStaffForm),
       });
       const updatedStaff = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(updatedStaff.error || "Unable to update staff");
-      // Render the server-confirmed row immediately; do not wait for the
-      // background dashboard poll to repaint the edited Staff ID/Reg. No.
-      setStaff((current) => current.map((member) => (
-        String(member.id) === String(updatedStaff.id) ? updatedStaff : member
-      )));
-      try {
-        const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
-        sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
-          ...cached,
-          staff: Array.isArray(cached.staff)
-            ? cached.staff.map((member) => String(member.id) === String(updatedStaff.id) ? updatedStaff : member)
-            : [updatedStaff],
-        }));
-      } catch {}
-      setEditingStaffId(null);
-      await fetchHospitalDashboard({ silent: true });
+      setStaff((current) => current.map((member) => String(member.id) === String(updatedStaff.id) ? updatedStaff : member));
+      void fetchHospitalDashboard({ silent: true });
     } catch (error) {
-      setErr(error.message || "Unable to update staff");
+      setErr(error.message || "Staff edit failed in background");
+      void fetchHospitalDashboard({ silent: true });
     }
   };
 

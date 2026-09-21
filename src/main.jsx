@@ -84,32 +84,45 @@ window.fetch = (input, init = {}) => {
 // Activate global instant cache for fast navigation across all pages without time delay
 installFetchCache();
 
-// Instant background warmup: eagerly pre-cache core datasets so clicks across all 5 portals load with 0ms delay
+// Staggered background warmup: one request every 3s to avoid overwhelming Render free tier
+// (Render free tier has WEB_CONCURRENCY=1 + ASGI_THREADS=4 — parallel requests cause CancelledError)
 try {
-  const warmupEndpoints = [
-    `${configuredApiBase}/api/ambulances/`,
-    `${configuredApiBase}/api/hospitals/`,
-    `${configuredApiBase}/api/bookings/`,
-  ];
-  const staffId = localStorage.getItem("staff_id");
-  const userEmail = localStorage.getItem("user");
   const role = (localStorage.getItem("role") || "").toLowerCase();
+  const userEmail = localStorage.getItem("user");
+  const staffId = localStorage.getItem("staff_id");
   const hospitalId = localStorage.getItem("hospital_id");
 
-  if (staffId && userEmail) {
-    warmupEndpoints.push(`${configuredApiBase}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(userEmail)}`);
-  }
-  if (role === "driver" && userEmail) {
-    warmupEndpoints.push(`${configuredApiBase}/api/driver/notifications/?email=${encodeURIComponent(userEmail)}`);
-  }
-  if (hospitalId) {
-    warmupEndpoints.push(`${configuredApiBase}/api/hospitals/${hospitalId}/beds/`);
-  }
+  // Only warmup if user is logged in
+  if (role || userEmail) {
+    const warmupEndpoints = [
+      `${configuredApiBase}/api/ambulances/`,
+      `${configuredApiBase}/api/hospitals/`,
+    ];
+    // Bookings endpoint — only for logged-in non-driver users
+    if (role !== "driver") {
+      warmupEndpoints.push(`${configuredApiBase}/api/bookings/`);
+    }
+    if (staffId && userEmail) {
+      warmupEndpoints.push(`${configuredApiBase}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(userEmail)}`);
+    }
+    if (role === "driver" && userEmail) {
+      warmupEndpoints.push(`${configuredApiBase}/api/driver/notifications/?email=${encodeURIComponent(userEmail)}`);
+    }
+    if (hospitalId) {
+      warmupEndpoints.push(`${configuredApiBase}/api/hospitals/${hospitalId}/beds/`);
+    }
 
-  // Pre-fetch in background without blocking
-  warmupEndpoints.forEach((url) => {
-    window.fetch(url).catch(() => {});
-  });
+    // Fire one request every 3 seconds — staggered so backend isn't overwhelmed
+    warmupEndpoints.forEach((url, i) => {
+      setTimeout(() => { window.fetch(url).catch(() => {}); }, i * 3000 + 2000);
+    });
+
+    // Keep-alive ping every 4 minutes to prevent Render free tier cold start (50s+ delay)
+    // Render spins down after ~15 min of inactivity — this keeps it warm
+    setInterval(() => {
+      window.fetch(`${configuredApiBase}/api/ambulances/`).catch(() => {});
+    }, 4 * 60 * 1000);
+  }
 } catch {}
 
 createRoot(document.getElementById("root")).render(

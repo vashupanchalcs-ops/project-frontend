@@ -108,16 +108,32 @@ const Requests = () => {
   }, [location.state?.flashMsg, location.pathname, navigate]);
 
   const updateBooking = async (id, payload) => {
-    const res = await fetch(`${BASE}/api/bookings/${id}/`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || "Booking update failed");
-    setBookings((prev) => prev.map((row) => (Number(row.id) === Number(id) ? { ...row, ...data } : row)));
-    fetchBookings();
-    return data;
+    // 1. Optimistic instant UI update in 0ms so card status turns Confirmed immediately
+    const bid = Number(id);
+    setBookings((prev) => prev.map((row) => (Number(row.id) === bid ? { ...row, ...payload } : row)));
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+      sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+        cached.map((row) => Number(row.id) === bid ? { ...row, ...payload } : row)
+      ));
+    } catch {}
+
+    // 2. Background patch
+    try {
+      const res = await fetch(`${BASE}/api/bookings/${id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Booking update failed");
+      setBookings((prev) => prev.map((row) => (Number(row.id) === bid ? { ...row, ...data } : row)));
+      return data;
+    } catch (err) {
+      console.warn("Booking update background error:", err);
+      fetchBookings();
+      throw err;
+    }
   };
 
   const updateStatus = (id, status) => updateBooking(id, { status });

@@ -229,6 +229,7 @@ export default function BookingChatPanel({
           } catch {}
         };
 
+        let wsRetryCount = 0;
         ws.onclose = () => {
           setWsConnected(false);
           setSyncMode(true);
@@ -239,7 +240,9 @@ export default function BookingChatPanel({
               setPresenceHttp({ online: true });
             }, 5000);
           }
-          reconnectTimer = setTimeout(connectWs, 2200);
+          wsRetryCount += 1;
+          const delay = wsRetryCount > 3 ? 25000 : wsRetryCount * 3000;
+          reconnectTimer = setTimeout(connectWs, delay);
         };
 
         ws.onerror = () => {
