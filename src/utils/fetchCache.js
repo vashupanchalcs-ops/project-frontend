@@ -50,7 +50,15 @@ function getTTL(input) {
 }
 
 function cacheKey(input) {
-  return getUrlString(input).split('?')[0];
+  const raw = getUrlString(input);
+  try {
+    const url = new URL(raw, window.location.origin);
+    // Keep query parameters in the key. Staff, driver and user dashboards
+    // call the same endpoint with different identities/filters.
+    return `${url.origin}${url.pathname}${url.search}`;
+  } catch {
+    return raw;
+  }
 }
 
 function readMem(key) {
@@ -93,8 +101,11 @@ export function installFetchCache() {
   window.fetch = async function cachedFetch(input, options = {}) {
     const method = (options?.method || (input instanceof Request ? input.method : 'GET') || 'GET').toUpperCase();
 
-    // Only intercept cacheable GET requests
-    if (method !== 'GET' || !isCacheable(input)) {
+    // A caller explicitly requesting no-store must always reach Django. This
+    // is used after mutations and on page refreshes where stale data is not
+    // acceptable.
+    const requestCache = options?.cache || (input instanceof Request ? input.cache : 'default');
+    if (method !== 'GET' || requestCache === 'no-store' || !isCacheable(input)) {
       return original(input, options);
     }
 
