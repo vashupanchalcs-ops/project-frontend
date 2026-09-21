@@ -13,7 +13,14 @@ import { installFetchCache } from "./utils/fetchCache.js";
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
   : "https://swiftrescue-backend-shlb.onrender.com";
-const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
+// Vercel can retain an old VITE_API_BASE_URL environment value. Production
+// must use the same live Render service as every hospital page, otherwise the
+// home dashboard and Bed Management read different databases.
+const configuredApiBase = (
+  import.meta.env.DEV
+    ? (import.meta.env.VITE_API_BASE_URL || defaultApiBase)
+    : defaultApiBase
+).replace(/\/+$/, "");
 const legacyApiOriginPattern = /^(?:https?:\/\/(?:127\.0\.0\.1|localhost):8000|https:\/\/(?:swiftrescue-backend|aarogya-backend)(?:-[a-z0-9]+)?\.onrender\.com)/;
 const nativeFetch = window.fetch.bind(window);
 const API_REQUEST_TIMEOUT_MS = 15000;
