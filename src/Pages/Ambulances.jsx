@@ -1640,7 +1640,15 @@ export default function Ambulances() {
           color: rgba(17, 17, 17, .62) !important;
         }
         html body #root .amb-user-booking-overlay .amb-location-action {
-          display: none !important;
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto !important;
+          align-items: center !important;
+          gap: 12px !important;
+          margin: 2px 0 4px !important;
+          padding: 10px 12px !important;
+          border: 1px solid #dce9df !important;
+          border-radius: 10px !important;
+          background: #f8fcf9 !important;
         }
         html body #root .amb-user-booking-overlay .amb-location-choice {
           margin-top: -2px !important;
@@ -2126,7 +2134,7 @@ export default function Ambulances() {
                   requestPickupLocation();
                 }}
               >
-                {locationPermission === "requesting" ? "Requesting location..." : locationPermission === "granted" ? "Location confirmed" : "Give location access"}
+                {locationPermission === "requesting" ? "Fetching address..." : locationPermission === "granted" ? "Location confirmed" : "Use current location"}
               </button>
             </div>
 
@@ -2186,7 +2194,7 @@ export default function Ambulances() {
 
             {confirmedPickup && (
               <div className="amb-location-confirmed">
-                Location confirmed
+                Location confirmed: {confirmedPickup.label || "Address fetched from GPS"}
               </div>
             )}
             {locationMessage && !confirmedPickup && <div className="amb-location-note">{locationMessage}</div>}
