@@ -1076,7 +1076,7 @@ export default function Hospitals() {
                               }}
                               disabled={!canAssign}
                               onClick={() => {
-                                navigate("/", { state: { openBooking: true, preselectedHospital: h } });
+                                navigate("/Ambulances?book=1", { state: { preselectedHospital: h } });
                               }}
                               title={canAssign ? "Book an ambulance directly for this hospital" : "This hospital currently has no available beds"}
                             >

@@ -255,27 +255,28 @@ export default function Ambulances() {
     setTimeout(() => setToast(null), 3200);
   };
 
-  const openBooking = (a, hospital = null) => {
+  const openBooking = (a, hospital = null, options = {}) => {
     if (isAdmin || isDriver) return;
     setSelectedAmb(a);
-    if (hospital) setTargetHospital(hospital);
+    setTargetHospital(hospital || null);
+    const startManual = options.startManual === true;
     setForm({
       pickup_address: "",
       pickup_landmark: "",
       pickup_city: "",
       pickup_district: "",
       patient_contact_number: "",
-      booking_for_other: false,
+      booking_for_other: startManual,
     });
-    setLocationPermission("prompt");
-    setLocationMode("gps");
+    setLocationPermission(startManual ? "manual" : "prompt");
+    setLocationMode(startManual ? "manual" : "gps");
     setConfirmedPickup(null);
-    setLocationMessage("");
+    setLocationMessage(startManual ? "" : "");
     setManualSuggestions([]);
     setShowModal(true);
     // This runs from the user's Book action so the browser can display its
     // native location-permission prompt immediately.
-    requestPickupLocation();
+    if (!startManual) requestPickupLocation();
   };
 
   const requestPickupLocation = () => {
@@ -767,6 +768,14 @@ export default function Ambulances() {
     }
   };
 
+  useEffect(() => {
+    if (!isUser || new URLSearchParams(location.search).get("book") !== "1") return;
+    openBooking(null, location.state?.preselectedHospital || null, { startManual: true });
+    navigate("/Ambulances", { replace: true, state: {} });
+    // The booking query is consumed once so the card remains open on refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUser, location.search, location.state, navigate]);
+
   return (
     <>
       <style>{`
@@ -781,6 +790,17 @@ export default function Ambulances() {
           color: var(--sr-page-text, #111111);
           position: relative;
           overflow: hidden;
+        }
+        .amb2-root.amb2-booking-open {
+          min-height: 64px;
+          height: 64px;
+          overflow: visible;
+          background: #ffffff;
+        }
+        .amb2-root.amb2-booking-open .amb2-wrap {
+          height: 0;
+          padding: 0;
+          overflow: visible;
         }
         .amb2-root::before,
         .amb2-root::after {
@@ -1579,6 +1599,59 @@ export default function Ambulances() {
           overflow-y: auto !important;
           padding: 82px 32px 24px !important;
         }
+        html body #root .amb-user-booking-overlay {
+          position: relative !important;
+          inset: auto !important;
+          z-index: 1 !important;
+          display: flex !important;
+          align-items: flex-start !important;
+          justify-content: center !important;
+          min-height: calc(100vh - 64px) !important;
+          margin-left: 64px !important;
+          box-sizing: border-box !important;
+          padding: 18px 32px 56px !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-modal {
+          width: min(820px, 100%) !important;
+          max-height: none !important;
+          overflow: visible !important;
+          grid-template-columns: 1fr !important;
+          gap: 10px !important;
+          padding: 20px 22px 16px !important;
+          border: 1px solid rgba(18, 111, 30, .20) !important;
+          border-radius: 16px !important;
+          background: #ffffff !important;
+          color: #111111 !important;
+          box-shadow: 0 8px 24px rgba(18, 111, 30, .06) !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-modal h3 {
+          font-size: 22px !important;
+          color: #111111 !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-modal p {
+          color: rgba(17, 17, 17, .62) !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-location-action {
+          display: none !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-location-choice {
+          margin-top: -2px !important;
+          margin-bottom: 4px !important;
+          color: #111111 !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-manual-location {
+          grid-template-columns: minmax(0, 1fr) auto !important;
+          gap: 8px !important;
+          align-items: end !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-modal-actions {
+          margin-top: 8px !important;
+          padding-top: 10px !important;
+          border-top: 1px solid #edf0ed !important;
+        }
+        html body #root .amb-user-booking-overlay .amb-modal-actions .amb2-btn {
+          min-width: 150px !important;
+        }
         html body #root .amb-modal {
           width: min(760px, 100%) !important;
           max-height: calc(100vh - 106px) !important;
@@ -1612,6 +1685,12 @@ export default function Ambulances() {
         }
         @media (max-width: 720px) {
           html body #root .amb-modal-ov { padding: 72px 12px 16px !important; }
+          html body #root .amb-user-booking-overlay {
+            min-height: calc(100vh - 64px) !important;
+            margin-left: 0 !important;
+            padding: 16px 12px 88px !important;
+          }
+          html body #root .amb-user-booking-overlay .amb-modal { padding: 18px 16px 14px !important; }
           html body #root .amb-modal { grid-template-columns: 1fr !important; max-height: calc(100vh - 88px) !important; }
           html body #root .amb-field { grid-column: 1 / -1; }
           html body #root .amb-location-action,
@@ -1682,7 +1761,7 @@ export default function Ambulances() {
 
       {toast && <div className={`amb-toast ${toast.type}`}>{toast.msg}</div>}
 
-      <div className={`amb2-root ${isAdmin ? "admin-cut" : ""}`} ref={rootRef}>
+      <div className={`amb2-root ${isAdmin ? "admin-cut" : ""} ${isUser && showModal ? "amb2-booking-open" : ""}`} ref={rootRef}>
         <div className="amb2-wrap">
           {!isUser ? (
             <div className="amb2-head">
@@ -1706,11 +1785,11 @@ export default function Ambulances() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : !showModal ? (
             <div className="amb2-head">
               <h1>Book your ambulance here</h1>
             </div>
-          )}
+          ) : null}
 
           {!isUser && (
             <div className="amb2-stats">
@@ -1961,7 +2040,7 @@ export default function Ambulances() {
       </div>
 
       {showModal && (
-        <div className="amb-modal-ov" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
+        <div className={`amb-modal-ov ${isUser ? "amb-user-booking-overlay" : ""}`} onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <div className="amb-modal">
             <h3>Book an ambulance</h3>
             <p>Share your pickup location and contact number.</p>

@@ -1,14 +1,13 @@
 import { Ambulance, ArrowRight, MapPin, X, Navigation, CheckCircle } from "lucide-react";
 import AMBULANCE_IMAGE from "../assets/ambulance.jpg";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { readFetchCache } from "../utils/fetchCache";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
 
 export default function UserHome() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [ambulances, setAmbulances] = useState(() => readFetchCache(`${BASE}/api/ambulances/`) ?? []);
   const [hospitals, setHospitals] = useState(() => readFetchCache(`${BASE}/api/hospitals/`) ?? []);
 
@@ -35,26 +34,10 @@ export default function UserHome() {
   };
 
   const openBookingCard = (hospital = null) => {
-    setTargetHospital(hospital);
-    setForm({
-      pickup_address: "",
-      patient_contact_number: localStorage.getItem("phone") || "",
-      booking_for_other: false,
+    navigate("/Ambulances?book=1", {
+      state: hospital ? { preselectedHospital: hospital } : undefined,
     });
-    setLocationMode("gps");
-    setLocationPermission("prompt");
-    setConfirmedPickup(null);
-    setLocationMessage("");
-    setShowModal(true);
   };
-
-  useEffect(() => {
-    if (!location.state?.openBooking) return;
-    openBookingCard(location.state.preselectedHospital || null);
-    navigate("/", { replace: true, state: {} });
-    // The state is immediately cleared after opening the card.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, navigate]);
 
   useEffect(() => {
     let active = true;
