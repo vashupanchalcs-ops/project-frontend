@@ -25,7 +25,6 @@ const adminNavItems = [
 const hospitalNavItems = [
   { to: "/hospital/home",          icon: Building2,         label: "Hospital Home" },
   { to: "/hospital/manage-cases",  icon: ListChecks,        label: "Manage Cases" },
-  { to: "/hospital/payments",      icon: CreditCard,         label: "Payments" },
   { to: "/hospital/responses",     icon: ShieldCheck,       label: "Hospital Response", dot: true },
   { to: "/hospital/beds",          icon: BedDouble,         label: "Bed Management", dot: true },
   { to: "/hospital/team-allocation", icon: UserCheck,         label: "Team Allocation" },
@@ -34,6 +33,7 @@ const hospitalNavItems = [
   { to: "/hospital/resources",     icon: BriefcaseBusiness, label: "Resources & Beds" },
   { to: "/hospital/staff",         icon: Users,             label: "Staff Management" },
   { to: "/hospital/employees",     icon: ContactRound,       label: "Employment Directory" },
+  { to: "/hospital/payments",      icon: CreditCard,         label: "Payments" },
 ];
 
 const userNavItems = [
