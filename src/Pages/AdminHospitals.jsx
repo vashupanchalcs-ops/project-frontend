@@ -32,7 +32,13 @@ function exportHospitals(rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function AdminHospitals({ hospitals = [] }) {
+export default function AdminHospitals({
+  hospitals = [],
+  assignBookingId = null,
+  reselectForBookingId = null,
+  onAssign,
+  onReassign,
+}) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("condition");
@@ -122,6 +128,10 @@ export default function AdminHospitals({ hospitals = [] }) {
         .admin-condition-red { color: #ad2438; background: #ffe5e8; }
         .admin-view-button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cddbd2; border-radius: 8px; padding: 8px 12px; background: #fff; color: #1c5c3b; font-weight: 800; cursor: pointer; }
         .admin-view-button:hover { border-color: #1c7a48; background: #ecf9f0; }
+        .admin-assign-button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e18b12; border-radius: 8px; padding: 8px 12px; background: #f59a23; color: #111; font-weight: 800; cursor: pointer; }
+        .admin-assign-button:hover:not(:disabled) { background: #e98b13; border-color: #c87308; }
+        .admin-assign-button:disabled { cursor: not-allowed; opacity: .55; }
+        .admin-hospital-assignment-banner { margin: 16px 18px 0; padding: 11px 13px; border: 1px solid #f0b36a; border-radius: 9px; background: #fff7e8; color: #8c4a05; font-size: 13px; font-weight: 700; }
         .admin-hospitals-empty { padding: 42px 18px; text-align: center; color: #68786e; }
         @media (max-width: 760px) {
           .admin-hospitals-page { padding: 76px 12px 28px; }
@@ -148,6 +158,8 @@ export default function AdminHospitals({ hospitals = [] }) {
           </header>
 
           <section className="admin-hospitals-panel">
+            {assignBookingId && <div className="admin-hospital-assignment-banner">Choose a hospital to assign Booking #{assignBookingId}. The existing hospital alert and booking workflow will continue after assignment.</div>}
+            {reselectForBookingId && <div className="admin-hospital-assignment-banner">Choose a hospital to reassign Booking #{reselectForBookingId}. The booking will be updated and the hospital will be notified.</div>}
             <div className="admin-hospitals-toolbar">
               <label className="admin-hospitals-search">
                 <Search size={17} />
@@ -185,6 +197,7 @@ export default function AdminHospitals({ hospitals = [] }) {
                 <tbody>
                   {rows.map((hospital) => {
                     const condition = getHospitalCondition(hospital);
+                    const canAssign = hospital.is_active !== false && String(hospital.status || "").toLowerCase() !== "closed" && condition.availableBeds > 0;
                     return (
                       <tr key={hospital.id}>
                         <td>
@@ -198,7 +211,13 @@ export default function AdminHospitals({ hospitals = [] }) {
                         <td><span className={`admin-condition admin-condition-${hospital.is_active === false ? "red" : "green"}`}>{hospital.is_active === false ? "Inactive" : "Active"}</span></td>
                         <td>{formatHospitalDate(hospital.created_at)}</td>
                         <td><span className={`admin-condition admin-condition-${condition.key}`} title={condition.description}>{condition.label}</span></td>
-                        <td><button className="admin-view-button" type="button" onClick={() => navigate(`/HospitalPartnerDetails/${hospital.id}`, { state: { hospitalId: hospital.id } })}><Eye size={15} /> View</button></td>
+                        <td>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                            <button className="admin-view-button" type="button" onClick={() => navigate(`/HospitalPartnerDetails/${hospital.id}`, { state: { hospitalId: hospital.id } })}><Eye size={15} /> View</button>
+                            {assignBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign} onClick={() => onAssign?.(hospital)}>{canAssign ? "Assign" : "Unavailable"}</button>}
+                            {reselectForBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign} onClick={() => onReassign?.(hospital)}>{canAssign ? "Reassign" : "Unavailable"}</button>}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}

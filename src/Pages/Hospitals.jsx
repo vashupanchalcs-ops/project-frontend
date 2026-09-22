@@ -325,7 +325,15 @@ export default function Hospitals() {
     return getHospitalPriorityScore(b) - getHospitalPriorityScore(a);
   });
 
-  if (isAdmin) return <AdminHospitals hospitals={hospitals} />;
+  if (isAdmin) return (
+    <AdminHospitals
+      hospitals={hospitals}
+      assignBookingId={assignBookingId}
+      reselectForBookingId={reselectForBookingId}
+      onAssign={assignHospitalToBooking}
+      onReassign={reassignUserHospital}
+    />
+  );
 
   return (
     <>
