@@ -247,6 +247,7 @@ const App = () => {
         <Route path="/HospitalResponses" element={<AdminRoute element={<HospitalResponses />} />} />
         <Route path="/AdminChatControl" element={<AdminRoute element={<AdminChatControl />} />} />
         <Route path="/HospitalPartnerDetails" element={<AdminRoute element={<AdminHospitalDetails />} />} />
+        <Route path="/HospitalPartnerDetails/:hospitalId" element={<AdminRoute element={<AdminHospitalDetails />} />} />
         <Route path="/CallIntakeConsole" element={<AdminRoute element={<CallIntakeConsole />} />} />
         <Route path="/ManageCases" element={<AdminRoute element={<CaseManagement scope="admin" />} />} />
 

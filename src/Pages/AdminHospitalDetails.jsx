@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import GoogleMapEmbed from "../Components/GoogleMapEmbed";
 import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
+import { getHospitalCondition } from "../utils/hospitalCondition";
 
 // Deployment v1.0.5 - Pin selected hospital to top and enable full page scrolling with zero cutoff
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://swiftrescue-backend-shlb.onrender.com").replace(/\/+$/, "");
@@ -27,10 +28,16 @@ const DEFAULT_HOSPITALS = [
 
 export default function AdminHospitalDetails() {
   const location = useLocation();
-  const cachedHospitals = readDataCache("hospitals_list", []);
+  const { hospitalId: routeHospitalId } = useParams();
+  const cachedData = readDataCache("hospitals_list", []);
+  const cachedHospitals = Array.isArray(cachedData) && cachedData.length ? cachedData : (() => {
+    try { return JSON.parse(sessionStorage.getItem("hospitals_list_cache") || "[]"); } catch { return []; }
+  })();
   const initialHospitals = Array.isArray(cachedHospitals) && cachedHospitals.length ? cachedHospitals : [];
-  const initialHospitalId = location.state?.hospitalId != null
-    ? location.state.hospitalId
+  const initialHospitalId = routeHospitalId != null
+    ? routeHospitalId
+    : location.state?.hospitalId != null
+      ? location.state.hospitalId
     : (initialHospitals[0]?.id ?? null);
   const [hospitals, setHospitals] = useState(initialHospitals);
   const [selectedHospitalId, setSelectedHospitalId] = useState(
@@ -45,7 +52,7 @@ export default function AdminHospitalDetails() {
         }
       : null
   ));
-  const [pulseTime, setPulseTime] = useState(Date.now());
+  const [pulseTime, setPulseTime] = useState(() => Date.now());
   const selectedItemRef = useRef(null);
 
   // Auto-scroll sidebar to selected hospital
@@ -95,14 +102,10 @@ export default function AdminHospitalDetails() {
   }, []);
 
   const hospitalInfo = selectedDashboard?.hospital || null;
+  const condition = getHospitalCondition(hospitalInfo || {});
   const lat = Number(hospitalInfo?.latitude);
   const lng = Number(hospitalInfo?.longitude);
   const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-  const mapQuery = hasCoords
-    ? `${lat},${lng}`
-    : encodeURIComponent((hospitalInfo?.address || hospitalInfo?.name || "").trim());
-  const mapEmbedSrc = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&z=14&output=embed` : "";
-  const openMapLink = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&z=14` : "";
 
   // Pin selected hospital to position #1 (TOP) in the list!
   const sortedHospitals = useMemo(() => {
@@ -153,6 +156,21 @@ export default function AdminHospitalDetails() {
           box-shadow: 0 12px 30px rgba(17,17,17,0.06);
         }
         .ahd-title { margin: 0 0 10px; font-size: 20px; font-weight: 900; }
+        .ahd-condition {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          border-radius: 8px;
+          padding: 7px 11px;
+          font-size: 11px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: .4px;
+        }
+        .ahd-condition::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+        .ahd-condition-green { color: #18733f; background: #e4f8ea; }
+        .ahd-condition-yellow { color: #986000; background: #fff4c8; }
+        .ahd-condition-red { color: #ad2438; background: #ffe5e8; }
         .ahd-item {
           border: 1px solid rgba(17,17,17,0.12);
           border-radius: 10px;
@@ -169,6 +187,10 @@ export default function AdminHospitalDetails() {
         .ahd-item.active { border-color: #a7b700; background: linear-gradient(165deg, #fbffd8 0%, #f3f7c7 100%); }
         .ahd-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 12px; }
         .ahd-k { color: rgba(17,17,17,0.62); }
+        .ahd-info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 13px 0 4px; }
+        .ahd-info-cell { min-width: 0; padding: 9px 10px; border: 1px solid rgba(17,17,17,0.1); border-radius: 9px; background: rgba(255,255,255,0.7); }
+        .ahd-info-label { color: rgba(17,17,17,0.58); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+        .ahd-info-value { margin-top: 4px; overflow-wrap: anywhere; font-size: 12px; font-weight: 700; }
         .ahd-track-btn {
           margin-top: 8px;
           border: 1px solid #9fb000;
@@ -258,21 +280,29 @@ export default function AdminHospitalDetails() {
           border: 0;
           display: block;
         }
-        .ahd-staff-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-        .ahd-staff-card {
-          border: 1px solid rgba(17,17,17,0.12);
-          border-radius: 10px;
-          padding: 10px;
-          background: linear-gradient(165deg, #ffffff 0%, #f9fbed 100%);
-        }
+        .ahd-staff-table-wrap { margin-top: 10px; border: 1px solid #dce7e0; border-radius: 10px; overflow-x: auto; }
+        .ahd-staff-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+        .ahd-staff-table th { padding: 11px 12px; background: #f7faf8; border-bottom: 1px solid #dce7e0; text-align: left; color: #64756b; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; }
+        .ahd-staff-table td { padding: 12px; border-bottom: 1px solid #edf2ee; font-size: 12px; color: #1d2c23; vertical-align: middle; }
+        .ahd-staff-table tr:last-child td { border-bottom: 0; }
+        .ahd-staff-table tbody tr:hover { background: #fbfefc; }
+        .ahd-staff-person { display: flex; align-items: center; gap: 9px; min-width: 165px; }
+        .ahd-staff-avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #eef4ff; border: 1px solid #c6d8f5; color: #275d96; font-weight: 900; }
+        .ahd-staff-name { font-weight: 800; }
+        .ahd-staff-sub { margin-top: 3px; color: #738178; font-size: 10px; }
+        .ahd-staff-status { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; }
+        .ahd-staff-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+        .ahd-staff-status.active { color: #1d8a4d; }
+        .ahd-staff-status.inactive { color: #b1283b; }
         .ahd-empty { text-align: center; color: rgba(17,17,17,0.55); font-size: 12px; padding: 18px 10px; }
-        @media (max-width: 1000px) { .ahd-grid { grid-template-columns: 1fr; } .ahd-staff-grid { grid-template-columns: 1fr; } .ahd-card.partners { position: static; max-height: 340px; } }
+        @media (max-width: 1000px) { .ahd-grid { grid-template-columns: 1fr; } .ahd-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ahd-card.partners { position: static; max-height: 340px; } }
         @media (max-width: 767px) {
           .ahd-root { padding: 72px 12px 84px 12px; min-height: 100vh; }
           .ahd-wrap { padding: 0; min-height: auto; display: flex; flex-direction: column; }
           .ahd-grid { display: flex; flex-direction: column; }
           .ahd-card.partners { position: static; max-height: 320px; margin-bottom: 12px; }
           .ahd-partners { max-height: 260px; }
+          .ahd-info-grid { grid-template-columns: 1fr; }
           main.ahd-card { min-height: auto; }
         }
       `}</style>
@@ -322,14 +352,22 @@ export default function AdminHospitalDetails() {
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <h2 className="ahd-title" style={{ margin: 0 }}>{selectedDashboard.hospital?.name || "Hospital Details"}</h2>
-                    <span style={{ fontSize: 11, background: "#166534", color: "#fff", padding: "3px 10px", borderRadius: 999, fontWeight: 800 }}>
-                      ACTIVE PARTNER
+                    <span className={`ahd-condition ahd-condition-${condition.key}`} title={condition.description}>
+                      {condition.label} condition
                     </span>
                   </div>
                   <div className="ahd-row"><span className="ahd-k">Address</span><span>{selectedDashboard.hospital?.address || "-"}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Contact</span><span>{selectedDashboard.hospital?.contact_number || "-"}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Specializations</span><span>{selectedDashboard.hospital?.specializations || "-"}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Facilities</span><span>{selectedDashboard.hospital?.facilities || "-"}</span></div>
+                  <div className="ahd-info-grid">
+                    <div className="ahd-info-cell"><div className="ahd-info-label">Email</div><div className="ahd-info-value">{selectedDashboard.hospital?.email || "Not added"}</div></div>
+                    <div className="ahd-info-cell"><div className="ahd-info-label">Location</div><div className="ahd-info-value">{[selectedDashboard.hospital?.city, selectedDashboard.hospital?.state, selectedDashboard.hospital?.pincode].filter(Boolean).join(", ") || "Not added"}</div></div>
+                    <div className="ahd-info-cell"><div className="ahd-info-label">Type</div><div className="ahd-info-value">{String(selectedDashboard.hospital?.hospital_type || "General").replaceAll("_", " ")}</div></div>
+                    <div className="ahd-info-cell"><div className="ahd-info-label">Emergency beds</div><div className="ahd-info-value">{selectedDashboard.hospital?.emergency_beds ?? 0}</div></div>
+                    <div className="ahd-info-cell"><div className="ahd-info-label">Oxygen beds</div><div className="ahd-info-value">{selectedDashboard.hospital?.oxygen_beds ?? 0}</div></div>
+                    <div className="ahd-info-cell"><div className="ahd-info-label">Emergency / 24×7</div><div className="ahd-info-value">{selectedDashboard.hospital?.emergency_services ? "Available" : "Not listed"} · {selectedDashboard.hospital?.is_24x7 ? "24×7" : "Scheduled"}</div></div>
+                  </div>
                   <div className="ahd-row"><span className="ahd-k">Active Cases</span><span>{selectedDashboard.summary?.active_cases ?? 0}</span></div>
                   <div className="ahd-row"><span className="ahd-k">Total / Booked / Available Beds</span><span>{selectedDashboard.hospital?.total_beds ?? 40} Total · <strong style={{ color: "#b45309" }}>{selectedDashboard.hospital?.booked_beds ?? Math.max(0, (selectedDashboard.hospital?.total_beds || 40) - (selectedDashboard.hospital?.available_beds || 0))} Booked</strong> · <strong style={{ color: "#166534" }}>{selectedDashboard.hospital?.available_beds ?? 10} Available</strong></span></div>
                   <div className="ahd-row"><span className="ahd-k">ICU / Ventilator Beds</span><span>{selectedDashboard.hospital?.available_icu_beds ?? selectedDashboard.hospital?.icu_beds ?? 0} Free ICU · {selectedDashboard.hospital?.available_ventilators ?? 0} Ventilators</span></div>
@@ -358,15 +396,28 @@ export default function AdminHospitalDetails() {
                   </section>
 
                   <h3 style={{ marginTop: 18, marginBottom: 10 }}>Doctors & Staff Directory</h3>
-                  <div className="ahd-staff-grid">
-                    {(selectedDashboard.staff || []).map((s) => (
-                      <article key={s.id} className="ahd-staff-card">
-                        <div style={{ fontWeight: 800 }}>{s.full_name}</div>
-                        <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)" }}>{s.role} • {s.specialization || "General"}</div>
-                        <div className="ahd-row"><span className="ahd-k">On Call</span><span>{s.is_on_call ? "Yes" : "No"}</span></div>
-                        <div className="ahd-row"><span className="ahd-k">Experience</span><span>{s.years_experience} yrs</span></div>
-                      </article>
-                    ))}
+                  <div className="ahd-staff-table-wrap">
+                    <table className="ahd-staff-table">
+                      <thead>
+                        <tr><th>Staff member</th><th>Role / department</th><th>Staff ID</th><th>Contact</th><th>Experience</th><th>Status</th></tr>
+                      </thead>
+                      <tbody>
+                        {(selectedDashboard.staff || []).map((s) => {
+                          const initials = String(s.full_name || "Staff").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+                          const role = String(s.role || "staff").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+                          return (
+                            <tr key={s.id}>
+                              <td><div className="ahd-staff-person"><span className="ahd-staff-avatar">{initials || "S"}</span><div><div className="ahd-staff-name">{s.full_name || "Unnamed staff"}</div><div className="ahd-staff-sub">{s.email || "Email not added"}</div></div></div></td>
+                              <td><strong>{role}</strong><div className="ahd-staff-sub">{s.specialization || "General care"}</div></td>
+                              <td>{s.staff_id || "—"}<div className="ahd-staff-sub">Reg. {s.registration_number || "—"}</div></td>
+                              <td>{s.contact_number || "—"}</td>
+                              <td>{Number(s.years_experience || 0)} years<div className="ahd-staff-sub">{s.shift || "Day"} shift{s.is_on_call ? " · On call" : ""}</div></td>
+                              <td><span className={`ahd-staff-status ${s.is_active ? "active" : "inactive"}`}>{s.is_active ? "Active" : "Inactive"}</span></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                   {(selectedDashboard.staff || []).length === 0 && <div className="ahd-empty">No staff registered for this hospital.</div>}
 

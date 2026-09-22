@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { BedSingle, CheckCircle2, HeartPulse } from "lucide-react";
+import AdminHospitals from "./AdminHospitals";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -324,6 +324,8 @@ export default function Hospitals() {
     // Sort by priority score (higher first)
     return getHospitalPriorityScore(b) - getHospitalPriorityScore(a);
   });
+
+  if (isAdmin) return <AdminHospitals hospitals={hospitals} />;
 
   return (
     <>
