@@ -36,10 +36,8 @@ export default function StaffPatientCondition() {
       return [];
     }
   });
-  const [photosByCase, setPhotosByCase] = useState({});
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedCaseId, setSelectedCaseId] = useState(null);
-  const [loading, setLoading] = useState(false);
 
   // Photo gallery slider state for active core case
   const [photoPage, setPhotoPage] = useState(0);
@@ -165,7 +163,6 @@ export default function StaffPatientCondition() {
     if (!staffId || !email) {
       setCases(defaultIncomingCases);
       setSelectedCaseId(defaultIncomingCases[0].id);
-      setLoading(false);
       return;
     }
     try {
@@ -191,8 +188,6 @@ export default function StaffPatientCondition() {
           })
         );
         const realPhotosMap = Object.fromEntries(entries);
-        setPhotosByCase(realPhotosMap);
-
         const mapped = rows.map((r, i) => {
           const isEmerg = `${r.patient_condition || ""} ${r.vitals_summary || ""}`.toLowerCase().includes("cardiac") || i === 0;
           const realCasePhotos = realPhotosMap[r.id] || [];
@@ -225,7 +220,11 @@ export default function StaffPatientCondition() {
         });
         setCases(mapped);
         setSelectedCaseId(mapped[0].id);
-        try { sessionStorage.setItem("staff_patient_cases_cache", JSON.stringify(mapped)); } catch {}
+        try {
+          sessionStorage.setItem("staff_patient_cases_cache", JSON.stringify(mapped));
+        } catch (storageError) {
+          void storageError;
+        }
       } else {
         setCases(defaultIncomingCases);
         setSelectedCaseId(defaultIncomingCases[0].id);
@@ -233,8 +232,6 @@ export default function StaffPatientCondition() {
     } catch {
       setCases(defaultIncomingCases);
       setSelectedCaseId(defaultIncomingCases[0].id);
-    } finally {
-      setLoading(false);
     }
   }, [defaultIncomingCases, email, staffId]);
 
@@ -287,10 +284,8 @@ export default function StaffPatientCondition() {
         .incoming-condition-view {
           margin-left: 64px;
           min-height: 100vh;
-          padding-top: 96px;
-          padding-left: clamp(12px, 3vw, 36px);
-          padding-right: clamp(12px, 3vw, 36px);
-          padding-bottom: 60px;
+          width: calc(100% - 64px);
+          padding: 96px 24px 60px;
           box-sizing: border-box;
           background: #f8fafc;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -300,6 +295,8 @@ export default function StaffPatientCondition() {
         }
 
         .incoming-center-shell {
+          width: 100%;
+          min-width: 0;
           max-width: 1240px;
           margin: 0 auto;
         }
@@ -384,6 +381,7 @@ export default function StaffPatientCondition() {
           grid-template-columns: 1.55fr 1fr;
           gap: 20px;
           align-items: start;
+          min-width: 0;
         }
 
         /* LEFT CARD: FEATURED CORE CASE WITH RED BORDER */
@@ -395,6 +393,7 @@ export default function StaffPatientCondition() {
           padding: 24px 28px 28px;
           box-sizing: border-box;
           position: relative;
+          min-width: 0;
         }
 
         .thick-top-accent {
@@ -410,12 +409,15 @@ export default function StaffPatientCondition() {
           align-items: center;
           justify-content: space-between;
           margin-bottom: 8px;
+          min-width: 0;
         }
 
         .core-case-tag {
           font-size: 13px;
           font-weight: 700;
           color: #64748b;
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .core-eta-badge {
@@ -599,6 +601,7 @@ export default function StaffPatientCondition() {
           display: flex;
           flex-direction: column;
           gap: 16px;
+          min-width: 0;
         }
 
         .incoming-stack-card {
@@ -608,6 +611,7 @@ export default function StaffPatientCondition() {
           box-shadow: 0 4px 18px rgba(0,0,0,0.04);
           padding: 18px 20px 20px;
           transition: transform 0.2s ease, border-color 0.2s ease;
+          min-width: 0;
         }
 
         .incoming-stack-card:hover {
@@ -721,7 +725,8 @@ export default function StaffPatientCondition() {
         @media (max-width: 900px) {
           .incoming-condition-view {
             margin-left: 0;
-            padding: 84px 16px 80px;
+            width: 100%;
+            padding: 84px 16px 90px;
           }
           .incoming-grid-layout {
             grid-template-columns: 1fr;
@@ -739,6 +744,7 @@ export default function StaffPatientCondition() {
             margin-left: 0;
             padding: 80px 10px 90px;
           }
+          .incoming-center-shell { max-width: none; }
           .featured-core-card {
             padding: 16px 14px 20px;
           }
@@ -752,6 +758,16 @@ export default function StaffPatientCondition() {
           }
           .patient-headline-name {
             font-size: 20px;
+          }
+          .patient-info-trio-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+          .photos-section-header { display: block; }
+          .photo-nav-controls {
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 8px;
           }
           .thumbnails-trio-grid {
             grid-template-columns: repeat(2, 1fr);

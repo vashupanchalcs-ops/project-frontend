@@ -88,7 +88,7 @@ export default function HospitalStaffPortal() {
 
   useEffect(() => {
     loadDashboard(Boolean(cachedDashboard));
-  }, [loadDashboard]);
+  }, [cachedDashboard, loadDashboard]);
 
   const staff = dashboard?.staff || {};
   const hospital = dashboard?.hospital || {};
@@ -104,12 +104,15 @@ export default function HospitalStaffPortal() {
       <style>{`
         .staff-portal-root {
           min-height: 100vh;
-          padding: 96px clamp(22px, 5vw, 72px) 64px;
+          width: calc(100% - 64px);
+          box-sizing: border-box;
+          margin-left: 64px;
+          padding: 88px 24px 64px;
           background: #ffffff;
           color: #122118;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-        .staff-portal-shell { max-width: 1440px; margin: 0 auto; }
+        .staff-portal-shell { width: 100%; max-width: 1440px; margin: 0 auto; min-width: 0; }
         .staff-portal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 26px; }
         .staff-kicker { color: #126f1e; font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
         .staff-title { margin: 8px 0 5px; font-size: clamp(32px, 4vw, 54px); line-height: 1; letter-spacing: -.05em; color: #101510; }
@@ -185,7 +188,8 @@ export default function HospitalStaffPortal() {
         .staff-profile-metric b { display:block; font-size:26px; color:#126f1e; }
         .staff-profile-metric span { font-size:11px; color:#6d7a70; }
         @media (max-width: 900px) { .staff-content,.staff-profile-layout,.staff-home-grid { grid-template-columns:1fr; } .staff-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media (max-width: 600px) { .staff-portal-root { padding: 92px 14px 88px; } .staff-portal-top { display: block; } .staff-actions { margin-top: 16px; } .staff-stats { gap: 8px; } .staff-stat { padding: 13px; } .staff-stat-value { font-size: 25px; } .staff-case { grid-template-columns: 7px minmax(0, 1fr); } .staff-case-side { grid-column: 2; text-align: left; } .staff-chip { margin-left: 0; } .staff-profile-grid { grid-template-columns:1fr; } }
+        @media (max-width: 767px) { .staff-portal-root { width: 100%; margin-left: 0; padding: 84px 12px 96px; overflow-x: hidden; } .staff-portal-shell { max-width: none; } .staff-portal-top { display: block; } .staff-actions { margin-top: 16px; } }
+        @media (max-width: 600px) { .staff-stats { gap: 8px; } .staff-stat { padding: 13px; } .staff-stat-value { font-size: 25px; } .staff-case { grid-template-columns: 7px minmax(0, 1fr); } .staff-case-side { grid-column: 2; text-align: left; } .staff-chip { margin-left: 0; } .staff-profile-grid { grid-template-columns:1fr; } }
       `}</style>
 
       <div className="staff-portal-shell">

@@ -53,7 +53,6 @@ const driverNavItems = [
   { to: "/driver/guidance",                    icon: BookOpen,      label: "Guidance", dot: true },
   { to: "/driver-dashboard?tab=change-request", icon: Repeat,      label: "Change Request", tab: "change-request" },
   { to: "/DriverRequestChat",                   icon: MessageSquareWarning, label: "Request Chat", dot: true },
-  { to: "/Hospitals",                          icon: Building2,     label: "Hospitals"      },
   { to: "/driver-dashboard?tab=map",          icon: Route,         label: "Live Track",    tab: "map" },
 ];
 
