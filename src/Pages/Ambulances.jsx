@@ -167,14 +167,6 @@ export default function Ambulances() {
 
   useEffect(() => () => clearPickupWatch(), []);
 
-  // Auto-open booking modal when navigated from home page with ?book=1
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("book") === "1" && isUser && !showModal) {
-      setShowModal(true);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     const query = form.pickup_address.trim();
     const manualEntryRequired = form.booking_for_other || locationMode === "manual" || locationPermission === "denied";
@@ -285,16 +277,6 @@ export default function Ambulances() {
     // native location-permission prompt immediately.
     requestPickupLocation();
   };
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (!isUser || params.get("book") !== "1") return;
-    const hospId = params.get("hospital_id");
-    const hospName = params.get("hospital_name");
-    const preselected = location.state?.preselectedHospital || (hospId ? { id: hospId, name: hospName } : null);
-    openBooking(null, preselected);
-    navigate("/Ambulances", { replace: true });
-  }, [isUser, location.search, navigate, location.state]);
 
   const requestPickupLocation = () => {
     if (!("geolocation" in navigator)) {
@@ -1846,8 +1828,8 @@ export default function Ambulances() {
                               openDetails(a);
                               return;
                             }
-                            if (canBook) {
-                              openBooking(a);
+                            if (isUser) {
+                              navigate("/");
                               return;
                             }
                             showToast("Unit is not available right now", "err");
@@ -1855,8 +1837,8 @@ export default function Ambulances() {
                         >
                           {isAdmin && (reassignBookingId > 0 || assignBookingId > 0)
                             ? (a.status === "available" ? "Assign This Ambulance" : "Unavailable")
-                            : canBook && !isAdmin && !isDriver
-                            ? "See More | Book"
+                            : isUser
+                            ? "Book from Home"
                             : "See More"}
                         </button>
                         <button className="amb2-btn icon" onClick={() => navigator.clipboard?.writeText(a.driver_contact || "")}>📋</button>
@@ -1975,53 +1957,6 @@ export default function Ambulances() {
             </div>
           )}
 
-          {isUser && (
-            <div className="amb2-scroll" style={{ marginTop: 18 }}>
-              <div
-                style={{
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "linear-gradient(165deg, rgba(255, 255, 255, 0.15), rgba(255,255,255,0.98))",
-                  borderRadius: 18,
-                  padding: "16px 18px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: "#111" }}>Book My Ambulance</div>
-                  <div style={{ fontSize: 13, color: "rgba(17,17,17,0.72)" }}>
-                    Submit your request. The admin will assign the nearest ambulance and you will receive live updates.
-                  </div>
-                </div>
-                <button
-                  className="amb2-btn main"
-                  style={{ minWidth: 220 }}
-                  onClick={() => {
-                    setSelectedAmb(null);
-                    setForm({
-                      pickup_address: "",
-                      pickup_landmark: "",
-                      pickup_city: "",
-                      pickup_district: "",
-                      patient_contact_number: "",
-                      booking_for_other: false,
-                    });
-                    setLocationPermission("prompt");
-                    setLocationMode("gps");
-                    setConfirmedPickup(null);
-                    setLocationMessage("");
-                    setManualSuggestions([]);
-                    setShowModal(true);
-                  }}
-                >
-                  Book My Ambulance
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

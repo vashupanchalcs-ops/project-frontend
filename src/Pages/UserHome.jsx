@@ -1,13 +1,14 @@
 import { Ambulance, ArrowRight, MapPin, X, Navigation, CheckCircle } from "lucide-react";
 import AMBULANCE_IMAGE from "../assets/ambulance.jpg";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { readFetchCache } from "../utils/fetchCache";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
 
 export default function UserHome() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [ambulances, setAmbulances] = useState(() => readFetchCache(`${BASE}/api/ambulances/`) ?? []);
   const [hospitals, setHospitals] = useState(() => readFetchCache(`${BASE}/api/hospitals/`) ?? []);
 
@@ -20,6 +21,7 @@ export default function UserHome() {
   const [confirmedPickup, setConfirmedPickup] = useState(null);
   const [locationMessage, setLocationMessage] = useState("");
   const [toast, setToast] = useState(null);
+  const [targetHospital, setTargetHospital] = useState(null);
 
   const [form, setForm] = useState({
     pickup_address: "",
@@ -31,6 +33,28 @@ export default function UserHome() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  const openBookingCard = (hospital = null) => {
+    setTargetHospital(hospital);
+    setForm({
+      pickup_address: "",
+      patient_contact_number: localStorage.getItem("phone") || "",
+      booking_for_other: false,
+    });
+    setLocationMode("gps");
+    setLocationPermission("prompt");
+    setConfirmedPickup(null);
+    setLocationMessage("");
+    setShowModal(true);
+  };
+
+  useEffect(() => {
+    if (!location.state?.openBooking) return;
+    openBookingCard(location.state.preselectedHospital || null);
+    navigate("/", { replace: true, state: {} });
+    // The state is immediately cleared after opening the card.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, navigate]);
 
   useEffect(() => {
     let active = true;
@@ -146,7 +170,11 @@ export default function UserHome() {
           pickup_longitude: pickupCoords.lng,
           patient_contact_number: form.patient_contact_number.trim(),
           status: "pending",
-          destination: "",
+          destination: targetHospital?.name || "",
+          user_selected_hospital_id: targetHospital?.id || null,
+          assigned_hospital_id: targetHospital?.id || null,
+          assigned_hospital_name: targetHospital?.name || "",
+          is_user_selected_hospital: Boolean(targetHospital),
         }),
       });
 
@@ -154,6 +182,7 @@ export default function UserHome() {
         const created = await res.json().catch(() => null);
         showToast("Booking submitted successfully! Live tracking active.", "ok");
         setShowModal(false);
+        setTargetHospital(null);
 
         // Prepend immediately to my_bookings_cache so MyBookings displays without delay
         if (created?.id) {
@@ -251,18 +280,21 @@ export default function UserHome() {
         /* Direct Modal Styles */
         .uh-modal-overlay {
           position: fixed; inset: 0; z-index: 10000;
-          background: rgba(10, 20, 15, 0.45);
-          backdrop-filter: blur(4px);
+          background: rgba(247, 250, 248, 0.88);
+          backdrop-filter: blur(3px);
           display: flex; align-items: center; justify-content: center;
-          padding: 16px;
+          padding: 24px;
+          overflow-y: auto;
         }
         .uh-modal-box {
           background: #ffffff;
-          border-radius: 20px;
-          border: 1px solid #cde3d1;
-          box-shadow: 0 24px 64px rgba(18, 111, 30, 0.12);
-          width: min(540px, 100%);
-          padding: 28px 26px;
+          border-radius: 18px;
+          border: 1px solid #afd3b9;
+          box-shadow: 0 24px 70px rgba(18, 111, 30, 0.16);
+          width: min(680px, 100%);
+          max-height: calc(100vh - 48px);
+          overflow-y: auto;
+          padding: 26px 28px;
           box-sizing: border-box;
           animation: uh-modal-in 0.22s ease-out;
         }
@@ -271,9 +303,10 @@ export default function UserHome() {
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
         .uh-modal-head {
-          display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px;
+          display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px;
+          padding-bottom: 16px; border-bottom: 1px solid #e2eee5;
         }
-        .uh-modal-head h3 { margin: 0; font-size: 22px; font-weight: 800; color: #163028; }
+        .uh-modal-head h3 { margin: 0; font-size: 25px; font-weight: 800; color: #163028; }
         .uh-modal-head p { margin: 4px 0 0; font-size: 13px; color: #587066; }
         .uh-close-btn { border: none; background: #f1f5f2; border-radius: 50%; width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; color: #333; }
         .uh-close-btn:hover { background: #e2e8e4; }
@@ -312,6 +345,14 @@ export default function UserHome() {
         }
         .uh-toast.err { background: #dc2626; }
 
+        .uh-target-hospital {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          margin: -4px 0 18px; padding: 11px 13px; border: 1px solid #b9e1c3;
+          border-radius: 10px; background: #f0faf2; color: #166534;
+        }
+        .uh-target-hospital small { display: block; margin-bottom: 3px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .uh-target-hospital strong { color: #163028; font-size: 14px; }
+
         @media (max-width: 960px) {
           .uh-stage { grid-template-columns: 1fr; padding: 48px 42px 72px; }
           .uh-visual { min-height: 320px; max-width: 700px; width: 100%; }
@@ -323,6 +364,11 @@ export default function UserHome() {
           .uh-booking-card { padding: 8px; }
           .uh-book-cta { width: 100%; }
           .uh-visual { min-height: 250px; border-radius: 32% 32% 10px 32%; }
+          .uh-modal-overlay { padding: 12px; }
+          .uh-modal-box { max-height: calc(100vh - 24px); padding: 22px 18px; border-radius: 14px; }
+          .uh-modal-head h3 { font-size: 21px; }
+          .uh-modal-actions { flex-direction: column-reverse; }
+          .uh-modal-actions button { width: 100%; }
         }
       `}</style>
 
@@ -337,7 +383,7 @@ export default function UserHome() {
             <span className="uh-data-chip"><Ambulance size={14} />{availableAmbulances} ambulance{availableAmbulances === 1 ? "" : "s"} ready</span>
             <span className="uh-data-chip accent">{hospitals.length} hospital partner{hospitals.length === 1 ? "" : "s"}</span>
           </div>
-          <div className="uh-booking-card" onClick={() => setShowModal(true)}>
+          <div className="uh-booking-card" onClick={() => openBookingCard()} role="button" tabIndex={0} onKeyDown={(event) => event.key === "Enter" && openBookingCard()}>
             <div className="uh-location">
               <span className="uh-location-icon"><MapPin size={17} /></span>
               <div>
@@ -346,7 +392,7 @@ export default function UserHome() {
               </div>
             </div>
           </div>
-          <button className="uh-book-btn uh-book-cta" onClick={() => setShowModal(true)}>
+          <button className="uh-book-btn uh-book-cta" onClick={() => openBookingCard()}>
             Book Ambulance <ArrowRight size={16} />
           </button>
         </div>
@@ -367,6 +413,16 @@ export default function UserHome() {
               </div>
               <button className="uh-close-btn" onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
+
+            {targetHospital && (
+              <div className="uh-target-hospital">
+                <div>
+                  <small>Selected destination hospital</small>
+                  <strong>🏥 {targetHospital.name}</strong>
+                </div>
+                <span>Hospital request</span>
+              </div>
+            )}
 
             <div className="uh-field">
               <div className="uh-loc-row">
