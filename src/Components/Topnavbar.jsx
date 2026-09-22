@@ -17,9 +17,8 @@ const PANEL_PAGES = {
   admin: [
     { label: "Home", path: "/" },
     { label: "Ambulances", path: "/Ambulances", keywords: "fleet vehicles drivers" },
-    { label: "Hospitals", path: "/Hospitals", keywords: "partners network beds" },
+    { label: "Hospital Partners", path: "/Hospitals", keywords: "hospitals partners network beds staff icu" },
     { label: "Hospital Response", path: "/HospitalResponses", keywords: "approval ready reject" },
-    { label: "Hospital Details", path: "/HospitalPartnerDetails", keywords: "staff resources" },
     { label: "Analytics", path: "/Analytics", keywords: "charts metrics reports" },
     { label: "Requests", path: "/Requests", keywords: "bookings emergency queue" },
     { label: "Call Intake", path: "/CallIntakeConsole", keywords: "voice hotline phone booking ivr" },

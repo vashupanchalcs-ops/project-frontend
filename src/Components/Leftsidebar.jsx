@@ -10,9 +10,8 @@ import {
 const adminNavItems = [
   { to: "/",                     icon: Grid3X3,       label: "Home"             },
   { to: "/Ambulances",           icon: Siren,         label: "Ambulances"       },
-  { to: "/Hospitals",            icon: Building2,     label: "Hospitals"        },
+  { to: "/Hospitals",            icon: Building2,     label: "Hospital Partners" },
   { to: "/HospitalResponses",    icon: ShieldCheck,   label: "Hospital Response" },
-  { to: "/HospitalPartnerDetails", icon: BookOpen,    label: "Hospital Details" },
   { to: "/Analytics",            icon: Activity,      label: "Analytics"        },
   { to: "/ManageCases",          icon: ListChecks,    label: "Manage Cases"     },
   { to: "/Requests",             icon: ClipboardList, label: "Requests"         },
