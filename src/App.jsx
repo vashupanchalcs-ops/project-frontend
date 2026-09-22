@@ -1990,6 +1990,13 @@ const App = () => {
           padding-right: 0 !important;
           box-sizing: border-box;
         }
+        html body #root .admin-route-shell > :is(.ad-root, .req-root, .rep-root, .ci-root, .amb2-root) > :is(.ad-console, .req-content, .rep-content, .ci-wrap, .amb2-wrap) {
+          width: 100% !important;
+          max-width: none !important;
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+          box-sizing: border-box;
+        }
         @media (max-width: 767px) {
           html body #root .admin-route-shell > :is(.admin-hospitals-page, .ahd-root, .cm-root, .night-page) {
             padding-left: 0 !important;
