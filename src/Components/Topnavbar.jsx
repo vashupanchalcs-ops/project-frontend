@@ -21,7 +21,6 @@ const PANEL_PAGES = {
     { label: "Hospital Response", path: "/HospitalResponses", keywords: "approval ready reject" },
     { label: "Analytics", path: "/Analytics", keywords: "charts metrics reports" },
     { label: "Requests", path: "/Requests", keywords: "bookings emergency queue" },
-    { label: "Call Intake", path: "/CallIntakeConsole", keywords: "voice hotline phone booking ivr" },
     { label: "Driver Requests", path: "/DriverChangeRequests", keywords: "change assign" },
     { label: "AI Chat Control", path: "/AdminChatControl", keywords: "assistant chat" },
     { label: "Driver View", path: "/DriverView", keywords: "tracking map live" },

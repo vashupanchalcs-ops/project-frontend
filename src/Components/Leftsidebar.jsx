@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   ChevronsRight, Truck, Building2, BarChart2, Headphones, Sparkles,
   ClipboardList, ListChecks, MapPin, Navigation, RefreshCw, Map, House, HeartPulse, Ambulance, Repeat, BookOpen, Bot, MessageSquareWarning,
-  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, PhoneCall, Image, Images,
+  Compass, Send, Search, PlayCircle, Plus, CircleUserRound, Grid3X3, Route, Activity, ShieldCheck, Siren, Users, MapPinned, BriefcaseBusiness, Image, Images,
   BedDouble, UserCheck, Video, UsersRound, ContactRound, CreditCard,
 } from 'lucide-react';
 
@@ -15,7 +15,6 @@ const adminNavItems = [
   { to: "/Analytics",            icon: Activity,      label: "Analytics"        },
   { to: "/ManageCases",          icon: ListChecks,    label: "Manage Cases"     },
   { to: "/Requests",             icon: ClipboardList, label: "Requests"         },
-  { to: "/CallIntakeConsole",    icon: PhoneCall,     label: "Call Intake"      },
   { to: "/DriverChangeRequests", icon: Headphones, label: "Driver Support", dot: true },
   { to: "/AdminChatControl",     icon: Sparkles,      label: "AI Chat Control", dot: true },
   { to: "/LiveMap",              icon: Compass,       label: "Live Map",        dot: true },
