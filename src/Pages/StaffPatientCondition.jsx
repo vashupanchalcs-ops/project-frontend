@@ -387,10 +387,10 @@ export default function StaffPatientCondition() {
         /* LEFT CARD: FEATURED CORE CASE WITH RED BORDER */
         .featured-core-card {
           background: #ffffff;
-          border-radius: 20px;
+          border-radius: 24px;
           border: 2.5px solid #ef4444;
           box-shadow: 0 8px 30px rgba(239, 68, 68, 0.08), 0 2px 10px rgba(0,0,0,0.04);
-          padding: 24px 28px 28px;
+          padding: 18px 22px 20px;
           box-sizing: border-box;
           position: relative;
           min-width: 0;
@@ -401,7 +401,7 @@ export default function StaffPatientCondition() {
           width: 100%;
           background: #ef4444;
           border-radius: 6px;
-          margin-bottom: 18px;
+          margin-bottom: 14px;
         }
 
         .core-header-row {
@@ -430,10 +430,10 @@ export default function StaffPatientCondition() {
         }
 
         .patient-headline-name {
-          font-size: 28px;
+          font-size: 26px;
           font-weight: 800;
           color: #0f172a;
-          margin: 0 0 20px 0;
+          margin: 0 0 14px 0;
           letter-spacing: -0.02em;
         }
 
@@ -442,9 +442,9 @@ export default function StaffPatientCondition() {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
           gap: 14px;
-          padding-bottom: 20px;
+          padding-bottom: 14px;
           border-bottom: 1px solid #f1f5f9;
-          margin-bottom: 18px;
+          margin-bottom: 14px;
         }
 
         .info-col-item {
@@ -532,7 +532,7 @@ export default function StaffPatientCondition() {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
           gap: 12px;
-          margin-bottom: 20px;
+          margin-bottom: 14px;
         }
 
         .single-thumb-box {
@@ -546,19 +546,19 @@ export default function StaffPatientCondition() {
 
         .thumb-aspect-frame {
           width: 100%;
-          height: 105px;
-          border-radius: 12px;
+          height: 96px;
+          border-radius: 14px;
           overflow: hidden;
-          background: #0f172a;
+          background: #eff6ff;
           box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-          border: 1px solid #e2e8f0;
+          border: 2px solid #93c5fd;
           position: relative;
         }
 
         .thumb-aspect-frame img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
           display: block;
         }
 
@@ -578,8 +578,8 @@ export default function StaffPatientCondition() {
           background: #0284c7;
           color: #ffffff;
           border: none;
-          padding: 14px 20px;
-          border-radius: 10px;
+          padding: 11px 18px;
+          border-radius: 12px;
           font-size: 14px;
           font-weight: 800;
           cursor: pointer;
@@ -663,12 +663,12 @@ export default function StaffPatientCondition() {
         }
 
         .lightbox-panel-box {
-          width: min(780px, 96vw);
-          max-width: 92vw;
-          height: min(720px, calc(100vh - 32px));
+          width: min(860px, calc(100vw - 32px));
+          max-width: calc(100vw - 32px);
+          height: min(640px, calc(100vh - 32px));
           max-height: calc(100vh - 32px);
           background: #ffffff;
-          border-radius: 24px; /* ROUNDED CARD */
+          border-radius: 20px;
           overflow: hidden;
           box-shadow: 0 24px 60px rgba(0,0,0,0.35);
           display: flex;
@@ -688,12 +688,22 @@ export default function StaffPatientCondition() {
           flex: 0 0 auto;
           min-height: 52px;
           box-sizing: border-box;
+          min-width: 0;
+        }
+
+        .lightbox-panel-head > span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .lightbox-big-img-frame {
           flex: 1;
           min-height: 0;
-          background: #0b131e;
+          background: #eaf3ff;
+          border-top: 1px solid #bfdbfe;
+          border-bottom: 1px solid #bfdbfe;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -703,6 +713,8 @@ export default function StaffPatientCondition() {
         .lightbox-big-img-frame img {
           width: 100%;
           height: 100%;
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
           display: block;
         }
@@ -718,6 +730,12 @@ export default function StaffPatientCondition() {
           gap: 8px;
           flex: 0 0 auto;
           box-sizing: border-box;
+          min-width: 0;
+        }
+
+        .lightbox-nav-footer > span {
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         /* ── RESPONSIVE BREAKPOINTS ── */
@@ -746,7 +764,8 @@ export default function StaffPatientCondition() {
           }
           .incoming-center-shell { max-width: none; }
           .featured-core-card {
-            padding: 16px 14px 20px;
+            padding: 14px 12px 16px;
+            border-radius: 18px;
           }
           .incoming-header-row {
             flex-direction: column;
@@ -770,15 +789,18 @@ export default function StaffPatientCondition() {
             margin-top: 8px;
           }
           .thumbnails-trio-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: minmax(0, 1fr);
+            gap: 10px;
           }
           .thumb-aspect-frame {
-            height: 85px;
+            height: 132px;
+            border-radius: 12px;
           }
           .lightbox-panel-box {
-            width: calc(100vw - 20px);
-            height: calc(100vh - 20px);
-            max-height: calc(100vh - 20px);
+            width: calc(100vw - 24px);
+            max-width: calc(100vw - 24px);
+            height: min(620px, calc(100vh - 112px));
+            max-height: calc(100vh - 112px);
             border-radius: 16px;
           }
           .lightbox-panel-head {
@@ -798,6 +820,7 @@ export default function StaffPatientCondition() {
             width: 100%;
             display: grid !important;
             grid-template-columns: 1fr 1fr;
+            min-width: 0;
           }
           .lightbox-nav-footer button {
             min-height: 40px;
