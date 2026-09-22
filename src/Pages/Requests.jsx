@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { calculateBookingBill, formatMoney } from "../utils/billing";
@@ -438,9 +437,10 @@ const Requests = () => {
 
         .req-content {
           width: 100%;
-          margin: 0 auto;
+          margin: 0;
           max-width: none;
-          padding: 20px 16px 72px;
+          padding: 28px 24px 72px;
+          box-sizing: border-box;
         }
 
         .req-header {
@@ -479,15 +479,15 @@ const Requests = () => {
         .req-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 12px;
+          gap: 20px;
           align-items: start;
         }
 
         .req-card-item {
-          background: linear-gradient(170deg, rgba(255,255,255,0.98), rgba(248,248,238,0.98));
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 16px;
-          padding: 9px 10px;
+          background: #f4fbf6;
+          border: 1px solid #cfe2d4;
+          border-radius: 18px;
+          padding: 18px;
           display: flex;
           flex-direction: column;
           gap: 6px;
@@ -497,17 +497,19 @@ const Requests = () => {
         }
 
         .req-card-item:hover {
-          border-color: rgba(255, 255, 255, 0.15);
-          box-shadow: 0 14px 30px rgba(255, 255, 255, 0.15);
-          transform: translateY(-3px);
+          border-color: #9fc9aa;
+          box-shadow: 0 8px 24px rgba(31,82,48,.08);
+          transform: translateY(-2px);
         }
 
         .req-card-top {
-          display: flex;
+          display: grid;
+          grid-template-columns: minmax(0,1fr) auto;
           align-items: flex-start;
           justify-content: space-between;
-          gap: 10px;
-          padding-right: 42px;
+          gap: 18px;
+          padding: 2px 42px 16px 2px;
+          border-bottom: 1px solid #d7e6db;
         }
         .req-menu-trigger {
           position: absolute;
@@ -647,13 +649,15 @@ const Requests = () => {
         .req-body {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 6px;
+          gap: 12px;
+          padding-top: 16px;
         }
 
         .req-cell {
-          border: 1px solid #ffffff;
+          border: 1px solid #d7e6db;
           border-radius: 10px;
-          padding: 5px 8px;
+          padding: 11px 12px;
+          min-height: 58px;
           background: #ffffff;
         }
 
@@ -673,15 +677,14 @@ const Requests = () => {
           word-break: break-word;
         }
 
-        .req-footer {
-          border-top: 1px solid rgba(20,20,20,0.12);
-          padding-top: 8px;
-        }
+        .req-section-label { grid-column: 1 / -1; margin-top: 4px; color: #126f1e; font-size: 10px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; }
+        .req-footer { margin-top: 16px; border-top: 1px solid #cfe2d4; padding-top: 16px; }
 
         .req-actions {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 8px;
+          display: flex;
+          align-items: stretch;
+          flex-wrap: wrap;
+          gap: 10px;
         }
 
         .req-empty {
@@ -700,7 +703,7 @@ const Requests = () => {
           .req-header h1 { font-size: 38px; }
           .req-grid { grid-template-columns: 1fr; }
           .req-body { grid-template-columns: 1fr 1fr; }
-          .req-actions { grid-template-columns: 1fr 1fr; }
+          .req-actions { flex-direction: column; }
         }
 
         @media (max-width: 767px) {
@@ -709,23 +712,23 @@ const Requests = () => {
           .req-header h1 { font-size: 30px; }
           .req-grid { grid-template-columns: 1fr; gap: 12px; }
           .req-body { grid-template-columns: 1fr; }
-          .req-actions { grid-template-columns: 1fr; }
+          .req-actions { flex-direction: column; }
           .req-amb { font-size: 22px; }
         }
 
-        /* Each booking stays in one clear green-bordered card. */
-        .req-grid { gap: 18px; }
+        /* Each booking stays in one structured, full-width operations card. */
+        .req-grid { gap: 20px; }
         .req-card-item,
         .req-card-item:hover {
-          background: #ffffff;
-          border: 1px solid #126f1e;
+          background: #f4fbf6;
+          border: 1px solid #cfe2d4;
           box-shadow: none;
           transform: none;
         }
-        .req-card-item:hover { background: #f4fbf4; }
-        .req-body { gap: 10px; }
-        .req-cell { border-color: rgba(18, 111, 30, .30); padding: 9px 10px; }
-        .req-footer { border-top-color: rgba(18, 111, 30, .26); padding-top: 12px; }
+        .req-card-item:hover { background: #f4fbf6; border-color: #9fc9aa; }
+        .req-body { gap: 12px; }
+        .req-cell { border-color: #d7e6db; padding: 11px 12px; }
+        .req-footer { border-top-color: #cfe2d4; padding-top: 16px; }
         .req-actions { gap: 10px; }
         .req-action {
           border-color: #126f1e !important;
@@ -742,9 +745,9 @@ const Requests = () => {
         .req-action.req-cancel:hover { background: #c92828 !important; border-color: #c92828 !important; color: #ffffff !important; }
         .req-action.req-waiting { background: #fff3df !important; border-color: #f59a23 !important; color: #111111 !important; }
         /* Center each request and apply yellow actions consistently. */
-        html body #root#root .req-content { width: min(1320px, calc(100% - 40px)) !important; margin: 0 auto !important; }
+        html body #root#root .req-content { width: 100% !important; max-width: none !important; margin: 0 !important; box-sizing: border-box !important; }
         html body #root#root .req-card-item,
-        html body #root#root .req-card-item:hover { background: #f4fbf4 !important; border-color: #126f1e !important; border-radius: 18px !important; box-shadow: none !important; transform: none !important; }
+        html body #root#root .req-card-item:hover { background: #f4fbf6 !important; border-color: #cfe2d4 !important; border-radius: 18px !important; box-shadow: none !important; transform: none !important; }
         html body #root#root .req-cell { background: #ffffff !important; border-color: #f59a23 !important; }
         html body #root#root .req-action.req-confirm,
         html body #root#root .req-action.req-confirm:hover,
@@ -805,7 +808,7 @@ const Requests = () => {
               {bookings.map((b, i) => {
                 const sc = statusColors[b.status] || statusColors.pending;
                 return (
-                  <motion.article key={b.id} className="req-card-item">
+                  <article key={b.id} className="req-card-item">
                     <button
                       className="req-menu-trigger"
                       onClick={(e) => {
@@ -909,6 +912,7 @@ const Requests = () => {
                           {formatMoney(calculateBookingBill({ booking: b }).total)}
                         </div>
                       </div>
+                      <div className="req-section-label">Live workflow & operational updates</div>
                       {b.assigned_doctor_names && (
                         <div className="req-cell" style={{ gridColumn: "1 / -1", borderColor: "#86efac", background: "#f0fdf4" }}>
                           <div className="req-label" style={{ color: "#166534", fontWeight: 800 }}>
@@ -1045,7 +1049,7 @@ const Requests = () => {
                     <div className="req-footer">
                       <ActionButtons b={b} />
                     </div>
-                  </motion.article>
+                  </article>
                 );
               })}
             </div>
