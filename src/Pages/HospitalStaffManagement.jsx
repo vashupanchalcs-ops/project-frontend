@@ -130,14 +130,21 @@ export default function HospitalStaffManagement({ directoryOnly = false }) {
     setError("");
     try {
       const id = await resolveHospital();
-      const response = await fetch(`${BASE}/api/hospitals/${id}/dashboard/?_=${Date.now()}`, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Staff data could not be loaded (${response.status})`);
-      const data = await response.json();
-      const rows = Array.isArray(data?.staff) ? data.staff : [];
-      setHospital(data?.hospital || null);
-      setStaff(rows);
-      sessionStorage.setItem("hospital_staff_management_cache", JSON.stringify({ hospital: data?.hospital || null, staff: rows }));
-      return { id, data };
+      // The directory should not wait on the large dashboard/queue payload.
+      // Read the staff collection directly so the roster renders immediately
+      // even when the live-case dashboard is slow or temporarily unavailable.
+      const [staffResponse, hospitalResponse] = await Promise.all([
+        fetch(`${BASE}/api/hospitals/${id}/staff/?_=${Date.now()}`, { cache: "no-store" }),
+        fetch(`${BASE}/api/hospitals/${id}/?_=${Date.now()}`, { cache: "no-store" }),
+      ]);
+      if (!staffResponse.ok) throw new Error(`Staff data could not be loaded (${staffResponse.status})`);
+      const rows = await staffResponse.json();
+      const hospitalData = hospitalResponse.ok ? await hospitalResponse.json().catch(() => null) : null;
+      const normalizedRows = Array.isArray(rows) ? rows : [];
+      setHospital(hospitalData || null);
+      setStaff(normalizedRows);
+      sessionStorage.setItem("hospital_staff_management_cache", JSON.stringify({ hospital: hospitalData || null, staff: normalizedRows }));
+      return { id, data: { hospital: hospitalData, staff: normalizedRows } };
     } catch (requestError) {
       setError(requestError?.message || "Staff data could not be loaded");
       return null;

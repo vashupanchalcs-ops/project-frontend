@@ -1,6 +1,6 @@
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
 import GoogleMapEmbed from "../Components/GoogleMapEmbed";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { ArrowRight, BedSingle, MapPinned, MoreVertical, Stethoscope, Accessibility } from "lucide-react";
@@ -189,6 +189,24 @@ export default function HospitalPortal() {
     is_on_call: false,
     is_active: true,
   });
+  const [pendingActions, setPendingActions] = useState({});
+  const actionLocksRef = useRef(new Set());
+
+  const beginAction = (key) => {
+    if (actionLocksRef.current.has(key)) return false;
+    actionLocksRef.current.add(key);
+    setPendingActions((current) => ({ ...current, [key]: true }));
+    return true;
+  };
+
+  const endAction = (key) => {
+    actionLocksRef.current.delete(key);
+    setPendingActions((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
 
   const hospitalEmail = (localStorage.getItem("user") || "").trim().toLowerCase();
   const storedHospitalId = Number(localStorage.getItem("hospital_id")) || null;
@@ -263,7 +281,7 @@ export default function HospitalPortal() {
         total_beds: dashboard.hospital?.total_beds ?? 40,
         available_beds: dashboard.hospital?.available_beds ?? 0,
         icu_beds: dashboard.hospital?.icu_beds ?? 0,
-        available_ventilators: dashboard.hospital?.available_ventilators ?? 0,
+        available_ventilators: dashboard.hospital?.ventilators_available ?? dashboard.hospital?.available_ventilators ?? 0,
         status: dashboard.hospital?.status || "active",
         specializations: dashboard.hospital?.specializations || "",
         facilities: dashboard.hospital?.facilities || "",
@@ -304,6 +322,8 @@ export default function HospitalPortal() {
 
   const updateResources = async () => {
     if (!hospital?.id) return;
+    const actionKey = "resources";
+    if (!beginAction(actionKey)) return;
     // 1. Optimistic instant UI update in 0ms
     setHospital(prev => prev ? ({ ...prev, ...resourceForm }) : prev);
     setResourceEditMode(false);
@@ -322,12 +342,26 @@ export default function HospitalPortal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(resourceForm),
       });
-      if (!res.ok) throw new Error("Resource update failed");
+      const savedHospital = await res.json().catch(() => ({}));
+      if (!res.ok || !savedHospital?.id) throw new Error(savedHospital?.error || "Resource update failed");
+      setHospital(savedHospital);
+      setResourceForm((current) => ({
+        ...current,
+        total_beds: savedHospital.total_beds,
+        available_beds: savedHospital.available_beds,
+        icu_beds: savedHospital.icu_beds,
+        available_ventilators: savedHospital.ventilators_available,
+        status: savedHospital.status,
+        specializations: savedHospital.specializations || "",
+        facilities: savedHospital.facilities || "",
+      }));
       try { localStorage.removeItem(RESOURCE_CACHE_KEY); } catch {}
       void fetchHospitalDashboard({ silent: true });
-    } catch {
-      setErr("Resource update failed in background. Retrying sync...");
+    } catch (error) {
+      setErr(error?.message || "Resource update failed in background. Retrying sync...");
       void fetchHospitalDashboard({ silent: true });
+    } finally {
+      endAction(actionKey);
     }
   };
 
@@ -386,6 +420,8 @@ export default function HospitalPortal() {
   };
 
   const updateHospitalResponse = async (bookingId, response) => {
+    const actionKey = `hospital-response:${bookingId}`;
+    if (!beginAction(actionKey)) return;
     try {
       // Optimistically update queue immediately so cards never flash or disappear
       setQueue((prev) =>
@@ -407,15 +443,21 @@ export default function HospitalPortal() {
           hospital_response_note: response === "ready" ? "Hospital intake ready" : "No immediate bed/staff availability",
         }),
       });
-      if (!res.ok) throw new Error("Response update failed");
-      await fetchHospitalDashboard({ silent: true });
-    } catch {
+      const saved = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(saved?.error || "Response update failed");
+      setQueue((prev) => prev.map((item) => Number(item.booking_id) === Number(bookingId) ? { ...item, ...saved } : item));
+      void fetchHospitalDashboard({ silent: true });
+    } catch (error) {
       setErr("Unable to update hospital response");
+    } finally {
+      endAction(actionKey);
     }
   };
 
   const assignBedInPortal = async (bookingId) => {
     if (!hospital?.id) return;
+    const actionKey = `assign-bed:${bookingId}`;
+    if (!beginAction(actionKey)) return;
     // 1. Instant 0ms optimistic queue and cache update
     setQueue((prev) =>
       prev.map((item) =>
@@ -448,7 +490,7 @@ export default function HospitalPortal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ booking_id: bookingId }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to assign bed");
       setQueue((prev) =>
         prev.map((item) =>
@@ -462,22 +504,31 @@ export default function HospitalPortal() {
             : item
         )
       );
-      await fetchHospitalDashboard({ silent: true });
+      void fetchHospitalDashboard({ silent: true });
     } catch (err) {
       console.warn("Bed assignment background error:", err);
+      setErr(err?.message || "Failed to assign bed");
+      void fetchHospitalDashboard({ silent: true });
+    } finally {
+      endAction(actionKey);
     }
   };
 
   const switchIcuInPortal = async (bookingId) => {
     if (!hospital?.id) return;
-    if (!window.confirm("Switch patient to an available ICU Bed? The existing bed will be freed.")) return;
+    const actionKey = `switch-icu:${bookingId}`;
+    if (!beginAction(actionKey)) return;
+    if (!window.confirm("Switch patient to an available ICU Bed? The existing bed will be freed.")) {
+      endAction(actionKey);
+      return;
+    }
     try {
       const res = await fetch(`${BASE}/api/hospitals/${hospital.id}/beds/switch-icu/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ booking_id: bookingId }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No available ICU bed found");
       // Optimistically update queue item with ICU bed info
       setQueue((prev) =>
@@ -492,13 +543,17 @@ export default function HospitalPortal() {
             : item
         )
       );
-      await fetchHospitalDashboard({ silent: true });
+      void fetchHospitalDashboard({ silent: true });
     } catch (err) {
       alert(err.message);
+    } finally {
+      endAction(actionKey);
     }
   };
 
   const markPatientReached = async (bookingId) => {
+    const actionKey = `patient-reached:${bookingId}`;
+    if (!beginAction(actionKey)) return;
     try {
       setQueue((prev) =>
         prev.map((item) =>
@@ -513,9 +568,11 @@ export default function HospitalPortal() {
         body: JSON.stringify({ patient_reached: true }),
       });
       if (!res.ok) throw new Error("Patient reached update failed");
-      await fetchHospitalDashboard({ silent: true });
+      void fetchHospitalDashboard({ silent: true });
     } catch {
       setErr("Unable to update patient reached status");
+    } finally {
+      endAction(actionKey);
     }
   };
 
@@ -3165,8 +3222,8 @@ export default function HospitalPortal() {
                           </button>
                           {!hasResponded && (
                             <>
-                              <button className="hp-btn ok" onClick={() => updateHospitalResponse(q.booking_id, "ready")}>Approve</button>
-                              <button className="hp-btn no" onClick={() => updateHospitalResponse(q.booking_id, "not_ready")}>Reject</button>
+                              <button className="hp-btn ok" disabled={Boolean(pendingActions[`hospital-response:${q.booking_id}`])} onClick={() => updateHospitalResponse(q.booking_id, "ready")}>{pendingActions[`hospital-response:${q.booking_id}`] ? "Saving..." : "Approve"}</button>
+                              <button className="hp-btn no" disabled={Boolean(pendingActions[`hospital-response:${q.booking_id}`])} onClick={() => updateHospitalResponse(q.booking_id, "not_ready")}>{pendingActions[`hospital-response:${q.booking_id}`] ? "Saving..." : "Reject"}</button>
                             </>
                           )}
                           {q.patient_reached ? (
@@ -3199,9 +3256,10 @@ export default function HospitalPortal() {
                                 borderRadius: "8px",
                                 cursor: "pointer",
                               }}
+                              disabled={Boolean(pendingActions[`patient-reached:${q.booking_id}`])}
                               onClick={() => markPatientReached(q.booking_id)}
                             >
-                              🏥 Patient Reached
+                              {pendingActions[`patient-reached:${q.booking_id}`] ? "Saving..." : "🏥 Patient Reached"}
                             </button>
                           )}
                         </div>
@@ -3329,8 +3387,8 @@ export default function HospitalPortal() {
                           <div className="hp-actions" style={{ flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                             {!hasResponded && (
                               <>
-                                <button className="hp-btn ok" onClick={() => updateHospitalResponse(q.booking_id, "ready")}>Approve</button>
-                                <button className="hp-btn no" onClick={() => updateHospitalResponse(q.booking_id, "not_ready")}>Reject</button>
+                                <button className="hp-btn ok" disabled={Boolean(pendingActions[`hospital-response:${q.booking_id}`])} onClick={() => updateHospitalResponse(q.booking_id, "ready")}>{pendingActions[`hospital-response:${q.booking_id}`] ? "Saving..." : "Approve"}</button>
+                                <button className="hp-btn no" disabled={Boolean(pendingActions[`hospital-response:${q.booking_id}`])} onClick={() => updateHospitalResponse(q.booking_id, "not_ready")}>{pendingActions[`hospital-response:${q.booking_id}`] ? "Saving..." : "Reject"}</button>
                               </>
                             )}
                             {response === "ready" && (
@@ -3421,9 +3479,10 @@ export default function HospitalPortal() {
                                       fontSize: "11px",
                                       cursor: "pointer",
                                     }}
+                                    disabled={Boolean(pendingActions[`patient-reached:${q.booking_id}`])}
                                     onClick={() => markPatientReached(q.booking_id)}
                                   >
-                                    🏥 Patient Reached
+                                    {pendingActions[`patient-reached:${q.booking_id}`] ? "Saving..." : "🏥 Patient Reached"}
                                   </button>
                                 )}
                               </>
@@ -3774,7 +3833,7 @@ export default function HospitalPortal() {
                         <textarea className="hp-textarea" value={resourceForm.facilities} onChange={(e) => setResourceForm((f) => ({ ...f, facilities: e.target.value }))} placeholder="Facilities (e.g., Blood Bank, 24/7 Pharmacy, Oxygen Plant)" />
                       </div>
                       <div className="hp-actions" style={{ marginTop: 14 }}>
-                        <button className="hp-btn ok" onClick={updateResources}>Save Resource Update</button>
+                        <button className="hp-btn ok" disabled={Boolean(pendingActions.resources)} onClick={updateResources}>{pendingActions.resources ? "Saving..." : "Save Resource Update"}</button>
                         <button className="hp-btn" onClick={() => setResourceEditMode(false)}>Cancel</button>
                       </div>
                     </div>

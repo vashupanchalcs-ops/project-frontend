@@ -75,9 +75,19 @@ export default function AdminHospitalDetails() {
   useEffect(() => {
     if (!selectedHospitalId) return undefined;
     const key = `hospital_dashboard_${selectedHospitalId}`;
-    fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/`, { key, fallback: null })
-      .then((data) => {
-        if (data) setSelectedDashboard(writeDataCache(key, data));
+    Promise.all([
+      fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/?_=${Date.now()}`, { key, fallback: null }),
+      fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/staff/?_=${Date.now()}`, { key: `hospital_staff_${selectedHospitalId}`, fallback: [] }),
+    ])
+      .then(([data, staffRows]) => {
+        if (data) {
+          // Use the small staff collection as the directory source so it is
+          // not blocked by the larger live dashboard response.
+          setSelectedDashboard(writeDataCache(key, {
+            ...data,
+            staff: Array.isArray(staffRows) ? staffRows : (Array.isArray(data.staff) ? data.staff : []),
+          }));
+        }
       })
       .catch(() => {
         const fallback = hospitals.find((hospital) => String(hospital.id) === String(selectedHospitalId));

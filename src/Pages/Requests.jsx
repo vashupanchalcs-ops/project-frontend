@@ -139,6 +139,12 @@ const Requests = () => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Booking update failed");
       setBookings((prev) => prev.map((row) => (Number(row.id) === bid ? { ...row, ...data } : row)));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+          cached.map((row) => Number(row.id) === bid ? { ...row, ...data } : row)
+        ));
+      } catch {}
       return data;
     } catch (err) {
       console.warn("Booking update background error:", err);

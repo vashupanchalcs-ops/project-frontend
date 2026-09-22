@@ -56,6 +56,17 @@ export default function HospitalBeds() {
   const [pendingBookings, setPendingBookings] = useState([]);
   const [selectedBookingIdForBed, setSelectedBookingIdForBed] = useState(urlBookingId || "");
   const icuHubRef = useRef(null);
+  const bedActionLocksRef = useRef(new Set());
+
+  const beginBedAction = (key) => {
+    if (bedActionLocksRef.current.has(key)) return false;
+    bedActionLocksRef.current.add(key);
+    return true;
+  };
+
+  const endBedAction = (key) => {
+    bedActionLocksRef.current.delete(key);
+  };
 
   const allocatedTeam = useMemo(() => {
     let parsed = [];
@@ -329,6 +340,8 @@ export default function HospitalBeds() {
   // Status Actions with OPTIMISTIC UPDATE
   const handleUpdateStatus = async (newStatus) => {
     if (!selectedBed) return;
+    const actionKey = `status:${selectedBed.id}`;
+    if (!beginBedAction(actionKey)) return;
     setUpdating(true);
     const bedId = selectedBed.id;
     const payload = { status: newStatus };
@@ -347,14 +360,14 @@ export default function HospitalBeds() {
       payload.admission_time = null;
     }
 
-    // 1. Optimistically update local state immediately (no delay, no fluctuation)
-    const updatedBed = { ...selectedBed, ...payload };
-    setSelectedBed(updatedBed);
-    setBeds((prev) => prev.map((b) => (b.id === bedId ? updatedBed : b)));
-    showToast(`Bed ${selectedBed.bed_number} updated to ${newStatus.toUpperCase()}`);
-
-    // 2. Send patch to backend silently
     try {
+      // 1. Optimistically update local state immediately (no delay, no fluctuation)
+      const updatedBed = { ...selectedBed, ...payload };
+      setSelectedBed(updatedBed);
+      setBeds((prev) => prev.map((b) => (b.id === bedId ? updatedBed : b)));
+      showToast(`Bed ${selectedBed.bed_number} updated to ${newStatus.toUpperCase()}`);
+
+      // 2. Send patch to backend and reconcile with the saved row
       const response = await fetch(`${BASE}/api/hospitals/beds/${bedId}/?_=${Date.now()}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -371,8 +384,10 @@ export default function HospitalBeds() {
     } catch (error) {
       showToast(error.message || "Unable to update bed", "error");
       await fetchBeds(true);
+    } finally {
+      endBedAction(actionKey);
+      setUpdating(false);
     }
-    setUpdating(false);
   };
 
   // Load target booking and pending bookings for Allocation Mode
@@ -474,6 +489,8 @@ export default function HospitalBeds() {
   // Explicit Bed Allocation to a specific Booking
   const handleAssignBedToBooking = async (bed, booking) => {
     if (!bed || !booking) return;
+    const actionKey = `assign:${booking.id}`;
+    if (!beginBedAction(actionKey)) return;
     setUpdating(true);
     const bedId = bed.id;
     const bookingId = booking.id;
@@ -559,37 +576,47 @@ export default function HospitalBeds() {
       }
     } catch {}
 
-    // 4. Send API requests in parallel
+    // 4. Send one authoritative, transactional API request. The previous
+    // implementation sent three writes in parallel, so a slow response could
+    // overwrite the successful allocation or return a 500 from bed detail.
     try {
       const hid = Number(hospitalInfo?.id || localStorage.getItem("hospital_id")) || 2;
-      await Promise.all([
-        fetch(`${BASE}/api/hospitals/${hid}/beds/assign/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            booking_id: bookingId,
-            bed_id: bed.id,
-            bed_type: bed.bed_type,
-          }),
-        }).catch(() => null),
-        fetch(`${BASE}/api/bookings/${bookingId}/`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assigned_bed_id: bed.id,
-            assigned_bed_number: bed.bed_number,
-            assigned_bed_type: bed.bed_type,
-          }),
-        }).catch(() => null),
-        fetch(`${BASE}/api/hospitals/beds/${bed.id}/`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }).catch(() => null),
-      ]);
-    } catch {}
+      const response = await fetch(`${BASE}/api/hospitals/${hid}/beds/assign/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId, bed_id: bed.id, bed_type: bed.bed_type }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.bed?.id) throw new Error(data?.error || "Bed allocation failed");
 
-    setUpdating(false);
+      const savedBed = data.bed;
+      setBeds((current) => current.map((row) => {
+        if (Number(row.id) === Number(savedBed.id)) return savedBed;
+        if (Number(row.assigned_booking_id) === Number(bookingId)) {
+          return { ...row, status: "available", assigned_booking_id: null, patient_name: "", assigned_staff_json: "[]", attending_doctor: "", admission_time: null };
+        }
+        return row;
+      }));
+      setSelectedBed(savedBed);
+      setTargetBooking((current) => ({ ...(current || booking), ...booking, assigned_bed_id: savedBed.id, assigned_bed_number: savedBed.bed_number, assigned_bed_type: savedBed.bed_type }));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("hospital_beds_cache") || "[]");
+        sessionStorage.setItem("hospital_beds_cache", JSON.stringify(cached.map((row) => {
+          if (Number(row.id) === Number(savedBed.id)) return savedBed;
+          if (Number(row.assigned_booking_id) === Number(bookingId)) {
+            return { ...row, status: "available", assigned_booking_id: null, patient_name: "", assigned_staff_json: "[]", attending_doctor: "", admission_time: null };
+          }
+          return row;
+        })));
+      } catch {}
+      void fetchBeds(true);
+    } catch (error) {
+      showToast(error.message || "Bed allocation failed", "error");
+      await fetchBeds(true);
+    } finally {
+      endBedAction(actionKey);
+      setUpdating(false);
+    }
   };
 
   // Helper for status styling
