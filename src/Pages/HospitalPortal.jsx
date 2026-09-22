@@ -191,6 +191,8 @@ export default function HospitalPortal() {
   });
   const [pendingActions, setPendingActions] = useState({});
   const actionLocksRef = useRef(new Set());
+  const pendingQueuePatchesRef = useRef(new Map());
+  const pendingHospitalPatchRef = useRef(null);
 
   const beginAction = (key) => {
     if (actionLocksRef.current.has(key)) return false;
@@ -205,6 +207,13 @@ export default function HospitalPortal() {
       const next = { ...current };
       delete next[key];
       return next;
+    });
+  };
+
+  const rememberQueuePatch = (bookingId, patch) => {
+    pendingQueuePatchesRef.current.set(Number(bookingId), {
+      patch,
+      expiresAt: Date.now() + 15000,
     });
   };
 
@@ -252,9 +261,23 @@ export default function HospitalPortal() {
       if (!dashRes.ok) throw new Error("Unable to load hospital dashboard");
       const dashboard = await dashRes.json();
 
-      const finalHosp = dashboard.hospital || hospitalData;
+      const now = Date.now();
+      const pendingHospitalPatch = pendingHospitalPatchRef.current;
+      if (pendingHospitalPatch && pendingHospitalPatch.expiresAt <= now) {
+        pendingHospitalPatchRef.current = null;
+      }
+      for (const [bookingId, entry] of pendingQueuePatchesRef.current.entries()) {
+        if (entry.expiresAt <= now) pendingQueuePatchesRef.current.delete(bookingId);
+      }
+
+      const finalHosp = pendingHospitalPatchRef.current
+        ? { ...(dashboard.hospital || hospitalData), ...pendingHospitalPatchRef.current.patch }
+        : (dashboard.hospital || hospitalData);
       const finalSum = dashboard.summary || null;
-      const finalQueue = Array.isArray(dashboard.queue) ? dashboard.queue : [];
+      const finalQueue = (Array.isArray(dashboard.queue) ? dashboard.queue : []).map((item) => {
+        const pending = pendingQueuePatchesRef.current.get(Number(item.booking_id));
+        return pending ? { ...item, ...pending.patch } : item;
+      });
       const finalStaff = Array.isArray(dashboard.staff) ? dashboard.staff : [];
       const finalSpecs = Array.isArray(dashboard.on_call_specialists) ? dashboard.on_call_specialists : [];
       const finalRedir = dashboard.redirect_suggestion || null;
@@ -294,7 +317,8 @@ export default function HospitalPortal() {
         ...(cachedResources.specializations ? { specializations: cachedResources.specializations } : {}),
         ...(cachedResources.facilities ? { facilities: cachedResources.facilities } : {}),
       };
-      setResourceForm(savedResources);
+      const liveResourcePatch = pendingHospitalPatchRef.current?.patch || {};
+      setResourceForm({ ...savedResources, ...liveResourcePatch });
       setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (e) {
       if (!silent) setErr(e.message || "Something went wrong");
@@ -325,6 +349,7 @@ export default function HospitalPortal() {
     const actionKey = "resources";
     if (!beginAction(actionKey)) return;
     // 1. Optimistic instant UI update in 0ms
+    pendingHospitalPatchRef.current = { patch: { ...resourceForm }, expiresAt: Date.now() + 15000 };
     setHospital(prev => prev ? ({ ...prev, ...resourceForm }) : prev);
     setResourceEditMode(false);
     try {
@@ -435,6 +460,10 @@ export default function HospitalPortal() {
             : item
         )
       );
+      rememberQueuePatch(bookingId, {
+        hospital_response: response,
+        hospital_response_note: response === "ready" ? "Hospital intake ready" : "No immediate bed/staff availability",
+      });
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/hospital-response/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -471,6 +500,11 @@ export default function HospitalPortal() {
           : item
       )
     );
+    rememberQueuePatch(bookingId, {
+      assigned_bed_id: 1,
+      assigned_bed_number: "G-001",
+      assigned_bed_type: "general",
+    });
     try {
       const pc = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
       if (pc && Array.isArray(pc.queue)) {
@@ -504,6 +538,11 @@ export default function HospitalPortal() {
             : item
         )
       );
+      rememberQueuePatch(bookingId, {
+        assigned_bed_id: data.icu_bed?.id,
+        assigned_bed_number: data.icu_bed?.bed_number,
+        assigned_bed_type: "icu",
+      });
       void fetchHospitalDashboard({ silent: true });
     } catch (err) {
       console.warn("Bed assignment background error:", err);
@@ -543,6 +582,7 @@ export default function HospitalPortal() {
             : item
         )
       );
+      rememberQueuePatch(bookingId, { patient_reached: true });
       void fetchHospitalDashboard({ silent: true });
     } catch (err) {
       alert(err.message);
