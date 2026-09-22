@@ -99,6 +99,14 @@ const reverseGeocodePickup = async (lat, lng) => {
 };
 
 export default function Ambulances() {
+  const initialUserBooking = (() => {
+    try {
+      const role = localStorage.getItem("role");
+      return role !== "admin" && role !== "driver";
+    } catch {
+      return false;
+    }
+  })();
   const cachedAmbs = (() => {
     try {
       return JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
@@ -115,7 +123,7 @@ export default function Ambulances() {
       return [];
     }
   });
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialUserBooking);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAmb, setSelectedAmb] = useState(null);
   const [form, setForm] = useState({
@@ -124,12 +132,12 @@ export default function Ambulances() {
     pickup_city: "",
     pickup_district: "",
     patient_contact_number: "",
-    booking_for_other: false,
+    booking_for_other: initialUserBooking,
   });
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
-  const [locationPermission, setLocationPermission] = useState("prompt");
-  const [locationMode, setLocationMode] = useState("gps");
+  const [locationPermission, setLocationPermission] = useState(initialUserBooking ? "manual" : "prompt");
+  const [locationMode, setLocationMode] = useState(initialUserBooking ? "manual" : "gps");
   const [confirmedPickup, setConfirmedPickup] = useState(null);
   const [locationMessage, setLocationMessage] = useState("");
   const [manualSuggestions, setManualSuggestions] = useState([]);
