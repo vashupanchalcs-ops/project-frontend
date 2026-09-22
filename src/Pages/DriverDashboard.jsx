@@ -186,6 +186,7 @@ export default function DriverDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [reportDrafts,  setReportDrafts]  = useState({});
+  const [pendingBookingActions, setPendingBookingActions] = useState({});
   const [bookingMenuOpenId, setBookingMenuOpenId] = useState(null);
   const [deletingBookingId, setDeletingBookingId] = useState(null);
   const [routeMode, setRouteMode] = useState("full"); // "start" | "full"
@@ -199,6 +200,27 @@ export default function DriverDashboard() {
   const ambulanceRef = useRef(null);
   const effectiveAmbIdRef = useRef(ambId || 0);
   const driverPhoneRef = useRef(driverPhone);
+  // A ref makes the guard synchronous; state alone still allows two rapid
+  // clicks before React has rendered the disabled button.
+  const bookingActionLocksRef = useRef(new Set());
+
+  const beginBookingAction = (bookingId, action) => {
+    const key = `${Number(bookingId)}:${action}`;
+    if (bookingActionLocksRef.current.has(key)) return false;
+    bookingActionLocksRef.current.add(key);
+    setPendingBookingActions((prev) => ({ ...prev, [key]: true }));
+    return true;
+  };
+
+  const endBookingAction = (bookingId, action) => {
+    const key = `${Number(bookingId)}:${action}`;
+    bookingActionLocksRef.current.delete(key);
+    setPendingBookingActions((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const driverEmbedSrc = useMemo(() => {
     const dLat = location?.lat ?? Number(ambulance?.latitude);
@@ -597,6 +619,7 @@ export default function DriverDashboard() {
   }, [ambId, driverName, driverEmail, ambNumber, leafletReady, loadNotifications]);
 
   const acceptBooking = async (bookingId) => {
+    if (!beginBookingAction(bookingId, "accept")) return;
     // 1. Instant 0ms optimistic local update
     setMyBookings((prev) =>
       prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
@@ -607,20 +630,28 @@ export default function DriverDashboard() {
         cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
       ));
     } catch {}
-    addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
-
-    // 2. Background patch
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ driver_accepted: true, driver_status: "accepted" }),
       });
-      if (!res.ok) throw new Error("Accept failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Accept failed");
+      setMyBookings((prev) => prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b)));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+        sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
+          cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b))
+        ));
+      } catch {}
+      addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
       fetchBookings();
     } catch {
       addLog("Accept booking failed", "error");
       fetchBookings();
+    } finally {
+      endBookingAction(bookingId, "accept");
     }
   };
 
@@ -708,10 +739,11 @@ export default function DriverDashboard() {
       addLog("Patient name required", "warn");
       return;
     }
+    if (!beginBookingAction(bookingId, "report")) return;
     // Optimistic update so the card never blinks or hides
     setMyBookings((prev) =>
       prev.map((b) =>
-        b.id === bookingId
+        Number(b.id) === Number(bookingId)
           ? {
               ...b,
               report_submitted_at: new Date().toISOString(),
@@ -737,11 +769,22 @@ export default function DriverDashboard() {
           },
         }),
       });
-      if (!res.ok) throw new Error("Report submit failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Report submit failed");
+      setMyBookings((prev) => prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b)));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+        sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
+          cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b))
+        ));
+      } catch {}
       addLog(`Patient report sent for booking #${bookingId}`, "success");
       fetchBookings();
     } catch {
       addLog("Patient report send failed", "error");
+      fetchBookings();
+    } finally {
+      endBookingAction(bookingId, "report");
     }
   };
 
@@ -2546,10 +2589,11 @@ export default function DriverDashboard() {
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                               <button
                                 className="dd-btn dd-btn-green"
-                                style={{ background: "#16a34a", color: "#ffffff", fontWeight: 850, padding: "10px 20px", borderRadius: 10, cursor: "pointer" }}
+                                style={{ background: "#16a34a", color: "#ffffff", fontWeight: 850, padding: "10px 20px", borderRadius: 10, cursor: pendingBookingActions[`${Number(b.id)}:accept`] ? "wait" : "pointer", opacity: pendingBookingActions[`${Number(b.id)}:accept`] ? 0.7 : 1 }}
+                                disabled={pendingBookingActions[`${Number(b.id)}:accept`]}
                                 onClick={() => acceptBooking(b.id)}
                               >
-                                ✓ Accept Booking
+                                {pendingBookingActions[`${Number(b.id)}:accept`] ? "Accepting..." : "✓ Accept Booking"}
                               </button>
                               <button
                                 className="dd-btn dd-btn-red"
@@ -2673,9 +2717,11 @@ export default function DriverDashboard() {
                               ) : (
                                 <button
                                   className="dd-btn dd-btn-green"
+                                  disabled={pendingBookingActions[`${Number(b.id)}:report`]}
+                                  style={{ opacity: pendingBookingActions[`${Number(b.id)}:report`] ? 0.7 : 1, cursor: pendingBookingActions[`${Number(b.id)}:report`] ? "wait" : "pointer" }}
                                   onClick={() => submitPatientReport(b.id)}
                                 >
-                                  Send Report To Admin & Hospital
+                                  {pendingBookingActions[`${Number(b.id)}:report`] ? "Sending..." : "Send Report To Admin & Hospital"}
                                 </button>
                               )}
                               <button className="dd-btn dd-btn-green" onClick={() => openLiveTrackForBooking(b)}>

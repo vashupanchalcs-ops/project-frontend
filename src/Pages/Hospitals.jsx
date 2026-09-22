@@ -71,6 +71,7 @@ export default function Hospitals() {
   const [assignBooking, setAssignBooking] = useState(null);
   const [assignmentBusy, setAssignmentBusy] = useState(false);
   const [assignmentError, setAssignmentError] = useState("");
+  const assignmentBusyRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
@@ -144,9 +145,10 @@ export default function Hospitals() {
 
   const assignHospitalToBooking = async (hospital) => {
     if (!assignBookingId) return;
-    if (assignmentBusy) return;
+    if (assignmentBusyRef.current) return;
     if (!(hospital?.is_active && hospital?.status !== "closed" && Number(hospital?.available_beds || 0) > 0)) return;
 
+    assignmentBusyRef.current = true;
     setAssignmentBusy(true);
     setAssignmentError("");
     try {
@@ -177,14 +179,16 @@ export default function Hospitals() {
       console.warn("Hospital assignment error:", err);
       setAssignmentError(err.message || "Hospital assignment failed. Please try again.");
     } finally {
+      assignmentBusyRef.current = false;
       setAssignmentBusy(false);
     }
   };
 
   const reassignUserHospital = async (h) => {
     if (!reselectForBookingId) return;
-    if (assignmentBusy) return;
+    if (assignmentBusyRef.current) return;
 
+    assignmentBusyRef.current = true;
     setAssignmentBusy(true);
     setAssignmentError("");
     try {
@@ -215,6 +219,7 @@ export default function Hospitals() {
       console.warn("Hospital transfer error:", err);
       setAssignmentError(err.message || "Hospital transfer failed. Please try again.");
     } finally {
+      assignmentBusyRef.current = false;
       setAssignmentBusy(false);
     }
   };
@@ -1047,19 +1052,19 @@ export default function Hospitals() {
                       {assignBookingId ? (
                         <button
                           className="h2-btn assign"
-                          disabled={!canAssign}
+                          disabled={!canAssign || assignmentBusy}
                           onClick={() => assignHospitalToBooking(h)}
                         >
-                          {canAssign ? `Assign To #${assignBookingId}` : "Not Available"}
+                          {assignmentBusy ? "Saving..." : canAssign ? `Assign To #${assignBookingId}` : "Not Available"}
                         </button>
                       ) : reselectForBookingId ? (
                         <button
                           className="h2-btn assign"
                           style={{ background: "#16a34a", color: "#fff", borderColor: "#15803d", fontWeight: 800, flex: "1 1 auto" }}
-                          disabled={!canAssign}
+                          disabled={!canAssign || assignmentBusy}
                           onClick={() => reassignUserHospital(h)}
                         >
-                          {canAssign ? `🏥 Transfer to ${h.name}` : "Currently Full"}
+                          {assignmentBusy ? "Saving..." : canAssign ? `🏥 Transfer to ${h.name}` : "Currently Full"}
                         </button>
                       ) : (
                         <>

@@ -50,9 +50,13 @@ const Requests = () => {
   const [bookings, setBookings] = useState(cachedBookings);
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [pendingActions, setPendingActions] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
+  // React state updates are asynchronous. Keep a synchronous lock as well so
+  // two clicks in the same event loop cannot create duplicate PATCH requests.
+  const pendingActionsRef = useRef(new Map());
 
   const fetchBookings = () => {
     fetch(`${BASE}/api/bookings/`)
@@ -64,8 +68,12 @@ const Requests = () => {
           const bId = Number(b?.id || 0);
           return bId - aId;
         });
-        setBookings(list);
-        try { sessionStorage.setItem("admin_requests_cache", JSON.stringify(list)); } catch {}
+        const visibleList = list.map((row) => {
+          const pendingPayload = pendingActionsRef.current.get(Number(row?.id));
+          return pendingPayload ? { ...row, ...pendingPayload } : row;
+        });
+        setBookings(visibleList);
+        try { sessionStorage.setItem("admin_requests_cache", JSON.stringify(visibleList)); } catch {}
       })
       .catch(() => {});
   };
@@ -107,8 +115,12 @@ const Requests = () => {
   }, [location.state?.flashMsg, location.pathname, navigate]);
 
   const updateBooking = async (id, payload) => {
-    // 1. Optimistic instant UI update in 0ms so card status turns Confirmed immediately
     const bid = Number(id);
+    if (!bid || pendingActionsRef.current.has(bid)) return null;
+    pendingActionsRef.current.set(bid, payload);
+    setPendingActions((prev) => ({ ...prev, [bid]: true }));
+
+    // 1. Optimistic instant UI update in 0ms so card status turns Confirmed immediately
     setBookings((prev) => prev.map((row) => (Number(row.id) === bid ? { ...row, ...payload } : row)));
     try {
       const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
@@ -132,6 +144,13 @@ const Requests = () => {
       console.warn("Booking update background error:", err);
       fetchBookings();
       throw err;
+    } finally {
+      pendingActionsRef.current.delete(bid);
+      setPendingActions((prev) => {
+        const next = { ...prev };
+        delete next[bid];
+        return next;
+      });
     }
   };
 
@@ -140,6 +159,7 @@ const Requests = () => {
   const forwardReportToHospital = async (booking) => {
     const id = Number(booking?.id || 0);
     if (!id || !booking?.assigned_hospital_name) return;
+    if (pendingActionsRef.current.has(id)) return;
     const sentAt = new Date().toISOString();
     setBookings((prev) =>
       prev.map((row) =>
@@ -177,6 +197,7 @@ const Requests = () => {
   };
 
   const ActionButtons = ({ b }) => {
+    const actionPending = Boolean(pendingActions[Number(b.id)]);
     const btnStyle = {
       flex: 1,
       fontSize: 11,
@@ -201,14 +222,15 @@ const Requests = () => {
               <button
                 className="req-action req-confirm"
                 style={{ ...btnStyle, background: "#126f1e", color: "#fff", borderColor: "#126f1e" }}
+                disabled={actionPending}
                 onClick={() => updateBooking(b.id, { status: "confirmed", send_hospital_alert: true })}
                 title="Confirm booking and immediately send alert to user's selected hospital"
               >
-                ✓ Confirm & Send to {b.assigned_hospital_name || "Hospital"}
+                {actionPending ? "Saving..." : `✓ Confirm & Send to ${b.assigned_hospital_name || "Hospital"}`}
               </button>
             )}
-            <button className="req-action req-confirm" style={btnStyle} onClick={() => updateStatus(b.id, "confirmed")}>✓ Confirm</button>
-            <button className="req-action req-cancel" style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
+            <button className="req-action req-confirm" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "confirmed")}>{actionPending ? "Saving..." : "✓ Confirm"}</button>
+            <button className="req-action req-cancel" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "cancelled")}>{actionPending ? "Saving..." : "✕ Cancel"}</button>
           </>
         )}
 
@@ -223,6 +245,7 @@ const Requests = () => {
                 borderColor: "#126f1e",
                 fontWeight: 900,
               }}
+              disabled={actionPending}
               onClick={() =>
                 updateBooking(b.id, {
                   approve_ambulance_transfer: true,
@@ -242,6 +265,7 @@ const Requests = () => {
                 borderColor: "#c92828",
                 fontWeight: 800,
               }}
+              disabled={actionPending}
               onClick={() =>
                 updateBooking(b.id, {
                   reject_ambulance_transfer: true,
@@ -264,6 +288,7 @@ const Requests = () => {
               borderColor: "#111111",
               fontWeight: 900,
             }}
+            disabled={actionPending}
             onClick={() => openAmbulanceReassign(b.id)}
           >
             🚑 Assign Another Ambulance (Proximity / ETA)
@@ -272,11 +297,11 @@ const Requests = () => {
 
         {b.status === "confirmed" && !b.sent_to_driver && (
           <>
-            <button className="req-action req-assign" style={btnStyle} onClick={() => openAmbulanceAssign(b.id)}>
+            <button className="req-action req-assign" style={btnStyle} disabled={actionPending} onClick={() => openAmbulanceAssign(b.id)}>
               {Number(b.ambulance_id || 0) > 0 ? "Reassign Ambulance" : "Assign Nearest Ambulance"}
             </button>
             {b.driver_rejected_once && (
-              <button className="req-action req-assign" style={btnStyle} onClick={() => openAmbulanceReassign(b.id)}>
+              <button className="req-action req-assign" style={btnStyle} disabled={actionPending} onClick={() => openAmbulanceReassign(b.id)}>
                 Assign Another Ambulance
               </button>
             )}
@@ -284,9 +309,10 @@ const Requests = () => {
               <button
                 className="req-action req-assign"
                 style={btnStyle}
+                disabled={actionPending}
                 onClick={() => updateBooking(b.id, { send_to_driver: true })}
               >
-                Send To Driver
+                {actionPending ? "Saving..." : "Send To Driver"}
               </button>
             )}
             {!(Number(b.ambulance_id || 0) > 0 && b.assigned_hospital_name && b.hospital_response === "ready") && (
@@ -312,7 +338,7 @@ const Requests = () => {
                   : "Assign Hospital First"}
               </div>
             )}
-            <button className="req-action req-cancel" style={btnStyle} onClick={() => updateStatus(b.id, "cancelled")}>✕ Cancel</button>
+            <button className="req-action req-cancel" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "cancelled")}>{actionPending ? "Saving..." : "✕ Cancel"}</button>
           </>
         )}
 
@@ -323,9 +349,10 @@ const Requests = () => {
                 <button
                   className="req-action req-assign"
                   style={{ ...btnStyle, background: "#126f1e", color: "#ffffff", borderColor: "#126f1e", fontWeight: 800 }}
+                  disabled={actionPending}
                   onClick={() => updateBooking(b.id, { send_hospital_alert: true })}
                 >
-                  📤 Send to {b.assigned_hospital_name || "Hospital"}
+                  {actionPending ? "Sending..." : `📤 Send to ${b.assigned_hospital_name || "Hospital"}`}
                 </button>
               ) : b.hospital_response === "not_ready" ? (
                 <div
@@ -351,7 +378,7 @@ const Requests = () => {
                 </div>
               )
             ) : (
-              <button className="req-action req-assign" style={btnStyle} onClick={() => openHospitalAssign(b.id)}>
+              <button className="req-action req-assign" style={btnStyle} disabled={actionPending} onClick={() => openHospitalAssign(b.id)}>
                 {b.assigned_hospital_name ? "Reassign Hospital" : "Assign Hospital"}
               </button>
             )}
@@ -369,7 +396,7 @@ const Requests = () => {
             disabled={!b.assigned_hospital_name}
             onClick={() => forwardReportToHospital(b)}
           >
-            Send Report To Hospital
+            {actionPending ? "Sending..." : "Send Report To Hospital"}
           </button>
         )}
 

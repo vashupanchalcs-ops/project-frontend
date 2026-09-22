@@ -147,6 +147,7 @@ export default function Ambulances() {
   const [mapLocationStatus, setMapLocationStatus] = useState("idle");
   const [targetHospital, setTargetHospital] = useState(null);
   const [assignmentBusy, setAssignmentBusy] = useState(false);
+  const assignmentBusyRef = useRef(false);
 
   const leafletReady = false;
   const mapRef = useRef(null);
@@ -739,11 +740,12 @@ export default function Ambulances() {
   const assignAmbulanceToBooking = async (amb) => {
     const bookingId = Number(assignBookingId || reassignBookingId || 0);
     if (!bookingId || !isAdmin) return;
-    if (assignmentBusy) return;
+    if (assignmentBusyRef.current) return;
     if (amb.status !== "available") {
       showToast("Please select an available ambulance", "err");
       return;
     }
+    assignmentBusyRef.current = true;
     setAssignmentBusy(true);
     try {
       const payload = reassignBookingId
@@ -772,6 +774,7 @@ export default function Ambulances() {
       console.warn("Ambulance assignment error:", err);
       showToast(err.message || "Ambulance assignment failed. Please try again.", "err");
     } finally {
+      assignmentBusyRef.current = false;
       setAssignmentBusy(false);
     }
   };
@@ -1931,7 +1934,7 @@ export default function Ambulances() {
                           }}
                         >
                           {isAdmin && (reassignBookingId > 0 || assignBookingId > 0)
-                            ? (a.status === "available" ? "Assign This Ambulance" : "Unavailable")
+                            ? (assignmentBusy ? "Saving..." : a.status === "available" ? "Assign This Ambulance" : "Unavailable")
                             : isUser
                             ? "Book from Home"
                             : "See More"}
