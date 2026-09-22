@@ -277,24 +277,21 @@ export default function UserHome() {
         .uh-visual-label { position: absolute; right: 20px; bottom: 20px; z-index: 1; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 9px 12px; background: rgba(255,255,255,.94); color: #126f1e; box-shadow: 0 7px 18px rgba(18,111,30,.14); font-size: 11px; font-weight: 800; }
         .uh-visual-label svg { color: #f59a23; }
 
-        /* Direct Modal Styles */
+        /* Centered inline booking card */
         .uh-modal-overlay {
-          position: fixed; inset: 0; z-index: 10000;
-          background: rgba(247, 250, 248, 0.88);
-          backdrop-filter: blur(3px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
-          overflow-y: auto;
+          min-height: calc(100vh - 64px);
+          box-sizing: border-box;
+          display: flex; align-items: flex-start; justify-content: center;
+          padding: 20px 24px 48px;
+          background: #ffffff;
         }
         .uh-modal-box {
           background: #ffffff;
           border-radius: 18px;
           border: 1px solid #afd3b9;
-          box-shadow: 0 24px 70px rgba(18, 111, 30, 0.16);
-          width: min(680px, 100%);
-          max-height: calc(100vh - 48px);
-          overflow-y: auto;
-          padding: 26px 28px;
+          box-shadow: 0 10px 30px rgba(18, 111, 30, 0.07);
+          width: min(820px, 100%);
+          padding: 20px 22px 16px;
           box-sizing: border-box;
           animation: uh-modal-in 0.22s ease-out;
         }
@@ -304,9 +301,9 @@ export default function UserHome() {
         }
         .uh-modal-head {
           display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px;
-          padding-bottom: 16px; border-bottom: 1px solid #e2eee5;
+          padding-bottom: 14px; border-bottom: 1px solid #e2eee5;
         }
-        .uh-modal-head h3 { margin: 0; font-size: 25px; font-weight: 800; color: #163028; }
+        .uh-modal-head h3 { margin: 0; font-size: 22px; font-weight: 800; color: #163028; }
         .uh-modal-head p { margin: 4px 0 0; font-size: 13px; color: #587066; }
         .uh-close-btn { border: none; background: #f1f5f2; border-radius: 50%; width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; color: #333; }
         .uh-close-btn:hover { background: #e2e8e4; }
@@ -364,8 +361,8 @@ export default function UserHome() {
           .uh-booking-card { padding: 8px; }
           .uh-book-cta { width: 100%; }
           .uh-visual { min-height: 250px; border-radius: 32% 32% 10px 32%; }
-          .uh-modal-overlay { padding: 12px; }
-          .uh-modal-box { max-height: calc(100vh - 24px); padding: 22px 18px; border-radius: 14px; }
+          .uh-modal-overlay { min-height: calc(100vh - 64px); padding: 16px 12px 88px; }
+          .uh-modal-box { width: 100%; padding: 18px 16px 14px; border-radius: 14px; }
           .uh-modal-head h3 { font-size: 21px; }
           .uh-modal-actions { flex-direction: column-reverse; }
           .uh-modal-actions button { width: 100%; }
@@ -374,33 +371,35 @@ export default function UserHome() {
 
       {toast && <div className={`uh-toast ${toast.type}`}>{toast.msg}</div>}
 
-      <section className="uh-stage" aria-label="Book an ambulance">
-        <div className="uh-copy">
-          <div className="uh-kicker">Aarogya emergency response</div>
-          <h1 className="uh-title">Emergency care, <span>right when you need it.</span></h1>
-          <p className="uh-sub">Book a verified ambulance and reach a ready hospital with a clear, real-time response flow.</p>
-          <div className="uh-data" aria-label="Live availability">
-            <span className="uh-data-chip"><Ambulance size={14} />{availableAmbulances} ambulance{availableAmbulances === 1 ? "" : "s"} ready</span>
-            <span className="uh-data-chip accent">{hospitals.length} hospital partner{hospitals.length === 1 ? "" : "s"}</span>
-          </div>
-          <div className="uh-booking-card" onClick={() => openBookingCard()} role="button" tabIndex={0} onKeyDown={(event) => event.key === "Enter" && openBookingCard()}>
-            <div className="uh-location">
-              <span className="uh-location-icon"><MapPin size={17} /></span>
-              <div>
-                <b>{confirmedPickup?.label || "Pickup location"}</b>
-                <span>{confirmedPickup ? "Location confirmed • Click to change" : "Click here to share pickup and book ambulance directly"}</span>
+      {!showModal && (
+        <section className="uh-stage" aria-label="Book an ambulance">
+          <div className="uh-copy">
+            <div className="uh-kicker">Aarogya emergency response</div>
+            <h1 className="uh-title">Emergency care, <span>right when you need it.</span></h1>
+            <p className="uh-sub">Book a verified ambulance and reach a ready hospital with a clear, real-time response flow.</p>
+            <div className="uh-data" aria-label="Live availability">
+              <span className="uh-data-chip"><Ambulance size={14} />{availableAmbulances} ambulance{availableAmbulances === 1 ? "" : "s"} ready</span>
+              <span className="uh-data-chip accent">{hospitals.length} hospital partner{hospitals.length === 1 ? "" : "s"}</span>
+            </div>
+            <div className="uh-booking-card" onClick={() => openBookingCard()} role="button" tabIndex={0} onKeyDown={(event) => event.key === "Enter" && openBookingCard()}>
+              <div className="uh-location">
+                <span className="uh-location-icon"><MapPin size={17} /></span>
+                <div>
+                  <b>{confirmedPickup?.label || "Pickup location"}</b>
+                  <span>{confirmedPickup ? "Location confirmed • Click to change" : "Click here to share pickup and book ambulance directly"}</span>
+                </div>
               </div>
             </div>
+            <button className="uh-book-btn uh-book-cta" onClick={() => openBookingCard()}>
+              Book Ambulance <ArrowRight size={16} />
+            </button>
           </div>
-          <button className="uh-book-btn uh-book-cta" onClick={() => openBookingCard()}>
-            Book Ambulance <ArrowRight size={16} />
-          </button>
-        </div>
-        <div className="uh-visual" aria-hidden="true">
-          <img src={AMBULANCE_IMAGE} alt="" />
-          <span className="uh-visual-label"><Ambulance size={16} />24/7 emergency support</span>
-        </div>
-      </section>
+          <div className="uh-visual" aria-hidden="true">
+            <img src={AMBULANCE_IMAGE} alt="" />
+            <span className="uh-visual-label"><Ambulance size={16} />24/7 emergency support</span>
+          </div>
+        </section>
+      )}
 
       {/* Direct Booking Card Modal */}
       {showModal && (
