@@ -145,6 +145,7 @@ const App = () => {
   
   const isAuth = p === "/login" || p === "/signup" || p === "/login/help";
   const isMapView = p === "/directions";
+  const isAdminPortal = role === "admin" && !isAuth && !isMapView;
 
   // Background polling for confirmed booking (user only)
   const isUser = role !== "admin" && role !== "driver" && role !== "hospital" && role !== "staff" && !!localStorage.getItem("user");
@@ -166,6 +167,7 @@ const App = () => {
        * subtree alive can leave the previous screen visible after a sidebar
        * navigation (especially when only the query tab changes).
        */}
+      <div className={isAdminPortal ? "admin-route-shell" : "route-shell"}>
       <Routes location={location} key={`${location.pathname}${location.search}`}>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
@@ -254,6 +256,7 @@ const App = () => {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </div>
 
       {/* Rendered after page styles so every route shares the same application surface. */}
       <style>{`
@@ -1957,6 +1960,42 @@ const App = () => {
         html body #root .driver-photo-root .driver-existing { background: #f8fbfd !important; border-color: #d8e5ec !important; }
         html body #root .live-consult-root .live-consult-stage-placeholder h2 { color: #172235 !important; }
         html body #root .live-consult-root .live-consult-stage-placeholder p { color: #64748b !important; }
+
+        /* Admin pages use the same content geometry as the hospital portal:
+           the sidebar owns the 64px left rail, while the page content keeps
+           an equal inner gutter on both sides. */
+        html body #root .admin-route-shell {
+          min-width: 0;
+          width: 100%;
+        }
+        html body #root .admin-route-shell > :is(.admin-hospitals-page, .ahd-root, .cm-root) {
+          padding-left: 64px !important;
+          padding-right: 0 !important;
+        }
+        html body #root .admin-route-shell > :is(.admin-hospitals-page, .ahd-root, .cm-root) > :is(.admin-hospitals-shell, .ahd-shell, .cm-shell) {
+          box-sizing: border-box;
+          padding-left: 24px;
+          padding-right: 24px;
+        }
+        html body #root .admin-route-shell > .dcr-root {
+          box-sizing: border-box;
+          padding-right: 0 !important;
+        }
+        html body #root .admin-route-shell > .night-page {
+          padding-left: 64px !important;
+          padding-right: 0 !important;
+          box-sizing: border-box;
+        }
+        @media (max-width: 767px) {
+          html body #root .admin-route-shell > :is(.admin-hospitals-page, .ahd-root, .cm-root, .night-page) {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+          html body #root .admin-route-shell > :is(.admin-hospitals-page, .ahd-root, .cm-root) > :is(.admin-hospitals-shell, .ahd-shell, .cm-shell) {
+            padding-left: 12px;
+            padding-right: 12px;
+          }
+        }
       `}</style>
     </>
   );
