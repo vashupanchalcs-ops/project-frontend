@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { Routes, Route, useLocation, useParams, Navigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Homepage              from "./Pages/Homepage";
@@ -63,6 +63,11 @@ const HospitalRoute = ({ element }) => {
   const user = localStorage.getItem("user");
   const role = localStorage.getItem("role");
   return user && role === "hospital" ? element : <Navigate to="/" replace />;
+};
+
+const LegacyHospitalCasesRedirect = () => {
+  const { bookingId } = useParams();
+  return <Navigate to={bookingId ? `/hospital/payments?booking_id=${bookingId}` : "/hospital/payments"} replace />;
 };
 
 const StaffRoute = ({ element }) => {
@@ -200,8 +205,8 @@ const App = () => {
         <Route path="/hospital/staff" element={<HospitalRoute element={<HospitalStaffManagement />} />} />
         <Route path="/hospital/employees" element={<HospitalRoute element={<HospitalStaffManagement directoryOnly />} />} />
         {/* Legacy case links now land on the replacement Payments page. */}
-        <Route path="/hospital/cases" element={<HospitalRoute element={<Navigate to="/hospital/payments" replace />} />} />
-        <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<Navigate to="/hospital/payments" replace />} />} />
+        <Route path="/hospital/cases" element={<HospitalRoute element={<LegacyHospitalCasesRedirect />} />} />
+        <Route path="/hospital/cases/:bookingId" element={<HospitalRoute element={<LegacyHospitalCasesRedirect />} />} />
         <Route path="/hospital/analytics" element={<HospitalRoute element={<HospitalPortal />} />} />
         <Route path="/hospital/manage-cases" element={<HospitalRoute element={<CaseManagement scope="hospital" />} />} />
         <Route path="/hospital/payments" element={<HospitalRoute element={<HospitalPayments />} />} />

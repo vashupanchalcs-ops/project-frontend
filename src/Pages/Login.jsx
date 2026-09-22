@@ -174,6 +174,9 @@ export default function Login() {
     if (!resp.ok || !data?.valid) {
       return { ok: false, error: data?.error || "Contract details do not match backend records." };
     }
+    if (data.role === "hospital" && data.session_token) {
+      localStorage.setItem("hospital_session_token", String(data.session_token));
+    }
     return { ok: true, data };
   };
 
@@ -182,6 +185,7 @@ export default function Login() {
     applySession(userRecord);
     if (userRecord.contract_id) localStorage.setItem("contract_id", String(userRecord.contract_id));
     if (userRecord.registration_number) localStorage.setItem("registration_number", String(userRecord.registration_number));
+    if (userRecord.session_token) localStorage.setItem("hospital_session_token", String(userRecord.session_token));
     if (userRecord.role === "driver" && userRecord.ambulance_id) {
       localStorage.setItem("ambulance_id", String(userRecord.ambulance_id));
       localStorage.setItem("ambulance_number", String(userRecord.ambulance_number || ""));

@@ -168,7 +168,10 @@ export default function HospitalPayments() {
     try {
       const response = await fetch(`${BASE}/api/hospitals/${hospitalId}/payments/${editingInvoice.booking_id}/`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("hospital_session_token") || ""}`,
+        },
         body: JSON.stringify({
           payment_status: editForm.payment_status,
           payment_total: total,
