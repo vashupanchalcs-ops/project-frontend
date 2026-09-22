@@ -38,6 +38,8 @@ export default function AdminHospitals({
   reselectForBookingId = null,
   onAssign,
   onReassign,
+  assignmentBusy = false,
+  assignmentError = "",
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -132,6 +134,7 @@ export default function AdminHospitals({
         .admin-assign-button:hover:not(:disabled) { background: #e98b13; border-color: #c87308; }
         .admin-assign-button:disabled { cursor: not-allowed; opacity: .55; }
         .admin-hospital-assignment-banner { margin: 16px 18px 0; padding: 11px 13px; border: 1px solid #f0b36a; border-radius: 9px; background: #fff7e8; color: #8c4a05; font-size: 13px; font-weight: 700; }
+        .admin-hospital-assignment-error { margin: 16px 18px 0; padding: 11px 13px; border: 1px solid #e7a1a8; border-radius: 9px; background: #fff0f1; color: #a41f32; font-size: 13px; font-weight: 700; }
         .admin-hospitals-empty { padding: 42px 18px; text-align: center; color: #68786e; }
         @media (max-width: 760px) {
           .admin-hospitals-page { padding: 76px 12px 28px; }
@@ -160,6 +163,7 @@ export default function AdminHospitals({
           <section className="admin-hospitals-panel">
             {assignBookingId && <div className="admin-hospital-assignment-banner">Choose a hospital to assign Booking #{assignBookingId}. The existing hospital alert and booking workflow will continue after assignment.</div>}
             {reselectForBookingId && <div className="admin-hospital-assignment-banner">Choose a hospital to reassign Booking #{reselectForBookingId}. The booking will be updated and the hospital will be notified.</div>}
+            {assignmentError && <div className="admin-hospital-assignment-error" role="alert">{assignmentError}</div>}
             <div className="admin-hospitals-toolbar">
               <label className="admin-hospitals-search">
                 <Search size={17} />
@@ -214,8 +218,8 @@ export default function AdminHospitals({
                         <td>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                             <button className="admin-view-button" type="button" onClick={() => navigate(`/HospitalPartnerDetails/${hospital.id}`, { state: { hospitalId: hospital.id } })}><Eye size={15} /> View</button>
-                            {assignBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign} onClick={() => onAssign?.(hospital)}>{canAssign ? "Assign" : "Unavailable"}</button>}
-                            {reselectForBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign} onClick={() => onReassign?.(hospital)}>{canAssign ? "Reassign" : "Unavailable"}</button>}
+                            {assignBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign || assignmentBusy} onClick={() => onAssign?.(hospital)}>{assignmentBusy ? "Saving..." : canAssign ? "Assign" : "Unavailable"}</button>}
+                            {reselectForBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign || assignmentBusy} onClick={() => onReassign?.(hospital)}>{assignmentBusy ? "Saving..." : canAssign ? "Reassign" : "Unavailable"}</button>}
                           </div>
                         </td>
                       </tr>

@@ -69,6 +69,8 @@ export default function Hospitals() {
   })();
   const [hospitals, setHospitals] = useState(cachedHospitals);
   const [assignBooking, setAssignBooking] = useState(null);
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
+  const [assignmentError, setAssignmentError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const rootRef = useRef(null);
@@ -142,36 +144,13 @@ export default function Hospitals() {
 
   const assignHospitalToBooking = async (hospital) => {
     if (!assignBookingId) return;
+    if (assignmentBusy) return;
     if (!(hospital?.is_active && hospital?.status !== "closed" && Number(hospital?.available_beds || 0) > 0)) return;
 
-    // 1. Optimistically update admin requests cache immediately
+    setAssignmentBusy(true);
+    setAssignmentError("");
     try {
-      const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
-      sessionStorage.setItem("admin_requests_cache", JSON.stringify(
-        cached.map((row) => {
-          if (Number(row.id) === Number(assignBookingId)) {
-            return {
-              ...row,
-              assigned_hospital_id: hospital.id,
-              assigned_hospital_name: hospital.name,
-              destination: hospital.name,
-              hospital_response: "pending",
-              hospital_alert_sent: true,
-            };
-          }
-          return row;
-        })
-      ));
-    } catch {}
-
-    // 2. Instant 0ms navigation
-    navigate("/Requests", {
-      state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
-    });
-
-    // 3. Background network PATCH
-    try {
-      await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
+      const response = await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -179,41 +158,37 @@ export default function Hospitals() {
           send_hospital_alert: true,
         }),
       });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Hospital assignment failed.");
+
+      // Store only the committed server response. This prevents the Requests
+      // polling loop from replacing an optimistic value with old data.
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+          cached.map((row) => Number(row.id) === Number(assignBookingId) ? { ...row, ...data } : row)
+        ));
+      } catch {}
+
+      navigate("/Requests", {
+        state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
+      });
     } catch (err) {
-      console.warn("Background hospital assignment error:", err);
+      console.warn("Hospital assignment error:", err);
+      setAssignmentError(err.message || "Hospital assignment failed. Please try again.");
+    } finally {
+      setAssignmentBusy(false);
     }
   };
 
   const reassignUserHospital = async (h) => {
     if (!reselectForBookingId) return;
+    if (assignmentBusy) return;
 
-    // 1. Optimistically update user's booking cache immediately
+    setAssignmentBusy(true);
+    setAssignmentError("");
     try {
-      const cached = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
-      sessionStorage.setItem("my_bookings_cache", JSON.stringify(
-        cached.map((row) => {
-          if (Number(row.id) === Number(reselectForBookingId)) {
-            return {
-              ...row,
-              assigned_hospital_id: h.id,
-              assigned_hospital_name: h.name,
-              destination: h.name,
-              is_user_selected_hospital: true,
-            };
-          }
-          return row;
-        })
-      ));
-    } catch {}
-
-    // 2. Instant 0ms navigation
-    navigate("/MyBookings", {
-      state: { flashMsg: `Booking #${reselectForBookingId} transferred to ${h.name}. Waiting for hospital approval.` },
-    });
-
-    // 3. Background network PATCH
-    try {
-      await fetch(`${BASE}/api/bookings/${reselectForBookingId}/`, {
+      const response = await fetch(`${BASE}/api/bookings/${reselectForBookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -223,8 +198,24 @@ export default function Hospitals() {
           is_user_selected_hospital: true,
         }),
       });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Hospital transfer failed.");
+
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("my_bookings_cache") || "[]");
+        sessionStorage.setItem("my_bookings_cache", JSON.stringify(
+          cached.map((row) => Number(row.id) === Number(reselectForBookingId) ? { ...row, ...data } : row)
+        ));
+      } catch {}
+
+      navigate("/MyBookings", {
+        state: { flashMsg: `Booking #${reselectForBookingId} transferred to ${h.name}. Waiting for hospital approval.` },
+      });
     } catch (err) {
-      console.warn("Background hospital transfer error:", err);
+      console.warn("Hospital transfer error:", err);
+      setAssignmentError(err.message || "Hospital transfer failed. Please try again.");
+    } finally {
+      setAssignmentBusy(false);
     }
   };
 
@@ -332,6 +323,8 @@ export default function Hospitals() {
       reselectForBookingId={reselectForBookingId}
       onAssign={assignHospitalToBooking}
       onReassign={reassignUserHospital}
+      assignmentBusy={assignmentBusy}
+      assignmentError={assignmentError}
     />
   );
 

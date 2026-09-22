@@ -138,6 +138,7 @@ export default function Ambulances() {
   const [mapLocation, setMapLocation] = useState(null);
   const [mapLocationStatus, setMapLocationStatus] = useState("idle");
   const [targetHospital, setTargetHospital] = useState(null);
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
 
   const leafletReady = false;
   const mapRef = useRef(null);
@@ -747,50 +748,40 @@ export default function Ambulances() {
   const assignAmbulanceToBooking = async (amb) => {
     const bookingId = Number(assignBookingId || reassignBookingId || 0);
     if (!bookingId || !isAdmin) return;
+    if (assignmentBusy) return;
     if (amb.status !== "available") {
       showToast("Please select an available ambulance", "err");
       return;
     }
-    // 1. Optimistic instant local status update
-    setAmbulances((prev) => prev.map((a) => (a.id === amb.id ? { ...a, status: "en_route" } : a)));
-
-    // 2. Optimistically update admin requests cache
-    try {
-      const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
-      sessionStorage.setItem("admin_requests_cache", JSON.stringify(
-        cached.map((row) => {
-          if (Number(row.id) === bookingId) {
-            return {
-              ...row,
-              ambulance_id: amb.id,
-              ambulance_number: amb.ambulance_number || "",
-              driver: amb.driver || "",
-              driver_contact: amb.driver_contact || "",
-              sent_to_driver: true,
-            };
-          }
-          return row;
-        })
-      ));
-    } catch {}
-
-    // 3. Instant 0ms navigation to Requests
-    navigate("/Requests", {
-      state: { flashMsg: `Booking #${bookingId} assigned to ${amb.ambulance_number}` },
-    });
-
-    // 4. Background network PATCH
+    setAssignmentBusy(true);
     try {
       const payload = reassignBookingId
         ? { reassign_ambulance_id: amb.id, notify_user_reassigned: true }
         : { assign_ambulance_id: amb.id };
-      await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+      const response = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Ambulance assignment failed.");
+
+      setAmbulances((prev) => prev.map((a) => (a.id === amb.id ? { ...a, status: "en_route" } : a)));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+          cached.map((row) => Number(row.id) === bookingId ? { ...row, ...data } : row)
+        ));
+      } catch {}
+
+      navigate("/Requests", {
+        state: { flashMsg: `Booking #${bookingId} assigned to ${amb.ambulance_number}` },
+      });
     } catch (err) {
-      console.warn("Background ambulance assignment error:", err);
+      console.warn("Ambulance assignment error:", err);
+      showToast(err.message || "Ambulance assignment failed. Please try again.", "err");
+    } finally {
+      setAssignmentBusy(false);
     }
   };
 
@@ -1845,6 +1836,7 @@ export default function Ambulances() {
                       <div className="amb2-actions">
                         <button
                           className={`amb2-btn main ${canBook ? "" : "alt"}`}
+                          disabled={assignmentBusy && isAdmin && (reassignBookingId > 0 || assignBookingId > 0)}
                           onClick={() => {
                             if (isAdmin && (reassignBookingId > 0 || assignBookingId > 0)) {
                               assignAmbulanceToBooking(a);
