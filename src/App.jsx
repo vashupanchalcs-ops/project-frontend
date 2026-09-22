@@ -1973,6 +1973,10 @@ const App = () => {
           padding-right: 0 !important;
         }
         html body #root .admin-route-shell > :is(.admin-hospitals-page, .ahd-root, .cm-root) > :is(.admin-hospitals-shell, .ahd-shell, .cm-shell) {
+          width: 100%;
+          max-width: none;
+          margin-left: 0;
+          margin-right: 0;
           box-sizing: border-box;
           padding-left: 24px;
           padding-right: 24px;
