@@ -520,7 +520,11 @@ export default function DriverDashboard() {
   }, [ambId, driverEmail, driverName]);
 
   const fetchBookings = useCallback(() => {
-    fetch(`${BASE}/api/bookings/?_=${Date.now()}`, { cache: "no-store" })
+    const query = new URLSearchParams();
+    if (effectiveAmbIdRef.current > 0) query.set("ambulance_id", String(effectiveAmbIdRef.current));
+    if (driverEmail) query.set("driver_email", driverEmail);
+    const scopedUrl = `${BASE}/api/bookings/driver-assigned/?${query.toString()}`;
+    fetch(scopedUrl)
       .then(r => r.json())
       .then(data => {
         const rows = Array.isArray(data) ? data : (data ? [data] : []);
@@ -573,6 +577,7 @@ export default function DriverDashboard() {
           ...(bookingMutationOverridesRef.current.get(Number(booking.id)) || {}),
         }));
         setMyBookings(mergedMine);
+        try { sessionStorage.setItem("driver_bookings_cache", JSON.stringify(mergedMine)); } catch {}
 
         // Sync pending change request banner with backend booking transfer status
         const pendingTransfer = rows.find(
@@ -840,6 +845,13 @@ export default function DriverDashboard() {
       fetchBookings();
     }
   }, [tab, fetchAmbulance, fetchBookings]);
+
+  // The first bookings request can run before the ambulance lookup finishes.
+  // Re-fetch immediately when the real ambulance id arrives instead of
+  // waiting for the next 8-second poll cycle.
+  useEffect(() => {
+    if (effectiveAmbId > 0) fetchBookings();
+  }, [effectiveAmbId, fetchBookings]);
 
   useEffect(() => {
     fetchAmbulance(); fetchBookings(); loadNotifications(); pollServerNotifications();

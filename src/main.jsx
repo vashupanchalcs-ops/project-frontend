@@ -101,6 +101,11 @@ try {
     // Bookings endpoint — only for logged-in non-driver users
     if (role !== "driver") {
       warmupEndpoints.push(`${configuredApiBase}/api/bookings/`);
+    } else if (userEmail) {
+      const warmupAmbulanceId = localStorage.getItem("ambulance_id");
+      const driverQuery = new URLSearchParams({ driver_email: userEmail });
+      if (warmupAmbulanceId) driverQuery.set("ambulance_id", warmupAmbulanceId);
+      warmupEndpoints.push(`${configuredApiBase}/api/bookings/driver-assigned/?${driverQuery.toString()}`);
     }
     if (staffId && userEmail) {
       warmupEndpoints.push(`${configuredApiBase}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(userEmail)}`);
@@ -110,6 +115,7 @@ try {
     }
     if (hospitalId) {
       warmupEndpoints.push(`${configuredApiBase}/api/hospitals/${hospitalId}/beds/`);
+      warmupEndpoints.push(`${configuredApiBase}/api/hospitals/${hospitalId}/staff/`);
     }
 
     // Fire one request every 3 seconds — staggered so backend isn't overwhelmed

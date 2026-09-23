@@ -24,6 +24,15 @@ const readPortalCache = () => {
   }
 };
 
+const readStaffCache = () => {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem("hospital_staff_management_cache") || "null");
+    return asArray(cached?.staff, ["results", "staff", "members"]);
+  } catch {
+    return [];
+  }
+};
+
 const roleFromValue = (value) => {
   const text = String(value || "").toLowerCase();
   return ROLES.find((role) => text === role || text.includes(role)) || "support";
@@ -57,10 +66,14 @@ export default function HospitalTeamAllocation() {
   const editMode = pathname.endsWith("/edit") || new URLSearchParams(search).get("edit") === "1";
   const cachedPortal = readPortalCache();
   const cachedHospitalId = cachedPortal?.hospital?.id || cachedPortal?.hospital?.hospital_id || "";
+  const cachedDirectoryStaff = readStaffCache();
   const [bookings, setBookings] = useState(() => (
     asArray(cachedPortal?.queue, ["bookings", "results"]).map(normalizeBooking).filter((item) => item?.id)
   ));
-  const [staff, setStaff] = useState(() => asArray(cachedPortal?.staff, ["results", "staff", "members"]));
+  const [staff, setStaff] = useState(() => {
+    const portalStaff = asArray(cachedPortal?.staff, ["results", "staff", "members"]);
+    return portalStaff.length ? portalStaff : cachedDirectoryStaff;
+  });
   const [bookingId, setBookingId] = useState(requestedBookingId);
   const [selected, setSelected] = useState({});
   const [step, setStep] = useState(1);
@@ -100,7 +113,8 @@ export default function HospitalTeamAllocation() {
       let scoped = await loadScopedHospital(resolvedHospitalId);
       // A stale hospital_id can still return a valid but empty portal. Resolve
       // the logged-in hospital by email/name before rendering an empty staff list.
-      if (!asArray(scoped.people, ["results", "staff", "members"]).length) {
+      if (!asArray(scoped.people, ["results", "staff", "members"]).length
+        && !asArray(scoped.dashboard?.staff, ["results", "staff", "members"]).length) {
         const email = String(localStorage.getItem("user") || "").trim().toLowerCase();
         const nameHint = String(localStorage.getItem("hospital_name") || localStorage.getItem("name") || "").trim().toLowerCase();
         let candidate = null;
@@ -153,12 +167,20 @@ export default function HospitalTeamAllocation() {
       const filtered = hospitalRows.length ? hospitalRows : (requested ? [requested] : hospitalRows);
       setBookings(filtered);
       const loadedStaff = asArray(people, ["results", "staff", "members"]);
-      const cachedStaff = asArray(cachedPortal?.staff, ["results", "staff", "members"]);
-      setStaff(staffOk && loadedStaff.length ? loadedStaff : cachedStaff);
-      if (loadedStaff.length) {
+      const dashboardStaff = asArray(dashboard?.staff, ["results", "staff", "members"]);
+      const nextStaff = loadedStaff.length
+        ? loadedStaff
+        : dashboardStaff.length
+          ? dashboardStaff
+          : (asArray(cachedPortal?.staff, ["results", "staff", "members"]).length
+            ? asArray(cachedPortal?.staff, ["results", "staff", "members"])
+            : cachedDirectoryStaff);
+      setStaff(nextStaff);
+      if (nextStaff.length) {
         try {
           const cache = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
-          sessionStorage.setItem("hospital_portal_cache", JSON.stringify({ ...cache, staff: loadedStaff }));
+          sessionStorage.setItem("hospital_portal_cache", JSON.stringify({ ...cache, staff: nextStaff }));
+          sessionStorage.setItem("hospital_staff_management_cache", JSON.stringify({ hospital: cache.hospital || null, staff: nextStaff }));
         } catch {}
       }
       const selectedBooking = filtered.find((item) => String(item.id) === String(requestedBookingId));
