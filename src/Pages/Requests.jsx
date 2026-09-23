@@ -392,7 +392,12 @@ const Requests = () => {
                   : "Assign Hospital First"}
               </div>
             )}
-            <button className="req-action req-cancel" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "cancelled")}>{actionPending ? "Saving..." : "✕ Cancel"}</button>
+            <div
+              className="req-action req-waiting"
+              style={{ ...btnStyle, background: "#dcfce7", borderColor: "#86efac", color: "#166534", cursor: "default", pointerEvents: "none" }}
+            >
+              ✓ Confirmed
+            </div>
           </>
         )}
 
