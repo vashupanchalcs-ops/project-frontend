@@ -136,20 +136,33 @@ export default function DriverDashboard() {
   const driverName  = localStorage.getItem("name")             || "Driver";
   const ambId       = parseInt(localStorage.getItem("ambulance_id") || "0");
   const ambNumber   = localStorage.getItem("ambulance_number") || "—";
+  const cachedAmbulances = (() => {
+    try {
+      const sessionRows = JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
+      const localRows = JSON.parse(localStorage.getItem("ambulances_list_cache") || "[]");
+      const merged = [...(Array.isArray(localRows) ? localRows : []), ...(Array.isArray(sessionRows) ? sessionRows : [])];
+      return merged.filter((row, index, rows) => rows.findIndex((item) => Number(item.id) === Number(row.id)) === index);
+    } catch {
+      return [];
+    }
+  })();
+  const cachedAmbulance = cachedAmbulances.find((a) =>
+    (ambId > 0 && Number(a.id) === ambId) ||
+    (ambNumber && String(a.ambulance_number || "").toLowerCase() === String(ambNumber).toLowerCase()) ||
+    (driverEmail && String(a.driver_email || "").toLowerCase() === String(driverEmail).toLowerCase()) ||
+    (driverName && String(a.driver || "").toLowerCase() === String(driverName).toLowerCase())
+  ) || null;
 
   const [driverPhone,   setDriverPhone]  = useState(localStorage.getItem("phone") || "");
   const [ambulance,     setAmbulance]    = useState(() => {
-    try {
-      const list = JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
-      return list.find((a) => a.id === ambId) || null;
-    } catch {
-      return null;
-    }
+    return cachedAmbulance;
   });
   const [liveBatteryPct, setLiveBatteryPct] = useState(null);
   const cachedDriverBookings = (() => {
     try {
-      return JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      const sessionRows = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      const localRows = JSON.parse(localStorage.getItem("driver_bookings_cache") || "[]");
+      return Array.isArray(sessionRows) && sessionRows.length ? sessionRows : (Array.isArray(localRows) ? localRows : []);
     } catch {
       return [];
     }
@@ -158,7 +171,16 @@ export default function DriverDashboard() {
   const [isTracking,    setIsTracking]   = useState(false);
   const [location,      setLocation]     = useState(null);
   const [speed,         setSpeed]        = useState(0);
-  const [route,         setRoute]        = useState(null);
+  const [route,         setRoute]        = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem(`driver_active_route_${Number(ambId || cachedAmbulance?.id || 0)}`) ||
+        localStorage.getItem("driver_active_route") || "null"
+      );
+    } catch {
+      return null;
+    }
+  });
   const [routeAlert, setRouteAlert] = useState("");
   const [notifAllowed,  setNotifAllowed] = useState(Notification.permission === "granted");
   const [log,           setLog]          = useState([]);
@@ -179,7 +201,7 @@ export default function DriverDashboard() {
   });
   const [changeReqAmb,  setChangeReqAmb] = useState(null);
   const [selectedTransferBooking, setSelectedTransferBooking] = useState(null);
-  const [effectiveAmbId, setEffectiveAmbId] = useState(ambId || 0);
+  const [effectiveAmbId, setEffectiveAmbId] = useState(ambId || Number(cachedAmbulance?.id) || 0);
   const [pendingReq,    setPendingReq]   = useState(() => {
     try { return JSON.parse(localStorage.getItem("dr_change_req") || "null"); } catch { return null; }
   });
@@ -198,7 +220,7 @@ export default function DriverDashboard() {
   // storm on Render.
   const allAmbsRef = useRef([]);
   const ambulanceRef = useRef(null);
-  const effectiveAmbIdRef = useRef(ambId || 0);
+  const effectiveAmbIdRef = useRef(ambId || Number(cachedAmbulance?.id) || 0);
   const driverPhoneRef = useRef(driverPhone);
   // A ref makes the guard synchronous; state alone still allows two rapid
   // clicks before React has rendered the disabled button.
@@ -489,15 +511,38 @@ export default function DriverDashboard() {
   }, [driverEmail, loadNotifications]);
 
   const fetchAmbulance = useCallback(() => {
+    // Hydrate from the last database snapshot immediately. The network call
+    // below revalidates it without making the page wait for Render.
+    const cachedRows = cachedAmbulances;
+    if (cachedRows.length) {
+      allAmbsRef.current = cachedRows;
+      setAllAmbs(cachedRows);
+      const cachedMine =
+        cachedRows.find(a => Number(a.id) === Number(ambId)) ||
+        cachedRows.find(a => ambNumber && String(a.ambulance_number || "").toLowerCase() === String(ambNumber).toLowerCase()) ||
+        cachedRows.find(a => String(a.driver_email || "").toLowerCase() === String(driverEmail || "").toLowerCase()) ||
+        cachedRows.find(a => String(a.driver || "").toLowerCase() === String(driverName || "").toLowerCase());
+      if (cachedMine) {
+        ambulanceRef.current = cachedMine;
+        effectiveAmbIdRef.current = Number(cachedMine.id) || 0;
+        setAmbulance(cachedMine);
+        setEffectiveAmbId(Number(cachedMine.id) || 0);
+      }
+    }
     fetch(`${BASE}/api/ambulances/`)
       .then(r => r.json())
       .then(data => {
         const rows = Array.isArray(data) ? data : [];
         allAmbsRef.current = rows;
         setAllAmbs(rows);
+        try {
+          sessionStorage.setItem("ambulances_list_cache", JSON.stringify(rows));
+          localStorage.setItem("ambulances_list_cache", JSON.stringify(rows));
+        } catch {}
         fetch(`${BASE}/api/hospitals/`).then(r=>r.json()).then(h=>setAllHospitals(h)).catch(()=>{});
         const mine =
           rows.find(a => Number(a.id) === Number(ambId)) ||
+          rows.find(a => ambNumber && String(a.ambulance_number || "").toLowerCase() === String(ambNumber).toLowerCase()) ||
           rows.find(a => String(a.driver_email || "").toLowerCase() === String(driverEmail || "").toLowerCase()) ||
           rows.find(a => String(a.driver || "").toLowerCase() === String(driverName || "").toLowerCase());
         if (mine) {
@@ -577,7 +622,10 @@ export default function DriverDashboard() {
           ...(bookingMutationOverridesRef.current.get(Number(booking.id)) || {}),
         }));
         setMyBookings(mergedMine);
-        try { sessionStorage.setItem("driver_bookings_cache", JSON.stringify(mergedMine)); } catch {}
+        try {
+          sessionStorage.setItem("driver_bookings_cache", JSON.stringify(mergedMine));
+          localStorage.setItem("driver_bookings_cache", JSON.stringify(mergedMine));
+        } catch {}
 
         // Sync pending change request banner with backend booking transfer status
         const pendingTransfer = rows.find(
@@ -853,6 +901,32 @@ export default function DriverDashboard() {
     if (effectiveAmbId > 0) fetchBookings();
   }, [effectiveAmbId, fetchBookings]);
 
+  const hydrateActiveRoute = useCallback(async () => {
+    const currentAmbulanceId = Number(effectiveAmbIdRef.current || ambId || 0);
+    if (!driverEmail && currentAmbulanceId <= 0) return;
+    try {
+      const params = new URLSearchParams();
+      if (driverEmail) params.set("driver_email", driverEmail);
+      if (currentAmbulanceId > 0) params.set("ambulance_id", String(currentAmbulanceId));
+      const response = await fetch(`${BASE}/api/driver/active-route/?${params.toString()}`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.id) return;
+      setRoute(data);
+      try {
+        localStorage.setItem(`driver_active_route_${currentAmbulanceId}`, JSON.stringify(data));
+        localStorage.setItem("driver_active_route", JSON.stringify(data));
+      } catch {}
+    } catch {
+      // Cached route stays visible while the backend is waking up.
+    }
+  }, [ambId, driverEmail]);
+
+  useEffect(() => {
+    hydrateActiveRoute();
+    const timer = setInterval(hydrateActiveRoute, 5000);
+    return () => clearInterval(timer);
+  }, [hydrateActiveRoute]);
+
   useEffect(() => {
     fetchAmbulance(); fetchBookings(); loadNotifications(); pollServerNotifications();
     requestNotifPermission().then(ok => setNotifAllowed(ok));
@@ -991,8 +1065,9 @@ export default function DriverDashboard() {
 
   const sendPingNow = useCallback(() => {
     const loc = latestLoc.current;
-    if (!loc || !driverEmail || !ambId) return;
-    const payload = { driver_email: driverEmail, ambulance_id: ambId, latitude: loc.lat, longitude: loc.lng, speed: 0 };
+    const currentAmbulanceId = Number(effectiveAmbIdRef.current || ambId || 0);
+    if (!loc || !driverEmail || !currentAmbulanceId) return;
+    const payload = { driver_email: driverEmail, ambulance_id: currentAmbulanceId, latitude: loc.lat, longitude: loc.lng, speed: 0 };
     if (Number.isFinite(Number(batteryLevelRef.current))) {
       payload.battery_level = Number(batteryLevelRef.current);
     }
@@ -1010,6 +1085,10 @@ export default function DriverDashboard() {
               sendPush("🚨 New Route!", `Pickup: ${nr.pickup_location} → ${nr.destination}`, `route-${nr.id}`);
               if (leafletReady) drawRoute(nr.pickup_location, nr.destination, nr.booking_id);
             }
+            try {
+              localStorage.setItem(`driver_active_route_${currentAmbulanceId}`, JSON.stringify(nr));
+              localStorage.setItem("driver_active_route", JSON.stringify(nr));
+            } catch {}
             return nr;
           });
         }

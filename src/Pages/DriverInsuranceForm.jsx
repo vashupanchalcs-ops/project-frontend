@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
@@ -52,9 +52,35 @@ export default function DriverInsuranceForm() {
   const selectedBookingId = Number(searchParams.get("booking") || 0);
   const driverEmail = String(localStorage.getItem("user") || "").toLowerCase().trim();
   const driverName = String(localStorage.getItem("driver_name") || localStorage.getItem("driver") || "").toLowerCase().trim();
-  const ambulanceId = Number(localStorage.getItem("ambulance_id") || "0");
+  const ambulanceNumber = String(localStorage.getItem("ambulance_number") || "").trim().toLowerCase();
+  const cachedAmbulances = (() => {
+    try {
+      const sessionRows = JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
+      const localRows = JSON.parse(localStorage.getItem("ambulances_list_cache") || "[]");
+      const rows = [...(Array.isArray(localRows) ? localRows : []), ...(Array.isArray(sessionRows) ? sessionRows : [])];
+      return rows.filter((row, index, all) => all.findIndex((item) => Number(item.id) === Number(row.id)) === index);
+    } catch {
+      return [];
+    }
+  })();
+  const cachedAmbulance = cachedAmbulances.find((item) =>
+    (ambulanceNumber && String(item.ambulance_number || "").toLowerCase() === ambulanceNumber) ||
+    (driverEmail && String(item.driver_email || "").toLowerCase() === driverEmail) ||
+    (driverName && String(item.driver || "").toLowerCase() === driverName)
+  );
+  const ambulanceId = Number(localStorage.getItem("ambulance_id") || cachedAmbulance?.id || 0);
+  const cachedBookings = (() => {
+    try {
+      const sessionRows = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      const localRows = JSON.parse(localStorage.getItem("driver_bookings_cache") || "[]");
+      const rows = Array.isArray(sessionRows) && sessionRows.length ? sessionRows : (Array.isArray(localRows) ? localRows : []);
+      return rows.filter((b) => b.status === "confirmed" && b.sent_to_driver);
+    } catch {
+      return [];
+    }
+  })();
 
-  const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState(cachedBookings);
   const [drafts, setDrafts] = useState({});
   const [savingId, setSavingId] = useState(0);
   const [msg, setMsg] = useState("");
@@ -62,11 +88,7 @@ export default function DriverInsuranceForm() {
   const savingLocksRef = useRef(new Set());
   const bookingOverridesRef = useRef(new Map());
 
-  const loadBookings = async () => {
-    try {
-      const res = await fetch(`${BASE}/api/bookings/?_=${Date.now()}`, { cache: "no-store" });
-      const data = await res.json();
-      const rows = Array.isArray(data) ? data : [];
+  const applyBookings = useCallback((rows) => {
       const mine = rows.filter((b) => {
         if (!(b.status === "confirmed" && b.sent_to_driver)) return false;
         const bEmail = String(b.driver_email || "").toLowerCase().trim();
@@ -100,10 +122,27 @@ export default function DriverInsuranceForm() {
         });
         return next;
       });
+      try {
+        sessionStorage.setItem("driver_bookings_cache", JSON.stringify(mine));
+        localStorage.setItem("driver_bookings_cache", JSON.stringify(mine));
+      } catch {}
+  }, [ambulanceId, driverEmail, driverName]);
+
+  const loadBookings = useCallback(async () => {
+    // Keep the last database snapshot visible while Render revalidates.
+    if (cachedBookings.length) applyBookings(cachedBookings);
+    try {
+      const query = new URLSearchParams();
+      if (ambulanceId > 0) query.set("ambulance_id", String(ambulanceId));
+      if (driverEmail) query.set("driver_email", driverEmail);
+      const res = await fetch(`${BASE}/api/bookings/driver-assigned/?${query.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Unable to load insurance bookings");
+      applyBookings(Array.isArray(data) ? data : []);
     } catch {
-      setBookings([]);
+      // Never replace usable cached cards with a delayed/failed empty state.
     }
-  };
+  }, [ambulanceId, driverEmail, cachedBookings.length, applyBookings]);
 
   useEffect(() => {
     loadBookings();

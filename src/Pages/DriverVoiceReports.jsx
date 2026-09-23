@@ -31,11 +31,41 @@ export default function DriverVoiceReports() {
   const [message, setMessage] = useState("");
   const [transferredByBooking, setTransferredByBooking] = useState({});
   const sendingRef = useRef(false);
-  const ambulanceId = Number(localStorage.getItem("ambulance_id") || 0);
   const driverEmail = localStorage.getItem("user") || localStorage.getItem("driver_email") || "";
   const driverName = localStorage.getItem("name") || localStorage.getItem("driver_name") || "Ambulance driver";
+  const ambulanceNumber = String(localStorage.getItem("ambulance_number") || "").trim().toLowerCase();
+  const cachedAmbulanceId = (() => {
+    try {
+      const sessionRows = JSON.parse(sessionStorage.getItem("ambulances_list_cache") || "[]");
+      const localRows = JSON.parse(localStorage.getItem("ambulances_list_cache") || "[]");
+      const rows = [...(Array.isArray(localRows) ? localRows : []), ...(Array.isArray(sessionRows) ? sessionRows : [])];
+      const mine = rows.find((item) =>
+        (ambulanceNumber && String(item.ambulance_number || "").toLowerCase() === ambulanceNumber) ||
+        (driverEmail && String(item.driver_email || "").toLowerCase() === driverEmail) ||
+        (driverName && String(item.driver || "").toLowerCase() === driverName)
+      );
+      return Number(mine?.id || 0);
+    } catch {
+      return 0;
+    }
+  })();
+  const ambulanceId = Number(localStorage.getItem("ambulance_id") || cachedAmbulanceId || 0);
+  const cachedBookings = (() => {
+    try {
+      const sessionRows = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      const localRows = JSON.parse(localStorage.getItem("driver_bookings_cache") || "[]");
+      return Array.isArray(sessionRows) && sessionRows.length ? sessionRows : (Array.isArray(localRows) ? localRows : []);
+    } catch {
+      return [];
+    }
+  })();
+  const cachedAssignedBookings = cachedBookings.filter((b) => b.status === "confirmed" && b.sent_to_driver);
 
   const load = useCallback(async () => {
+    if (cachedAssignedBookings.length) {
+      setBookings(cachedAssignedBookings);
+      setLoading(false);
+    }
     if (!ambulanceId) {
       setError("Your ambulance is not linked to this driver session. Please sign in again.");
       setLoading(false);
@@ -43,17 +73,22 @@ export default function DriverVoiceReports() {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${BASE}/api/bookings/driver-assigned/?ambulance_id=${ambulanceId}&driver_email=${encodeURIComponent(driverEmail)}`, { cache: "no-store" });
+      const response = await fetch(`${BASE}/api/bookings/driver-assigned/?ambulance_id=${ambulanceId}&driver_email=${encodeURIComponent(driverEmail)}`);
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Unable to load assigned bookings");
-      setBookings(Array.isArray(data) ? data : []);
+      const rows = Array.isArray(data) ? data : [];
+      setBookings(rows);
+      try {
+        sessionStorage.setItem("driver_bookings_cache", JSON.stringify(rows));
+        localStorage.setItem("driver_bookings_cache", JSON.stringify(rows));
+      } catch {}
       setError("");
     } catch (err) {
-      setError(err.message || "Unable to load assigned bookings");
+      if (!cachedAssignedBookings.length) setError(err.message || "Unable to load assigned bookings");
     } finally {
       setLoading(false);
     }
-  }, [ambulanceId, driverEmail]);
+  }, [ambulanceId, driverEmail, cachedAssignedBookings.length]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -98,7 +133,10 @@ export default function DriverVoiceReports() {
     }
     sendingRef.current = true;
     setSending(true);
-    setMessage("");
+    // Show the completed state immediately after the single click. The
+    // request continues in the background and rolls back only on failure.
+    setTransferredByBooking((current) => ({ ...current, [activeId]: true }));
+    setMessage(`${drafts.length} photo(s) transferring to the hospital…`);
     try {
       const payload = new FormData();
       drafts.forEach((draft) => {
@@ -116,10 +154,10 @@ export default function DriverVoiceReports() {
       if (!response.ok) throw new Error(data.error || "Photo upload failed");
       drafts.forEach((draft) => draft.preview && URL.revokeObjectURL(draft.preview));
       setDraftsByBooking((current) => ({ ...current, [activeId]: [] }));
-      setTransferredByBooking((current) => ({ ...current, [activeId]: true }));
       setMessage(`${data.photos?.length || drafts.length} photo(s) transferred to the hospital and assigned staff.`);
       await load();
     } catch (err) {
+      setTransferredByBooking((current) => ({ ...current, [activeId]: false }));
       setMessage(err.message || "Photo upload failed");
     } finally {
       sendingRef.current = false;
