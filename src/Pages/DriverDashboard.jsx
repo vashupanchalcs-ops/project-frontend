@@ -203,6 +203,7 @@ export default function DriverDashboard() {
   // A ref makes the guard synchronous; state alone still allows two rapid
   // clicks before React has rendered the disabled button.
   const bookingActionLocksRef = useRef(new Set());
+  const bookingMutationOverridesRef = useRef(new Map());
 
   const beginBookingAction = (bookingId, action) => {
     const key = `${Number(bookingId)}:${action}`;
@@ -519,7 +520,7 @@ export default function DriverDashboard() {
   }, [ambId, driverEmail, driverName]);
 
   const fetchBookings = useCallback(() => {
-    fetch(`${BASE}/api/bookings/`)
+    fetch(`${BASE}/api/bookings/?_=${Date.now()}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => {
         const rows = Array.isArray(data) ? data : (data ? [data] : []);
@@ -567,7 +568,11 @@ export default function DriverDashboard() {
             );
           })
           .sort((a, b) => b.id - a.id);
-        setMyBookings(mine);
+        const mergedMine = mine.map((booking) => ({
+          ...booking,
+          ...(bookingMutationOverridesRef.current.get(Number(booking.id)) || {}),
+        }));
+        setMyBookings(mergedMine);
 
         // Sync pending change request banner with backend booking transfer status
         const pendingTransfer = rows.find(
@@ -620,6 +625,7 @@ export default function DriverDashboard() {
 
   const acceptBooking = async (bookingId) => {
     if (!beginBookingAction(bookingId, "accept")) return;
+    bookingMutationOverridesRef.current.set(Number(bookingId), { driver_accepted: true, driver_status: "accepted" });
     // 1. Instant 0ms optimistic local update
     setMyBookings((prev) =>
       prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
@@ -638,6 +644,7 @@ export default function DriverDashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Accept failed");
+      bookingMutationOverridesRef.current.set(Number(bookingId), { driver_accepted: true, driver_status: "accepted", ...data });
       setMyBookings((prev) => prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b)));
       try {
         const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
@@ -648,6 +655,7 @@ export default function DriverDashboard() {
       addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
       fetchBookings();
     } catch {
+      bookingMutationOverridesRef.current.delete(Number(bookingId));
       addLog("Accept booking failed", "error");
       fetchBookings();
     } finally {
@@ -740,14 +748,23 @@ export default function DriverDashboard() {
       return;
     }
     if (!beginBookingAction(bookingId, "report")) return;
+    const reportPatch = {
+      report_submitted_at: new Date().toISOString(),
+      report_submitted_by: driverName || "Driver Team",
+      patient_name: draft.patient_name,
+      patient_age: draft.patient_age,
+      patient_gender: draft.patient_gender,
+      patient_condition: draft.patient_condition,
+      vitals_summary: draft.vitals_summary,
+    };
+    bookingMutationOverridesRef.current.set(Number(bookingId), reportPatch);
     // Optimistic update so the card never blinks or hides
     setMyBookings((prev) =>
       prev.map((b) =>
         Number(b.id) === Number(bookingId)
           ? {
               ...b,
-              report_submitted_at: new Date().toISOString(),
-              report_submitted_by: driverName || "Driver Team",
+              ...reportPatch,
               patient_name: draft.patient_name || b.patient_name,
               patient_age: draft.patient_age || b.patient_age,
               patient_gender: draft.patient_gender || b.patient_gender,
@@ -771,6 +788,7 @@ export default function DriverDashboard() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Report submit failed");
+      bookingMutationOverridesRef.current.set(Number(bookingId), { ...reportPatch, ...data });
       setMyBookings((prev) => prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b)));
       try {
         const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
@@ -781,6 +799,7 @@ export default function DriverDashboard() {
       addLog(`Patient report sent for booking #${bookingId}`, "success");
       fetchBookings();
     } catch {
+      bookingMutationOverridesRef.current.delete(Number(bookingId));
       addLog("Patient report send failed", "error");
       fetchBookings();
     } finally {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
@@ -58,10 +58,13 @@ export default function DriverInsuranceForm() {
   const [drafts, setDrafts] = useState({});
   const [savingId, setSavingId] = useState(0);
   const [msg, setMsg] = useState("");
+  const [msgType, setMsgType] = useState("success");
+  const savingLocksRef = useRef(new Set());
+  const bookingOverridesRef = useRef(new Map());
 
   const loadBookings = async () => {
     try {
-      const res = await fetch(`${BASE}/api/bookings/`);
+      const res = await fetch(`${BASE}/api/bookings/?_=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       const rows = Array.isArray(data) ? data : [];
       const mine = rows.filter((b) => {
@@ -73,7 +76,10 @@ export default function DriverInsuranceForm() {
         const byName = !!driverName && bName === driverName;
         return byAmb || byEmail || byName;
       });
-      setBookings(mine);
+      setBookings(mine.map((booking) => ({
+        ...booking,
+        ...(bookingOverridesRef.current.get(Number(booking.id)) || {}),
+      })));
       setDrafts((prev) => {
         const next = { ...prev };
         mine.forEach((b) => {
@@ -142,22 +148,40 @@ export default function DriverInsuranceForm() {
   };
 
   const sendInsurance = async (booking) => {
+    if (savingLocksRef.current.has(Number(booking.id))) return;
     const draft = drafts[booking.id] || emptyDraft();
     if (!draft.full_name || !draft.insurance_provider || !draft.policy_member_id) {
+      setMsgType("error");
       setMsg("Full Name, Insurance Provider, and Policy/Member ID are required.");
       return;
     }
+    savingLocksRef.current.add(Number(booking.id));
     setSavingId(booking.id);
+    setMsgType("success");
     setMsg("");
+    const submittedAt = new Date().toISOString();
+    const insurancePatch = {
+      insurance_status: "submitted",
+      insurance_submitted_at: submittedAt,
+      insurance_full_name: draft.full_name,
+      insurance_dob: draft.date_of_birth,
+      insurance_gender: draft.gender,
+      insurance_provider: draft.insurance_provider,
+      insurance_policy_member_id: draft.policy_member_id,
+      insurance_policy_holder_name: draft.policy_holder_name,
+      insurance_government_id: draft.government_id,
+      insurance_sum_insured: draft.sum_insured,
+      insurance_emergency_nature: draft.emergency_nature,
+      insurance_exclusions_waiting: draft.exclusions_waiting_period,
+    };
+    bookingOverridesRef.current.set(Number(booking.id), insurancePatch);
     // Optimistic update so the card doesn't fluctuate
     setBookings((prev) =>
       prev.map((b) =>
         b.id === booking.id
           ? {
               ...b,
-              insurance_status: "submitted",
-              insurance_provider: draft.insurance_provider,
-              insurance_policy_member_id: draft.policy_member_id,
+              ...insurancePatch,
             }
           : b
       )
@@ -175,11 +199,15 @@ export default function DriverInsuranceForm() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Insurance form send failed");
+      bookingOverridesRef.current.set(Number(booking.id), { ...insurancePatch, ...json });
       setMsg(`Insurance details for Booking #${booking.id} were sent to the hospital.`);
       loadBookings();
     } catch (e) {
+      bookingOverridesRef.current.delete(Number(booking.id));
+      setMsgType("error");
       setMsg(e.message || "Insurance details send failed.");
     } finally {
+      savingLocksRef.current.delete(Number(booking.id));
       setSavingId(0);
     }
   };
@@ -202,6 +230,7 @@ export default function DriverInsuranceForm() {
         .di-summary-card.submitted .di-summary-value { color:#126f1e; }
         .di-summary-card.pending .di-summary-value { color:#c47a00; }
         .di-message { margin-top:14px; border:1px solid #a9d9b3; border-radius:10px; background:#f0fbf2; color:#126f1e; padding:12px 14px; font-size:13px; font-weight:800; }
+        .di-message.error { border-color:#efb2b7; background:#fff3f4; color:#ae202b; }
         .di-list { display:grid; gap:16px; margin-top:16px; }
         .di-empty { border:1px dashed #b9c8bf; border-radius:14px; background:#fff; padding:42px 22px; color:#68766f; text-align:center; }
         .di-card { border:1px solid #cbd9cf; border-radius:16px; background:#fff; padding:20px; box-shadow:0 5px 18px rgba(31,82,48,.05); }
@@ -267,7 +296,7 @@ export default function DriverInsuranceForm() {
             <div className="di-summary-card pending"><div className="di-summary-label">Pending forms</div><div className="di-summary-value">{insuranceStats.pending}</div></div>
           </section>
 
-          {msg && <div className="di-message" role="status">{msg}</div>}
+          {msg && <div className={`di-message ${msgType === "error" ? "error" : ""}`} role="status">{msg}</div>}
 
           {orderedBookings.length === 0 ? (
             <div className="di-empty">No confirmed driver bookings found for insurance submission.</div>
@@ -318,7 +347,7 @@ export default function DriverInsuranceForm() {
                           <label className="di-field wide"><span className="di-label">Exclusions / waiting period</span><textarea className="di-input di-textarea" value={d.exclusions_waiting_period} onChange={(e) => updateDraft(b.id, "exclusions_waiting_period", e.target.value)} placeholder="Add exclusions or waiting-period notes" /></label>
                         </div>
                         <div className="di-actions">
-                          <button className="di-submit" type="button" onClick={() => sendInsurance(b)} disabled={savingId === b.id}>{savingId === b.id ? "Sending..." : alreadySent ? "Update & Re-send to Hospital" : "Send to Hospital"}</button>
+                          <button className="di-submit" type="button" onClick={() => sendInsurance(b)} disabled={savingId === b.id || alreadySent}>{savingId === b.id ? "Sending..." : alreadySent ? "✓ Sent Successfully" : "Send to Hospital"}</button>
                           {b.insurance_submitted_at && <span className="di-submitted-at">Submitted: {new Date(b.insurance_submitted_at).toLocaleString("en-IN")}</span>}
                         </div>
                       </div>

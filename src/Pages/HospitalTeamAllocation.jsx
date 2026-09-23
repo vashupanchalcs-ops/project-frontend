@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com")).replace(/\/+$/, "");
@@ -66,6 +66,7 @@ export default function HospitalTeamAllocation() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const savingRef = useRef(false);
   const hospitalId = localStorage.getItem("hospital_id") || String(cachedHospitalId || "");
   const activeBookingId = bookingId || requestedBookingId;
   const booking = useMemo(() => bookings.find((item) => String(item.id) === String(activeBookingId)) || (!activeBookingId ? bookings[0] || null : null), [bookings, activeBookingId]);
@@ -80,18 +81,53 @@ export default function HospitalTeamAllocation() {
       let people = [];
       let staffOk = false;
       let rawRows = [];
+      let resolvedHospitalId = String(hospitalId || cachedHospitalId || "");
 
-      if (hospitalId) {
+      const loadScopedHospital = async (id) => {
+        if (!id) return { dashboard: null, dashboardOk: false, people: [], staffOk: false };
         const [dashboardResponse, staffResponse] = await Promise.all([
-          fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/`, { cache: "no-store", signal: controller.signal }),
-          fetch(`${BASE}/api/hospitals/${hospitalId}/staff/`, { cache: "no-store", signal: controller.signal }),
+          fetch(`${BASE}/api/hospitals/${id}/dashboard/?_=${Date.now()}`, { cache: "no-store", signal: controller.signal }),
+          fetch(`${BASE}/api/hospitals/${id}/staff/?_=${Date.now()}`, { cache: "no-store", signal: controller.signal }),
         ]);
-        dashboardOk = dashboardResponse.ok;
-        staffOk = staffResponse.ok;
-        if (dashboardResponse.ok) dashboard = await dashboardResponse.json();
-        if (staffResponse.ok) people = await staffResponse.json();
-        rawRows = asArray(dashboard?.queue, ["bookings", "results"]);
+        return {
+          dashboard: dashboardResponse.ok ? await dashboardResponse.json() : null,
+          dashboardOk: dashboardResponse.ok,
+          people: staffResponse.ok ? await staffResponse.json() : [],
+          staffOk: staffResponse.ok,
+        };
+      };
+
+      let scoped = await loadScopedHospital(resolvedHospitalId);
+      // A stale hospital_id can still return a valid but empty portal. Resolve
+      // the logged-in hospital by email/name before rendering an empty staff list.
+      if (!asArray(scoped.people, ["results", "staff", "members"]).length) {
+        const email = String(localStorage.getItem("user") || "").trim().toLowerCase();
+        const nameHint = String(localStorage.getItem("hospital_name") || localStorage.getItem("name") || "").trim().toLowerCase();
+        let candidate = null;
+        if (email) {
+          const byEmail = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(email)}&_=${Date.now()}`, { cache: "no-store", signal: controller.signal }).catch(() => null);
+          if (byEmail?.ok) candidate = await byEmail.json().catch(() => null);
+        }
+        if (!candidate || !candidate.id && !candidate.hospital_id) {
+          const hospitalsResponse = await fetch(`${BASE}/api/hospitals/?_=${Date.now()}`, { cache: "no-store", signal: controller.signal }).catch(() => null);
+          const hospitals = hospitalsResponse?.ok ? await hospitalsResponse.json().catch(() => []) : [];
+          const rows = Array.isArray(hospitals) ? hospitals : [];
+          candidate = rows.find((item) => email && String(item.email || "").trim().toLowerCase() === email)
+            || rows.find((item) => nameHint && String(item.name || "").trim().toLowerCase() === nameHint)
+            || (rows.length === 1 ? rows[0] : null);
+        }
+        const candidateId = String(candidate?.hospital_id || candidate?.id || "");
+        if (candidateId && candidateId !== resolvedHospitalId) {
+          resolvedHospitalId = candidateId;
+          localStorage.setItem("hospital_id", candidateId);
+          scoped = await loadScopedHospital(candidateId);
+        }
       }
+      dashboard = scoped.dashboard;
+      dashboardOk = scoped.dashboardOk;
+      people = scoped.people;
+      staffOk = scoped.staffOk;
+      rawRows = asArray(dashboard?.queue, ["bookings", "results"]);
 
       // Use the fast, hospital-scoped dashboard response first. The global
       // endpoint remains a compatibility fallback for older records.
@@ -112,12 +148,19 @@ export default function HospitalTeamAllocation() {
         .filter((item) => item?.id);
       const hospitalRows = dashboardRows.length
         ? dashboardRows
-        : rows.filter((item) => !hospitalId || String(item.assigned_hospital_id) === String(hospitalId));
+        : rows.filter((item) => !resolvedHospitalId || String(item.assigned_hospital_id) === String(resolvedHospitalId));
       const requested = rows.find((item) => String(item.id) === String(requestedBookingId));
       const filtered = hospitalRows.length ? hospitalRows : (requested ? [requested] : hospitalRows);
       setBookings(filtered);
       const loadedStaff = asArray(people, ["results", "staff", "members"]);
-      setStaff(staffOk ? loadedStaff : asArray(cachedPortal?.staff, ["results", "staff", "members"]));
+      const cachedStaff = asArray(cachedPortal?.staff, ["results", "staff", "members"]);
+      setStaff(staffOk && loadedStaff.length ? loadedStaff : cachedStaff);
+      if (loadedStaff.length) {
+        try {
+          const cache = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+          sessionStorage.setItem("hospital_portal_cache", JSON.stringify({ ...cache, staff: loadedStaff }));
+        } catch {}
+      }
       const selectedBooking = filtered.find((item) => String(item.id) === String(requestedBookingId));
       setBookingId(String((selectedBooking || filtered[0])?.id || ""));
       if (!dashboardOk && !filtered.length && !people.length) {
@@ -184,7 +227,8 @@ export default function HospitalTeamAllocation() {
   };
 
   const allocate = async () => {
-    if (!booking || !selectedMembers.length) return;
+    if (!booking || !selectedMembers.length || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setNotice("");
     const team = selectedMembers.map(({ role, member }) => ({
@@ -196,18 +240,12 @@ export default function HospitalTeamAllocation() {
       years_experience: member.years_experience || 0,
     }));
     try {
-      let response = await fetch(`${BASE}/api/hospitals/${hospitalId}/staff-team/assign/`, {
-        method: "POST",
+      const targetHospitalId = localStorage.getItem("hospital_id") || String(cachedHospitalId || "");
+      const response = await fetch(`${BASE}/api/bookings/${booking.id}/`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ booking_id: booking.id, staff_ids: team.map((person) => person.id) }),
+        body: JSON.stringify({ assign_doctors: team, hospital_id: targetHospitalId || undefined }),
       });
-      if (!response.ok) {
-        response = await fetch(`${BASE}/api/bookings/${booking.id}/`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assign_doctors: team }),
-        });
-      }
       let responseData = {};
       try { responseData = await response.json(); } catch {}
       if (!response.ok) throw new Error(responseData.error || "Team allocation could not be saved. Please retry.");
@@ -223,6 +261,7 @@ export default function HospitalTeamAllocation() {
     } catch (error) {
       setNotice(error.message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
