@@ -747,6 +747,43 @@ export default function Ambulances() {
     }
     assignmentBusyRef.current = true;
     setAssignmentBusy(true);
+    const optimisticPatch = {
+      ambulance_id: amb.id,
+      ambulance_number: amb.ambulance_number || "",
+      driver: amb.driver || "",
+      driver_contact: amb.driver_contact || "",
+      ...(reassignBookingId
+        ? { sent_to_driver: true, driver_status: "pending", driver_accepted: false }
+        : { sent_to_driver: false }),
+    };
+    const rememberIntent = (patch) => {
+      try {
+        const intents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
+        intents[bookingId] = { patch, expiresAt: Date.now() + 20000 };
+        sessionStorage.setItem("admin_assignment_intents", JSON.stringify(intents));
+      } catch {}
+    };
+    const clearIntent = () => {
+      try {
+        const intents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
+        delete intents[bookingId];
+        sessionStorage.setItem("admin_assignment_intents", JSON.stringify(intents));
+      } catch {}
+    };
+    const mergeBookingCache = (patch) => {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+          cached.map((row) => Number(row.id) === bookingId ? { ...row, ...patch } : row)
+        ));
+      } catch {}
+    };
+    setAmbulances((prev) => prev.map((a) => (a.id === amb.id ? { ...a, status: "en_route" } : a)));
+    mergeBookingCache(optimisticPatch);
+    rememberIntent(optimisticPatch);
+    navigate("/Requests", {
+      state: { flashMsg: `Booking #${bookingId} assigned to ${amb.ambulance_number}` },
+    });
     try {
       const payload = reassignBookingId
         ? { reassign_ambulance_id: amb.id, notify_user_reassigned: true }
@@ -758,21 +795,15 @@ export default function Ambulances() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Ambulance assignment failed.");
-
-      setAmbulances((prev) => prev.map((a) => (a.id === amb.id ? { ...a, status: "en_route" } : a)));
-      try {
-        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
-        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
-          cached.map((row) => Number(row.id) === bookingId ? { ...row, ...data } : row)
-        ));
-      } catch {}
-
-      navigate("/Requests", {
-        state: { flashMsg: `Booking #${bookingId} assigned to ${amb.ambulance_number}` },
-      });
+      mergeBookingCache(data);
+      clearIntent();
     } catch (err) {
       console.warn("Ambulance assignment error:", err);
-      showToast(err.message || "Ambulance assignment failed. Please try again.", "err");
+      clearIntent();
+      try {
+        const current = await fetch(`${BASE}/api/bookings/${bookingId}/`).then((response) => response.ok ? response.json() : null);
+        if (current) mergeBookingCache(current);
+      } catch {}
     } finally {
       assignmentBusyRef.current = false;
       setAssignmentBusy(false);

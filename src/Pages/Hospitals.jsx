@@ -151,6 +151,45 @@ export default function Hospitals() {
     assignmentBusyRef.current = true;
     setAssignmentBusy(true);
     setAssignmentError("");
+    const bookingId = Number(assignBookingId);
+    const optimisticPatch = {
+      assigned_hospital_id: hospital.id,
+      assigned_hospital_name: hospital.name || "",
+      assigned_hospital_address: hospital.address || "",
+      assigned_hospital_contact: hospital.contact_number || "",
+      assigned_hospital_email: hospital.email || "",
+      destination: hospital.name || assignBooking?.destination || "",
+      hospital_alert_sent: true,
+      hospital_response: "pending",
+      hospital_response_note: "Awaiting hospital readiness response.",
+    };
+    const rememberIntent = (patch) => {
+      try {
+        const intents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
+        intents[bookingId] = { patch, expiresAt: Date.now() + 20000 };
+        sessionStorage.setItem("admin_assignment_intents", JSON.stringify(intents));
+      } catch {}
+    };
+    const clearIntent = () => {
+      try {
+        const intents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
+        delete intents[bookingId];
+        sessionStorage.setItem("admin_assignment_intents", JSON.stringify(intents));
+      } catch {}
+    };
+    const mergeBookingCache = (patch) => {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
+        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
+          cached.map((row) => Number(row.id) === bookingId ? { ...row, ...patch } : row)
+        ));
+      } catch {}
+    };
+    mergeBookingCache(optimisticPatch);
+    rememberIntent(optimisticPatch);
+    navigate("/Requests", {
+      state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
+    });
     try {
       const response = await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
         method: "PATCH",
@@ -162,22 +201,15 @@ export default function Hospitals() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Hospital assignment failed.");
-
-      // Store only the committed server response. This prevents the Requests
-      // polling loop from replacing an optimistic value with old data.
-      try {
-        const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
-        sessionStorage.setItem("admin_requests_cache", JSON.stringify(
-          cached.map((row) => Number(row.id) === Number(assignBookingId) ? { ...row, ...data } : row)
-        ));
-      } catch {}
-
-      navigate("/Requests", {
-        state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
-      });
+      mergeBookingCache(data);
+      clearIntent();
     } catch (err) {
       console.warn("Hospital assignment error:", err);
-      setAssignmentError(err.message || "Hospital assignment failed. Please try again.");
+      clearIntent();
+      try {
+        const current = await fetch(`${BASE}/api/bookings/${bookingId}/`).then((response) => response.ok ? response.json() : null);
+        if (current) mergeBookingCache(current);
+      } catch {}
     } finally {
       assignmentBusyRef.current = false;
       setAssignmentBusy(false);

@@ -69,15 +69,26 @@ const Requests = () => {
           const bId = Number(b?.id || 0);
           return bId - aId;
         });
+        let assignmentIntents = {};
+        try {
+          assignmentIntents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
+          const now = Date.now();
+          Object.keys(assignmentIntents).forEach((key) => {
+            if (!assignmentIntents[key] || assignmentIntents[key].expiresAt <= now) delete assignmentIntents[key];
+          });
+          sessionStorage.setItem("admin_assignment_intents", JSON.stringify(assignmentIntents));
+        } catch {}
         const visibleList = list.map((row) => {
+          const assignmentIntent = assignmentIntents[String(row?.id)];
+          const assignmentRow = assignmentIntent ? { ...row, ...assignmentIntent.patch } : row;
           const pendingPayload = pendingActionsRef.current.get(Number(row?.id));
           const committed = committedBookingPatchesRef.current.get(Number(row?.id));
           if (committed && Date.now() < committed.expiresAt) {
             const serverMatches = Object.entries(committed.patch).every(([key, value]) => row?.[key] === value);
             if (serverMatches) committedBookingPatchesRef.current.delete(Number(row?.id));
-            else return { ...row, ...committed.patch, ...(pendingPayload || {}) };
+            else return { ...assignmentRow, ...committed.patch, ...(pendingPayload || {}) };
           }
-          return pendingPayload ? { ...row, ...pendingPayload } : row;
+          return pendingPayload ? { ...assignmentRow, ...pendingPayload } : assignmentRow;
         });
         setBookings(visibleList);
         try { sessionStorage.setItem("admin_requests_cache", JSON.stringify(visibleList)); } catch {}
