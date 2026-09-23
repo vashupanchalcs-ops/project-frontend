@@ -217,7 +217,7 @@ export default function Ambulances() {
   }, [form.booking_for_other, form.pickup_address, locationMode, locationPermission]);
 
   useEffect(() => {
-    fetch(`${BASE}/api/ambulances/`)
+    fetch(`${BASE}/api/ambulances/`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         const rows = Array.isArray(data) ? data : [];
@@ -226,7 +226,7 @@ export default function Ambulances() {
       })
       .catch(() => {});
 
-    fetch(`${BASE}/api/bookings/`)
+    fetch(`${BASE}/api/bookings/`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         const rows = Array.isArray(data) ? data : [];

@@ -10,6 +10,7 @@ const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
   : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
+const ACTION_RECONCILIATION_MS = 90000;
 
 const statusColors = {
   pending: { color: "#111", bg: "#ffffff", border: "#ffffff" },
@@ -60,7 +61,7 @@ const Requests = () => {
   const committedBookingPatchesRef = useRef(new Map());
 
   const fetchBookings = () => {
-    fetch(`${BASE}/api/bookings/`)
+    fetch(`${BASE}/api/bookings/`, { cache: "no-store" })
       .then((r) => r.json())
       .then((rows) => {
         const list = Array.isArray(rows) ? rows : [];
@@ -98,7 +99,7 @@ const Requests = () => {
 
   useEffect(() => {
     fetchBookings();
-    const intervalId = window.setInterval(fetchBookings, 5000);
+    const intervalId = window.setInterval(fetchBookings, 3000);
     const onFocus = () => fetchBookings();
     const onVisibility = () => {
       if (document.visibilityState === "visible") fetchBookings();
@@ -132,6 +133,29 @@ const Requests = () => {
     }
   }, [location.state?.flashMsg, location.pathname, navigate]);
 
+  const patchBooking = async (id, payload) => {
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const res = await fetch(`${BASE}/api/bookings/${id}/`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return data;
+        const error = new Error(data?.error || "Booking update failed");
+        if (res.status < 500 && res.status !== 429) throw error;
+        lastError = error;
+      } catch (error) {
+        lastError = error;
+      }
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+    }
+    throw lastError || new Error("Booking update failed");
+  };
+
   const updateBooking = async (id, payload) => {
     const bid = Number(id);
     if (!bid || pendingActionsRef.current.has(bid)) return null;
@@ -147,18 +171,13 @@ const Requests = () => {
       ));
     } catch {}
 
-    // 2. Background patch
+    // 2. Background patch. Retries cover Render cold-start/network hiccups
+    // while the optimistic state keeps the action single-click and immediate.
     try {
-      const res = await fetch(`${BASE}/api/bookings/${id}/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Booking update failed");
+      const data = await patchBooking(id, payload);
       committedBookingPatchesRef.current.set(bid, {
         patch: data,
-        expiresAt: Date.now() + 20000,
+        expiresAt: Date.now() + ACTION_RECONCILIATION_MS,
       });
       setBookings((prev) => prev.map((row) => (Number(row.id) === bid ? { ...row, ...data } : row)));
       try {
@@ -204,8 +223,13 @@ const Requests = () => {
     }
   };
 
-  const openHospitalAssign = (bookingId) => {
-    navigate("/Hospitals", { state: { assignBookingId: bookingId } });
+  const openHospitalAssign = (booking) => {
+    navigate("/Hospitals", {
+      state: {
+        assignBookingId: booking.id,
+        assignBookingStatus: booking.status,
+      },
+    });
   };
   const openAmbulanceAssign = (bookingId) => {
     navigate("/Ambulances", { state: { assignBookingId: bookingId } });
@@ -222,7 +246,7 @@ const Requests = () => {
       const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
       sessionStorage.setItem("admin_requests_cache", JSON.stringify(cached.filter((r) => Number(r.id) !== bid)));
     } catch {}
-    fetch(`${BASE}/api/bookings/${id}/`, { method: "DELETE" }).catch(() => fetchBookings());
+    fetch(`${BASE}/api/bookings/${id}/`, { method: "DELETE", cache: "no-store" }).catch(() => fetchBookings());
   };
 
   const ActionButtons = ({ b }) => {
@@ -408,7 +432,7 @@ const Requests = () => {
                 </div>
               )
             ) : (
-              <button className="req-action req-assign" style={btnStyle} disabled={actionPending} onClick={() => openHospitalAssign(b.id)}>
+              <button className="req-action req-assign" style={btnStyle} disabled={actionPending} onClick={() => openHospitalAssign(b)}>
                 {b.assigned_hospital_name ? "Reassign Hospital" : "Assign Hospital"}
               </button>
             )}

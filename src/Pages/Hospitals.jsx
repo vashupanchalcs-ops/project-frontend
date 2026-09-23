@@ -80,11 +80,12 @@ export default function Hospitals() {
   const isDriver = role === "driver";
   const isUser = !isAdmin && !isDriver && role !== "hospital";
   const assignBookingId = isAdmin ? location.state?.assignBookingId : null;
+  const assignBookingStatus = isAdmin ? location.state?.assignBookingStatus : null;
   const reselectForBookingId = location.state?.reselectForBookingId || null;
 
   useEffect(() => {
     const loadHospitals = () => {
-      fetch(`${BASE}/api/hospitals/`)
+      fetch(`${BASE}/api/hospitals/`, { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : []))
         .then((rows) => {
           const list = Array.isArray(rows) && rows.length ? rows : DEFAULT_HOSPITALS;
@@ -103,7 +104,7 @@ export default function Hospitals() {
       setAssignBooking(null);
       return;
     }
-    fetch(`${BASE}/api/bookings/${assignBookingId}/`)
+    fetch(`${BASE}/api/bookings/${assignBookingId}/`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setAssignBooking(data || null))
       .catch(() => setAssignBooking(null));
@@ -153,6 +154,9 @@ export default function Hospitals() {
     setAssignmentError("");
     const bookingId = Number(assignBookingId);
     const optimisticPatch = {
+      // Preserve the already-confirmed workflow while the assignment PATCH is
+      // in flight, so polling cannot bring back Confirm/Reject controls.
+      status: assignBooking?.status || assignBookingStatus || "confirmed",
       assigned_hospital_id: hospital.id,
       assigned_hospital_name: hospital.name || "",
       assigned_hospital_address: hospital.address || "",
