@@ -34,6 +34,7 @@ function exportHospitals(rows) {
 
 export default function AdminHospitals({
   hospitals = [],
+  rankedHospitals = null,
   assignBookingId = null,
   reselectForBookingId = null,
   onAssign,
@@ -44,22 +45,27 @@ export default function AdminHospitals({
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("condition");
+  const assignmentMode = Boolean(assignBookingId || reselectForBookingId);
+  const displayedHospitals = assignmentMode && Array.isArray(rankedHospitals) && rankedHospitals.length
+    ? rankedHospitals
+    : hospitals;
 
   const rows = useMemo(() => {
     const search = query.trim().toLowerCase();
-    const filtered = hospitals.filter((hospital) => {
+    const filtered = displayedHospitals.filter((hospital) => {
       if (!search) return true;
       return [hospital.name, hospital.email, hospital.contact_number, hospital.city, hospital.state]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(search));
     });
 
+    if (assignmentMode) return filtered;
     return filtered.sort((a, b) => {
       if (sortBy === "name") return String(a.name || "").localeCompare(String(b.name || ""));
       if (sortBy === "date") return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       return conditionOrder[getHospitalCondition(a).key] - conditionOrder[getHospitalCondition(b).key];
     });
-  }, [hospitals, query, sortBy]);
+  }, [assignmentMode, displayedHospitals, hospitals, query, sortBy]);
 
   const counts = useMemo(() => hospitals.reduce((result, hospital) => {
     result[getHospitalCondition(hospital).key] += 1;
@@ -135,6 +141,25 @@ export default function AdminHospitals({
         .admin-assign-button:disabled { cursor: not-allowed; opacity: .55; }
         .admin-hospital-assignment-banner { margin: 16px 18px 0; padding: 11px 13px; border: 1px solid #f0b36a; border-radius: 9px; background: #fff7e8; color: #8c4a05; font-size: 13px; font-weight: 700; }
         .admin-hospital-assignment-error { margin: 16px 18px 0; padding: 11px 13px; border: 1px solid #e7a1a8; border-radius: 9px; background: #fff0f1; color: #a41f32; font-size: 13px; font-weight: 700; }
+        .admin-assignment-intro { margin: 16px 18px 0; padding: 13px 15px; border: 1px solid #c5dfcf; border-radius: 10px; background: #f1fbf4; color: #245b3b; font-size: 13px; line-height: 1.45; }
+        .admin-assignment-list { display: grid; gap: 16px; padding: 18px; background: #f8fbf9; }
+        .admin-assignment-card { display: grid; grid-template-columns: minmax(230px, .85fr) minmax(420px, 1.65fr) auto; gap: 22px; align-items: center; min-height: 214px; padding: 22px; border: 1px solid #b9d9c2; border-radius: 17px; background: #fff; box-shadow: 0 8px 24px rgba(24, 74, 44, .07); }
+        .admin-assignment-card-best { border: 2px solid #16803a; box-shadow: 0 10px 28px rgba(22, 128, 58, .13); }
+        .admin-assignment-card-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; color: #176638; font-size: 12px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+        .admin-assignment-rank { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; border-radius: 50%; background: #e5f6e9; color: #146b3a; font-size: 13px; }
+        .admin-assignment-best-label { padding: 5px 8px; border-radius: 6px; background: #dff5e5; color: #176638; font-size: 10px; }
+        .admin-assignment-card h2 { margin: 0; color: #12251a; font-size: 22px; line-height: 1.15; }
+        .admin-assignment-address { min-height: 36px; margin: 7px 0 14px; color: #66766d; font-size: 13px; line-height: 1.4; }
+        .admin-assignment-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 7px; background: #e4f8ea; color: #18733f; font-size: 12px; font-weight: 800; }
+        .admin-assignment-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+        .admin-assignment-status-unavailable { background: #ffe5e8; color: #ad2438; }
+        .admin-assignment-metrics { display: grid; grid-template-columns: repeat(4, minmax(105px, 1fr)); gap: 9px; }
+        .admin-assignment-metric { min-height: 62px; padding: 10px 11px; border: 1px solid #deebe2; border-radius: 10px; background: #f9fcfa; }
+        .admin-assignment-metric-label { display: block; margin-bottom: 6px; color: #6b7c72; font-size: 10px; font-weight: 800; letter-spacing: .45px; text-transform: uppercase; }
+        .admin-assignment-metric-value { display: block; color: #12251a; font-size: 17px; font-weight: 850; }
+        .admin-assignment-actions { display: flex; min-width: 122px; flex-direction: column; gap: 9px; align-items: stretch; }
+        .admin-assignment-actions button { justify-content: center; white-space: nowrap; }
+        .admin-assignment-score { margin-top: 11px; color: #718178; font-size: 11px; }
         .admin-hospitals-empty { padding: 42px 18px; text-align: center; color: #68786e; }
         @media (max-width: 760px) {
           .admin-hospitals-page { padding: 76px 12px 28px; }
@@ -142,6 +167,10 @@ export default function AdminHospitals({
           .admin-hospitals-summary { justify-content: flex-start; }
           .admin-hospitals-toolbar { flex-wrap: wrap; }
           .admin-hospitals-count { margin-left: 0; width: 100%; }
+          .admin-assignment-list { padding: 12px; }
+          .admin-assignment-card { grid-template-columns: 1fr; gap: 15px; padding: 17px; }
+          .admin-assignment-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .admin-assignment-actions { min-width: 0; flex-direction: row; }
         }
       `}</style>
 
@@ -164,6 +193,7 @@ export default function AdminHospitals({
             {assignBookingId && <div className="admin-hospital-assignment-banner">Choose a hospital to assign Booking #{assignBookingId}. The existing hospital alert and booking workflow will continue after assignment.</div>}
             {reselectForBookingId && <div className="admin-hospital-assignment-banner">Choose a hospital to reassign Booking #{reselectForBookingId}. The booking will be updated and the hospital will be notified.</div>}
             {assignmentError && <div className="admin-hospital-assignment-error" role="alert">{assignmentError}</div>}
+            {assignmentMode && <div className="admin-assignment-intro">Hospitals are ranked by available beds, estimated distance and ETA, then active staff capacity. The top card is the best current match for this patient.</div>}
             <div className="admin-hospitals-toolbar">
               <label className="admin-hospitals-search">
                 <Search size={17} />
@@ -171,7 +201,7 @@ export default function AdminHospitals({
               </label>
               <label className="admin-hospitals-select">
                 <SlidersHorizontal size={15} style={{ marginRight: 7, color: "#63736b" }} />
-                <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Sort hospitals">
+                <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Sort hospitals" disabled={assignmentMode}>
                   <option value="condition">Sort by condition</option>
                   <option value="name">Sort by name</option>
                   <option value="date">Sort by newest</option>
@@ -184,7 +214,48 @@ export default function AdminHospitals({
               <span className="admin-hospitals-count">{rows.length} of {hospitals.length} hospitals</span>
             </div>
 
-            <div className="admin-hospitals-table-wrap">
+            {assignmentMode ? (
+              <div className="admin-assignment-list">
+                {rows.map((hospital, index) => {
+                  const condition = getHospitalCondition(hospital);
+                  const assignment = hospital._assignment || {};
+                  const canAssign = hospital.is_active !== false && String(hospital.status || "").toLowerCase() !== "closed" && condition.availableBeds > 0;
+                  const staffTotal = Number(hospital.staff_total_count ?? hospital.staff_count ?? condition.totalStaff ?? 0) || 0;
+                  const staffActive = Number(hospital.staff_active_count ?? condition.activeStaff ?? 0) || 0;
+                  const staffAvailable = Number(hospital.available_staff_count ?? staffActive) || 0;
+                  const rank = Number(assignment.rank) || index + 1;
+                  const distance = Number.isFinite(Number(assignment.distanceKm)) ? `${Number(assignment.distanceKm).toFixed(1)} km` : "—";
+                  const eta = Number.isFinite(Number(assignment.etaMinutes)) ? `${assignment.etaMinutes} min` : "—";
+                  return (
+                    <article className={`admin-assignment-card ${rank === 1 ? "admin-assignment-card-best" : ""}`} key={hospital.id}>
+                      <div>
+                        <div className="admin-assignment-card-heading"><span className="admin-assignment-rank">#{rank}</span>{rank === 1 && <span className="admin-assignment-best-label">Best match</span>}</div>
+                        <h2>{hospital.name || "Unnamed Hospital"}</h2>
+                        <p className="admin-assignment-address">{hospital.address || hospital.city || hospital.state || "Location not added"}</p>
+                        <span className={`admin-assignment-status ${!canAssign ? "admin-assignment-status-unavailable" : ""}`}>{canAssign ? "Ready for assignment" : "Not available"}</span>
+                        <div className="admin-assignment-score">Priority score: {Number.isFinite(Number(assignment.priorityScore)) ? Number(assignment.priorityScore).toFixed(1) : "—"}</div>
+                      </div>
+                      <div className="admin-assignment-metrics">
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Total beds</span><strong className="admin-assignment-metric-value">{condition.totalBeds}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Available beds</span><strong className="admin-assignment-metric-value">{condition.availableBeds}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Distance</span><strong className="admin-assignment-metric-value">{distance}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Est. ETA</span><strong className="admin-assignment-metric-value">{eta}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Staff</span><strong className="admin-assignment-metric-value">{staffTotal}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Available staff</span><strong className="admin-assignment-metric-value">{staffAvailable}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">Active staff</span><strong className="admin-assignment-metric-value">{staffActive}</strong></div>
+                        <div className="admin-assignment-metric"><span className="admin-assignment-metric-label">ICU beds</span><strong className="admin-assignment-metric-value">{condition.availableIcuBeds}/{condition.totalIcuBeds}</strong></div>
+                      </div>
+                      <div className="admin-assignment-actions">
+                        <button className="admin-view-button" type="button" onClick={() => navigate(`/HospitalPartnerDetails/${hospital.id}`, { state: { hospitalId: hospital.id } })}><Eye size={15} /> View</button>
+                        {assignBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign || assignmentBusy} onClick={() => onAssign?.(hospital)}>{assignmentBusy ? "Saving..." : canAssign ? "Assign hospital" : "Unavailable"}</button>}
+                        {reselectForBookingId && <button className="admin-assign-button" type="button" disabled={!canAssign || assignmentBusy} onClick={() => onReassign?.(hospital)}>{assignmentBusy ? "Saving..." : canAssign ? "Reassign hospital" : "Unavailable"}</button>}
+                      </div>
+                    </article>
+                  );
+                })}
+                {rows.length === 0 && <div className="admin-hospitals-empty">No hospital matches your search.</div>}
+              </div>
+            ) : <div className="admin-hospitals-table-wrap">
               <table className="admin-hospitals-table">
                 <colgroup><col style={{ width: "22%" }} /><col style={{ width: "18%" }} /><col style={{ width: "14%" }} /><col style={{ width: "11%" }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /><col style={{ width: "9%" }} /></colgroup>
                 <thead>
@@ -228,7 +299,7 @@ export default function AdminHospitals({
                 </tbody>
               </table>
               {rows.length === 0 && <div className="admin-hospitals-empty">No hospital matches your search.</div>}
-            </div>
+            </div>}
           </section>
         </div>
       </main>

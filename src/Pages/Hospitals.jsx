@@ -316,39 +316,33 @@ export default function Hospitals() {
     return haversineKm(pickupPoint, { lat: hLat, lng: hLng }) * 1.56;
   };
 
-  // Priority scoring: higher score = better hospital for assignment
-  // Weights: ICU beds (40) > Facilities (25) > Doctors (15) > Staff (10) > Distance (10)
+  const getEstimatedEtaMinutes = (distanceKm) => {
+    if (!Number.isFinite(Number(distanceKm))) return null;
+    // An estimate for urban ambulance travel; the assignment card labels it as estimated.
+    return Math.max(3, Math.round(Number(distanceKm) * 2.1));
+  };
+
+  // Priority scoring: higher score = better hospital for assignment.
+  // Assignment quality is driven by the metrics the admin sees: beds, distance/ETA and active staff.
   const getHospitalPriorityScore = (hospital) => {
-    const icuBeds = Number(hospital?.available_icu_beds || hospital?.icu_beds || 0);
-    const facilitiesCount = String(hospital?.facilities || "").split(",").filter(f => f.trim()).length;
-    const doctorsActive = Number(hospital?.doctors_active || 0);
-    const staffActive = Number(hospital?.staff_active_count || 0);
     const availableBeds = Number(hospital?.available_beds || 0);
+    const activeStaff = Number(hospital?.staff_active_count || 0);
+    const distanceKm = getDistanceToPickup(hospital);
+    const etaMinutes = getEstimatedEtaMinutes(distanceKm);
 
-    // ICU beds score (0-40 points): each ICU bed = 8 pts, max 40
-    const icuScore = Math.min(icuBeds * 8, 40);
-    // Facilities score (0-25 points): each facility = 5 pts, max 25
-    const facilityScore = Math.min(facilitiesCount * 5, 25);
-    // Doctor score (0-15 points): each active doctor = 3 pts, max 15
-    const doctorScore = Math.min(doctorsActive * 3, 15);
-    // Staff score (0-10 points): each active staff = 1 pt, max 10
-    const staffScore = Math.min(staffActive * 1, 10);
-    // Bed availability bonus (0-10 points)
-    const bedScore = Math.min(availableBeds * 2, 10);
+    // Beds (0-40): enough capacity is the first assignment priority.
+    const bedScore = Math.min(availableBeds * 2, 40);
+    // Distance (0-30) and ETA (0-20): closer hospitals receive the highest score.
+    const distanceScore = distanceKm === null ? 0 : Math.max(0, 30 - Math.min(distanceKm, 30));
+    const etaScore = etaMinutes === null ? 0 : Math.max(0, 20 - Math.min(etaMinutes, 20));
+    // Active staff (0-25): prefer hospitals that can actually receive the patient.
+    const staffScore = Math.min(activeStaff * 1.5, 25);
 
-    // Distance penalty (0-10 points subtracted): closer = less penalty
-    let distancePenalty = 0;
-    if (pickupPoint) {
-      const distKm = getDistanceToPickup(hospital);
-      if (distKm !== null) {
-        // 0 km = 0 penalty, 50+ km = 10 penalty
-        distancePenalty = Math.min(distKm / 5, 10);
-      } else {
-        distancePenalty = 10; // unknown distance = max penalty
-      }
-    }
-
-    return icuScore + facilityScore + doctorScore + staffScore + bedScore - distancePenalty;
+    // Preserve a small clinical-capability tie-breaker for ICU capacity.
+    const staffActive = Number(hospital?.staff_active_count || 0);
+    const icuBeds = Number(hospital?.available_icu_beds || 0);
+    const icuScore = Math.min(icuBeds * 1.5, 10);
+    return bedScore + distanceScore + etaScore + staffScore + icuScore + Math.min(staffActive * 0.05, 1);
   };
 
   const sortedHospitals = [...hospitals];
@@ -366,13 +360,30 @@ export default function Hospitals() {
     if (!aFull && bFull) return -1;
     if (aFull && !bFull) return 1;
 
-    // Sort by priority score (higher first)
-    return getHospitalPriorityScore(b) - getHospitalPriorityScore(a);
+    // Sort by the visible assignment priority metrics (higher first).
+    const scoreDifference = getHospitalPriorityScore(b) - getHospitalPriorityScore(a);
+    if (scoreDifference !== 0) return scoreDifference;
+    return Number(b.available_beds || 0) - Number(a.available_beds || 0);
   });
+
+  const assignmentHospitals = sortedHospitals.map((hospital, index) => {
+    const distanceKm = getDistanceToPickup(hospital);
+    return {
+      ...hospital,
+      _assignment: {
+        rank: index + 1,
+        distanceKm,
+        etaMinutes: getEstimatedEtaMinutes(distanceKm),
+        priorityScore: getHospitalPriorityScore(hospital),
+      },
+    };
+  });
+  const assignmentMode = Boolean(assignBookingId || reselectForBookingId);
 
   if (isAdmin) return (
     <AdminHospitals
       hospitals={hospitals}
+      rankedHospitals={assignmentMode ? assignmentHospitals : null}
       assignBookingId={assignBookingId}
       reselectForBookingId={reselectForBookingId}
       onAssign={assignHospitalToBooking}
