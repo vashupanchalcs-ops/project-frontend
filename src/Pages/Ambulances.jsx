@@ -759,7 +759,10 @@ export default function Ambulances() {
     const rememberIntent = (patch) => {
       try {
         const intents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
-        intents[bookingId] = { patch, expiresAt: Date.now() + 20000 };
+        // Render can take a while to wake the free backend instance. Keep the
+        // optimistic assignment protected from polling until the PATCH has had
+        // enough time to complete or the failure reconciliation runs.
+        intents[bookingId] = { patch, expiresAt: Date.now() + 90000 };
         sessionStorage.setItem("admin_assignment_intents", JSON.stringify(intents));
       } catch {}
     };
@@ -788,13 +791,26 @@ export default function Ambulances() {
       const payload = reassignBookingId
         ? { reassign_ambulance_id: amb.id, notify_user_reassigned: true }
         : { assign_ambulance_id: amb.id };
-      const response = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Ambulance assignment failed.");
+      let data = null;
+      let lastError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const response = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          data = await response.json().catch(() => ({}));
+          if (response.ok) break;
+          const error = new Error(data.error || "Ambulance assignment failed.");
+          if (response.status < 500 && response.status !== 429) throw error;
+          lastError = error;
+        } catch (error) {
+          lastError = error;
+        }
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+      }
+      if (!data || lastError && !data.id) throw lastError || new Error("Ambulance assignment failed.");
       mergeBookingCache(data);
       clearIntent();
     } catch (err) {

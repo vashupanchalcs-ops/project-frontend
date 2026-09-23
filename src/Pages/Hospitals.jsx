@@ -166,7 +166,9 @@ export default function Hospitals() {
     const rememberIntent = (patch) => {
       try {
         const intents = JSON.parse(sessionStorage.getItem("admin_assignment_intents") || "{}");
-        intents[bookingId] = { patch, expiresAt: Date.now() + 20000 };
+        // Keep the optimistic assignment visible while Render wakes the
+        // backend, then reconcile it with the authoritative PATCH response.
+        intents[bookingId] = { patch, expiresAt: Date.now() + 90000 };
         sessionStorage.setItem("admin_assignment_intents", JSON.stringify(intents));
       } catch {}
     };
@@ -191,16 +193,27 @@ export default function Hospitals() {
       state: { flashMsg: `Hospital assigned: ${hospital.name}. Waiting for hospital approval.` },
     });
     try {
-      const response = await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assign_hospital_id: hospital.id,
-          send_hospital_alert: true,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Hospital assignment failed.");
+      const payload = { assign_hospital_id: hospital.id, send_hospital_alert: true };
+      let data = null;
+      let lastError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const response = await fetch(`${BASE}/api/bookings/${assignBookingId}/`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          data = await response.json().catch(() => ({}));
+          if (response.ok) break;
+          const error = new Error(data.error || "Hospital assignment failed.");
+          if (response.status < 500 && response.status !== 429) throw error;
+          lastError = error;
+        } catch (error) {
+          lastError = error;
+        }
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+      }
+      if (!data || (lastError && !data.id)) throw lastError || new Error("Hospital assignment failed.");
       mergeBookingCache(data);
       clearIntent();
     } catch (err) {
