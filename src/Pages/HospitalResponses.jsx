@@ -6,17 +6,25 @@ const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$
 
 export default function HospitalResponses() {
   const navigate = useNavigate();
-  const cachedBookings = useMemo(() => {
+  const cachedData = useMemo(() => {
     try {
-      return JSON.parse(sessionStorage.getItem("hospital_responses_cache") || "[]");
+      const storedBookings = JSON.parse(sessionStorage.getItem("hospital_responses_cache") || "[]");
+      const portal = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+      const storedAmbulances = JSON.parse(sessionStorage.getItem("hospital_ambulances_cache") || "[]");
+      return {
+        bookings: Array.isArray(storedBookings) && storedBookings.length
+          ? storedBookings
+          : (Array.isArray(portal?.queue) ? portal.queue : []),
+        ambulances: Array.isArray(storedAmbulances) ? storedAmbulances : [],
+      };
     } catch {
-      return [];
+      return { bookings: [], ambulances: [] };
     }
   }, []);
 
-  const [bookings, setBookings] = useState(cachedBookings);
-  const [ambulances, setAmbulances] = useState([]);
-  const [loading, setLoading] = useState(cachedBookings.length === 0);
+  const [bookings, setBookings] = useState(cachedData.bookings);
+  const [ambulances, setAmbulances] = useState(cachedData.ambulances);
+  const [loading, setLoading] = useState(cachedData.bookings.length === 0);
   const [actionLoading, setActionLoading] = useState(null);
   const [teamBooking, setTeamBooking] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
@@ -29,8 +37,8 @@ export default function HospitalResponses() {
   const fetchBookings = ({ silent = false } = {}) => {
     if (!silent && bookings.length === 0) setLoading(true);
     Promise.all([
-      fetch(`${BASE}/api/bookings/`).then((r) => r.json()).catch(() => []),
-      fetch(`${BASE}/api/ambulances/`).then((r) => r.json()).catch(() => []),
+      fetch(`${BASE}/api/bookings/?_=${Date.now()}`, { cache: "no-store" }).then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${BASE}/api/ambulances/?_=${Date.now()}`, { cache: "no-store" }).then((r) => r.ok ? r.json() : []).catch(() => []),
     ])
       .then(([bookingData, ambulanceData]) => {
         const bList = Array.isArray(bookingData) ? bookingData : [];
@@ -38,6 +46,7 @@ export default function HospitalResponses() {
         setAmbulances(Array.isArray(ambulanceData) ? ambulanceData : []);
         try {
           sessionStorage.setItem("hospital_responses_cache", JSON.stringify(bList));
+          sessionStorage.setItem("hospital_ambulances_cache", JSON.stringify(Array.isArray(ambulanceData) ? ambulanceData : []));
         } catch {}
       })
       .catch(() => {})

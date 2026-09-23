@@ -7,6 +7,15 @@ const defaultApiBase = import.meta.env.DEV
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
 const PAGE_SIZE = 10;
 
+const readPortalCache = () => {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+    return cached?.hospital ? cached : null;
+  } catch {
+    return null;
+  }
+};
+
 const formatMoney = (amount) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -60,14 +69,15 @@ const paymentStatus = (booking) => {
 };
 
 export default function HospitalPayments() {
-  const [hospital, setHospital] = useState(null);
-  const [hospitalId, setHospitalId] = useState(Number(localStorage.getItem("hospital_id") || 0));
-  const [bookings, setBookings] = useState([]);
+  const cachedPortal = useMemo(readPortalCache, []);
+  const [hospital, setHospital] = useState(cachedPortal?.hospital || null);
+  const [hospitalId, setHospitalId] = useState(Number(localStorage.getItem("hospital_id") || cachedPortal?.hospital?.id || 0));
+  const [bookings, setBookings] = useState(Array.isArray(cachedPortal?.queue) ? cachedPortal.queue : []);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedPortal);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [lastSyncedAt, setLastSyncedAt] = useState("");
@@ -84,7 +94,7 @@ export default function HospitalPayments() {
       if (!hospitalId) {
         const email = (localStorage.getItem("user") || "").trim().toLowerCase();
         if (email) {
-          const byEmail = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(email)}`);
+          const byEmail = await fetch(`${BASE}/api/hospitals/by-email/?email=${encodeURIComponent(email)}`, { cache: "no-store" });
           if (byEmail.ok) hospitalId = Number((await byEmail.json())?.id || 0);
         }
       }
@@ -95,8 +105,18 @@ export default function HospitalPayments() {
       const response = await fetch(`${BASE}/api/hospitals/${hospitalId}/dashboard/?_=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Payment records could not be loaded");
       const data = await response.json();
-      setHospital(data?.hospital || null);
-      setBookings(Array.isArray(data?.queue) ? data.queue : []);
+      const nextHospital = data?.hospital || null;
+      const nextQueue = Array.isArray(data?.queue) ? data.queue : [];
+      setHospital(nextHospital);
+      setBookings(nextQueue);
+      try {
+        const previous = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+          ...previous,
+          hospital: nextHospital,
+          queue: nextQueue,
+        }));
+      } catch {}
       setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
     } catch (requestError) {
       setError(requestError?.message || "Payment records could not be loaded");

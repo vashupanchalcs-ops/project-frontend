@@ -197,7 +197,7 @@ export default function HospitalBeds() {
       // If no valid hid, fetch from hospitals list
       if (!hid) {
         try {
-          const allH = await fetch(`${BASE}/api/hospitals/`).then((r) => r.json());
+          const allH = await fetch(`${BASE}/api/hospitals/?_=${Date.now()}`, { cache: "no-store" }).then((r) => r.json());
           if (Array.isArray(allH) && allH.length > 0) {
             const match =
               allH.find((h) => String(h.email || "").toLowerCase() === userEmail) ||
@@ -435,7 +435,7 @@ export default function HospitalBeds() {
         foundTarget = allPending.find((b) => String(b.id) === String(urlBookingId));
         if (!foundTarget) {
           try {
-            const res = await fetch(`${BASE}/api/bookings/${urlBookingId}/`);
+            const res = await fetch(`${BASE}/api/bookings/${urlBookingId}/?_=${Date.now()}`, { cache: "no-store" });
             if (res.ok) {
               foundTarget = await res.json();
               if (!allPending.find((p) => p.id === foundTarget.id)) {
@@ -448,7 +448,7 @@ export default function HospitalBeds() {
 
       if (allPending.length === 0) {
         try {
-          const res = await fetch(`${BASE}/api/bookings/`);
+          const res = await fetch(`${BASE}/api/bookings/?_=${Date.now()}`, { cache: "no-store" });
           if (res.ok) {
             const list = await res.json();
             if (Array.isArray(list)) {

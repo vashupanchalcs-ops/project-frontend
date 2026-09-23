@@ -13,7 +13,7 @@ const RESOURCE_CACHE_KEY = "swiftrescue_hospital_resources";
 
 const fetchJsonOrNull = async (url) => {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
     return await res.json();
   } catch {
