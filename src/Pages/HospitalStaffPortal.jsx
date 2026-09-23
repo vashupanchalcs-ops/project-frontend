@@ -49,7 +49,7 @@ const formatCaseStatus = (booking) => {
   return booking?.hospital_response === "ready" ? "Ready for intake" : "In progress";
 };
 
-export default function HospitalStaffPortal() {
+export default function HospitalStaffPortal({ screen }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const staffId = localStorage.getItem("staff_id") || "";
@@ -60,8 +60,15 @@ export default function HospitalStaffPortal() {
   const [loading, setLoading] = useState(!cachedDashboard);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const isHomeRoute = pathname === "/staff/home";
-  const isProfileRoute = pathname === "/staff/profile";
+  const activeScreen = screen || (
+    pathname === "/staff/home" || pathname === "/staff/dashboard"
+      ? "home"
+      : pathname === "/staff/profile"
+        ? "profile"
+        : "cases"
+  );
+  const isHomeRoute = activeScreen === "home";
+  const isProfileRoute = activeScreen === "profile";
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!staffId || !email) {

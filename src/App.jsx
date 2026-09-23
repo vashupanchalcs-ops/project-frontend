@@ -72,9 +72,18 @@ const LegacyHospitalCasesRedirect = () => {
 
 const StaffRoute = ({ element }) => {
   const user = localStorage.getItem("user");
-  const role = localStorage.getItem("role");
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
   return user && role === "staff" ? element : <Navigate to="/Login" replace />;
 };
+
+// Keep each staff screen's identity explicit. The staff home, case list and
+// profile share one data component, so relying only on a pathname check can
+// leave the previous screen mounted after a sidebar click on a warm SPA.
+const StaffPortalScreen = ({ screen }) => (
+  <HospitalStaffPortal key={`staff-portal-${screen}`} screen={screen} />
+);
+
+const StaffVideoScreen = () => <LiveVideoConsultation key="staff-live-video" />;
 
 const ConfirmedTrackingRoute = ({ element }) => {
   const raw = localStorage.getItem("active_confirmed_booking");
@@ -218,12 +227,12 @@ const App = () => {
         <Route path="/hospital/beds" element={<HospitalRoute element={<HospitalBeds />} />} />
 
         {/* Hospital staff */}
-        <Route path="/staff/home" element={<StaffRoute element={<HospitalStaffPortal />} />} />
-        <Route path="/staff/dashboard" element={<StaffRoute element={<HospitalStaffPortal />} />} />
-        <Route path="/staff/cases" element={<StaffRoute element={<HospitalStaffPortal />} />} />
+        <Route path="/staff/home" element={<StaffRoute element={<StaffPortalScreen screen="home" />} />} />
+        <Route path="/staff/dashboard" element={<StaffRoute element={<StaffPortalScreen screen="home" />} />} />
+        <Route path="/staff/cases" element={<StaffRoute element={<StaffPortalScreen screen="cases" />} />} />
         <Route path="/staff/patient-condition" element={<StaffRoute element={<StaffPatientCondition />} />} />
-        <Route path="/staff/live-video" element={<StaffRoute element={<LiveVideoConsultation />} />} />
-        <Route path="/staff/profile" element={<StaffRoute element={<HospitalStaffPortal />} />} />
+        <Route path="/staff/live-video" element={<StaffRoute element={<StaffVideoScreen />} />} />
+        <Route path="/staff/profile" element={<StaffRoute element={<StaffPortalScreen screen="profile" />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />
