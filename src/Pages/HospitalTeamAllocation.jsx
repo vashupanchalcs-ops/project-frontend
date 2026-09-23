@@ -157,6 +157,26 @@ export default function HospitalTeamAllocation() {
       const rows = (Array.isArray(rawRows) ? rawRows : (rawRows?.results || rawRows?.bookings || []))
         .map(normalizeBooking)
         .filter((item) => item?.id);
+
+      // When localStorage contains no hospital_id (or an old one), the
+      // booking still carries the authoritative assigned_hospital_id. Resolve
+      // staff from that booking so allocation never renders empty role rows
+      // while the hospital roster is available in PostgreSQL.
+      const staffBooking = rows.find((item) => String(item.id) === String(requestedBookingId)) || rows[0];
+      const bookingHospitalId = String(staffBooking?.assigned_hospital_id || "");
+      if (!asArray(people, ["results", "staff", "members"]).length && bookingHospitalId) {
+        const bookingScoped = await loadScopedHospital(bookingHospitalId);
+        const bookingPeople = asArray(bookingScoped.people, ["results", "staff", "members"]);
+        if (bookingPeople.length || bookingScoped.staffOk) {
+          resolvedHospitalId = bookingHospitalId;
+          dashboard = bookingScoped.dashboard;
+          dashboardOk = bookingScoped.dashboardOk;
+          people = bookingPeople;
+          staffOk = bookingScoped.staffOk;
+          localStorage.setItem("hospital_id", bookingHospitalId);
+        }
+      }
+
       const dashboardRows = asArray(dashboard?.queue, ["bookings", "results"])
         .map(normalizeBooking)
         .filter((item) => item?.id);
