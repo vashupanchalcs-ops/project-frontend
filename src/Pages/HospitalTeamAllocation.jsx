@@ -204,7 +204,20 @@ export default function HospitalTeamAllocation() {
     const text = `${booking?.patient_condition || ""} ${booking?.vitals_summary || ""}`.toLowerCase();
     const score = (person) => (person.is_on_call ? 25 : 0) + Number(person.years_experience || 0) * 3 + (person.specialization && text.includes(String(person.specialization).toLowerCase()) ? 100 : 0);
     const isAlreadyAssigned = (person) => savedTeam.some((saved) => String(saved.id || "") === String(person.id) || String(saved.full_name || saved.name || "").toLowerCase() === String(person.full_name || "").toLowerCase());
-    return Object.fromEntries(ROLES.map((role) => [role, staff.filter((person) => roleFromValue(person.role) === role && person.is_active !== false && (!person.is_busy || isAlreadyAssigned(person))).sort((a, b) => score(b) - score(a)).slice(0, 5)]));
+    return Object.fromEntries(ROLES.map((role) => {
+      const members = staff
+        .filter((person) => roleFromValue(person.role) === role && person.is_active !== false)
+        .sort((a, b) => {
+          // Prefer genuinely free members, but keep busy active members
+          // visible. Older records can retain stale is_busy flags after a
+          // booking closes, and hiding every member made allocation appear
+          // empty even though the hospital roster was present.
+          const availability = Number(Boolean(!a.is_busy || isAlreadyAssigned(a))) - Number(Boolean(!b.is_busy || isAlreadyAssigned(b)));
+          return availability || score(b) - score(a);
+        })
+        .slice(0, 5);
+      return [role, members];
+    }));
   }, [booking, savedTeam, staff]);
 
   const savedSelection = useMemo(() => {
