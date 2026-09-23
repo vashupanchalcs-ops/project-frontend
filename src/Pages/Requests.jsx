@@ -57,6 +57,7 @@ const Requests = () => {
   // React state updates are asynchronous. Keep a synchronous lock as well so
   // two clicks in the same event loop cannot create duplicate PATCH requests.
   const pendingActionsRef = useRef(new Map());
+  const committedBookingPatchesRef = useRef(new Map());
 
   const fetchBookings = () => {
     fetch(`${BASE}/api/bookings/`)
@@ -70,6 +71,12 @@ const Requests = () => {
         });
         const visibleList = list.map((row) => {
           const pendingPayload = pendingActionsRef.current.get(Number(row?.id));
+          const committed = committedBookingPatchesRef.current.get(Number(row?.id));
+          if (committed && Date.now() < committed.expiresAt) {
+            const serverMatches = Object.entries(committed.patch).every(([key, value]) => row?.[key] === value);
+            if (serverMatches) committedBookingPatchesRef.current.delete(Number(row?.id));
+            else return { ...row, ...committed.patch, ...(pendingPayload || {}) };
+          }
           return pendingPayload ? { ...row, ...pendingPayload } : row;
         });
         setBookings(visibleList);
@@ -138,6 +145,10 @@ const Requests = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Booking update failed");
+      committedBookingPatchesRef.current.set(bid, {
+        patch: data,
+        expiresAt: Date.now() + 20000,
+      });
       setBookings((prev) => prev.map((row) => (Number(row.id) === bid ? { ...row, ...data } : row)));
       try {
         const cached = JSON.parse(sessionStorage.getItem("admin_requests_cache") || "[]");
@@ -148,6 +159,7 @@ const Requests = () => {
       return data;
     } catch (err) {
       console.warn("Booking update background error:", err);
+      committedBookingPatchesRef.current.delete(bid);
       fetchBookings();
       throw err;
     } finally {
@@ -226,6 +238,7 @@ const Requests = () => {
           <>
             {b.is_user_selected_hospital && (
               <button
+                type="button"
                 className="req-action req-confirm"
                 style={{ ...btnStyle, background: "#126f1e", color: "#fff", borderColor: "#126f1e" }}
                 disabled={actionPending}
@@ -235,7 +248,7 @@ const Requests = () => {
                 {actionPending ? "Saving..." : `✓ Confirm & Send to ${b.assigned_hospital_name || "Hospital"}`}
               </button>
             )}
-            <button className="req-action req-confirm" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "confirmed")}>{actionPending ? "Saving..." : "✓ Confirm"}</button>
+            <button type="button" className="req-action req-confirm" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "confirmed")}>{actionPending ? "Saving..." : "✓ Confirm"}</button>
             <button className="req-action req-cancel" style={btnStyle} disabled={actionPending} onClick={() => updateStatus(b.id, "cancelled")}>{actionPending ? "Saving..." : "✕ Cancel"}</button>
           </>
         )}
