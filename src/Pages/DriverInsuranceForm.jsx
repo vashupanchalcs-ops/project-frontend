@@ -263,6 +263,7 @@ export default function DriverInsuranceForm() {
         .di-submit { border:1px solid #126f1e !important; border-radius:8px; background:#126f1e !important; color:#fff !important; padding:11px 16px; font-weight:900; cursor:pointer; }
         .di-submit:hover:not(:disabled) { background:#0d5b18 !important; }
         .di-submit:disabled { cursor:wait; opacity:.58; }
+        .di-submit.sent { cursor:default; opacity:1; background:#087f3d !important; border-color:#087f3d !important; }
         .di-submitted-at { color:#68766f; font-size:12px; }
         @media (max-width: 1050px) { .di-card-body { grid-template-columns:1fr; } .di-form { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         @media (max-width: 767px) {
@@ -347,7 +348,7 @@ export default function DriverInsuranceForm() {
                           <label className="di-field wide"><span className="di-label">Exclusions / waiting period</span><textarea className="di-input di-textarea" value={d.exclusions_waiting_period} onChange={(e) => updateDraft(b.id, "exclusions_waiting_period", e.target.value)} placeholder="Add exclusions or waiting-period notes" /></label>
                         </div>
                         <div className="di-actions">
-                          <button className="di-submit" type="button" onClick={() => sendInsurance(b)} disabled={savingId === b.id || alreadySent}>{savingId === b.id ? "Sending..." : alreadySent ? "✓ Sent Successfully" : "Send to Hospital"}</button>
+                          <button className={`di-submit ${alreadySent ? "sent" : ""}`} type="button" onClick={() => sendInsurance(b)} disabled={savingId === b.id || alreadySent}>{savingId === b.id ? "Sending..." : alreadySent ? "✓ Sent Successfully" : "Send to Hospital"}</button>
                           {b.insurance_submitted_at && <span className="di-submitted-at">Submitted: {new Date(b.insurance_submitted_at).toLocaleString("en-IN")}</span>}
                         </div>
                       </div>
