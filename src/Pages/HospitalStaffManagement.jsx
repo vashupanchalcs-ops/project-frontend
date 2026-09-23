@@ -83,9 +83,16 @@ function getHospitalId() {
 
 export default function HospitalStaffManagement({ directoryOnly = false }) {
   const cached = useMemo(() => safeJson("hospital_staff_management_cache", null), []);
-  const [hospital, setHospital] = useState(cached?.hospital || null);
-  const [staff, setStaff] = useState(Array.isArray(cached?.staff) ? cached.staff : []);
-  const [loading, setLoading] = useState(!cached);
+  const portalCache = useMemo(() => safeJson("hospital_portal_cache", null), []);
+  const cachedHospital = cached?.hospital || portalCache?.hospital || null;
+  const cachedStaff = Array.isArray(cached?.staff) && cached.staff.length
+    ? cached.staff
+    : (Array.isArray(portalCache?.staff) ? portalCache.staff : []);
+  const hasCachedDirectory = Boolean(cached || portalCache);
+  const [hospital, setHospital] = useState(cachedHospital);
+  const [staff, setStaff] = useState(cachedStaff);
+  // Keep cached rows visible while the background request revalidates them.
+  const [loading, setLoading] = useState(!hasCachedDirectory);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -126,7 +133,7 @@ export default function HospitalStaffManagement({ directoryOnly = false }) {
 
   const loadStaff = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
-    else setLoading(true);
+    else if (!hasCachedDirectory) setLoading(true);
     setError("");
     try {
       const id = await resolveHospital();
@@ -152,7 +159,7 @@ export default function HospitalStaffManagement({ directoryOnly = false }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [resolveHospital]);
+  }, [hasCachedDirectory, resolveHospital]);
 
   useEffect(() => { loadStaff(); }, [loadStaff]);
 

@@ -27,15 +27,6 @@ const rememberHospitalSession = (hospitalData) => {
   if (hospitalData.name) localStorage.setItem("name", hospitalData.name);
 };
 
-const readResourceCache = (hospitalId) => {
-  try {
-    const cache = JSON.parse(localStorage.getItem(RESOURCE_CACHE_KEY) || "{}");
-    return cache[String(hospitalId)] || {};
-  } catch {
-    return {};
-  }
-};
-
 const saveResourceCache = (hospitalId, values) => {
   try {
     const cache = JSON.parse(localStorage.getItem(RESOURCE_CACHE_KEY) || "{}");
@@ -45,6 +36,16 @@ const saveResourceCache = (hospitalId, values) => {
     // Browser storage can be unavailable; Django remains the source of truth.
   }
 };
+
+const resourceValuesFromHospital = (hospital = {}) => ({
+  total_beds: hospital.total_beds ?? 40,
+  available_beds: hospital.available_beds ?? 0,
+  icu_beds: hospital.icu_beds ?? 0,
+  available_ventilators: hospital.ventilators_available ?? hospital.available_ventilators ?? 0,
+  status: hospital.status || "active",
+  specializations: hospital.specializations || "",
+  facilities: hospital.facilities || "",
+});
 
 const hasCoordPair = (lat, lng) => {
   const nLat = Number(lat);
@@ -148,15 +149,7 @@ export default function HospitalPortal() {
   const [loading, setLoading] = useState(!cachedPortal?.hospital);
   const [err, setErr] = useState("");
   const [resourceEditMode, setResourceEditMode] = useState(false);
-  const [resourceForm, setResourceForm] = useState({
-    total_beds: 40,
-    available_beds: 10,
-    icu_beds: 4,
-    available_ventilators: 0,
-    status: "active",
-    specializations: "",
-    facilities: "",
-  });
+  const [resourceForm, setResourceForm] = useState(() => resourceValuesFromHospital(cachedPortal?.hospital));
   const [staffForm, setStaffForm] = useState({
     full_name: "",
     role: "doctor",
@@ -300,25 +293,12 @@ export default function HospitalPortal() {
         }));
       } catch {}
 
-      const serverResources = {
-        total_beds: dashboard.hospital?.total_beds ?? 40,
-        available_beds: dashboard.hospital?.available_beds ?? 0,
-        icu_beds: dashboard.hospital?.icu_beds ?? 0,
-        available_ventilators: dashboard.hospital?.ventilators_available ?? dashboard.hospital?.available_ventilators ?? 0,
-        status: dashboard.hospital?.status || "active",
-        specializations: dashboard.hospital?.specializations || "",
-        facilities: dashboard.hospital?.facilities || "",
-      };
-      // Server bed counts ALWAYS take priority – cache only keeps unsaved text edits
-      const cachedResources = readResourceCache(hospitalId);
-      const savedResources = {
-        ...serverResources,
-        // Only keep cached specializations/facilities/status if user was mid-edit
-        ...(cachedResources.specializations ? { specializations: cachedResources.specializations } : {}),
-        ...(cachedResources.facilities ? { facilities: cachedResources.facilities } : {}),
-      };
+      // The database response is the source of truth. Local storage is only
+      // used for the first paint and must never restore stale bed counts after
+      // a fresh dashboard response has arrived.
+      const serverResources = resourceValuesFromHospital(dashboard.hospital || hospitalData);
       const liveResourcePatch = pendingHospitalPatchRef.current?.patch || {};
-      setResourceForm({ ...savedResources, ...liveResourcePatch });
+      setResourceForm({ ...serverResources, ...liveResourcePatch });
       setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (e) {
       if (!silent) setErr(e.message || "Something went wrong");
@@ -369,20 +349,23 @@ export default function HospitalPortal() {
       });
       const savedHospital = await res.json().catch(() => ({}));
       if (!res.ok || !savedHospital?.id) throw new Error(savedHospital?.error || "Resource update failed");
+      // The PATCH response is already the persisted database row. Clear the
+      // optimistic overlay before revalidation so an old local value cannot
+      // overwrite the saved value on the next render.
+      pendingHospitalPatchRef.current = null;
       setHospital(savedHospital);
-      setResourceForm((current) => ({
-        ...current,
-        total_beds: savedHospital.total_beds,
-        available_beds: savedHospital.available_beds,
-        icu_beds: savedHospital.icu_beds,
-        available_ventilators: savedHospital.ventilators_available,
-        status: savedHospital.status,
-        specializations: savedHospital.specializations || "",
-        facilities: savedHospital.facilities || "",
-      }));
-      try { localStorage.removeItem(RESOURCE_CACHE_KEY); } catch {}
+      setResourceForm(resourceValuesFromHospital(savedHospital));
+      saveResourceCache(hospital.id, resourceValuesFromHospital(savedHospital));
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+        sessionStorage.setItem("hospital_portal_cache", JSON.stringify({
+          ...cached,
+          hospital: savedHospital,
+        }));
+      } catch {}
       void fetchHospitalDashboard({ silent: true });
     } catch (error) {
+      pendingHospitalPatchRef.current = null;
       setErr(error?.message || "Resource update failed in background. Retrying sync...");
       void fetchHospitalDashboard({ silent: true });
     } finally {

@@ -77,6 +77,9 @@ export default function HospitalPayments() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [page, setPage] = useState(1);
+  // Cached queue data is rendered immediately; dashboard data refreshes in
+  // the background so navigation never replaces existing invoices with a
+  // loading placeholder.
   const [loading, setLoading] = useState(!cachedPortal);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -87,7 +90,7 @@ export default function HospitalPayments() {
 
   const loadPayments = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
-    else setLoading(true);
+    else if (!Array.isArray(cachedPortal?.queue) || cachedPortal.queue.length === 0) setLoading(true);
     setError("");
     try {
       let hospitalId = Number(localStorage.getItem("hospital_id") || 0);
