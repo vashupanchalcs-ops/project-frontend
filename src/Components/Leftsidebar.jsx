@@ -431,7 +431,12 @@ const Leftsidebar = () => {
             return (
               <div key={item.to} style={{ display: "contents" }}>
                 {role === "admin" && index === 6 && <div className="lsb-divider" />}
-                <Link to={item.to} className={`lsb-item ${isActive ? "active" : ""}`} title={item.label}>
+                <Link
+                  to={item.to}
+                  reloadDocument={role === "staff"}
+                  className={`lsb-item ${isActive ? "active" : ""}`}
+                  title={item.label}
+                >
                   <Icon size={20} />
                   {item.dot && !isPendingReq && <div className="lsb-dot" />}
                   {isPendingReq && <div className="lsb-dot-red">{pendingCount}</div>}
@@ -454,7 +459,12 @@ const Leftsidebar = () => {
               ? location.pathname.toLowerCase() === "/driver-dashboard" && currentTab === item.tab
               : location.pathname === item.to;
             return (
-              <Link key={item.to} to={item.to} className={`lsb-bottom-item ${isActive ? "active" : ""}`}>
+              <Link
+                key={item.to}
+                to={item.to}
+                reloadDocument={role === "staff"}
+                className={`lsb-bottom-item ${isActive ? "active" : ""}`}
+              >
                 <Icon size={18} />
                 <span className="lsb-bottom-label">{item.label}</span>
                 {item.dot && <div className="lsb-bottom-dot" />}

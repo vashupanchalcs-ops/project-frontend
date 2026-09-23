@@ -40,6 +40,17 @@ const initials = (value) => String(value || "Team")
   .map((part) => part[0]?.toUpperCase())
   .join("") || "T";
 
+const attachMediaStream = (element, mediaStream, muted = false) => {
+  if (!element) return;
+  element.srcObject = mediaStream || null;
+  element.muted = muted;
+  const play = () => element.play?.().catch(() => {});
+  if (mediaStream) {
+    if (element.readyState >= 2) play();
+    else element.onloadedmetadata = play;
+  }
+};
+
 export default function LiveVideoConsultation() {
   // Read logged-in user strictly
   const role = (localStorage.getItem("role") || "staff").toLowerCase();
@@ -60,6 +71,7 @@ export default function LiveVideoConsultation() {
   const chatBottomRef = useRef(null);
   const signalSocketRef = useRef(null);
   const peerConnectionsRef = useRef(new Map());
+  const pendingIceRef = useRef(new Map());
   const clientIdRef = useRef(globalThis.crypto?.randomUUID?.() || `consult-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
   // States
@@ -75,7 +87,8 @@ export default function LiveVideoConsultation() {
   const [activeSpeaker, setActiveSpeaker] = useState("remote"); // "local" or "remote"
   const [callRequests, setCallRequests] = useState([]);
   const [remoteParticipants, setRemoteParticipants] = useState({});
-  const [callJoined, setCallJoined] = useState(isDriver);
+  const [callJoined, setCallJoined] = useState(true);
+  const [mediaMode, setMediaMode] = useState("starting"); // starting | video | voice | unavailable
 
   // ── DRIVER MULTI-PERSON CALL STATE ──
   const [activeTab, setActiveTab] = useState("roster"); // "roster" | "chat" | "directives"
@@ -114,7 +127,7 @@ export default function LiveVideoConsultation() {
   // Never carry a previous booking's participants into the next case.
   useEffect(() => {
     setConnectedStaff([]);
-    setCallJoined(isDriver);
+    setCallJoined(true);
   }, [selectedBooking?.id]);
 
 
@@ -326,6 +339,11 @@ export default function LiveVideoConsultation() {
       if (["failed", "disconnected", "closed"].includes(peer.connectionState)) removePeer(remoteId);
     };
     peerConnectionsRef.current.set(remoteId, peer);
+    const queuedCandidates = pendingIceRef.current.get(remoteId) || [];
+    pendingIceRef.current.delete(remoteId);
+    for (const candidate of queuedCandidates) {
+      try { await peer.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+    }
     if (makeOffer) {
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
@@ -354,7 +372,11 @@ export default function LiveVideoConsultation() {
             ...prev,
             [remoteId]: { ...(prev[remoteId] || {}), role: payload.role, participantId: payload.participant_id },
           }));
-          if (clientIdRef.current < remoteId) await createPeer(remoteId, localStream, true);
+          // Always let the existing participant offer to the newly joined
+          // opposite role. Client-id ordering could leave both sides waiting
+          // with a blank video tile.
+          const oppositeRole = isDriver ? "staff" : "driver";
+          if (payload.role === oppositeRole) await createPeer(remoteId, localStream, true);
         }
         if (payload.type === "offer" && payload.target_id === clientIdRef.current) {
           setRemoteParticipants((prev) => ({
@@ -386,6 +408,11 @@ export default function LiveVideoConsultation() {
         if (payload.type === "ice-candidate" && payload.target_id === clientIdRef.current) {
           const peer = peerConnectionsRef.current.get(remoteId);
           if (peer && payload.candidate) await peer.addIceCandidate(new RTCIceCandidate(payload.candidate));
+          else if (payload.candidate) {
+            const queued = pendingIceRef.current.get(remoteId) || [];
+            queued.push(payload.candidate);
+            pendingIceRef.current.set(remoteId, queued);
+          }
         }
         if (payload.type === "peer-left") removePeer(remoteId);
       } catch (err) {
@@ -402,6 +429,7 @@ export default function LiveVideoConsultation() {
     signalSocketRef.current = null;
     peerConnectionsRef.current.forEach((peer) => peer.close());
     peerConnectionsRef.current.clear();
+    pendingIceRef.current.clear();
     setRemoteParticipants({});
   }, [sendSignal]);
 
@@ -430,14 +458,24 @@ export default function LiveVideoConsultation() {
     let localStream = null;
     async function initCam() {
       try {
-        if (navigator.mediaDevices?.getUserMedia) {
-          const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          localStream = s;
-          setStream(s);
-          if (localVideoRef.current) localVideoRef.current.srcObject = s;
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Media devices are unavailable in this browser");
+        let s;
+        try {
+          s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          setMediaMode("video");
           setCameraOn(true);
           setMicOn(true);
+        } catch (videoError) {
+          // Camera permission/device failures must not disable the voice call.
+          s = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+          setMediaMode("voice");
+          setCameraOn(false);
+          setMicOn(true);
+          showToast(videoError?.name === "NotAllowedError" ? "Camera blocked; voice call connected" : "Camera unavailable; voice call connected");
         }
+        localStream = s;
+        setStream(s);
+        attachMediaStream(localVideoRef.current, s, true);
       } catch (err) {
         // Camera/mic not available — show toast but don't crash
         const msg = err?.name === "NotAllowedError"
@@ -448,6 +486,7 @@ export default function LiveVideoConsultation() {
         showToast(msg);
         setCameraOn(false);
         setMicOn(false);
+        setMediaMode("unavailable");
       }
     }
     initCam();
@@ -458,8 +497,11 @@ export default function LiveVideoConsultation() {
   }, []);
 
   useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream || null;
+    attachMediaStream(localVideoRef.current, stream, true);
   }, [stream]);
+
+  const hasLiveVideo = Boolean(stream?.getVideoTracks?.().some((track) => track.readyState === "live"));
+  const hasLiveAudio = Boolean(stream?.getAudioTracks?.().some((track) => track.readyState === "live"));
 
   const toggleMic = () => {
     const next = !micOn;
@@ -681,6 +723,17 @@ export default function LiveVideoConsultation() {
           font-size: clamp(34px, 5vw, 68px);
           font-weight: 900;
         }
+
+        .stream-waiting-tile {
+          flex-direction: column;
+          gap: 12px;
+          color: #0e6a3d;
+          font-size: 14px;
+          text-align: center;
+          background: linear-gradient(135deg, #eef8f1, #f8fcfd);
+        }
+
+        .stream-waiting-tile svg { opacity: 0.75; }
 
         /* Identity Pill Overlay */
         .stream-id-pill {
@@ -1563,14 +1616,13 @@ export default function LiveVideoConsultation() {
             >
               {/* Driver's own tile (always first) */}
               <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
-                {cameraOn && stream ? (
+                {cameraOn && stream && hasLiveVideo ? (
                   <video ref={localVideoRef} autoPlay playsInline muted className="stream-video-element mirror" />
                 ) : (
-                  <img
-                    src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80"
-                    alt={driverName}
-                    className="stream-video-element"
-                  />
+                  <div className="stream-initials-tile stream-waiting-tile">
+                    {hasLiveAudio ? <Mic size={42} /> : <VideoOff size={42} />}
+                    <span>{hasLiveAudio ? "Voice connected" : mediaMode === "starting" ? "Starting camera…" : "Camera unavailable"}</span>
+                  </div>
                 )}
                 <div className="stream-id-pill">
                   <span className={`live-mic-indicator ${!micOn ? "muted" : ""}`}></span>
@@ -1588,7 +1640,7 @@ export default function LiveVideoConsultation() {
                     return (
                       <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
                         {participant?.stream ? (
-                          <video ref={(element) => { if (element) element.srcObject = participant.stream; }} autoPlay playsInline className="stream-video-element" />
+                          <video ref={(element) => attachMediaStream(element, participant.stream)} autoPlay playsInline className="stream-video-element" />
                         ) : staff.avatar ? (
                           <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} />
                         ) : (
@@ -1606,7 +1658,7 @@ export default function LiveVideoConsultation() {
                 Object.entries(remoteParticipants).slice(0, 3).map(([remoteId, p]) => (
                   <div key={remoteId} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
                     {p.stream ? (
-                      <video ref={(element) => { if (element) element.srcObject = p.stream; }} autoPlay playsInline className="stream-video-element" />
+                      <video ref={(element) => attachMediaStream(element, p.stream)} autoPlay playsInline className="stream-video-element" />
                     ) : (
                       <div className="stream-initials-tile">DOC</div>
                     )}
@@ -1624,11 +1676,14 @@ export default function LiveVideoConsultation() {
             <div className="video-stage-grid">
               {/* PERSON 1: AMBULANCE DRIVER */}
               <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
-                {driverParticipant?.stream ? <video ref={(element) => { if (element) element.srcObject = driverParticipant.stream; }} autoPlay playsInline className="stream-video-element" /> : <img
-                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80"
-                  alt="Driver"
-                  className="stream-video-element"
-                />}
+                {driverParticipant?.stream ? (
+                  <video ref={(element) => attachMediaStream(element, driverParticipant.stream)} autoPlay playsInline className="stream-video-element" />
+                ) : (
+                  <div className="stream-initials-tile stream-waiting-tile">
+                    <VideoOff size={42} />
+                    <span>{Object.keys(remoteParticipants).length ? "Connecting driver video…" : "Waiting for driver…"}</span>
+                  </div>
+                )}
                 <div className="stream-id-pill">
                   <span className="live-mic-indicator"></span>
                   <span>{driverName}</span>
@@ -1638,14 +1693,13 @@ export default function LiveVideoConsultation() {
 
               {/* PERSON 2: CURRENTLY LOGGED-IN STAFF MEMBER */}
               <div className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
-                {cameraOn && stream ? (
+                {cameraOn && stream && hasLiveVideo ? (
                   <video ref={localVideoRef} autoPlay playsInline muted className="stream-video-element mirror" />
                 ) : (
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80"
-                    alt={loggedInStaffName}
-                    className="stream-video-element"
-                  />
+                  <div className="stream-initials-tile stream-waiting-tile">
+                    {hasLiveAudio ? <Mic size={42} /> : <VideoOff size={42} />}
+                    <span>{hasLiveAudio ? "Voice connected" : mediaMode === "starting" ? "Starting camera…" : "Camera unavailable"}</span>
+                  </div>
                 )}
                 <div className="stream-id-pill">
                   <span className="live-mic-indicator"></span>
