@@ -63,11 +63,12 @@ export default function HospitalStaffPortal({ screen }) {
   // The URL is the source of truth. Keeping the route name ahead of the
   // optional prop prevents a reused portal instance from showing the old
   // screen after a sidebar Link updates the address bar.
-  const pathnameScreen = pathname === "/staff/home" || pathname === "/staff/dashboard"
+  const effectivePath = (pathname || window.location.pathname).toLowerCase();
+  const pathnameScreen = effectivePath === "/staff/home" || effectivePath === "/staff/dashboard"
     ? "home"
-    : pathname === "/staff/profile"
+    : effectivePath === "/staff/profile"
       ? "profile"
-      : pathname === "/staff/cases"
+      : effectivePath === "/staff/cases"
         ? "cases"
         : null;
   const activeScreen = pathnameScreen || screen || "home";

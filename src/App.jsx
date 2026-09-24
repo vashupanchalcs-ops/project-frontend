@@ -50,7 +50,7 @@ import StaffPatientCondition     from "./Pages/StaffPatientCondition";
 import HospitalPayments          from "./Pages/HospitalPayments";
 
 const AdminRoute = ({ element }) => {
-  const role = localStorage.getItem("role");
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
   return role === "admin" ? element : <Navigate to="/Ambulances" replace />;
 };
 
@@ -61,7 +61,7 @@ const ProtectedRoute = ({ element }) => {
 
 const HospitalRoute = ({ element }) => {
   const user = localStorage.getItem("user");
-  const role = localStorage.getItem("role");
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
   return user && role === "hospital" ? element : <Navigate to="/" replace />;
 };
 
@@ -81,10 +81,11 @@ const StaffRoute = ({ element }) => {
 // pathname key prevents a reused route element from leaving the old screen
 // visible after a sidebar click.
 const StaffPortalScreen = () => {
-  const { pathname } = useLocation();
-  const screen = pathname === "/staff/profile"
+  const { pathname: locPathname } = useLocation();
+  const pathname = locPathname || window.location.pathname;
+  const screen = pathname.toLowerCase() === "/staff/profile"
     ? "profile"
-    : pathname === "/staff/cases"
+    : pathname.toLowerCase() === "/staff/cases"
       ? "cases"
       : "home";
   return <HospitalStaffPortal key={`staff-portal-${pathname}`} screen={screen} />;
@@ -96,14 +97,20 @@ const StaffVideoScreen = () => <LiveVideoConsultation key="staff-live-video" />;
 // small URL switch outside the large route table so a sidebar click can never
 // leave the previous staff page mounted behind the new URL.
 const StaffPortalRouter = () => {
-  const { pathname, search } = useLocation();
+  const loc = useLocation();
+  // Use window.location.pathname as the authoritative source so we always
+  // read the current browser URL even when the hook might receive a stale
+  // value during the initial render of a remounted component.
+  const pathname = loc.pathname || window.location.pathname;
+  const search = loc.search || window.location.search;
   const user = localStorage.getItem("user");
   const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
   if (!user || role !== "staff") return <Navigate to="/Login" replace />;
-  if (pathname === "/staff/patient-condition") {
+  const lpath = pathname.toLowerCase();
+  if (lpath === "/staff/patient-condition") {
     return <StaffPatientCondition key={`staff-photos-${pathname}${search}`} />;
   }
-  if (pathname === "/staff/live-video") {
+  if (lpath === "/staff/live-video") {
     return <StaffVideoScreen key={`staff-video-${pathname}${search}`} />;
   }
   return <StaffPortalScreen key={`staff-portal-route-${pathname}${search}`} />;
@@ -122,7 +129,7 @@ const ConfirmedTrackingRoute = ({ element }) => {
 };
 
 const DriverAwareRoute = ({ driverElement, defaultElement }) => {
-  const role = localStorage.getItem("role");
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
   const user = localStorage.getItem("user");
   if (role === "driver" && user) return driverElement;
   if (role === "hospital" && user) return <Navigate to="/hospital/home" replace />;
@@ -134,7 +141,7 @@ const App = () => {
   const location = useLocation();
   const { pathname } = location;
   const p = pathname.toLowerCase();
-  const role = localStorage.getItem("role");
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
   const email = (localStorage.getItem("user") || "").trim().toLowerCase();
 
   useEffect(() => {

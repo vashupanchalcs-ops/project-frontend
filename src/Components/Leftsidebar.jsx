@@ -424,9 +424,11 @@ const Leftsidebar = () => {
             const Icon         = item.icon;
             const isDriverTabItem = role === "driver" && item.tab;
             const currentTab = new URLSearchParams(location.search).get("tab");
+            const curPath = location.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+            const targetPath = item.to.toLowerCase().replace(/\/+$/, "") || "/";
             const isActive = isDriverTabItem
-              ? location.pathname.toLowerCase() === "/driver-dashboard" && currentTab === item.tab
-              : location.pathname === item.to;
+              ? curPath === "/driver-dashboard" && currentTab === item.tab
+              : curPath === targetPath;
             const isPendingReq = item.to === "/DriverChangeRequests" && pendingCount > 0;
             return (
               <div key={item.to} style={{ display: "contents" }}>
@@ -454,9 +456,11 @@ const Leftsidebar = () => {
             const Icon = item.icon;
             const isDriverTabItem = role === "driver" && item.tab;
             const currentTab = new URLSearchParams(location.search).get("tab");
+            const curPath = location.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+            const targetPath = item.to.toLowerCase().replace(/\/+$/, "") || "/";
             const isActive = isDriverTabItem
-              ? location.pathname.toLowerCase() === "/driver-dashboard" && currentTab === item.tab
-              : location.pathname === item.to;
+              ? curPath === "/driver-dashboard" && currentTab === item.tab
+              : curPath === targetPath;
             return (
               <Link
                 key={item.to}
