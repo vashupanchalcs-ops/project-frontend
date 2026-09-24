@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import {
   ChevronsRight, Truck, Building2, BarChart2, Headphones, Sparkles,
@@ -66,7 +66,6 @@ const staffNavItems = [
 
 const Leftsidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const rawRole  = localStorage.getItem("role") || "";
   const role     = rawRole.toLowerCase().trim();
   const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
@@ -94,12 +93,6 @@ const Leftsidebar = () => {
   // Driver dashboard internal tabs were removed, so the shared sidebar
   // bottom navigation is also visible on mobile.
   const hideBottomNav = false;
-
-  const handlePortalNavigation = (event, to) => {
-    event.preventDefault();
-    navigate(to);
-    window.requestAnimationFrame(() => window.scrollTo(0, 0));
-  };
 
   return (
     <>
@@ -440,7 +433,6 @@ const Leftsidebar = () => {
                 {role === "admin" && index === 6 && <div className="lsb-divider" />}
                 <Link
                   to={item.to}
-                  onClick={(event) => handlePortalNavigation(event, item.to)}
                   className={`lsb-item ${isActive ? "active" : ""}`}
                   title={item.label}
                 >
@@ -469,7 +461,6 @@ const Leftsidebar = () => {
               <Link
                 key={item.to}
                 to={item.to}
-                onClick={(event) => handlePortalNavigation(event, item.to)}
                 className={`lsb-bottom-item ${isActive ? "active" : ""}`}
               >
                 <Icon size={18} />

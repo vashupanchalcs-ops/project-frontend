@@ -76,9 +76,19 @@ const StaffRoute = ({ element }) => {
   return user && role === "staff" ? element : <Navigate to="/Login" replace />;
 };
 
-// Let the shared staff portal derive its screen from useLocation. This keeps
-// sidebar navigation fully client-side even if React reuses the route element.
-const StaffPortalScreen = () => <HospitalStaffPortal />;
+// Keep the shared staff shell URL-driven and remount it when the staff route
+// changes. Home, cases and profile intentionally use one component, so the
+// pathname key prevents a reused route element from leaving the old screen
+// visible after a sidebar click.
+const StaffPortalScreen = () => {
+  const { pathname } = useLocation();
+  const screen = pathname === "/staff/profile"
+    ? "profile"
+    : pathname === "/staff/cases"
+      ? "cases"
+      : "home";
+  return <HospitalStaffPortal key={`staff-portal-${pathname}`} screen={screen} />;
+};
 
 const StaffVideoScreen = () => <LiveVideoConsultation key="staff-live-video" />;
 
@@ -167,14 +177,8 @@ const App = () => {
       {!isAuth && !isMapView && isUser && <UserLiveTracking />}
       {!isAuth && !isMapView && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
 
-      {/*
-       * Remount the active route whenever the URL changes. Several portal
-       * screens share layout/stateful components, so keeping the same route
-       * subtree alive can leave the previous screen visible after a sidebar
-       * navigation (especially when only the query tab changes).
-       */}
       <div className={isAdminPortal ? "admin-route-shell" : "route-shell"}>
-      <Routes location={location} key={`${location.pathname}${location.search}`}>
+      <Routes>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
         <Route path="/login/help" element={<SignInHelp />} />
