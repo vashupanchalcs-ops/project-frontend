@@ -96,6 +96,8 @@ export default function LiveVideoConsultation() {
   const peerConnectionsRef = useRef(new Map());
   const pendingIceRef = useRef(new Map());
   const remoteAudioUnlockedRef = useRef(false);
+  const reconnectTimerRef = useRef(null);
+  const closingSignalingRef = useRef(false);
   const clientIdRef = useRef(globalThis.crypto?.randomUUID?.() || `consult-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
   // States
@@ -381,7 +383,9 @@ export default function LiveVideoConsultation() {
   }, [removePeer, sendSignal]);
 
   const connectSignaling = useCallback((localStream) => {
-    if (!selectedBooking?.id || !localStream || signalSocketRef.current || typeof WebSocket === "undefined") return;
+    if (!selectedBooking?.id || !localStream || typeof WebSocket === "undefined") return;
+    if ([WebSocket.CONNECTING, WebSocket.OPEN].includes(signalSocketRef.current?.readyState)) return;
+    closingSignalingRef.current = false;
     const socketBase = BASE.replace(/^http/, "ws");
     const query = isDriver
       ? `role=driver&ambulance_id=${encodeURIComponent(ambulanceId)}&email=${encodeURIComponent(email)}&participant_id=${encodeURIComponent(email)}&client_id=${encodeURIComponent(clientIdRef.current)}`
@@ -449,10 +453,18 @@ export default function LiveVideoConsultation() {
       }
     };
     socket.onerror = () => showToast("Video signaling is unavailable");
-    socket.onclose = () => { signalSocketRef.current = null; };
+    socket.onclose = () => {
+      signalSocketRef.current = null;
+      if (!closingSignalingRef.current && selectedBooking?.id && localStream) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = window.setTimeout(() => connectSignaling(localStream), 1200);
+      }
+    };
   }, [ambulanceId, createPeer, email, isDriver, removePeer, selectedBooking?.id, sendSignal, staffId]);
 
   const closeSignaling = useCallback(() => {
+    closingSignalingRef.current = true;
+    window.clearTimeout(reconnectTimerRef.current);
     sendSignal({ type: "leave" });
     signalSocketRef.current?.close();
     signalSocketRef.current = null;
@@ -1659,8 +1671,10 @@ export default function LiveVideoConsultation() {
               className="video-stage-grid-driver"
               onClick={resumeVideoPlayback}
               style={{
-                gridTemplateColumns: connectedStaff.length === 0 ? "1fr" : "1fr 1fr",
-                gridTemplateRows: connectedStaff.length <= 1 ? "1fr" : "1fr 1fr",
+                // Reserve the four-person canvas up front. A new staff member
+                // can then join without resizing the existing video cards.
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gridTemplateRows: "repeat(2, minmax(0, 1fr))",
               }}
             >
               {/* Driver's own tile (always first) */}

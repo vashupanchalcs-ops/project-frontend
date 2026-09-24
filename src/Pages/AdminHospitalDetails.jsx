@@ -36,6 +36,19 @@ const formatRole = (value) => String(value || "staff")
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
+const toHospitalId = (value) => {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? String(id) : null;
+};
+
+const isHospitalDirectoryRow = (member = {}) => Boolean(
+  member.hospital_contract_id
+  || member.hospital_type
+  || member.total_beds != null
+  || member.available_beds != null
+  || member.doctors_count != null
+);
+
 // Keep the admin directory compatible with older staff payloads while the
 // hospital portal remains the single source of truth for the records.
 const normalizeStaffMember = (member = {}) => ({
@@ -50,7 +63,7 @@ const normalizeStaffMember = (member = {}) => ({
 });
 
 const normalizeStaffRows = (rows) => (Array.isArray(rows) ? rows : [])
-  .filter((member) => member && typeof member === "object")
+  .filter((member) => member && typeof member === "object" && !isHospitalDirectoryRow(member))
   .map(normalizeStaffMember);
 
 export default function AdminHospitalDetails() {
@@ -61,18 +74,23 @@ export default function AdminHospitalDetails() {
   const cachedHospitals = Array.isArray(cachedData) && cachedData.length ? cachedData : (() => {
     try { return JSON.parse(sessionStorage.getItem("hospitals_list_cache") || "[]"); } catch { return []; }
   })();
-  const initialHospitalId = routeHospitalId ?? location.state?.hospitalId ?? cachedHospitals[0]?.id ?? null;
+  const initialHospitalId = toHospitalId(routeHospitalId)
+    || toHospitalId(location.state?.hospitalId)
+    || toHospitalId(cachedHospitals[0]?.id)
+    || null;
   const [hospitals, setHospitals] = useState(cachedHospitals);
   const [selectedHospitalId, setSelectedHospitalId] = useState(initialHospitalId);
-  const [selectedDashboard, setSelectedDashboard] = useState(() => (
-    initialHospitalId != null
-      ? readDataCache(`hospital_dashboard_${initialHospitalId}`, null) || {
+  const [selectedDashboard, setSelectedDashboard] = useState(() => {
+    if (initialHospitalId == null) return null;
+    const cachedDashboard = readDataCache(`hospital_dashboard_${initialHospitalId}`, null);
+    return cachedDashboard
+      ? { ...cachedDashboard, staff: normalizeStaffRows(cachedDashboard.staff) }
+      : {
           hospital: cachedHospitals.find((item) => String(item.id) === String(initialHospitalId)),
           summary: {},
           staff: [],
-        }
-      : null
-  ));
+        };
+  });
   const [pulseTime, setPulseTime] = useState(() => Date.now());
 
   useEffect(() => {
@@ -81,11 +99,13 @@ export default function AdminHospitalDetails() {
         const rows = Array.isArray(data) ? data : [];
         const list = rows.length ? rows : DEFAULT_HOSPITALS;
         setHospitals(list);
-        if (list[0]) setSelectedHospitalId((current) => current || list[0].id);
+        if (list[0]) setSelectedHospitalId((current) => (
+          list.some((hospital) => String(hospital.id) === String(current)) ? current : String(list[0].id)
+        ));
       })
       .catch(() => {
         setHospitals(DEFAULT_HOSPITALS);
-        setSelectedHospitalId((current) => current || DEFAULT_HOSPITALS[0].id);
+        setSelectedHospitalId((current) => current || String(DEFAULT_HOSPITALS[0].id));
       });
   }, []);
 
@@ -105,7 +125,13 @@ export default function AdminHospitalDetails() {
           ? dashboardResult.value
           : null;
         const staffRequestSucceeded = staffResult.status === "fulfilled";
-        const staffRows = staffRequestSucceeded ? normalizeStaffRows(staffResult.value) : null;
+        const directStaffRows = staffRequestSucceeded ? normalizeStaffRows(staffResult.value) : null;
+        const dashboardStaffRows = normalizeStaffRows(data?.staff);
+        // If a legacy/proxy response accidentally returns the hospital list,
+        // discard it and use the dashboard's real staff snapshot instead.
+        const staffRows = staffRequestSucceeded
+          ? (directStaffRows.length || (Array.isArray(staffResult.value) && staffResult.value.length === 0) ? directStaffRows : dashboardStaffRows)
+          : dashboardStaffRows;
         const fallbackHospital = hospitals.find((hospital) => String(hospital.id) === String(selectedHospitalId));
 
         setSelectedDashboard((current) => writeDataCache(key, {
