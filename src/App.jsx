@@ -92,6 +92,23 @@ const StaffPortalScreen = () => {
 
 const StaffVideoScreen = () => <LiveVideoConsultation key="staff-live-video" />;
 
+// Staff pages share the application chrome but not the page body. Render this
+// small URL switch outside the large route table so a sidebar click can never
+// leave the previous staff page mounted behind the new URL.
+const StaffPortalRouter = () => {
+  const { pathname, search } = useLocation();
+  const user = localStorage.getItem("user");
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
+  if (!user || role !== "staff") return <Navigate to="/Login" replace />;
+  if (pathname === "/staff/patient-condition") {
+    return <StaffPatientCondition key={`staff-photos-${pathname}${search}`} />;
+  }
+  if (pathname === "/staff/live-video") {
+    return <StaffVideoScreen key={`staff-video-${pathname}${search}`} />;
+  }
+  return <StaffPortalScreen key={`staff-portal-route-${pathname}${search}`} />;
+};
+
 const ConfirmedTrackingRoute = ({ element }) => {
   const raw = localStorage.getItem("active_confirmed_booking");
   if (!raw) return <Navigate to="/MyBookings" replace />;
@@ -162,6 +179,7 @@ const App = () => {
   const isAuth = p === "/login" || p === "/signup" || p === "/login/help";
   const isMapView = p === "/directions";
   const isAdminPortal = role === "admin" && !isAuth && !isMapView;
+  const isStaffPortal = role === "staff" && p.startsWith("/staff/");
 
   // Background polling for confirmed booking (user only)
   const isUser = role !== "admin" && role !== "driver" && role !== "hospital" && role !== "staff" && !!localStorage.getItem("user");
@@ -178,7 +196,9 @@ const App = () => {
       {!isAuth && !isMapView && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
 
       <div className={isAdminPortal ? "admin-route-shell" : "route-shell"}>
-      <Routes>
+      {isStaffPortal ? (
+        <StaffPortalRouter key={`${location.pathname}${location.search}`} />
+      ) : <Routes>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
         <Route path="/login/help" element={<SignInHelp />} />
@@ -265,7 +285,7 @@ const App = () => {
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </Routes>}
       </div>
 
       {/* Rendered after page styles so every route shares the same application surface. */}
