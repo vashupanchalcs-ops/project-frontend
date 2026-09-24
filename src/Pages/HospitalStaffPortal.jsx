@@ -55,9 +55,12 @@ export default function HospitalStaffPortal({ screen }) {
   const staffId = localStorage.getItem("staff_id") || "";
   const email = localStorage.getItem("user") || "";
   const dashboardCacheKey = `staff_dashboard_${staffId || email}`;
-  const cachedDashboard = readDataCache(dashboardCacheKey, null);
-  const [dashboard, setDashboard] = useState(cachedDashboard);
-  const [loading, setLoading] = useState(!cachedDashboard);
+  // Read the cache once when this portal instance is created. Do not read it
+  // on every render: a freshly returned object can become an Effect dependency
+  // and cause repeated dashboard requests/re-renders while the user is trying
+  // to navigate between staff pages.
+  const [dashboard, setDashboard] = useState(() => readDataCache(dashboardCacheKey, null));
+  const [loading, setLoading] = useState(() => !readDataCache(dashboardCacheKey, null));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   // The URL is the source of truth. Keeping the route name ahead of the
@@ -82,13 +85,13 @@ export default function HospitalStaffPortal({ screen }) {
       return;
     }
     if (silent) setRefreshing(true);
-    else if (!cachedDashboard) setLoading(true);
+    else setLoading(true);
     try {
       const data = await fetchFreshJson(
         `${BASE}/api/staff/dashboard/?staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`,
         { key: dashboardCacheKey, fallback: {} }
       );
-      setDashboard(writeDataCache(dashboardCacheKey, data));
+      setDashboard(data);
       setError("");
     } catch (err) {
       setError(err.message || "Unable to load staff dashboard");
@@ -96,11 +99,15 @@ export default function HospitalStaffPortal({ screen }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [cachedDashboard, dashboardCacheKey, email, staffId]);
+  }, [dashboardCacheKey, email, staffId]);
 
+  // Fetch once when this URL-mounted staff screen is created. Manual refresh
+  // remains available through the button and is intentionally not tied to
+  // dashboard state.
   useEffect(() => {
-    loadDashboard(Boolean(cachedDashboard));
-  }, [cachedDashboard, loadDashboard]);
+    const hasCachedDashboard = readDataCache(dashboardCacheKey, null) !== null;
+    loadDashboard(hasCachedDashboard);
+  }, [dashboardCacheKey, loadDashboard]);
 
   const staff = dashboard?.staff || {};
   const hospital = dashboard?.hospital || {};
