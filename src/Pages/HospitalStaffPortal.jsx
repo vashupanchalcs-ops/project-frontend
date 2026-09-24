@@ -60,13 +60,17 @@ export default function HospitalStaffPortal({ screen }) {
   const [loading, setLoading] = useState(!cachedDashboard);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const activeScreen = screen || (
-    pathname === "/staff/home" || pathname === "/staff/dashboard"
-      ? "home"
-      : pathname === "/staff/profile"
-        ? "profile"
-        : "cases"
-  );
+  // The URL is the source of truth. Keeping the route name ahead of the
+  // optional prop prevents a reused portal instance from showing the old
+  // screen after a sidebar Link updates the address bar.
+  const pathnameScreen = pathname === "/staff/home" || pathname === "/staff/dashboard"
+    ? "home"
+    : pathname === "/staff/profile"
+      ? "profile"
+      : pathname === "/staff/cases"
+        ? "cases"
+        : null;
+  const activeScreen = pathnameScreen || screen || "home";
   const isHomeRoute = activeScreen === "home";
   const isProfileRoute = activeScreen === "profile";
 

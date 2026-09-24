@@ -74,9 +74,12 @@ export default function AdminHospitalDetails() {
   const cachedHospitals = Array.isArray(cachedData) && cachedData.length ? cachedData : (() => {
     try { return JSON.parse(sessionStorage.getItem("hospitals_list_cache") || "[]"); } catch { return []; }
   })();
+  // A cached first row is not a reliable selection: the API can reorder
+  // hospitals and a refreshed /HospitalPartnerDetails URL has no navigation
+  // state. Only an explicit route/state id may select a hospital before the
+  // fresh directory response arrives.
   const initialHospitalId = toHospitalId(routeHospitalId)
     || toHospitalId(location.state?.hospitalId)
-    || toHospitalId(cachedHospitals[0]?.id)
     || null;
   const [hospitals, setHospitals] = useState(cachedHospitals);
   const [selectedHospitalId, setSelectedHospitalId] = useState(initialHospitalId);
@@ -99,8 +102,11 @@ export default function AdminHospitalDetails() {
         const rows = Array.isArray(data) ? data : [];
         const list = rows.length ? rows : DEFAULT_HOSPITALS;
         setHospitals(list);
-        if (list[0]) setSelectedHospitalId((current) => (
-          list.some((hospital) => String(hospital.id) === String(current)) ? current : String(list[0].id)
+        const defaultHospital = list.find((hospital) => Number(hospital.staff_total_count || 0) > 0) || list[0];
+        if (defaultHospital) setSelectedHospitalId((current) => (
+          current && list.some((hospital) => String(hospital.id) === String(current))
+            ? current
+            : String(defaultHospital.id)
         ));
       })
       .catch(() => {

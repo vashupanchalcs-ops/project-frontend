@@ -1153,7 +1153,7 @@ export default function Hospitals() {
                             style={isUser ? { flex: "0 0 auto", padding: "8px 12px" } : { flex: 1 }}
                             onClick={() => {
                               if (isAdmin) {
-                                navigate("/HospitalPartnerDetails", { state: { hospitalId: h.id } });
+                                navigate(`/HospitalPartnerDetails/${h.id}`, { state: { hospitalId: h.id } });
                                 return;
                               }
                               handleDirections(h);

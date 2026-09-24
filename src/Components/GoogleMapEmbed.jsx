@@ -19,18 +19,33 @@ const validPoint = (point) => (isIndiaPoint(point)
 
 const pointText = (point) => `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`;
 
-// One predictable Google embed is shared by every role and every map screen.
+// Use the embeddable OpenStreetMap view instead of a Google Maps iframe.
+// Google injects an internal GetViewportInfo XHR into embedded maps; that
+// request is blocked by the browser's CORS policy and creates noisy console
+// errors even when the map itself is visible. OSM's export view is a stable,
+// keyless embed and keeps the map available on every portal.
 const createEmbedUrl = (ambulance, pickup, destination) => {
-  const origin = ambulance || pickup;
-  if (origin && destination) {
-    const waypoint = ambulance && pickup ? `&waypoints=${encodeURIComponent(pointText(pickup))}` : "";
-    return `https://maps.google.com/maps?output=embed&f=d&saddr=${encodeURIComponent(pointText(origin))}&daddr=${encodeURIComponent(pointText(destination))}${waypoint}&dirflg=d&hl=en`;
+  const points = [ambulance, pickup, destination].filter(Boolean);
+  if (!points.length) {
+    return "https://www.openstreetmap.org/export/embed.html?bbox=68%2C6%2C98%2C38&layer=mapnik";
   }
 
-  const point = destination || pickup || ambulance;
-  const query = point ? pointText(point) : DEFAULT_QUERY;
-  const zoom = point ? 13 : 5;
-  return `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(query)}&z=${zoom}&hl=en`;
+  const latitudes = points.map((point) => point.lat);
+  const longitudes = points.map((point) => point.lng);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+  const latPadding = Math.max(0.015, (maxLat - minLat) * 0.2);
+  const lngPadding = Math.max(0.015, (maxLng - minLng) * 0.2);
+  const bbox = [
+    minLng - lngPadding,
+    minLat - latPadding,
+    maxLng + lngPadding,
+    maxLat + latPadding,
+  ].map((value) => value.toFixed(6)).join(",");
+  const marker = destination || pickup || ambulance;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${marker.lat.toFixed(6)}%2C${marker.lng.toFixed(6)}`;
 };
 
 export default function GoogleMapEmbed({
@@ -64,7 +79,7 @@ export default function GoogleMapEmbed({
       }}
     >
       <iframe
-        title="Google Maps route"
+        title="Hospital location map"
         src={embedSrc}
         width="100%"
         height="100%"
