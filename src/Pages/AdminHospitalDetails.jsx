@@ -137,8 +137,8 @@ export default function AdminHospitalDetails() {
     // Fetch them independently so a slow/failed dashboard can never replace
     // the hospital's real roster with an unrelated cached list.
     Promise.allSettled([
-      fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/?_=${Date.now()}`, { key, fallback: null }),
-      fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/staff/?_=${Date.now()}`, { key: `hospital_staff_${selectedHospitalId}`, fallback: [] }),
+      fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/?_=${Date.now()}`, { key, fallback: null, cache: "no-store" }),
+      fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/staff/?_=${Date.now()}`, { key: `hospital_staff_${selectedHospitalId}`, fallback: [], cache: "no-store", headers: { Accept: "application/json" } }),
     ])
       .then(([dashboardResult, staffResult]) => {
         const data = dashboardResult.status === "fulfilled" && dashboardResult.value && typeof dashboardResult.value === "object"

@@ -45,8 +45,8 @@ export const readDataCache  = (key, fallback) => { const v = readCache(key); ret
 export const writeDataCache = writeCache;
 export const clearDataCache = clearCache;
 
-export async function fetchFreshJson(url, { key, signal, fallback, ttl } = {}) {
-  const response = await fetch(url, { signal });
+export async function fetchFreshJson(url, { key, signal, fallback, ttl, cache = "default", headers } = {}) {
+  const response = await fetch(url, { signal, cache, headers });
   const payload = await response.json().catch(() => fallback);
   if (!response.ok) throw new Error((payload && payload.error) || ('Request failed (' + response.status + ')'));
   if (key) writeCache(key, payload, ttl || CACHE_TTL.DEFAULT);
