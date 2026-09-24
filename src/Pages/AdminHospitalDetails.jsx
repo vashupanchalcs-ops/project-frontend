@@ -36,6 +36,23 @@ const formatRole = (value) => String(value || "staff")
   .replaceAll("_", " ")
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
+// Keep the admin directory compatible with older staff payloads while the
+// hospital portal remains the single source of truth for the records.
+const normalizeStaffMember = (member = {}) => ({
+  ...member,
+  full_name: member.full_name || member.name || member.staff_name || member.doctor_name || member.display_name || "",
+  role: member.role || member.staff_role || member.designation || member.type || "staff",
+  staff_id: member.staff_id || member.staffId || member.employee_id || "",
+  specialization: member.specialization || member.speciality || member.department || "",
+  registration_number: member.registration_number || member.registration_no || member.registrationNumber || "",
+  contact_number: member.contact_number || member.phone || member.mobile || "",
+  email: member.email || member.staff_email || "",
+});
+
+const normalizeStaffRows = (rows) => (Array.isArray(rows) ? rows : [])
+  .filter((member) => member && typeof member === "object")
+  .map(normalizeStaffMember);
+
 export default function AdminHospitalDetails() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -75,24 +92,34 @@ export default function AdminHospitalDetails() {
   useEffect(() => {
     if (!selectedHospitalId) return undefined;
     const key = `hospital_dashboard_${selectedHospitalId}`;
-    Promise.all([
+    // The dashboard contains a staff snapshot for convenience, but the
+    // hospital staff endpoint is authoritative for the admin directory.
+    // Fetch them independently so a slow/failed dashboard can never replace
+    // the hospital's real roster with an unrelated cached list.
+    Promise.allSettled([
       fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/dashboard/?_=${Date.now()}`, { key, fallback: null }),
       fetchFreshJson(`${BASE}/api/hospitals/${selectedHospitalId}/staff/?_=${Date.now()}`, { key: `hospital_staff_${selectedHospitalId}`, fallback: [] }),
     ])
-      .then(([data, staffRows]) => {
-        if (data) {
-          // Use the small staff collection as the directory source so it is
-          // not blocked by the larger live dashboard response.
-          setSelectedDashboard(writeDataCache(key, {
-            ...data,
-            staff: Array.isArray(staffRows) ? staffRows : (Array.isArray(data.staff) ? data.staff : []),
-          }));
-        }
+      .then(([dashboardResult, staffResult]) => {
+        const data = dashboardResult.status === "fulfilled" && dashboardResult.value && typeof dashboardResult.value === "object"
+          ? dashboardResult.value
+          : null;
+        const staffRequestSucceeded = staffResult.status === "fulfilled";
+        const staffRows = staffRequestSucceeded ? normalizeStaffRows(staffResult.value) : null;
+        const fallbackHospital = hospitals.find((hospital) => String(hospital.id) === String(selectedHospitalId));
+
+        setSelectedDashboard((current) => writeDataCache(key, {
+          ...(current || {}),
+          ...(data || {}),
+          hospital: data?.hospital || current?.hospital || fallbackHospital || null,
+          // An empty array is valid: it means this hospital has no registered
+          // staff. Only retain cached rows when the staff request itself failed.
+          staff: staffRequestSucceeded
+            ? staffRows
+            : normalizeStaffRows(data?.staff || current?.staff || []),
+        }));
       })
-      .catch(() => {
-        const fallback = hospitals.find((hospital) => String(hospital.id) === String(selectedHospitalId));
-        if (fallback) setSelectedDashboard((current) => current?.hospital ? current : { hospital: fallback, summary: {}, staff: [] });
-      });
+      .catch(() => undefined);
     return undefined;
   }, [selectedHospitalId, hospitals]);
 
@@ -109,7 +136,7 @@ export default function AdminHospitalDetails() {
   const totalBeds = condition.totalBeds;
   const availableBeds = condition.availableBeds;
   const bookedBeds = Math.max(0, totalBeds - availableBeds);
-  const staff = selectedDashboard?.staff || [];
+  const staff = normalizeStaffRows(selectedDashboard?.staff);
   const facilities = splitValues(hospital?.facilities);
   const specializations = splitValues(hospital?.specializations);
 
