@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import StaffPatientCondition from "./StaffPatientCondition";
+import LiveVideoConsultation from "./LiveVideoConsultation";
 import {
   AlertTriangle,
   ArrowRight,
@@ -49,34 +51,35 @@ const formatCaseStatus = (booking) => {
   return booking?.hospital_response === "ready" ? "Ready for intake" : "In progress";
 };
 
-export default function HospitalStaffPortal({ screen }) {
-  const { pathname } = useLocation();
+export default function HospitalStaffPortal({ screen: propScreen }) {
+  const location = useLocation();
   const navigate = useNavigate();
   const staffId = localStorage.getItem("staff_id") || "";
   const email = localStorage.getItem("user") || "";
   const dashboardCacheKey = `staff_dashboard_${staffId || email}`;
-  // Read the cache once when this portal instance is created. Do not read it
-  // on every render: a freshly returned object can become an Effect dependency
-  // and cause repeated dashboard requests/re-renders while the user is trying
-  // to navigate between staff pages.
+
+  // Read cache lazily once on mount to avoid re-render loops
   const [dashboard, setDashboard] = useState(() => readDataCache(dashboardCacheKey, null));
   const [loading, setLoading] = useState(() => !readDataCache(dashboardCacheKey, null));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  // The URL is the source of truth. Keeping the route name ahead of the
-  // optional prop prevents a reused portal instance from showing the old
-  // screen after a sidebar Link updates the address bar.
-  const effectivePath = (pathname || window.location.pathname).toLowerCase();
-  const pathnameScreen = effectivePath === "/staff/home" || effectivePath === "/staff/dashboard"
-    ? "home"
-    : effectivePath === "/staff/profile"
-      ? "profile"
-      : effectivePath === "/staff/cases"
-        ? "cases"
-        : null;
-  const activeScreen = pathnameScreen || screen || "home";
+
+  // Single Source of Truth: URL pathname
+  const currentPath = (location.pathname || window.location.pathname || "").toLowerCase().replace(/\/+$/, "");
+  const activeScreen = useMemo(() => {
+    if (currentPath === "/staff/profile") return "profile";
+    if (currentPath === "/staff/cases") return "cases";
+    if (currentPath === "/staff/patient-condition") return "patient-condition";
+    if (currentPath === "/staff/live-video") return "live-video";
+    if (currentPath === "/staff/home" || currentPath === "/staff/dashboard") return "home";
+    return propScreen || "home";
+  }, [currentPath, propScreen]);
+
   const isHomeRoute = activeScreen === "home";
   const isProfileRoute = activeScreen === "profile";
+  const isCasesRoute = activeScreen === "cases";
+  const isPhotosRoute = activeScreen === "patient-condition";
+  const isVideoRoute = activeScreen === "live-video";
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!staffId || !email) {
@@ -101,13 +104,19 @@ export default function HospitalStaffPortal({ screen }) {
     }
   }, [dashboardCacheKey, email, staffId]);
 
-  // Fetch once when this URL-mounted staff screen is created. Manual refresh
-  // remains available through the button and is intentionally not tied to
-  // dashboard state.
   useEffect(() => {
-    const hasCachedDashboard = readDataCache(dashboardCacheKey, null) !== null;
-    loadDashboard(hasCachedDashboard);
-  }, [dashboardCacheKey, loadDashboard]);
+    if (isHomeRoute || isProfileRoute || isCasesRoute) {
+      const hasCached = readDataCache(dashboardCacheKey, null) !== null;
+      loadDashboard(hasCached);
+    }
+  }, [dashboardCacheKey, loadDashboard, currentPath, isHomeRoute, isProfileRoute, isCasesRoute]);
+
+  if (isPhotosRoute) {
+    return <StaffPatientCondition key={`staff-photos-${currentPath}`} />;
+  }
+  if (isVideoRoute) {
+    return <LiveVideoConsultation key={`staff-video-${currentPath}`} />;
+  }
 
   const staff = dashboard?.staff || {};
   const hospital = dashboard?.hospital || {};
@@ -223,8 +232,9 @@ export default function HospitalStaffPortal({ screen }) {
               <RefreshCw size={15} className={refreshing ? "staff-spin" : ""} /> Refresh
             </button>
             {!isHomeRoute && <button className="staff-action" onClick={() => navigate("/staff/home")}>Staff home</button>}
+            {!isCasesRoute && <button className="staff-action" onClick={() => navigate("/staff/cases")}>Assigned cases</button>}
             {!isProfileRoute && <button className="staff-action primary" onClick={() => navigate("/staff/profile")}>My profile</button>}
-            {isHomeRoute && <button className="staff-action primary" onClick={() => navigate("/staff/patient-condition")}>Patient condition photos</button>}
+            <button className="staff-action" onClick={() => navigate("/staff/patient-condition")}>Patient condition photos</button>
           </div>
         </header>
 
@@ -263,7 +273,7 @@ export default function HospitalStaffPortal({ screen }) {
           </section>
         )}
 
-        {dashboard && !isHomeRoute && !isProfileRoute && (
+        {dashboard && isCasesRoute && (
           <>
             <section className="staff-stats">
               <div className="staff-stat"><div className="staff-stat-label">Assigned cases</div><div className="staff-stat-value">{summary.assigned_cases || 0}</div></div>

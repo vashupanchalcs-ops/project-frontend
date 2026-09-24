@@ -203,9 +203,7 @@ const App = () => {
       {!isAuth && !isMapView && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
 
       <div className={isAdminPortal ? "admin-route-shell" : "route-shell"}>
-      {isStaffPortal ? (
-        <StaffPortalRouter key={`${location.pathname}${location.search}`} />
-      ) : <Routes>
+      <Routes>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
         <Route path="/login/help" element={<SignInHelp />} />
@@ -255,12 +253,12 @@ const App = () => {
         <Route path="/hospital/beds" element={<HospitalRoute element={<HospitalBeds />} />} />
 
         {/* Hospital staff */}
-        <Route path="/staff/home" element={<StaffRoute element={<StaffPortalScreen />} />} />
-        <Route path="/staff/dashboard" element={<StaffRoute element={<StaffPortalScreen />} />} />
-        <Route path="/staff/cases" element={<StaffRoute element={<StaffPortalScreen />} />} />
+        <Route path="/staff/home" element={<StaffRoute element={<HospitalStaffPortal screen="home" />} />} />
+        <Route path="/staff/dashboard" element={<StaffRoute element={<HospitalStaffPortal screen="home" />} />} />
+        <Route path="/staff/cases" element={<StaffRoute element={<HospitalStaffPortal screen="cases" />} />} />
         <Route path="/staff/patient-condition" element={<StaffRoute element={<StaffPatientCondition />} />} />
-        <Route path="/staff/live-video" element={<StaffRoute element={<StaffVideoScreen />} />} />
-        <Route path="/staff/profile" element={<StaffRoute element={<StaffPortalScreen />} />} />
+        <Route path="/staff/live-video" element={<StaffRoute element={<LiveVideoConsultation />} />} />
+        <Route path="/staff/profile" element={<StaffRoute element={<HospitalStaffPortal screen="profile" />} />} />
 
         {/* Shared */}
         <Route path="/Ambulances" element={<ProtectedRoute element={<Ambulances />} />} />
@@ -292,7 +290,7 @@ const App = () => {
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>}
+      </Routes>
       </div>
 
       {/* Rendered after page styles so every route shares the same application surface. */}
@@ -1709,11 +1707,18 @@ const App = () => {
           box-shadow: none !important;
           transform: none !important;
         }
-        html body #root :is(.lsb-root.lsb-root .lsb-item:hover, .lsb-root.lsb-root .lsb-item.active, .lsb-bottom .lsb-bottom-item:hover, .lsb-bottom .lsb-bottom-item.active, .lsb-bottom .lsb-bottom-toggle) {
+        html body #root :is(.lsb-root.lsb-root .lsb-item.active, .lsb-bottom .lsb-bottom-item.active, .lsb-bottom .lsb-bottom-toggle) {
           background: #126f1e !important;
           border-color: #126f1e !important;
           color: #ffffff !important;
           box-shadow: none !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          html body #root :is(.lsb-root.lsb-root .lsb-item:hover, .lsb-bottom .lsb-bottom-item:hover) {
+            background: #126f1e !important;
+            border-color: #126f1e !important;
+            color: #ffffff !important;
+          }
         }
         html body #root :is(.lsb-root.lsb-root .lsb-item:hover, .lsb-root.lsb-root .lsb-item.active, .lsb-bottom .lsb-bottom-item:hover, .lsb-bottom .lsb-bottom-item.active) :is(svg, path) {
           stroke: #ffffff !important;
@@ -1803,11 +1808,18 @@ const App = () => {
           color: #111111 !important;
           box-shadow: none !important;
         }
-        html body #root#root :is(.lsb-root .lsb-item.active, .lsb-root .lsb-item:hover, .lsb-bottom-item.active, .lsb-bottom-item:hover, .lsb-bottom-toggle) {
+        html body #root#root :is(.lsb-root .lsb-item.active, .lsb-bottom-item.active, .lsb-bottom-toggle) {
           background: #126f1e !important;
           border-color: #126f1e !important;
           color: #ffffff !important;
           box-shadow: none !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          html body #root#root :is(.lsb-root .lsb-item:hover, .lsb-bottom-item:hover) {
+            background: #126f1e !important;
+            border-color: #126f1e !important;
+            color: #ffffff !important;
+          }
         }
         /* Login is neutral except for the selected yellow Sign In tab. */
         html body #root#root .auth-root :is(.auth-mode, .auth-role, .auth-google, .auth-back, .auth-pass-toggle) {
