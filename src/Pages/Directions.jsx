@@ -131,6 +131,7 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
     <div style={{ position: "relative", height: "100vh", width: "100%", background: "#f5f5f5" }}>
       <GoogleMapEmbed
         pickupLoc={driverLoc ? { ...driverLoc, label: "Your location" } : null}
+        userLoc={driverLoc ? { ...driverLoc, label: "Your location" } : null}
         destinationLoc={hospCoord ? { ...hospCoord, name: hospital.name || "Hospital" } : null}
         height="100%"
       />

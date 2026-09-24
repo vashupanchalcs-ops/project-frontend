@@ -2052,6 +2052,7 @@ export default function Ambulances() {
                  
                   <div className="amb-map-box" style={{ position: "relative" }}>
                     <GoogleMapEmbed
+                      userLoc={mapLocation}
                       ambulanceLoc={
                         selectedAmb && isIndiaLatLng(Number(selectedAmb.latitude), Number(selectedAmb.longitude))
                           ? { lat: Number(selectedAmb.latitude), lng: Number(selectedAmb.longitude), heading: Number(selectedAmb.heading) || 0, speed: selectedAmb.speed || 0 }

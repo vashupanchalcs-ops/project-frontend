@@ -39,8 +39,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   const [deviceLocation, setDeviceLocation] = useState(null);
 
   useEffect(() => {
-    const hasBookingCoords = isIndiaCoord(Number(booking?.pickup_latitude), Number(booking?.pickup_longitude));
-    if (hasBookingCoords || !navigator.geolocation) return undefined;
+    if (!navigator.geolocation) return undefined;
     const watchId = navigator.geolocation.watchPosition(
       ({ coords }) => {
         if (isIndiaCoord(coords.latitude, coords.longitude)) {
@@ -575,6 +574,7 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
             ambulanceLoc={effectiveAmbLoc}
             pickupLoc={pickupLoc}
             destinationLoc={destLoc}
+            userLoc={deviceLocation}
             routeData={routeData}
             followAmbulance={routeMode === "start"}
             loading={routeLoading}

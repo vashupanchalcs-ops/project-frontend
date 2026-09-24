@@ -62,7 +62,15 @@ const normalizeStaffMember = (member = {}) => ({
   email: member.email || member.staff_email || "",
 });
 
-const normalizeStaffRows = (rows) => (Array.isArray(rows) ? rows : [])
+const unwrapStaffRows = (rows) => {
+  if (Array.isArray(rows)) return rows;
+  if (Array.isArray(rows?.staff)) return rows.staff;
+  if (Array.isArray(rows?.members)) return rows.members;
+  if (Array.isArray(rows?.results)) return rows.results;
+  return [];
+};
+
+const normalizeStaffRows = (rows) => unwrapStaffRows(rows)
   .filter((member) => member && typeof member === "object" && !isHospitalDirectoryRow(member))
   .map(normalizeStaffMember);
 
@@ -94,6 +102,10 @@ export default function AdminHospitalDetails() {
           staff: [],
         };
   });
+  const [staffRoster, setStaffRoster] = useState(() => (
+    initialHospitalId ? normalizeStaffRows(readDataCache(`hospital_staff_${initialHospitalId}`, [])) : []
+  ));
+  const [staffRosterLoading, setStaffRosterLoading] = useState(Boolean(initialHospitalId));
   const [pulseTime, setPulseTime] = useState(() => Date.now());
 
   useEffect(() => {
@@ -117,6 +129,8 @@ export default function AdminHospitalDetails() {
 
   useEffect(() => {
     if (!selectedHospitalId) return undefined;
+    let active = true;
+    setStaffRosterLoading(true);
     const key = `hospital_dashboard_${selectedHospitalId}`;
     // The dashboard contains a staff snapshot for convenience, but the
     // hospital staff endpoint is authoritative for the admin directory.
@@ -140,6 +154,8 @@ export default function AdminHospitalDetails() {
           : dashboardStaffRows;
         const fallbackHospital = hospitals.find((hospital) => String(hospital.id) === String(selectedHospitalId));
 
+        if (!active) return;
+        setStaffRoster(staffRows);
         setSelectedDashboard((current) => writeDataCache(key, {
           ...(current || {}),
           ...(data || {}),
@@ -151,8 +167,11 @@ export default function AdminHospitalDetails() {
             : normalizeStaffRows(data?.staff || current?.staff || []),
         }));
       })
-      .catch(() => undefined);
-    return undefined;
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setStaffRosterLoading(false);
+      });
+    return () => { active = false; };
   }, [selectedHospitalId, hospitals]);
 
   useEffect(() => {
@@ -168,7 +187,10 @@ export default function AdminHospitalDetails() {
   const totalBeds = condition.totalBeds;
   const availableBeds = condition.availableBeds;
   const bookedBeds = Math.max(0, totalBeds - availableBeds);
-  const staff = normalizeStaffRows(selectedDashboard?.staff);
+  // Keep the roster in its own state. Dashboard refreshes must never be able
+  // to replace a successful hospital-scoped staff response with a stale
+  // cached snapshot.
+  const staff = staffRoster;
   const facilities = splitValues(hospital?.facilities);
   const specializations = splitValues(hospital?.specializations);
 
@@ -317,8 +339,10 @@ export default function AdminHospitalDetails() {
               </div>
 
               <section className="ahd-staff-section">
-                <div className="ahd-staff-heading"><h2>Doctors & Staff Directory</h2><span className="ahd-staff-count">{staff.length} registered staff</span></div>
-                {staff.length ? (
+                <div className="ahd-staff-heading"><h2>Doctors & Staff Directory</h2><span className="ahd-staff-count">{staffRosterLoading ? "Loading staff…" : `${staff.length} registered staff`}</span></div>
+                {staffRosterLoading ? (
+                  <div className="ahd-empty">Loading the hospital’s registered staff…</div>
+                ) : staff.length ? (
                   <div className="ahd-staff-wrap">
                     <table className="ahd-staff-table">
                       <thead><tr><th>Staff member</th><th>Role / department</th><th>Staff ID</th><th>Contact</th><th>Experience</th><th>Status</th></tr></thead>
