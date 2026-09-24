@@ -44,12 +44,35 @@ const attachMediaStream = (element, mediaStream, muted = false) => {
   if (!element) return;
   element.srcObject = mediaStream || null;
   element.muted = muted;
-  const play = () => element.play?.().catch(() => {});
-  if (mediaStream) {
-    if (element.readyState >= 2) play();
-    else element.onloadedmetadata = play;
-  }
+  element.autoplay = true;
+  element.playsInline = true;
+  if (!mediaStream) return;
+
+  // A MediaStream can arrive before metadata is ready, or after the first
+  // metadata event has already fired. Try both paths so a live track never
+  // remains mounted as a silent/black video element.
+  const play = () => {
+    const promise = element.play?.();
+    promise?.catch(() => {
+      // Browsers may wait for a user gesture before playing remote audio.
+      // The stage click handler retries playback from that gesture.
+      element.dataset.playBlocked = "true";
+    });
+  };
+  element.onloadedmetadata = play;
+  element.onloadeddata = play;
+  element.oncanplay = play;
+  if (element.readyState >= 1) play();
+  window.requestAnimationFrame?.(play);
 };
+
+const hasLiveVideoTrack = (mediaStream) => Boolean(
+  mediaStream?.getVideoTracks?.().some((track) => track.readyState === "live")
+);
+
+const hasLiveAudioTrack = (mediaStream) => Boolean(
+  mediaStream?.getAudioTracks?.().some((track) => track.readyState === "live")
+);
 
 export default function LiveVideoConsultation() {
   // Read logged-in user strictly
@@ -72,6 +95,7 @@ export default function LiveVideoConsultation() {
   const signalSocketRef = useRef(null);
   const peerConnectionsRef = useRef(new Map());
   const pendingIceRef = useRef(new Map());
+  const remoteAudioUnlockedRef = useRef(false);
   const clientIdRef = useRef(globalThis.crypto?.randomUUID?.() || `consult-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
   // States
@@ -328,8 +352,12 @@ export default function LiveVideoConsultation() {
       if (event.candidate) sendSignal({ type: "ice-candidate", target_id: remoteId, candidate: event.candidate });
     };
     peer.ontrack = (event) => {
-      const remoteStream = event.streams?.[0];
-      if (!remoteStream) return;
+      const existingStream = peerConnectionsRef.current.get(remoteId)?._remoteStream;
+      const remoteStream = event.streams?.[0] || existingStream || new MediaStream();
+      if (!event.streams?.[0] && event.track && !remoteStream.getTracks().some((track) => track.id === event.track.id)) {
+        remoteStream.addTrack(event.track);
+      }
+      peer._remoteStream = remoteStream;
       setRemoteParticipants((prev) => ({
         ...prev,
         [remoteId]: { ...(prev[remoteId] || {}), stream: remoteStream },
@@ -372,9 +400,10 @@ export default function LiveVideoConsultation() {
             ...prev,
             [remoteId]: { ...(prev[remoteId] || {}), role: payload.role, participantId: payload.participant_id },
           }));
-          // Always let the existing participant offer to the newly joined
-          // opposite role. Client-id ordering could leave both sides waiting
-          // with a blank video tile.
+          // Only the participant already in the room receives peer-joined
+          // from the backend, so the existing side creates the offer. This
+          // works regardless of whether driver or staff joined first without
+          // creating an offer collision.
           const oppositeRole = isDriver ? "staff" : "driver";
           if (payload.role === oppositeRole) await createPeer(remoteId, localStream, true);
         }
@@ -500,8 +529,26 @@ export default function LiveVideoConsultation() {
     attachMediaStream(localVideoRef.current, stream, true);
   }, [stream]);
 
-  const hasLiveVideo = Boolean(stream?.getVideoTracks?.().some((track) => track.readyState === "live"));
-  const hasLiveAudio = Boolean(stream?.getAudioTracks?.().some((track) => track.readyState === "live"));
+  const hasLiveVideo = hasLiveVideoTrack(stream);
+  const hasLiveAudio = hasLiveAudioTrack(stream);
+
+  const resumeVideoPlayback = useCallback(() => {
+    remoteAudioUnlockedRef.current = true;
+    const videos = new Set([
+      localVideoRef.current,
+      ...Array.from(document.querySelectorAll(".consult-middle-container video")),
+    ].filter(Boolean));
+    videos.forEach((video) => {
+      if (video !== localVideoRef.current) video.muted = false;
+      video.play?.().catch(() => {});
+    });
+  }, []);
+
+  useEffect(() => {
+    const unlockCallMedia = () => resumeVideoPlayback();
+    window.addEventListener("pointerdown", unlockCallMedia, { once: true, passive: true });
+    return () => window.removeEventListener("pointerdown", unlockCallMedia);
+  }, [resumeVideoPlayback]);
 
   const toggleMic = () => {
     const next = !micOn;
@@ -514,6 +561,7 @@ export default function LiveVideoConsultation() {
     const next = !cameraOn;
     stream?.getVideoTracks().forEach((t) => { t.enabled = next; });
     setCameraOn(next);
+    resumeVideoPlayback();
     showToast(next ? "Camera Turned On" : "Camera Turned Off");
   };
 
@@ -1609,6 +1657,7 @@ export default function LiveVideoConsultation() {
             /* ── DRIVER: UP TO 4 TILES (DRIVER + MAX 3 CONNECTED STAFF) ── */
             <div
               className="video-stage-grid-driver"
+              onClick={resumeVideoPlayback}
               style={{
                 gridTemplateColumns: connectedStaff.length === 0 ? "1fr" : "1fr 1fr",
                 gridTemplateRows: connectedStaff.length <= 1 ? "1fr" : "1fr 1fr",
@@ -1617,7 +1666,7 @@ export default function LiveVideoConsultation() {
               {/* Driver's own tile (always first) */}
               <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
                 {cameraOn && stream && hasLiveVideo ? (
-                  <video ref={localVideoRef} autoPlay playsInline muted className="stream-video-element mirror" />
+                  <video ref={(element) => { localVideoRef.current = element; attachMediaStream(element, stream, true); }} autoPlay playsInline muted className="stream-video-element mirror" />
                 ) : (
                   <div className="stream-initials-tile stream-waiting-tile">
                     {hasLiveAudio ? <Mic size={42} /> : <VideoOff size={42} />}
@@ -1639,8 +1688,8 @@ export default function LiveVideoConsultation() {
                     const participant = participantForStaff(staff);
                     return (
                       <div key={staff.id} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
-                        {participant?.stream ? (
-                          <video ref={(element) => attachMediaStream(element, participant.stream)} autoPlay playsInline className="stream-video-element" />
+                        {participant?.stream && hasLiveVideoTrack(participant.stream) ? (
+                          <video ref={(element) => attachMediaStream(element, participant.stream, !remoteAudioUnlockedRef.current)} autoPlay playsInline className="stream-video-element" />
                         ) : staff.avatar ? (
                           <img src={staff.avatar} alt={staff.name} className="stream-video-element" style={{ objectFit: "cover" }} />
                         ) : (
@@ -1657,8 +1706,10 @@ export default function LiveVideoConsultation() {
               ) : Object.keys(remoteParticipants).length > 0 ? (
                 Object.entries(remoteParticipants).slice(0, 3).map(([remoteId, p]) => (
                   <div key={remoteId} className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
-                    {p.stream ? (
-                      <video ref={(element) => attachMediaStream(element, p.stream)} autoPlay playsInline className="stream-video-element" />
+                    {p.stream && hasLiveVideoTrack(p.stream) ? (
+                      <video ref={(element) => attachMediaStream(element, p.stream, !remoteAudioUnlockedRef.current)} autoPlay playsInline className="stream-video-element" />
+                    ) : p.stream && hasLiveAudioTrack(p.stream) ? (
+                      <div className="stream-initials-tile stream-waiting-tile"><Mic size={42} /><span>Voice connected · Camera starting…</span></div>
                     ) : (
                       <div className="stream-initials-tile">DOC</div>
                     )}
@@ -1673,11 +1724,13 @@ export default function LiveVideoConsultation() {
             </div>
           ) : (
             /* ── STAFF: 2 TILES ONLY (DRIVER + LOGGED-IN STAFF MEMBER) ── */
-            <div className="video-stage-grid">
+            <div className="video-stage-grid" onClick={resumeVideoPlayback}>
               {/* PERSON 1: AMBULANCE DRIVER */}
               <div className={`single-stream-tile ${activeSpeaker === "local" ? "speaker-active" : ""}`}>
-                {driverParticipant?.stream ? (
-                  <video ref={(element) => attachMediaStream(element, driverParticipant.stream)} autoPlay playsInline className="stream-video-element" />
+                {driverParticipant?.stream && hasLiveVideoTrack(driverParticipant.stream) ? (
+                  <video ref={(element) => attachMediaStream(element, driverParticipant.stream, !remoteAudioUnlockedRef.current)} autoPlay playsInline className="stream-video-element" />
+                ) : driverParticipant?.stream && hasLiveAudioTrack(driverParticipant.stream) ? (
+                  <div className="stream-initials-tile stream-waiting-tile"><Mic size={42} /><span>Voice connected · Driver camera starting…</span></div>
                 ) : (
                   <div className="stream-initials-tile stream-waiting-tile">
                     <VideoOff size={42} />
@@ -1694,7 +1747,7 @@ export default function LiveVideoConsultation() {
               {/* PERSON 2: CURRENTLY LOGGED-IN STAFF MEMBER */}
               <div className={`single-stream-tile ${activeSpeaker === "remote" ? "speaker-active" : ""}`}>
                 {cameraOn && stream && hasLiveVideo ? (
-                  <video ref={localVideoRef} autoPlay playsInline muted className="stream-video-element mirror" />
+                  <video ref={(element) => { localVideoRef.current = element; attachMediaStream(element, stream, true); }} autoPlay playsInline muted className="stream-video-element mirror" />
                 ) : (
                   <div className="stream-initials-tile stream-waiting-tile">
                     {hasLiveAudio ? <Mic size={42} /> : <VideoOff size={42} />}

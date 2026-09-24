@@ -433,7 +433,6 @@ const Leftsidebar = () => {
                 {role === "admin" && index === 6 && <div className="lsb-divider" />}
                 <Link
                   to={item.to}
-                  reloadDocument={role === "staff"}
                   className={`lsb-item ${isActive ? "active" : ""}`}
                   title={item.label}
                 >
@@ -462,7 +461,6 @@ const Leftsidebar = () => {
               <Link
                 key={item.to}
                 to={item.to}
-                reloadDocument={role === "staff"}
                 className={`lsb-bottom-item ${isActive ? "active" : ""}`}
               >
                 <Icon size={18} />

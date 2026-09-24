@@ -38,6 +38,7 @@ export default function StaffPatientCondition() {
   });
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [photoLoadingIds, setPhotoLoadingIds] = useState(() => new Set());
 
   // Photo gallery slider state for active core case
   const [photoPage, setPhotoPage] = useState(0);
@@ -158,7 +159,31 @@ export default function StaffPatientCondition() {
     },
   ], []);
 
-  // Fetch real cases & photos from backend
+  const mapBooking = useCallback((r, index, photos = [], photosLoading = false) => {
+    const isEmerg = `${r.patient_condition || ""} ${r.vitals_summary || ""}`.toLowerCase().includes("cardiac") || index === 0;
+    return {
+      id: String(r.id),
+      ambulance_id: `AMB-${r.id}`,
+      patient_name: r.patient_name || r.booked_by || "Incoming Patient",
+      patient_age: r.patient_age || "42",
+      patient_gender: r.patient_gender || "M",
+      ambulance_fleet_id: r.ambulance_number || `DL-3C-${r.id}`,
+      ambulance_number: r.ambulance_number || `DL-3C-${r.id}`,
+      driver_name: r.driver || "driver 1",
+      driver_contact: r.driver_contact || "9711933066",
+      diagnostic: r.patient_condition || r.vitals_summary || "Emergency Triage En-Route",
+      condition_tone: isEmerg ? "emergency" : index % 2 === 0 ? "en_route" : "stable",
+      eta_mins: `${6 + index * 5} mins`,
+      status_label: isEmerg ? "Active Core Case" : "En-Route Unit",
+      accent_color: isEmerg ? "#ef4444" : index % 2 === 0 ? "#f59e0b" : "#10b981",
+      photos,
+      photosLoading,
+    };
+  }, []);
+
+  // Fetch cases first, then hydrate each photo gallery independently. The old
+  // implementation awaited every photo request before rendering any case,
+  // making the whole staff page appear stuck on slow Render responses.
   const loadCases = useCallback(async () => {
     if (!staffId || !email) {
       setCases(defaultIncomingCases);
@@ -173,58 +198,47 @@ export default function StaffPatientCondition() {
       const data = await response.json().catch(() => ({}));
       const rows = Array.isArray(data.cases) ? data.cases : [];
       if (rows.length > 0) {
-        // Fetch real condition photos for each case
-        const entries = await Promise.all(
-          rows.map(async (booking) => {
+        const mapped = rows.map((booking, index) => mapBooking(booking, index, [], true));
+        const ids = new Set(mapped.map((item) => item.id));
+        setPhotoLoadingIds(ids);
+        setCases(mapped);
+        setSelectedCaseId((current) => ids.has(String(current)) ? current : mapped[0].id);
+        try {
+          // Never put base64 image payloads in sessionStorage. They block the
+          // next page render while JSON is parsed and can exceed its quota.
+          sessionStorage.setItem("staff_patient_cases_cache", JSON.stringify(mapped.map(({ photos, photosLoading, ...item }) => item)));
+        } catch (storageError) {
+          void storageError;
+        }
+
+        // Hydrate galleries progressively; one slow/failed booking no longer
+        // delays photos belonging to every other assigned patient.
+        rows.forEach(async (booking) => {
+          try {
             const photoResponse = await fetch(
               `${BASE}/api/bookings/${booking.id}/photos/?role=staff&staff_id=${encodeURIComponent(staffId)}&email=${encodeURIComponent(email)}`,
               { cache: "no-store" }
             );
             const photoData = await photoResponse.json().catch(() => ({}));
-            return [
-              booking.id,
-              photoResponse.ok && Array.isArray(photoData.photos) ? photoData.photos : [],
-            ];
-          })
-        );
-        const realPhotosMap = Object.fromEntries(entries);
-        const mapped = rows.map((r, i) => {
-          const isEmerg = `${r.patient_condition || ""} ${r.vitals_summary || ""}`.toLowerCase().includes("cardiac") || i === 0;
-          const realCasePhotos = realPhotosMap[r.id] || [];
-          const combinedPhotos = realCasePhotos.length > 0
-            ? realCasePhotos.map((p, idx) => ({
-                id: p.id || `real-${idx}`,
-                url: p.url,
-                label: p.label || p.instruction || `Patient Condition Photo #${idx + 1}`,
-                time: p.created_at ? new Date(p.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "Uploaded recently",
-              }))
-            : defaultIncomingCases[0].photos;
-
-          return {
-            id: String(r.id),
-            ambulance_id: `AMB-${r.id}`,
-            patient_name: r.patient_name || r.booked_by || "Incoming Patient",
-            patient_age: r.patient_age || "42",
-            patient_gender: r.patient_gender || "M",
-            ambulance_fleet_id: r.ambulance_number || `DL-3C-${r.id}`,
-            ambulance_number: r.ambulance_number || `DL-3C-${r.id}`,
-            driver_name: r.driver || "driver 1",
-            driver_contact: r.driver_contact || "9711933066",
-            diagnostic: r.patient_condition || r.vitals_summary || "Emergency Triage En-Route",
-            condition_tone: isEmerg ? "emergency" : i % 2 === 0 ? "en_route" : "stable",
-            eta_mins: `${6 + i * 5} mins`,
-            status_label: isEmerg ? "Active Core Case" : "En-Route Unit",
-            accent_color: isEmerg ? "#ef4444" : i % 2 === 0 ? "#f59e0b" : "#10b981",
-            photos: combinedPhotos,
-          };
+            const photos = photoResponse.ok && Array.isArray(photoData.photos)
+              ? photoData.photos.map((p, index) => ({
+                  id: p.id || `real-${index}`,
+                  url: p.url,
+                  label: p.label || p.instruction || `Patient Condition Photo #${index + 1}`,
+                  time: p.created_at ? new Date(p.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "Uploaded recently",
+                }))
+              : [];
+            setCases((current) => current.map((item) => String(item.id) === String(booking.id) ? { ...item, photos, photosLoading: false } : item));
+          } catch {
+            setCases((current) => current.map((item) => String(item.id) === String(booking.id) ? { ...item, photos: [], photosLoading: false } : item));
+          } finally {
+            setPhotoLoadingIds((current) => {
+              const next = new Set(current);
+              next.delete(String(booking.id));
+              return next;
+            });
+          }
         });
-        setCases(mapped);
-        setSelectedCaseId(mapped[0].id);
-        try {
-          sessionStorage.setItem("staff_patient_cases_cache", JSON.stringify(mapped));
-        } catch (storageError) {
-          void storageError;
-        }
       } else {
         setCases(defaultIncomingCases);
         setSelectedCaseId(defaultIncomingCases[0].id);
@@ -233,7 +247,7 @@ export default function StaffPatientCondition() {
       setCases(defaultIncomingCases);
       setSelectedCaseId(defaultIncomingCases[0].id);
     }
-  }, [defaultIncomingCases, email, staffId]);
+  }, [defaultIncomingCases, email, mapBooking, staffId]);
 
   useEffect(() => {
     loadCases();
@@ -263,6 +277,7 @@ export default function StaffPatientCondition() {
   // Photo slice for current page
   const totalPhotos = coreCase?.photos?.length || 0;
   const maxPages = Math.ceil(totalPhotos / PHOTOS_PER_PAGE);
+  const photosAreLoading = Boolean(coreCase?.photosLoading || photoLoadingIds.has(String(coreCase?.id)));
   const currentPhotosSlice = useMemo(() => {
     if (!coreCase?.photos) return [];
     const start = photoPage * PHOTOS_PER_PAGE;
@@ -533,6 +548,30 @@ export default function StaffPatientCondition() {
           grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
           gap: 12px;
           margin-bottom: 14px;
+          min-height: 96px;
+        }
+
+        .photos-loading-state {
+          grid-column: 1 / -1;
+          min-height: 96px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border: 1px dashed #93c5fd;
+          border-radius: 14px;
+          color: #2563eb;
+          background: #f8fbff;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .staff-photo-spin {
+          animation: staff-photo-spin 1s linear infinite;
+        }
+
+        @keyframes staff-photo-spin {
+          to { transform: rotate(360deg); }
         }
 
         .single-thumb-box {
@@ -594,6 +633,12 @@ export default function StaffPatientCondition() {
         .btn-view-live-conditions:hover {
           background: #0369a1;
           transform: translateY(-1px);
+        }
+
+        .btn-view-live-conditions:disabled {
+          opacity: .5;
+          cursor: not-allowed;
+          transform: none;
         }
 
         /* RIGHT STACK COLUMN */
@@ -948,6 +993,7 @@ export default function StaffPatientCondition() {
 
               {/* Trio of Live Thumbnails with Slide Navigation */}
               <div className="thumbnails-trio-grid">
+                {photosAreLoading && <div className="photos-loading-state"><RefreshCw size={17} className="staff-photo-spin" /> Loading live patient images…</div>}
                 {currentPhotosSlice.map((photo, sliceIdx) => {
                   const absoluteIndex = photoPage * PHOTOS_PER_PAGE + sliceIdx;
                   return (
@@ -964,12 +1010,14 @@ export default function StaffPatientCondition() {
                     </div>
                   );
                 })}
+                {!photosAreLoading && !currentPhotosSlice.length && <div className="photos-loading-state">No patient images received yet.</div>}
               </div>
 
               {/* Full Width Cyan/Blue Action Button */}
               <button
                 className="btn-view-live-conditions"
-                onClick={() => setLightboxIndex(photoPage * PHOTOS_PER_PAGE)}
+                disabled={!totalPhotos}
+                onClick={() => totalPhotos && setLightboxIndex(photoPage * PHOTOS_PER_PAGE)}
               >
                 View Live Conditions ({totalPhotos} Photos)
               </button>
