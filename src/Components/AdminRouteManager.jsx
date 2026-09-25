@@ -136,7 +136,6 @@ export default function AdminRouteManager({
 
   const {
     ambulanceLoc,
-    heading,
     speed,
     battery,
     driverName,
@@ -322,7 +321,7 @@ export default function AdminRouteManager({
             };
             setRouteData(clientRoute);
             setRouteStats({ distKm, mins, isTransfer });
-            showToast(`Road Route: ${distKm} km · ~${mins} min (OSRM Live)`);
+            showToast(`Road Route: ${distKm} km · ~${mins} min (OSRM, traffic unavailable)`);
             return;
           }
         }

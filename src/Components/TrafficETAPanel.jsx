@@ -61,7 +61,6 @@ export default function TrafficETAPanel({
   currentStepIndex = 0,
   remainingDistanceM = null,
   remainingEtaS = null,
-  isLiveTracking = false,
   showGuidance = true,
   className = "",
   style = {},
@@ -76,9 +75,15 @@ export default function TrafficETAPanel({
     return alts[activeRouteIndex - 1] || routeData;
   }, [routeData, activeRouteIndex]);
 
+  const trafficAvailable = Boolean(
+    activeRoute?.traffic_available ?? activeRoute?.trafficAvailable ??
+    ["tomtom", "google"].includes(String(activeRoute?.provider || "").toLowerCase())
+  );
+
   // Traffic classification logic (Aarogya custom thresholds)
   const trafficClassification = useMemo(() => {
-    if (!activeRoute) return { label: "Normal", color: "#16a34a", bg: "#dcfce7", ratioPct: 0 };
+    if (!activeRoute) return { label: "Route pending", color: "#64748b", bg: "#f1f5f9", ratioPct: 0 };
+    if (!trafficAvailable) return { label: "Traffic data unavailable", color: "#64748b", bg: "#f1f5f9", ratioPct: 0 };
     const delay = Number(activeRoute.traffic_delay_s) || 0;
     const noTraf = Number(activeRoute.no_traffic_s) || Number(activeRoute.duration_s) || 1;
     const ratio = delay / Math.max(1, noTraf);
@@ -91,13 +96,13 @@ export default function TrafficETAPanel({
     } else {
       return { label: "Heavy Traffic", color: "#dc2626", bg: "#fee2e2", ratioPct };
     }
-  }, [activeRoute]);
+  }, [activeRoute, trafficAvailable]);
 
   if (!routeData || !activeRoute) {
     return (
       <div className={"tep-container empty " + className} style={style}>
         <div style={{ padding: 16, textAlign: "center", color: "#666", fontSize: 13 }}>
-          Calculating traffic-aware route...
+          Calculating route...
         </div>
       </div>
     );
@@ -111,7 +116,7 @@ export default function TrafficETAPanel({
     ? (remainingDistanceM / 1000).toFixed(1)
     : ((activeRoute.distance_m || 0) / 1000).toFixed(1);
 
-  const delayMin = Math.round((activeRoute.traffic_delay_s || 0) / 60);
+  const delayMin = trafficAvailable ? Math.round((activeRoute.traffic_delay_s || 0) / 60) : 0;
 
   const freeFlowMin = Math.max(1, Math.round((activeRoute.no_traffic_s || activeRoute.duration_s || 0) / 60));
   const historicMin = Math.max(1, Math.round((activeRoute.historic_s || activeRoute.duration_s || 0) / 60));
@@ -358,7 +363,7 @@ export default function TrafficETAPanel({
       <div className="tep-analysis-card">
         <div className="tep-analysis-title">
           <span>Traffic Analysis</span>
-          <span style={{ fontSize: 10, color: "#9ca3af" }}>Google Maps Live</span>
+          <span style={{ fontSize: 10, color: "#9ca3af" }}>{trafficAvailable ? "Traffic provider live" : "Road route · no live traffic"}</span>
         </div>
 
         <div className="tep-scenario-grid">
@@ -371,7 +376,7 @@ export default function TrafficETAPanel({
             <div className="tep-scenario-val">{historicMin} min</div>
           </div>
           <div className="tep-scenario-box">
-            <div className="tep-scenario-label">Live</div>
+            <div className="tep-scenario-label">{trafficAvailable ? "Live traffic" : "Road ETA"}</div>
             <div className="tep-scenario-val" style={{ color: "#2563eb" }}>{liveMin} min</div>
           </div>
         </div>
@@ -384,7 +389,7 @@ export default function TrafficETAPanel({
               color: delayMin > 5 ? "#991b1b" : "#92400e",
             }}
           >
-            <span>⏱ Traffic Delay: <strong>+{delayMin} min</strong> slower than free-flow</span>
+            <span>{trafficAvailable ? <>⏱ Traffic Delay: <strong>+{delayMin} min</strong> slower than free-flow</> : "Live traffic data is unavailable for this route."}</span>
             <span>⚠️</span>
           </div>
         ) : (
@@ -468,7 +473,7 @@ export default function TrafficETAPanel({
 
       {/* Disclaimer */}
       <div className="tep-disclaimer">
-        Traffic data provided by Google Maps when available. Traffic status classification adheres to Aarogya custom thresholds.
+        {trafficAvailable ? "Traffic data provided by the configured routing provider." : "This is a road ETA from a fallback provider; live traffic is unavailable."} Traffic status classification adheres to Aarogya custom thresholds.
       </div>
     </div>
   );

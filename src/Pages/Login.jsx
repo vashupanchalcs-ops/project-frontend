@@ -239,6 +239,7 @@ export default function Login() {
       try {
         const resp = await fetch(`${BASE}/api/auth/staff-login/`, {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email,
@@ -717,6 +718,7 @@ export default function Login() {
       try {
         const resp = await fetch(`${BASE}/api/auth/staff-login/`, {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email,

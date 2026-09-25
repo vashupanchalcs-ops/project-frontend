@@ -1,7 +1,5 @@
-const defaultBase = import.meta.env.DEV
-  ? 'http://127.0.0.1:8000'
-  : 'https://swiftrescue-backend-shlb.onrender.com';
-export const BASE = (import.meta.env.VITE_API_BASE_URL || defaultBase).replace(/\/+$/, '');
+import { API_BASE_URL as BASE, apiRequest } from "../api/client";
+export { BASE };
 
 import { readCache, writeCache, isFresh, CACHE_TTL } from './dataCache.js';
 
@@ -31,16 +29,7 @@ export async function apiFetch(endpoint, {
 }
 
 async function _doFetch(endpoint, { key, ttl, signal, method = 'GET', body, headers = {} } = {}) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', ...headers },
-    signal,
-  };
-  if (body) opts.body = typeof body === 'string' ? body : JSON.stringify(body);
-
-  const p = fetch(BASE + endpoint, opts).then(async r => {
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error((data && data.error) || ('API error ' + r.status));
+  const p = apiRequest(endpoint, { method, body, headers, signal }).then(data => {
     if (key) writeCache(key, data, ttl || CACHE_TTL.DEFAULT);
     return data;
   }).finally(() => { if (key) inflight.delete(key); });
@@ -62,7 +51,7 @@ let _kTimer = null;
 /** Ping backend every 10 min to prevent Render cold start */
 export function startKeepalive() {
   if (_kTimer) return;
-  const ping = () => fetch(BASE + '/api/health/', { method: 'GET', cache: 'no-store' }).catch(() => {});
+  const ping = () => apiRequest('/api/health/', { method: 'GET' }).catch(() => {});
   ping();
   _kTimer = setInterval(ping, 10 * 60 * 1000);
 }
