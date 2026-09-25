@@ -114,8 +114,8 @@ export function calculatePolylineProgress(coords, point) {
 export default function useAmbulanceTracking({
   ambulanceId = null,
   ambulanceNumber = null,
+  bookingId = null,
   routeData = null,
-  destinationLoc = null,
   pollIntervalMs = 4000,
   deviationThresholdM = 150,
   onRerouteNeeded = null,
@@ -134,7 +134,55 @@ export default function useAmbulanceTracking({
   const [isOffRoute, setIsOffRoute] = useState(false);
 
   const prevLocRef = useRef(null);
-  const lastRerouteTimeRef = useRef(Date.now());
+  const lastRerouteTimeRef = useRef(0);
+  const wsConnectedRef = useRef(false);
+
+  const applyLocation = useCallback((amb) => {
+    const lat = parseFloat(amb?.latitude);
+    const lng = parseFloat(amb?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return;
+
+    let newHeading = Number(amb.heading) || 0;
+    if (prevLocRef.current && (!newHeading || newHeading === 0)) {
+      const dLat = lat - prevLocRef.current.lat;
+      const dLng = lng - prevLocRef.current.lng;
+      if (Math.abs(dLat) > 0.00005 || Math.abs(dLng) > 0.00005) {
+        newHeading = (Math.atan2(dLng, dLat) * 180) / Math.PI;
+        if (newHeading < 0) newHeading += 360;
+      }
+    }
+    prevLocRef.current = { lat, lng };
+    setAmbulanceLoc({ lat, lng, heading: newHeading, speed: amb.speed || 0 });
+    setHeading(newHeading);
+    setSpeed(amb.speed || 0);
+    setBattery(amb.battery_percentage ?? null);
+    setDriverName(amb.driver || "");
+    setStatus(amb.status || "en_route");
+  }, []);
+
+  // User tracking prefers a booking-scoped WebSocket. The HTTP poll remains
+  // as a graceful fallback for old deployments or a temporary Redis outage.
+  useEffect(() => {
+    if (!ambulanceId || !bookingId) return undefined;
+    const socketBase = BASE.replace(/^http/, "ws");
+    const query = new URLSearchParams({ role: "user", booking_id: String(bookingId) });
+    const socket = new WebSocket(`${socketBase}/ws/ambulances/${ambulanceId}/?${query.toString()}`);
+    socket.onopen = () => { wsConnectedRef.current = true; };
+    socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (Number(payload.ambulance_id) === Number(ambulanceId)) applyLocation(payload);
+      } catch {
+        return;
+      }
+    };
+    socket.onerror = () => { wsConnectedRef.current = false; };
+    socket.onclose = () => { wsConnectedRef.current = false; };
+    return () => {
+      wsConnectedRef.current = false;
+      socket.close();
+    };
+  }, [ambulanceId, bookingId, applyLocation]);
 
   // ── Poll ambulance live location ──────────────────────────────────────────
   useEffect(() => {
@@ -163,24 +211,7 @@ export default function useAmbulanceTracking({
         const lng = parseFloat(amb.longitude);
 
         if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
-          // Calculate heading if not provided
-          let newHeading = Number(amb.heading) || 0;
-          if (prevLocRef.current && (!newHeading || newHeading === 0)) {
-            const dLat = lat - prevLocRef.current.lat;
-            const dLng = lng - prevLocRef.current.lng;
-            if (Math.abs(dLat) > 0.00005 || Math.abs(dLng) > 0.00005) {
-              newHeading = (Math.atan2(dLng, dLat) * 180) / Math.PI;
-              if (newHeading < 0) newHeading += 360;
-            }
-          }
-          prevLocRef.current = { lat, lng };
-
-          setAmbulanceLoc({ lat, lng, heading: newHeading, speed: amb.speed || 0 });
-          setHeading(newHeading);
-          setSpeed(amb.speed || 0);
-          setBattery(amb.battery_percentage ?? null);
-          setDriverName(amb.driver || "");
-          setStatus(amb.status || "en_route");
+          applyLocation(amb);
         }
       } catch (err) {
         console.warn("Ambulance tracking poll error:", err);
@@ -188,20 +219,25 @@ export default function useAmbulanceTracking({
     };
 
     fetchAmbulanceLocation();
-    const interval = setInterval(fetchAmbulanceLocation, pollIntervalMs);
+    let timer;
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        await fetchAmbulanceLocation();
+        if (!cancelled) schedule();
+      }, wsConnectedRef.current ? Math.max(30000, pollIntervalMs) : pollIntervalMs);
+    };
+    schedule();
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      clearTimeout(timer);
     };
-  }, [ambulanceId, ambulanceNumber, pollIntervalMs]);
+  }, [ambulanceId, ambulanceNumber, pollIntervalMs, applyLocation]);
 
+  /* Derived route progress is intentionally synchronized from live GPS state. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!routeData || !routeData.geometry || !ambulanceLoc) {
-      if (routeData) {
-        setRemainingDistanceM(routeData.distance_m || 0);
-        setRemainingEtaS(routeData.duration_s || 0);
-      }
       return;
     }
 
@@ -242,6 +278,7 @@ export default function useAmbulanceTracking({
     }
 
     const now = Date.now();
+    if (!lastRerouteTimeRef.current) lastRerouteTimeRef.current = now;
     if (offRoute && now - lastRerouteTimeRef.current > 30000) {
       lastRerouteTimeRef.current = now;
       if (onRerouteNeeded) {
@@ -253,6 +290,7 @@ export default function useAmbulanceTracking({
       }
     }
   }, [routeData, ambulanceLoc, deviationThresholdM, onRerouteNeeded]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return {
     ambulanceLoc,
@@ -261,8 +299,8 @@ export default function useAmbulanceTracking({
     battery,
     driverName,
     status,
-    remainingDistanceM,
-    remainingEtaS,
+    remainingDistanceM: remainingDistanceM ?? (routeData?.distance_m ?? null),
+    remainingEtaS: remainingEtaS ?? (routeData?.duration_s ?? null),
     deviationM,
     isOffRoute,
     currentStepIndex,

@@ -32,7 +32,9 @@ export async function apiRequest(endpoint, {
   signal,
   timeoutMs = API_TIMEOUT_MS,
   credentials = "include",
-  cache = "no-store",
+  // GETs participate in the global stale-while-revalidate cache. Mutations
+  // remain no-store because their response must always be authoritative.
+  cache = method === "GET" ? "default" : "no-store",
 } = {}) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);

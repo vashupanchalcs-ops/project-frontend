@@ -9,7 +9,7 @@
  * - Left 380px dispatch sidebar + Full-height interactive map canvas.
  */
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import GoogleMapEmbed from "./GoogleMapEmbed";
 import useAmbulanceTracking, { haversineM } from "../hooks/useAmbulanceTracking";
 import { isIndiaCoord } from "../hooks/useLeaflet";
@@ -112,17 +112,14 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
   // ── Hook: Live Ambulance Tracking ──────────────────────────────────────────
   const {
     ambulanceLoc,
-    heading,
     speed,
-    battery,
     driverName,
     remainingDistanceM,
     remainingEtaS,
-    deviationM,
-    isOffRoute,
   } = useAmbulanceTracking({
     ambulanceId: booking?.ambulance_id,
     ambulanceNumber: booking?.ambulance_number,
+    bookingId: booking?.id,
     routeData,
     destinationLoc: destLoc,
     pollIntervalMs: 4000,
@@ -142,8 +139,6 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     if (!pickupLoc || !destLoc) return;
 
     let cancel = false;
-    setRouteLoading(true);
-
     const fetchRoute = async () => {
       try {
         const startLat = effectiveAmbLoc.lat;
@@ -220,6 +215,9 @@ export default function UserBookingMap({ booking, onClose, embedded = false }) {
     return () => {
       cancel = true;
     };
+  // The route is intentionally recalculated only when the booking/destination
+  // changes; GPS movement is handled by the hook's polyline interpolation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking?.id, destLoc.lat, destLoc.lng, pickupLoc.lat, pickupLoc.lng]);
 
   const hospName = booking?.assigned_hospital_name || booking?.destination || "Hospital pending";
