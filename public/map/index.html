@@ -328,6 +328,206 @@
       padding: 2px 6px !important;
       border-radius: 4px;
     }
+    /* ── USER MOBILE / DESKTOP UBER-STYLE SHEET (MATCHING REFERENCE IMAGE) ── */
+    .user-floating-back {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 1001;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #111;
+      transition: transform 0.15s;
+    }
+    .user-floating-back:hover { transform: scale(1.05); }
+
+    .user-floating-recenter {
+      position: absolute;
+      bottom: 270px;
+      right: 18px;
+      z-index: 1001;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #0f172a;
+      transition: transform 0.15s;
+    }
+    .user-floating-recenter:hover { transform: scale(1.05); }
+
+    /* ── USER CLEAN GOOGLE MAPS NAVIGATION BAR (MATCHING REFERENCE) ── */
+    .user-bottom-sheet {
+      display: none;
+      position: fixed;
+      background: #ffffff;
+      z-index: 1002;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      box-shadow: 0 6px 28px rgba(0,0,0,0.18);
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+
+    /* Mobile Screen */
+    @media (max-width: 768px) {
+      .user-bottom-sheet {
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-radius: 22px 22px 0 0;
+        padding: 10px 20px 22px 20px;
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.14);
+      }
+      .user-floating-recenter {
+        bottom: 125px !important;
+        right: 16px !important;
+      }
+    }
+
+    /* Desktop Screen */
+    @media (min-width: 769px) {
+      .user-bottom-sheet {
+        bottom: 24px;
+        left: 24px;
+        width: 360px;
+        max-width: calc(100vw - 48px);
+        border-radius: 20px;
+        padding: 14px 22px 18px 22px;
+      }
+      .user-floating-recenter {
+        bottom: 30px !important;
+        right: 30px !important;
+      }
+    }
+
+    .gmap-handle {
+      width: 38px;
+      height: 4px;
+      background: #cbd5e1;
+      border-radius: 2px;
+      margin: 0 auto 12px auto;
+    }
+
+    .gmap-main-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gmap-eta {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ea580c; /* vibrant ETA like in Google Maps */
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .gmap-dist {
+      font-size: 20px;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.1;
+    }
+
+    .gmap-status-pill {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .gmap-dot {
+      width: 8px;
+      height: 8px;
+      background: #2563eb;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+    }
+
+    .gmap-sub-text {
+      margin-top: 6px;
+      font-size: 13.5px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .gmap-meta-text {
+      margin-top: 3px;
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Google Maps Route Callout Bubble on Map */
+    .gmap-bubble-wrapper {
+      background: transparent !important;
+      border: none !important;
+    }
+    .gmap-route-bubble {
+      background: #1d4ed8;
+      color: #ffffff;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      border: 2px solid #ffffff;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      position: relative;
+    }
+    .gmap-route-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px 6px 0;
+      border-style: solid;
+      border-color: #1d4ed8 transparent transparent transparent;
+      display: block;
+      width: 0;
+    }
+
+    /* User Mode Layout Rules */
+    body.user-mode #sidebar,
+    #app-layout.user-mode #sidebar,
+    body.user-mode #sidebar-toggle,
+    body.user-mode #map-bottom-bar,
+    body.user-mode #map-status,
+    body.user-mode .map-fabs {
+      display: none !important;
+    }
+    body.user-mode .user-floating-back,
+    body.user-mode .user-floating-recenter,
+    body.user-mode .user-bottom-sheet {
+      display: flex !important;
+    }
   </style>
 </head>
 <body>
@@ -478,6 +678,35 @@
   ═══════════════════════════════════════════════════════ -->
   <main id="map-wrap">
     <div id="map"></div>
+    <button id="user-back-btn" class="user-floating-back" title="Back">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+
+    <button id="user-recenter-btn" class="user-floating-recenter" title="Recenter Route">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="3" fill="#1e293b"/>
+        <line x1="12" y1="1" x2="12" y2="4"/>
+        <line x1="12" y1="20" x2="12" y2="23"/>
+        <line x1="1" y1="12" x2="4" y2="12"/>
+        <line x1="20" y1="12" x2="23" y2="12"/>
+      </svg>
+    </button>
+
+    <!-- Google Maps Clean Navigation Bar for User Mode -->
+    <div id="user-tracking-sheet" class="user-bottom-sheet">
+      <div class="gmap-handle"></div>
+      <div class="gmap-main-row">
+        <span class="gmap-eta" id="gmap-live-eta">-- min</span>
+        <span class="gmap-dist" id="gmap-live-dist">(-- km)</span>
+        <div class="gmap-status-pill">
+          <span class="gmap-dot"></span>
+          <span id="gmap-live-status">On-site</span>
+        </div>
+      </div>
+      <div class="gmap-sub-text" id="gmap-live-sub">Fastest route, despite the usual traffic</div>
+      <div class="gmap-meta-text" id="gmap-live-vehicle">Ambulance • Live GPS Navigation</div>
+    </div>
 
     <button id="sidebar-toggle" title="Toggle Sidebar">☰</button>
 
@@ -532,6 +761,11 @@
     const appEl = document.getElementById('app-layout');
     if (appEl) appEl.classList.add('map-only');
   }
+  if (params.role === 'user') {
+    document.body.classList.add('user-mode');
+    const appEl = document.getElementById('app-layout');
+    if (appEl) appEl.classList.add('user-mode');
+  }
   if (params.hideSidebar) {
     document.body.classList.add('map-only'); // reuse same CSS to hide sidebar
     const appEl = document.getElementById('app-layout');
@@ -561,6 +795,8 @@
   // Leg 2: User Booking Address -> Hospital (Royal Blue)
   let legA_lines = [];
   let legB_lines = [];
+  let hasInitialFitted = false;
+  let userInteracted = false;
 
   // ── Clean Clutter-Free Tile Themes (WITHOUT POI Icons) ────────
   // s.t:3|s.e:l|p.v:off removes all business, hotel, shop, museum, landmark POIs!
@@ -659,9 +895,58 @@
     });
   }
 
-  // ── 3. Hospital Destination Icon (Anchor at pin needle tip [75, 72])
+  // ── 2b. User Mode Pin (Clean Blue Pulsing Halo Pin) ──
+  function makeUserPickupPin(label) {
+    const place = label ? label.split(',')[0] : '';
+    return L.divIcon({
+      className: 'user-pickup-halo-pin',
+      iconSize: [60, 50],
+      iconAnchor: [30, 25],
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;pointer-events:none;">
+          ${place ? `<div style="font-size:10px;font-weight:800;color:#0f172a;background:#ffffff;padding:2px 7px;border-radius:6px;margin-bottom:4px;box-shadow:0 2px 6px rgba(0,0,0,0.18);white-space:nowrap;border:1px solid #e2e8f0;">${place}</div>` : ''}
+          <div style="
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.14);
+          ">
+            <div style="
+              width: 14px;
+              height: 14px;
+              border-radius: 50%;
+              background: #2563eb;
+              border: 2.5px solid #ffffff;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            "></div>
+          </div>
+        </div>
+      `
+    });
+  }
+  // ── 3. Hospital Destination Icon (Anchor at pin needle tip)
   function makeHospitalIcon(label) {
-    const txt = label || 'Hospital';
+    const txt = label || 'Destination Hospital';
+    if (params.role === 'user') {
+      return L.divIcon({
+        className: 'hosp-custom-icon',
+        iconSize: [34, 46],
+        iconAnchor: [17, 44],
+        html: `
+          <div style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.35));cursor:pointer;" title="${txt}">
+            <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+              <path d="M17 0C7.61 0 0 7.61 0 17C0 28.5 17 44 17 44C17 44 34 28.5 34 17C34 7.61 26.39 0 17 0Z" fill="#ea4335"/>
+              <circle cx="17" cy="16" r="6.5" fill="#ffffff"/>
+              <rect x="15" y="11" width="4" height="10" rx="1" fill="#ea4335"/>
+              <rect x="12" y="14" width="10" height="4" rx="1" fill="#ea4335"/>
+            </svg>
+          </div>`
+      });
+    }
     return L.divIcon({
       className: 'hosp-custom-icon',
       iconSize: [150, 72],
@@ -677,6 +962,35 @@
           <div style="width:3px;height:14px;background:#ef4444;border-radius:2px;"></div>
         </div>`
     });
+  }
+
+  // ── Route ETA Callout Bubble (Google Maps Style on Route Line) ──
+  let routeEtaMarker = null;
+  function updateRouteEtaBubble(midpoint, etaMin) {
+    if (!map || !midpoint || !etaMin) return;
+    const html = `
+      <div class="gmap-route-bubble">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="3" width="15" height="13"></rect>
+          <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+          <circle cx="5.5" cy="18.5" r="2.5"></circle>
+          <circle cx="18.5" cy="18.5" r="2.5"></circle>
+        </svg>
+        <span>${etaMin} min</span>
+      </div>
+    `;
+    const icon = L.divIcon({
+      className: 'gmap-bubble-wrapper',
+      iconSize: [80, 32],
+      iconAnchor: [40, 32],
+      html: html
+    });
+    if (!routeEtaMarker) {
+      routeEtaMarker = L.marker(midpoint, { icon, zIndexOffset: 920 }).addTo(map);
+    } else {
+      routeEtaMarker.setLatLng(midpoint);
+      routeEtaMarker.setIcon(icon);
+    }
   }
 
   // ── Initialize Map Engine ─────────────────────────────────────
@@ -702,33 +1016,51 @@
 
     // Patient & Hospital markers will ONLY be added if there is an active booking
 
+    // Track user camera interaction to NEVER snatch camera control from user!
+    map.on('movestart', (e) => {
+      if (e.originalEvent) {
+        userInteracted = true;
+        cameraFollow = false;
+        const rFab = $('fab-recenter');
+        if (rFab) rFab.classList.remove('active');
+      }
+    });
     map.on('dragstart', () => {
+      userInteracted = true;
       cameraFollow = false;
-      $('fab-recenter').classList.remove('active');
+      const rFab = $('fab-recenter');
+      if (rFab) rFab.classList.remove('active');
+    });
+    map.on('zoomstart', (e) => {
+      if (e.originalEvent) {
+        userInteracted = true;
+        cameraFollow = false;
+      }
     });
 
     initUI();
     fetchLiveBookingAndRoute();
   }
 
-  // ── Uber Style Double-Line Drawer with Arrows ──────────────────
+  // ── Route Line Drawer with Arrows (Solid Black Route) ──
   function renderUberPolyline(coords, color, isDashed) {
     if (!coords || coords.length < 2) return [];
+    const routeColor = color || '#111827';
     const dashArray = isDashed ? '12 8' : null;
 
-    // 1. Dark shadow stroke
+    // 1. Dark soft shadow
     const shadowLine = L.polyline(coords, {
       color: '#000000',
-      weight: 11,
-      opacity: 0.18,
+      weight: 10,
+      opacity: 0.22,
       lineCap: 'round',
       lineJoin: 'round',
       dashArray: dashArray
     }).addTo(map);
 
-    // 2. Colored core line
+    // 2. Solid Black route core line
     const coreLine = L.polyline(coords, {
-      color: color,
+      color: routeColor,
       weight: 5.5,
       opacity: 1.0,
       lineCap: 'round',
@@ -736,18 +1068,19 @@
       dashArray: dashArray
     }).addTo(map);
 
-    // 3. Circular arrows matching route color (red on red route, black on black route)
+    // 3. Directional white arrowheads on black line
+    const arrowColor = (routeColor === '#111827' || routeColor === '#000000') ? '#ffffff' : routeColor;
     const arrowDecorator = L.polylineDecorator(coreLine, {
       patterns: [{
-        offset: '10%',
+        offset: '12%',
         repeat: '20%',
         symbol: L.Symbol.arrowHead({
-          pixelSize: 16,
+          pixelSize: 14,
           polygon: true,
           pathOptions: {
-            color: color,
-            fillColor: color,
-            fillOpacity: 1,
+            color: arrowColor,
+            fillColor: arrowColor,
+            fillOpacity: 0.95,
             weight: 0,
             opacity: 1
           }
@@ -908,6 +1241,27 @@
           setText('route-amb-name', bookData.ambulance_number);
         }
 
+        if (params.role === 'user') {
+          if (bookData.ambulance_number) {
+            setText('user-sheet-vehicle', `${bookData.ambulance_number} • ALS Unit`);
+          }
+          if (bookData.driver) {
+            setText('user-sheet-driver', bookData.driver);
+          }
+          if (bookData.pickup_location) {
+            setText('user-sheet-pickup', bookData.pickup_location);
+          }
+          if (bookData.assigned_hospital_name) {
+            setText('user-sheet-hospital', bookData.assigned_hospital_name);
+          }
+          if (bookData.driver_contact) {
+            const callBtn = $('user-call-btn');
+            if (callBtn) callBtn.href = `tel:${bookData.driver_contact}`;
+          }
+          if (patientMarker) {
+            patientMarker.setIcon(makeUserPickupPin(2, bookData.pickup_location));
+          }
+        }
         if (bookData.ambulance_id) assignedAmbId = bookData.ambulance_id;
         if (bookData.assigned_hospital_id) assignedHospId = bookData.assigned_hospital_id;
       }
@@ -985,81 +1339,122 @@
   }
 
   // ── Build Connected Road Route (Ambulance -> User -> Hospital) ─
+  let isRoutingInProgress = false;
+
   async function buildCompleteRoute() {
-    clearLines(legA_lines);
-    clearLines(legB_lines);
+    if (isRoutingInProgress) return;
+    isRoutingInProgress = true;
 
-    let allCoords = [];
-    let totalDistM = 0;
-    let totalDurS = 0;
-
-    // LEG A: Ambulance GPS -> User Booking Address (Red Solid)
     try {
-      const urlA = `https://router.project-osrm.org/route/v1/driving/${ambPos[1]},${ambPos[0]};${patientPos[1]},${patientPos[0]}?overview=full&geometries=geojson`;
-      const resA = await fetch(urlA);
-      if (resA.ok) {
-        const dataA = await resA.json();
-        if (dataA.routes && dataA.routes[0]) {
-          const ptsA = dataA.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-          ptsA[0] = ambPos;
-          ptsA[ptsA.length - 1] = patientPos;
-          legA_lines = renderUberPolyline(ptsA, '#ef4444', false);
-          allCoords = allCoords.concat(ptsA);
-          totalDistM += dataA.routes[0].distance;
-          totalDurS  += dataA.routes[0].duration;
-          const durMin = Math.ceil(dataA.routes[0].duration / 60);
-          setText('eta-chip', `${durMin} min`);
-          setText('map-eta', `${durMin} min`);
-          setText('tele-eta', durMin);
+      let allCoords = [];
+      let legAPts = [];
+      let totalDistM = 0;
+      let totalDurS = 0;
+
+      // Solid Black route as requested by user ("and route black ho")
+      const routeColor = '#111827';
+
+      let newLegA_lines = [];
+      let newLegB_lines = [];
+
+      // LEG A: Ambulance GPS -> User Booking Address (Black Solid)
+      try {
+        const urlA = `https://router.project-osrm.org/route/v1/driving/${ambPos[1]},${ambPos[0]};${patientPos[1]},${patientPos[0]}?overview=full&geometries=geojson`;
+        const resA = await fetch(urlA);
+        if (resA.ok) {
+          const dataA = await resA.json();
+          if (dataA.routes && dataA.routes[0]) {
+            const ptsA = dataA.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            ptsA[0] = ambPos;
+            ptsA[ptsA.length - 1] = patientPos;
+            newLegA_lines = renderUberPolyline(ptsA, routeColor, false);
+            legAPts = ptsA;
+            allCoords = allCoords.concat(ptsA);
+            totalDistM += dataA.routes[0].distance;
+            totalDurS  += dataA.routes[0].duration;
+            const durMin = Math.ceil(dataA.routes[0].duration / 60);
+            setText('eta-chip', `${durMin} min`);
+            setText('map-eta', `${durMin} min`);
+            setText('tele-eta', durMin);
+          }
+        }
+      } catch (_) {
+        newLegA_lines = renderUberPolyline([ambPos, patientPos], routeColor, false);
+        legAPts = [ambPos, patientPos];
+        allCoords = allCoords.concat([ambPos, patientPos]);
+      }
+
+      // LEG B: User Booking Address -> Hospital (Black Solid)
+      try {
+        const urlB = `https://router.project-osrm.org/route/v1/driving/${patientPos[1]},${patientPos[0]};${hospitalPos[1]},${hospitalPos[0]}?overview=full&geometries=geojson`;
+        const resB = await fetch(urlB);
+        if (resB.ok) {
+          const dataB = await resB.json();
+          if (dataB.routes && dataB.routes[0]) {
+            const ptsB = dataB.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            ptsB[0] = patientPos;
+            ptsB[ptsB.length - 1] = hospitalPos;
+
+            newLegB_lines = renderUberPolyline(ptsB, routeColor, false);
+            allCoords = allCoords.concat(ptsB);
+
+            totalDistM += dataB.routes[0].distance;
+            totalDurS  += dataB.routes[0].duration;
+
+            const durMin = Math.ceil(dataB.routes[0].duration / 60);
+            setText('eta-chip', `${durMin} min`);
+            setText('map-eta', `${durMin} min`);
+            setText('tele-eta', durMin);
+          }
+        }
+      } catch (_) {
+        newLegB_lines = renderUberPolyline([patientPos, hospitalPos], routeColor, false);
+        allCoords = allCoords.concat([patientPos, hospitalPos]);
+      }
+
+      // Smooth swap: Clear old lines AFTER new lines are ready (ELIMINATES BLINKING!)
+      if (newLegA_lines.length > 0) {
+        clearLines(legA_lines);
+        legA_lines = newLegA_lines;
+      }
+      if (newLegB_lines.length > 0) {
+        clearLines(legB_lines);
+        legB_lines = newLegB_lines;
+      }
+
+      // Update Telemetry & Stats
+      if (totalDistM > 0) {
+        const distKm = (totalDistM / 1000).toFixed(1);
+        setText('route-dist-km', distKm);
+        setText('dist-chip', `${distKm} km`);
+        const durMin = Math.ceil(totalDurS / 60);
+        setText('route-duration-min', durMin);
+        
+        // Clean Google Maps navigation bar
+        setText('gmap-live-eta', `${durMin} min`);
+        setText('gmap-live-dist', `(${distKm} km)`);
+        setText('gmap-live-status', 'On-site');
+        setText('gmap-live-sub', 'Fastest route, despite the usual traffic');
+
+        // Blue ETA callout bubble on the route line (Google Maps style at the top)
+        if (legAPts.length > 1) {
+          const midIdx = Math.floor(legAPts.length / 2);
+          updateRouteEtaBubble(legAPts[midIdx], durMin);
         }
       }
-    } catch (_) {
-      legA_lines = renderUberPolyline([ambPos, patientPos], '#ef4444', false);
-      allCoords = allCoords.concat([ambPos, patientPos]);
-    }
 
-    // LEG B: User Booking Address -> Hospital (Blue Solid)
-    try {
-      const urlB = `https://router.project-osrm.org/route/v1/driving/${patientPos[1]},${patientPos[0]};${hospitalPos[1]},${hospitalPos[0]}?overview=full&geometries=geojson`;
-      const resB = await fetch(urlB);
-      if (resB.ok) {
-        const dataB = await resB.json();
-        if (dataB.routes && dataB.routes[0]) {
-          const ptsB = dataB.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-          ptsB[0] = patientPos;
-          ptsB[ptsB.length - 1] = hospitalPos;
-
-          legB_lines = renderUberPolyline(ptsB, '#1a1a1a', false);
-          allCoords = allCoords.concat(ptsB);
-
-          totalDistM += dataB.routes[0].distance;
-          totalDurS  += dataB.routes[0].duration;
-
-          const durMin = Math.ceil(dataB.routes[0].duration / 60);
-          setText('eta-chip', `${durMin} min`);
-          setText('map-eta', `${durMin} min`);
-          setText('tele-eta', durMin);
+      // ONLY Auto-Fit Map ONCE on initial load!
+      // NEVER override the user's manual pan/zoom after that!
+      if (!hasInitialFitted) {
+        if (allCoords.length > 2) {
+          map.fitBounds(L.latLngBounds(allCoords), { padding: [60, 60] });
+        } else {
+          map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });
         }
+        hasInitialFitted = true;
       }
-    } catch (_) {
-      legB_lines = renderUberPolyline([patientPos, hospitalPos], '#1a1a1a', false);
-      allCoords = allCoords.concat([patientPos, hospitalPos]);
-    }
-
-    // Update Telemetry & Stats
-    if (totalDistM > 0) {
-      const distKm = (totalDistM / 1000).toFixed(1);
-      setText('route-dist-km', distKm);
-      setText('dist-chip', `${distKm} km`);
-      const durMin = Math.ceil(totalDurS / 60);
-      setText('route-duration-min', durMin);
-    }
-
-    // Auto-Fit Map to show the complete route and all 3 points perfectly
-    if (allCoords.length > 2) {
-      map.fitBounds(L.latLngBounds(allCoords), { padding: [60, 60] });
-    } else {
-      map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });
+    } finally {
+      isRoutingInProgress = false;
     }
   }
 
@@ -1086,7 +1481,7 @@
               // Re-route Leg A dynamically to keep route line connected to ambulance!
               buildCompleteRoute();
 
-              if (cameraFollow) map.panTo(ambPos);
+              if (cameraFollow && !userInteracted) map.panTo(ambPos);
 
               if (d.speed) {
                 const spd = Math.round(parseFloat(d.speed));
@@ -1164,8 +1559,37 @@
     });
 
 
+    const uRecenter = $('user-recenter-btn');
+    if (uRecenter) {
+      uRecenter.addEventListener('click', () => {
+        cameraFollow = true;
+        userInteracted = false;
+        if (params.bookingId && patientMarker) {
+          if (hospitalMarker) {
+            map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });
+          } else {
+            map.fitBounds(L.latLngBounds([ambPos, patientPos]), { padding: [60, 60] });
+          }
+        } else {
+          map.setView(ambPos, 16);
+        }
+      });
+    }
+
+    const uBack = $('user-back-btn');
+    if (uBack) {
+      uBack.addEventListener('click', () => {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'AAROGYA_MAP_BACK' }, '*');
+        } else if (window.history.length > 1) {
+          window.history.back();
+        }
+      });
+    }
+
     $('fab-recenter').addEventListener('click', () => {
       cameraFollow = true;
+      userInteracted = false;
       $('fab-recenter').classList.add('active');
       if (params.bookingId && patientMarker && hospitalMarker) {
         map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });

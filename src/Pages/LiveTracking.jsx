@@ -262,7 +262,12 @@ export default function LiveTracking() {
 
         {/* Fullscreen Flutter Web tracking map */}
         {!loading && booking && (
-          <FlutterTrackingFrame role="user" bookingId={booking.id} title="User Flutter live tracking map" />
+          <FlutterTrackingFrame
+            role="user"
+            bookingId={booking.id}
+            ambulanceId={booking?.ambulance_id || null}
+            title="User Flutter live tracking map"
+          />
         )}
       </div>
     </>
