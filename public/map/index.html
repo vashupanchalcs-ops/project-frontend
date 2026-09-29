@@ -875,58 +875,40 @@
     });
   }
 
-  // ── 2. User Booking Address Icon (Anchor at pin needle tip [70, 68])
+  // ── 2. User Booking Address Icon (High-Visibility User / Patient Pin) ──
   function makePatientPickupIcon(label) {
-    const txt = label || 'User Booking Address';
+    const raw = label || 'User Location';
+    const place = raw.split(',')[0].trim();
     return L.divIcon({
       className: 'pickup-custom-icon',
-      iconSize: [140, 68],
-      iconAnchor: [70, 68],
+      iconSize: [120, 68],
+      iconAnchor: [60, 64],
       html: `
-        <div style="display:flex;flex-direction:column;align-items:center;">
-          <div style="background:#1a1a1a;color:#ffffff;border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);margin-bottom:2px;border:1px solid rgba(255,255,255,0.25);">
-            📍 ${txt}
+        <div style="display:flex;flex-direction:column;align-items:center;pointer-events:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.35));">
+          ${place ? `<div style="font-size:11px;font-weight:800;color:#0f172a;background:#ffffff;padding:2px 8px;border-radius:6px;margin-bottom:3px;box-shadow:0 2px 6px rgba(0,0,0,0.2);white-space:nowrap;border:1.5px solid #2563eb;">👤 User: ${place}</div>` : ''}
+          <div style="
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2563eb;
+            border: 3px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 5px rgba(37,99,235,0.28);
+            font-size: 19px;
+            color: #ffffff;
+          ">
+            👤
           </div>
-          <div style="width:38px;height:38px;border-radius:50%;background:#10b981;border:3.5px solid #ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(16,185,129,0.55);font-size:19px;">
-            🧑
-          </div>
-          <div style="width:3px;height:12px;background:#10b981;border-radius:2px;"></div>
+          <div style="width: 3.5px; height: 12px; background: #2563eb; border-radius: 2px;"></div>
         </div>`
     });
   }
 
-  // ── 2b. User Mode Pin (Clean Blue Pulsing Halo Pin) ──
+  // ── 2b. User Mode Pin (Alias to same high-visibility user pin) ──
   function makeUserPickupPin(label) {
-    const place = label ? label.split(',')[0] : '';
-    return L.divIcon({
-      className: 'user-pickup-halo-pin',
-      iconSize: [60, 50],
-      iconAnchor: [30, 25],
-      html: `
-        <div style="display:flex;flex-direction:column;align-items:center;pointer-events:none;">
-          ${place ? `<div style="font-size:10px;font-weight:800;color:#0f172a;background:#ffffff;padding:2px 7px;border-radius:6px;margin-bottom:4px;box-shadow:0 2px 6px rgba(0,0,0,0.18);white-space:nowrap;border:1px solid #e2e8f0;">${place}</div>` : ''}
-          <div style="
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: rgba(37, 99, 235, 0.22);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.14);
-          ">
-            <div style="
-              width: 14px;
-              height: 14px;
-              border-radius: 50%;
-              background: #2563eb;
-              border: 2.5px solid #ffffff;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            "></div>
-          </div>
-        </div>
-      `
-    });
+    return makePatientPickupIcon(label);
   }
   // ── 3. Hospital Destination Icon (Anchor at pin needle tip)
   function makeHospitalIcon(label) {
@@ -969,8 +951,23 @@
   function updateRouteEtaBubble(midpoint, etaMin) {
     if (!map || !midpoint || !etaMin) return;
     const html = `
-      <div class="gmap-route-bubble">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <div class="gmap-route-bubble" style="
+        background: #1d4ed8;
+        color: #ffffff;
+        padding: 5px 12px;
+        border-radius: 14px;
+        font-size: 13px;
+        font-weight: 800;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        box-shadow: 0 4px 14px rgba(29, 78, 216, 0.55);
+        border: 2px solid #ffffff;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        pointer-events: none;
+      ">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="1" y="3" width="15" height="13"></rect>
           <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
           <circle cx="5.5" cy="18.5" r="2.5"></circle>
@@ -981,15 +978,16 @@
     `;
     const icon = L.divIcon({
       className: 'gmap-bubble-wrapper',
-      iconSize: [80, 32],
-      iconAnchor: [40, 32],
+      iconSize: [88, 36],
+      iconAnchor: [44, 46], // Anchored 46px above point so it floats over vehicles and markers!
       html: html
     });
     if (!routeEtaMarker) {
-      routeEtaMarker = L.marker(midpoint, { icon, zIndexOffset: 920 }).addTo(map);
+      routeEtaMarker = L.marker(midpoint, { icon, zIndexOffset: 9999 }).addTo(map);
     } else {
       routeEtaMarker.setLatLng(midpoint);
       routeEtaMarker.setIcon(icon);
+      routeEtaMarker.setZIndexOffset(9999);
     }
   }
 
@@ -1180,15 +1178,15 @@
     // 3. Otherwise: Booking mode (create patient & hospital markers and draw route)
     if (!patientMarker) {
       patientMarker = L.marker(patientPos, {
-        icon: makePatientPickupIcon('User Booking Address'),
-        zIndexOffset: 800,
-        title: 'User Booking Address'
+        icon: makePatientPickupIcon('User Location'),
+        zIndexOffset: 3000,
+        title: 'User Location'
       }).addTo(map);
     }
     if (!hospitalMarker) {
       hospitalMarker = L.marker(hospitalPos, {
         icon: makeHospitalIcon('Hospital Destination'),
-        zIndexOffset: 800,
+        zIndexOffset: 2500,
         title: 'Hospital Destination'
       }).addTo(map);
     }
@@ -1211,11 +1209,12 @@
           patientPos = [pLat, pLng];
         }
 
-        const pickupLabel = bookData.pickup_location || 'User Booking Address';
+        const pickupLabel = bookData.pickup_location || 'User Location';
         setText('route-pat-name', pickupLabel);
         setText('det-pickup', pickupLabel);
         patientMarker.setLatLng(patientPos);
         patientMarker.setIcon(makePatientPickupIcon(pickupLabel));
+        patientMarker.setZIndexOffset(3000);
 
         if (bookData.patient_name) {
           setText('det-patient', bookData.patient_name);
@@ -1225,6 +1224,7 @@
           setText('route-hosp-name', bookData.assigned_hospital_name);
           setText('det-hospital', bookData.assigned_hospital_name);
           hospitalMarker.setIcon(makeHospitalIcon(bookData.assigned_hospital_name));
+          hospitalMarker.setZIndexOffset(2500);
         }
         if (bookData.assigned_hospital_address) {
           setText('route-hosp-addr', bookData.assigned_hospital_address);
@@ -1438,8 +1438,16 @@
 
         // Blue ETA callout bubble on the route line (Google Maps style at the top)
         if (legAPts.length > 1) {
-          const midIdx = Math.floor(legAPts.length / 2);
-          updateRouteEtaBubble(legAPts[midIdx], durMin);
+          const distToPatient = L.latLng(ambPos).distanceTo(L.latLng(patientPos));
+          let bubblePos;
+          if (distToPatient > 300) {
+            const midIdx = Math.floor(legAPts.length / 2);
+            bubblePos = legAPts[midIdx];
+          } else {
+            // Float cleanly above user & ambulance when they are close
+            bubblePos = [patientPos[0] + 0.0012, patientPos[1]];
+          }
+          updateRouteEtaBubble(bubblePos, durMin);
         }
       }
 
@@ -1447,9 +1455,9 @@
       // NEVER override the user's manual pan/zoom after that!
       if (!hasInitialFitted) {
         if (allCoords.length > 2) {
-          map.fitBounds(L.latLngBounds(allCoords), { padding: [60, 60] });
+          map.fitBounds(L.latLngBounds(allCoords), { padding: [60, 60], animate: false });
         } else {
-          map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });
+          map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60], animate: false });
         }
         hasInitialFitted = true;
       }
@@ -1480,8 +1488,6 @@
 
               // Re-route Leg A dynamically to keep route line connected to ambulance!
               buildCompleteRoute();
-
-              if (cameraFollow && !userInteracted) map.panTo(ambPos);
 
               if (d.speed) {
                 const spd = Math.round(parseFloat(d.speed));
