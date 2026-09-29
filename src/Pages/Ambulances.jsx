@@ -132,7 +132,7 @@ export default function Ambulances() {
     pickup_city: "",
     pickup_district: "",
     patient_contact_number: localStorage.getItem("phone") || "",
-    booking_for_other: false,
+    booking_for_other: initialUserBooking,
   });
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -268,21 +268,22 @@ export default function Ambulances() {
     if (isAdmin || isDriver) return;
     setSelectedAmb(a);
     setTargetHospital(hospital || null);
+    const startManual = options.startManual === true;
     setForm((prev) => ({
       pickup_address: "",
       pickup_landmark: "",
       pickup_city: "",
       pickup_district: "",
       patient_contact_number: prev.patient_contact_number || localStorage.getItem("phone") || "",
-      booking_for_other: false,
+      booking_for_other: startManual,
     }));
-    setLocationPermission("prompt");
-    setLocationMode("gps");
+    setLocationPermission(startManual ? "manual" : "prompt");
+    setLocationMode(startManual ? "manual" : "gps");
     setConfirmedPickup(null);
-    setLocationMessage("");
+    setLocationMessage(startManual ? "" : "");
     setManualSuggestions([]);
     setShowModal(true);
-    requestPickupLocation();
+    if (!startManual) requestPickupLocation();
   };
 
   const requestPickupLocation = () => {
@@ -629,13 +630,24 @@ export default function Ambulances() {
     let landmark = form.pickup_landmark.trim();
     let city = form.pickup_city.trim();
     let district = form.pickup_district.trim();
+    const requiresManualAddress =
+      form.booking_for_other ||
+      locationMode === "manual" ||
+      locationPermission === "denied" ||
+      locationPermission === "unavailable";
+
     if (!form.patient_contact_number.trim()) {
       showToast("Contact number is required.", "err");
       return;
     }
 
+    if (requiresManualAddress && !form.pickup_address.trim()) {
+      showToast("A pickup address is required for another person or a manual booking.", "err");
+      return;
+    }
+
     if (!confirmedPickup) {
-      showToast("Please wait for your GPS location to be detected or click 'Detect current location'.", "err");
+      showToast("Confirm the pickup location before submitting.", "err");
       return;
     }
     setLoading(true);
@@ -2113,27 +2125,100 @@ export default function Ambulances() {
             )}
 
             <div className="amb-location-explainer">
-              <strong>Pickup location (Auto-detected via GPS)</strong>
+              <strong>Pickup location</strong>
             </div>
 
+            <label className="amb-location-choice">
+              <input
+                type="checkbox"
+                checked={form.booking_for_other}
+                onChange={(event) => {
+                  const bookingForOther = event.target.checked;
+                  setForm((previous) => ({ ...previous, booking_for_other: bookingForOther }));
+                  if (bookingForOther) {
+                    clearPickupWatch();
+                    setLocationMode("manual");
+                    setConfirmedPickup(null);
+                    setLocationMessage("Enter their pickup address.");
+                  }
+                }}
+              />
+              Use another pickup address
+            </label>
+
             <div className="amb-location-action">
-              <div><b>Current Location</b></div>
+              <div><b>Use current location</b></div>
               <button
                 className="amb2-btn"
                 type="button"
                 disabled={locationPermission === "requesting"}
                 onClick={() => {
+                  setForm((previous) => ({ ...previous, booking_for_other: false }));
                   setLocationMode("gps");
                   requestPickupLocation();
                 }}
               >
-                {locationPermission === "requesting" ? "Fetching address..." : locationPermission === "granted" ? "Location confirmed" : "Detect current location"}
+                {locationPermission === "requesting" ? "Fetching address..." : locationPermission === "granted" ? "Location confirmed" : "Use current location"}
               </button>
             </div>
 
+            {(form.booking_for_other || locationMode === "manual" || locationPermission === "denied" || locationPermission === "unavailable") && (
+              <div className="amb-manual-location">
+                <label>Pickup address</label>
+                <input
+                  list="pickup-address-suggestions"
+                  value={form.pickup_address}
+                  onChange={(event) => {
+                    const pickupAddress = event.target.value;
+                    setForm((previous) => ({ ...previous, pickup_address: pickupAddress }));
+                    const selected = manualSuggestions.find((item) => item.label === pickupAddress);
+                    if (selected) {
+                      setConfirmedPickup({ lat: selected.lat, lng: selected.lng, source: "manual", label: selected.label });
+                      setLocationPermission("manual");
+                      setLocationMessage("Location confirmed.");
+                    } else {
+                      setConfirmedPickup(null);
+                    }
+                  }}
+                  placeholder="House, street, landmark, city"
+                />
+                <datalist id="pickup-address-suggestions">
+                  {manualSuggestions.map((suggestion) => (
+                    <option key={`${suggestion.lat}-${suggestion.lng}`} value={suggestion.label} />
+                  ))}
+                  <option value="Shiv Vihar, Delhi" />
+                  <option value="Loni, Ghaziabad" />
+                  <option value="Noida, Uttar Pradesh" />
+                  <option value="New Delhi, Delhi" />
+                </datalist>
+                <button className="amb2-btn" type="button" disabled={geocoding} onClick={confirmManualPickup}>
+                  {geocoding ? "Confirming address..." : "Confirm address"}
+                </button>
+              </div>
+            )}
+
+            {locationPermission === "denied" && (
+              <button className="amb2-btn" type="button" onClick={() => setLocationMode("manual")}>Use manual address instead</button>
+            )}
+
+            {!form.booking_for_other && locationMode === "manual" && (
+              <button
+                className="amb2-btn"
+                type="button"
+                onClick={() => {
+                  setLocationMode("gps");
+                  setLocationPermission("prompt");
+                  setConfirmedPickup(null);
+                  setLocationMessage("");
+                }}
+              >
+                Use current location instead
+              </button>
+            )}
+
             {confirmedPickup && (
-              <div className="amb-location-confirmed" style={{ color: "#166534", fontWeight: 600 }}>
-                📍 Location confirmed: {confirmedPickup.label || "GPS location detected"}
+              <div className="amb-location-confirmed">
+                Location confirmed: {confirmedPickup.label || "Address fetched from GPS"}
               </div>
             )}
             {locationMessage && !confirmedPickup && <div className="amb-location-note">{locationMessage}</div>}

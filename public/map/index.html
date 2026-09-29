@@ -480,38 +480,9 @@
       font-weight: 500;
     }
 
-    /* Google Maps Route Callout Bubble on Map */
-    .gmap-bubble-wrapper {
-      background: transparent !important;
-      border: none !important;
-    }
-    .gmap-route-bubble {
-      background: #1d4ed8;
-      color: #ffffff;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 800;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-      border: 2px solid #ffffff;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      white-space: nowrap;
-      position: relative;
-    }
-    .gmap-route-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -6px;
-      left: 50%;
-      transform: translateX(-50%);
-      border-width: 6px 6px 0;
-      border-style: solid;
-      border-color: #1d4ed8 transparent transparent transparent;
-      display: block;
-      width: 0;
+    /* Google Maps Route Callout Bubble on Map - Removed as per user request */
+    .gmap-bubble-wrapper, .gmap-route-bubble {
+      display: none !important;
     }
 
     /* User Mode Layout Rules */
@@ -945,61 +916,12 @@
     });
   }
 
-  // ── Route ETA Callout Bubble (Google Maps Style) ──
+  // ── Route ETA Callout Bubble (Removed as requested by user) ──
   let routeEtaMarker = null;
-  let currentEtaMinutes = null;
-
   function updateRouteEtaBubble(pos, etaMin) {
-    if (!map || !pos) return;
-    if (etaMin !== undefined && etaMin !== null && etaMin > 0) {
-      currentEtaMinutes = etaMin;
-    }
-    const displayEta = currentEtaMinutes || 8;
-    const html = `
-      <div class="gmap-route-bubble" style="
-        position: relative;
-        background: #1d4ed8;
-        color: #ffffff;
-        padding: 4px 10px;
-        border-radius: 16px;
-        font-size: 12px;
-        font-weight: 800;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        box-shadow: 0 4px 14px rgba(29, 78, 216, 0.45);
-        border: 2px solid #ffffff;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        white-space: nowrap;
-        pointer-events: none;
-      ">
-        <span style="font-size: 13px; line-height: 1;">🚑</span>
-        <span>${displayEta} min</span>
-        <div style="
-          position: absolute;
-          bottom: -5px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 5px solid transparent;
-          border-right: 5px solid transparent;
-          border-top: 5px solid #1d4ed8;
-        "></div>
-      </div>
-    `;
-    const icon = L.divIcon({
-      className: 'gmap-bubble-wrapper',
-      iconSize: [88, 30],
-      iconAnchor: [44, 46], // Anchored 46px above pos in screen pixels, stays close at all zoom levels!
-      html: html
-    });
-    if (!routeEtaMarker) {
-      routeEtaMarker = L.marker(pos, { icon, zIndexOffset: 9999 }).addTo(map);
-    } else {
-      routeEtaMarker.setLatLng(pos);
-      routeEtaMarker.setIcon(icon);
-      routeEtaMarker.setZIndexOffset(9999);
+    if (routeEtaMarker && map) {
+      try { map.removeLayer(routeEtaMarker); } catch (_) {}
+      routeEtaMarker = null;
     }
   }
 
@@ -1292,7 +1214,6 @@
           if (!isNaN(aLat) && !isNaN(aLng) && aLat !== 0 && aLng !== 0) {
             ambPos = [aLat, aLng];
             ambMarker.setLatLng(ambPos);
-            if (routeEtaMarker) routeEtaMarker.setLatLng(ambPos);
             setText('tel-lat', ambPos[0].toFixed(5));
             setText('tel-lng', ambPos[1].toFixed(5));
           }
@@ -1449,8 +1370,7 @@
         setText('gmap-live-status', 'On-site');
         setText('gmap-live-sub', 'Fastest route, despite the usual traffic');
 
-        // Blue ETA callout bubble anchored right above ambulance vehicle
-        updateRouteEtaBubble(ambPos, durMin);
+        // (Floating bubble removed; live ETA and distance are shown cleanly in the bottom bar)
       }
 
       // ONLY Auto-Fit Map ONCE on initial load!
@@ -1487,14 +1407,6 @@
               if (d.bearing) ambBearing = parseFloat(d.bearing);
               ambMarker.setLatLng(ambPos);
               ambMarker.setIcon(makeAmbulanceIcon(ambBearing));
-              if (routeEtaMarker) routeEtaMarker.setLatLng(ambPos);
-
-              // Update ETA dynamically as ambulance moves
-              if (patientPos) {
-                const straightDistM = L.latLng(ambPos).distanceTo(L.latLng(patientPos));
-                const approxDurMin = Math.max(1, Math.round((straightDistM * 1.3) / 500));
-                updateRouteEtaBubble(ambPos, approxDurMin);
-              }
 
               // Re-route Leg A dynamically to keep route line connected to ambulance!
               buildCompleteRoute();
