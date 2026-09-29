@@ -2425,7 +2425,7 @@ export default function HospitalPortal() {
         }
         .hp-map-layout {
           display: grid;
-          grid-template-columns: 280px minmax(0, 1fr);
+          grid-template-columns: 1fr; width: 100%;
           gap: 10px;
           flex: 1 1 auto;
           min-height: calc(100vh - 220px);
