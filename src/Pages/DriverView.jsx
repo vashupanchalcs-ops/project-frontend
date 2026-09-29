@@ -59,6 +59,7 @@ export default function DriverView() {
   const [location,       setLocation]      = useState(null);
   const [speed,          setSpeed]         = useState(0);
   const [route,          setRoute]         = useState(null);
+  const [activeBooking,  setActiveBooking] = useState(null);
   const [log,            setLog]           = useState([]);
   const [panelOpen,      setPanelOpen]     = useState(false);
   const [notifAllowed,   setNotifAllowed]  = useState(Notification.permission === "granted");
@@ -347,6 +348,37 @@ export default function DriverView() {
   };
 
   useEffect(() => () => stopTracking(), []);
+  useEffect(() => {
+    const aid = parseInt(ambId || localStorage.getItem("dr_amb_id") || "0");
+    const em  = (email || localStorage.getItem("dr_email") || "").toLowerCase().trim();
+    if (!aid && !em) return;
+
+    const loadDriverBooking = async () => {
+      try {
+        const res = await fetch(`${BASE}/api/bookings/`);
+        if (res.ok) {
+          const data = await res.json();
+          const rows = Array.isArray(data) ? data : (data.results || []);
+          const matched = rows.filter(b => 
+            (Number(b.ambulance_id) === aid || (b.driver_email && b.driver_email.toLowerCase() === em)) &&
+            b.status !== "completed" && b.status !== "cancelled"
+          ).sort((a, b) => b.id - a.id);
+
+          if (matched.length > 0) {
+            setActiveBooking(matched[0]);
+            localStorage.setItem("dr_last_confirmed", matched[0].id);
+            setLastConfirmedId(matched[0].id);
+          }
+        }
+      } catch (err) {
+        console.warn("Error fetching driver active booking:", err);
+      }
+    };
+
+    loadDriverBooking();
+    const interval = setInterval(loadDriverBooking, 6000);
+    return () => clearInterval(interval);
+  }, [ambId, email]);
 
   const sendPing = () => {
     const loc = latestLoc.current;
@@ -627,7 +659,9 @@ export default function DriverView() {
           <div className={`dv-map ${mobileTab !== "map" ? "hidden" : ""}`} style={{ overflow: "hidden", position: "relative", background: "#111" }}>
             <FlutterTrackingFrame
               role="driver"
-              bookingId={route?.booking_id || route?.bookingId || 0}
+              bookingId={activeBooking?.id || lastConfirmedId || route?.booking_id || 0}
+              ambulanceId={ambId || localStorage.getItem("dr_amb_id")}
+              hideSidebar={true}
               title="Driver Flutter live tracking map"
             />
             {!isOnline && (

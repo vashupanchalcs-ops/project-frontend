@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import gsap from "gsap";
 import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
+import { API_BASE_URL } from "../api/client";
 
 const TABS = [
   { id: "map", label: "🗺 Flutter Live Tracking" },
@@ -10,15 +11,48 @@ const TABS = [
 
 export default function LiveMap() {
   const location = useLocation();
-  const [activeTab,      setActiveTab]      = useState("map");
+  const [activeTab, setActiveTab] = useState("map");
   const rootRef = useRef(null);
-  const preBookingId = location.state?.bookingId ?? null;
+
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBookingId, setSelectedBookingId] = useState(() => {
+    const q = new URLSearchParams(location.search);
+    return Number(q.get("booking_id") || location.state?.bookingId || 0);
+  });
 
   useEffect(() => {
-    if (location.state?.openRouteManager) {
-      setActiveTab("route");
-    }
-  }, [location.state]);
+    let mounted = true;
+    const fetchBookings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/bookings/`);
+        if (res.ok) {
+          const data = await res.json();
+          const rows = Array.isArray(data) ? data : (data.results || []);
+          if (mounted) {
+            setBookings(rows);
+            setSelectedBookingId((prev) => {
+              if (prev > 0 && rows.some(b => Number(b.id) === Number(prev))) return prev;
+              const active = rows.find(b => b.ambulance_id && b.status !== "completed" && b.status !== "cancelled");
+              return active ? Number(active.id) : (rows[0] ? Number(rows[0].id) : 0);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load active bookings in LiveMap:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchBookings();
+    const interval = setInterval(fetchBookings, 8000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, []);
+
+  const activeBooking = useMemo(() => {
+    return bookings.find(b => Number(b.id) === Number(selectedBookingId)) || bookings[0] || null;
+  }, [bookings, selectedBookingId]);
 
   useEffect(() => {
     if (!rootRef.current) return;
@@ -84,20 +118,63 @@ export default function LiveMap() {
         }
         .lm-tab-btn.active { border-bottom-color: #f59a23; color: #111; font-weight: 800; background: #f59a23; border-radius: 6px; }
         .lm-tab-btn:hover { background: #f4fbf4; color: #126f1e; }
-        .lm-selected-info {
-          margin-left: auto; display: flex; align-items: center;
-          gap: 6px; flex-shrink: 0; padding-left: 8px;
-        }
+        
         .lm-content {
           flex: 1; min-height: 0; overflow: hidden; position: relative;
         }
         .lm-pane {
-          position: absolute; inset: 0; display: flex;
+          position: absolute; inset: 0; display: flex; flex-direction: row; gap: 12px; padding: 12px;
+        }
+
+        .lm-dispatch-sidebar {
+          width: 320px;
+          flex-shrink: 0;
+          background: #ffffff;
+          border: 1px solid rgba(17,17,17,0.12);
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .lm-dispatch-head {
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(17,17,17,0.1);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #fafafa;
+        }
+        .lm-dispatch-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .lm-dispatch-card {
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(17,17,17,0.1);
+          background: #fff;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .lm-dispatch-card:hover {
+          border-color: #f59a23;
+          background: #fffdf9;
+        }
+        .lm-dispatch-card.active {
+          border-color: #f59a23;
+          background: #fff8ee;
+          box-shadow: 0 0 0 1px #f59a23;
         }
 
         /* ── Tablet ── */
         @media (max-width: 1024px) {
           .lm-root { margin-left: 64px; width: calc(100vw - 64px); }
+          .lm-dispatch-sidebar { width: 280px; }
         }
 
         /* ── Mobile ── */
@@ -113,32 +190,15 @@ export default function LiveMap() {
           .lm-header-title { font-size: 13px; }
           .lm-live-badge { padding: 4px 10px; font-size: 10px; }
           .lm-tab-btn { font-size: 12px; padding: 8px 10px; }
-          .lm-selected-info .lm-sel-label { display: none; }
-
-          /* ✅ KEY FIX: pane flex-direction column — panel upar, map neeche */
           .lm-pane {
             flex-direction: column;
             overflow-y: auto;
+            padding: 8px;
           }
-
-          /* Mobile layout for the RealTimeMap panel and map. */
-          .lm-pane > * {
-            width: 100% !important;
-            min-width: unset !important;
+          .lm-dispatch-sidebar {
+            width: 100%;
+            max-height: 200px;
           }
-        }
-
-        @media (max-width: 480px) {
-          .lm-header-title { font-size: 12px; }
-          .lm-tab-btn { font-size: 11px; padding: 8px 8px; }
-        }
-
-        /* Active live-map controls use the shared yellow state, not red. */
-        html body #root#root .lm-tab-btn.active,
-        html body #root#root .lm-tab-btn.active:hover {
-          background: #f59a23 !important;
-          border-bottom-color: #f59a23 !important;
-          color: #111111 !important;
         }
       `}</style>
 
@@ -173,10 +233,61 @@ export default function LiveMap() {
           ))}
         </div>
 
-        {/* Flutter owns the actual GoogleMap surface for the admin role. */}
+        {/* Content with Left Active Dispatches Panel + Full Map */}
         <div className="lm-content">
-          <div className="lm-pane" style={{ display: "flex", zIndex: 1 }}>
-            <FlutterTrackingFrame role="admin" bookingId={preBookingId} title="Admin Flutter live tracking map" />
+          <div className="lm-pane">
+            <aside className="lm-dispatch-sidebar">
+              <div className="lm-dispatch-head">
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#0f172a" }}>
+                  Active Dispatches ({bookings.length})
+                </span>
+                <span style={{ fontSize: "10px", fontWeight: 700, background: "#f1f5f9", padding: "2px 6px", borderRadius: "10px", color: "#64748b" }}>
+                  GPS Real-Time
+                </span>
+              </div>
+              <div className="lm-dispatch-list">
+                {bookings.length === 0 && (
+                  <div style={{ padding: "16px", textAlign: "center", color: "#64748b", fontSize: "12px" }}>
+                    No active dispatches found.
+                  </div>
+                )}
+                {bookings.map((b) => (
+                  <div
+                    key={`b-${b.id}`}
+                    className={`lm-dispatch-card ${Number(activeBooking?.id) === Number(b.id) ? "active" : ""}`}
+                    onClick={() => setSelectedBookingId(Number(b.id))}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a" }}>
+                        {b.ambulance_number || "Ambulance Unit"}
+                      </span>
+                      <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "8px", background: b.status === "confirmed" ? "#dcfce7" : "#fef3c7", color: b.status === "confirmed" ? "#166534" : "#92400e" }}>
+                        #{b.id} · {b.status || "active"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
+                      Driver: <strong>{b.driver || "Assigned Driver"}</strong>
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                      Patient: {b.patient_name || "Patient"}
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      📍 {b.pickup_location || "Pickup location"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            <div style={{ flex: "1 1 auto", width: "100%", height: "100%", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(17,17,17,0.12)" }}>
+              <FlutterTrackingFrame
+                role="admin"
+                bookingId={activeBooking?.id || selectedBookingId || 0}
+                ambulanceId={activeBooking?.ambulance_id || null}
+                hideSidebar={true}
+                title="Admin Flutter live tracking map"
+              />
+            </div>
           </div>
         </div>
       </div>

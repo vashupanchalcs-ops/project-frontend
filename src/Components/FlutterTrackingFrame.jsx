@@ -39,8 +39,8 @@ export default function FlutterTrackingFrame({
 
   const identity = useMemo(() => ({
     role: String(role || "user").toLowerCase(),
-    email: storageValue("user"),
-    ambulanceId: storageValue("ambulance_id"),
+    email: storageValue("user") || storageValue("dr_email"),
+    ambulanceId: storageValue("ambulance_id") || storageValue("dr_amb_id"),
     hospitalId: storageValue("hospital_id"),
     staffId: storageValue("staff_id"),
   }), [role]);
@@ -48,10 +48,9 @@ export default function FlutterTrackingFrame({
   const activeUrl = useFallback ? "/map/index.html" : defaultUrl;
 
   const src = useMemo(() => {
-    // When the map is served via Vite (same origin), use the window origin so
-    // API + WS calls flow through the Vite dev-server proxy → no CORS issues.
-    // In production (different origins), fall back to the real Django URL.
-    const mapOrigin = (typeof window !== "undefined" ? window.location.origin : "") || API_BASE_URL;
+    // Always use the authoritative backend API_BASE_URL so the Leaflet iframe
+    // directly calls the Django REST backend (with CORS) instead of Vercel static rewrites.
+    const mapOrigin = API_BASE_URL;
     const query = new URLSearchParams({
       role: identity.role,
       email: identity.email,

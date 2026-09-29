@@ -3649,15 +3649,242 @@ export default function HospitalPortal() {
                     )}
                   </div>
                   {visibleTrackingRows.length === 0 && <div className="hp-empty">No live ambulance coordinates available yet.</div>}
-                  {visibleTrackingRows.length > 0 && (
-                    <div className="hp-map-layout" style={{ flex: "1 1 auto" }}>
-                      
-                      <section className="hp-map-panel" style={{ flex: "1 1 auto", width: "100%" }}>
+                                    {visibleTrackingRows.length > 0 && (
+                    <div className="hp-map-layout" style={{ display: "flex", flexDirection: "row", gap: "12px", flex: "1 1 auto", width: "100%", height: "calc(100vh - 220px)" }}>
+                                            <aside style={{
+                        width: "360px",
+                        flexShrink: 0,
+                        background: "#fafafa",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "16px",
+                        padding: "16px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "14px",
+                        overflowY: "auto",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+                      }}>
+                        {/* Top Header */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "17px", fontWeight: 800, color: "#111", letterSpacing: "-0.3px" }}>
+                            Emergency Transits
+                          </span>
+                          <span style={{ fontSize: "18px", color: "#666", cursor: "pointer" }}>⋮</span>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            type="button"
+                            style={{
+                              padding: "6px 14px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              borderRadius: "20px",
+                              background: "#111111",
+                              color: "#ffffff",
+                              border: "none",
+                              cursor: "pointer"
+                            }}
+                          >
+                            On the way ({visibleTrackingRows.length})
+                          </button>
+                          <button
+                            type="button"
+                            style={{
+                              padding: "6px 14px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              borderRadius: "20px",
+                              background: "transparent",
+                              color: "#6b7280",
+                              border: "none",
+                              cursor: "pointer"
+                            }}
+                          >
+                            Delivered
+                          </button>
+                        </div>
+
+                        {/* Active Selected Card - Matching Second Image Style */}
+                        {selectedMapBooking && (
+                          <div style={{
+                            background: "#ffffff",
+                            border: "1.5px solid #111111",
+                            borderRadius: "16px",
+                            padding: "16px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                            boxShadow: "0 4px 14px rgba(0,0,0,0.06)"
+                          }}>
+                            {/* Route Header */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                              <div>
+                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#111827", lineHeight: "1.3" }}>
+                                  {(selectedMapBooking.pickup_location || "Pickup").split(",")[0]} ➔ {hospital?.name || "Hospital"}
+                                </div>
+                                <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px", fontWeight: 500 }}>
+                                  Order ID #{selectedMapBooking.booking_id || selectedMapBooking.id}
+                                </div>
+                              </div>
+                              <span style={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                background: "#ccff00",
+                                color: "#111",
+                                padding: "4px 8px",
+                                borderRadius: "8px",
+                                letterSpacing: "0.4px",
+                                whiteSpace: "nowrap"
+                              }}>
+                                IN TRANSIT
+                              </span>
+                            </div>
+
+                            {/* Progress bar */}
+                            <div style={{ width: "100%", height: "4px", background: "#f3f4f6", borderRadius: "2px", overflow: "hidden" }}>
+                              <div style={{ width: "65%", height: "100%", background: "#ccff00" }} />
+                            </div>
+
+                            {/* 4-column metric layout */}
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", padding: "8px 0", borderBottom: "1px solid #f3f4f6" }}>
+                              <div>
+                                <div style={{ fontSize: "10px", color: "#9ca3af", fontWeight: 600 }}>Patient</div>
+                                <div style={{ fontSize: "12px", fontWeight: 700, color: "#111" }}>
+                                  {selectedMapBooking.patient_name || "Patient"} {selectedMapBooking.patient_age ? `(${selectedMapBooking.patient_age}y)` : ""}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "10px", color: "#9ca3af", fontWeight: 600 }}>Ambulance</div>
+                                <div style={{ fontSize: "12px", fontWeight: 700, color: "#111" }}>
+                                  {selectedMapBooking.ambulance_number || "Ambulance"}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "10px", color: "#9ca3af", fontWeight: 600 }}>Contact</div>
+                                <div style={{ fontSize: "12px", fontWeight: 700, color: "#111" }}>
+                                  {selectedMapBooking.patient_contact_number || "-"}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "10px", color: "#9ca3af", fontWeight: 600 }}>Status</div>
+                                <div style={{ fontSize: "12px", fontWeight: 700, color: "#16a34a" }}>
+                                  {selectedMapBooking.status || "Active"}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Driver / Courier Row */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "4px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div style={{
+                                  width: "34px",
+                                  height: "34px",
+                                  borderRadius: "50%",
+                                  background: "#f3f4f6",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "16px"
+                                }}>
+                                  👨‍⚕️
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "10px", color: "#9ca3af", fontWeight: 600 }}>Assigned Driver</div>
+                                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#111" }}>
+                                    {selectedMapBooking.driver_name || selectedMapBooking.driver || "Driver"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                <button
+                                  type="button"
+                                  title="Chat"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    border: "1px solid #e5e7eb",
+                                    background: "#fff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    fontSize: "13px"
+                                  }}
+                                >
+                                  💬
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Call"
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    border: "1px solid #e5e7eb",
+                                    background: "#fff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    fontSize: "13px"
+                                  }}
+                                >
+                                  📞
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Other Inactive Bookings */}
+                        {visibleTrackingRows.filter(r => Number(r.booking_id) !== Number(selectedMapBooking?.booking_id)).map((other) => (
+                          <div
+                            key={`other-${other.booking_id}`}
+                            onClick={() => setSelectedMapBookingId(Number(other.booking_id))}
+                            style={{
+                              background: "#ffffff",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "14px",
+                              padding: "12px 14px",
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: "#1f2937" }}>
+                                {(other.pickup_location || "Pickup").split(",")[0]} ➔ {hospital?.name || "Hospital"}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
+                                Order ID #{other.booking_id} · {other.ambulance_number}
+                              </div>
+                            </div>
+                            <span style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              background: "#dcfce7",
+                              color: "#166534",
+                              padding: "3px 7px",
+                              borderRadius: "6px"
+                            }}>
+                              IN TRANSIT
+                            </span>
+                          </div>
+                        ))}
+                      </aside>
+
+                      <section className="hp-map-panel" style={{ flex: "1 1 auto", width: "100%", height: "100%" }}>
                         {selectedMapBooking ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
                             <FlutterTrackingFrame
                               role="hospital"
                               bookingId={selectedMapBooking?.booking_id || selectedMapBooking?.id || 0}
+                              ambulanceId={selectedMapBooking?.ambulance_id || null}
                               hideSidebar={true}
                               title="Hospital Flutter live tracking map"
                             />

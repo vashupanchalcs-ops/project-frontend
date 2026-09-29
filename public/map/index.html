@@ -368,8 +368,8 @@
     <div class="driver-card">
       <div class="driver-avatar">🧑‍⚕️</div>
       <div class="driver-info">
-        <div class="driver-name" id="driver-name">Ramesh Sharma</div>
-        <div class="driver-sub" id="vehicle-plate">DL-01-AMB-101 • ALS Unit</div>
+        <div class="driver-name" id="driver-name">Assigned Driver</div>
+        <div class="driver-sub" id="vehicle-plate">Ambulance Unit</div>
       </div>
       <div class="driver-badge">⭐ 4.9</div>
     </div>
@@ -391,7 +391,7 @@
             <div class="route-stop-icon" style="background:#f59e0b;">🚑</div>
             <div>
               <div class="route-stop-label">1. AMBULANCE LIVE LOCATION</div>
-              <div class="route-stop-name" id="route-amb-name">DL-01-AMB-101</div>
+              <div class="route-stop-name" id="route-amb-name">Ambulance Unit</div>
               <div class="route-stop-addr" id="route-amb-addr">GPS Active (En route)</div>
             </div>
           </div>
@@ -400,7 +400,7 @@
             <div class="route-stop-icon" style="background:#10b981;">📍</div>
             <div>
               <div class="route-stop-label">2. USER BOOKING ADDRESS (GPS FETCHED)</div>
-              <div class="route-stop-name" id="route-pat-name">Fetching Location...</div>
+              <div class="route-stop-name" id="route-pat-name">Patient Pickup Point</div>
               <div class="route-stop-addr" id="route-pat-addr">Patient Pickup Point</div>
             </div>
           </div>
@@ -409,7 +409,7 @@
             <div class="route-stop-icon" style="background:#ef4444;">🏥</div>
             <div>
               <div class="route-stop-label">3. DESTINATION HOSPITAL</div>
-              <div class="route-stop-name" id="route-hosp-name">AIIMS New Delhi</div>
+              <div class="route-stop-name" id="route-hosp-name">Destination Hospital</div>
               <div class="route-stop-addr" id="route-hosp-addr">Emergency Trauma Center</div>
             </div>
           </div>
@@ -465,7 +465,7 @@
           <div class="detail-row"><span class="detail-key">Patient</span><span class="detail-val" id="det-patient">Loading...</span></div>
           <div class="detail-row"><span class="detail-key">Condition</span><span class="detail-val" id="det-condition">Emergency</span></div>
           <div class="detail-row"><span class="detail-key">Pickup Address</span><span class="detail-val" id="det-pickup">--</span></div>
-          <div class="detail-row"><span class="detail-key">Hospital</span><span class="detail-val" id="det-hospital">AIIMS New Delhi</span></div>
+          <div class="detail-row"><span class="detail-key">Hospital</span><span class="detail-val" id="det-hospital">Destination Hospital</span></div>
           <div class="detail-row"><span class="detail-key">Hospital Address</span><span class="detail-val" id="det-hosp-addr">Ansari Nagar, New Delhi</span></div>
         </div>
       </div>
@@ -862,16 +862,19 @@
 
     const bId = params.bookingId;
 
-    // Step A: Fetch Booking details (user's GPS booked location + hospital)
+    // Step A: Fetch Booking details (user's real GPS booked location + hospital)
+    let assignedAmbId = params.ambulanceId || null;
+    let assignedHospId = null;
+
     try {
       const bookRes = await fetch(`${params.apiBase}/api/bookings/${bId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
       if (bookRes.ok) {
         const bookData = await bookRes.json();
         
-        // User GPS pickup coordinates
+        // 1. User's REAL GPS Pickup Coordinates
         const pLat = parseFloat(bookData.pickup_latitude);
         const pLng = parseFloat(bookData.pickup_longitude);
-        if (!isNaN(pLat) && !isNaN(pLng) && pLat > 0 && pLng > 0) {
+        if (!isNaN(pLat) && !isNaN(pLng) && pLat !== 0 && pLng !== 0) {
           patientPos = [pLat, pLng];
         }
 
@@ -897,65 +900,88 @@
         if (bookData.patient_condition) {
           setText('det-condition', bookData.patient_condition);
         }
+        if (bookData.driver) {
+          setText('driver-name', bookData.driver);
+        }
+        if (bookData.ambulance_number) {
+          setText('vehicle-plate', `${bookData.ambulance_number} • ALS Unit`);
+          setText('route-amb-name', bookData.ambulance_number);
+        }
+
+        if (bookData.ambulance_id) assignedAmbId = bookData.ambulance_id;
+        if (bookData.assigned_hospital_id) assignedHospId = bookData.assigned_hospital_id;
       }
     } catch (e) {
       console.warn('Booking fetch error:', e);
     }
 
-    // Step B: Fetch Live Tracking data (Ambulance's GPS coordinates)
-    try {
-      const trackRes = await fetch(`${params.apiBase}/api/tracking/${bId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
-      if (trackRes.ok) {
-        const trackData = await trackRes.json();
-        
-        // Ambulance live GPS
-        if (trackData.ambulance) {
-          const aLat = parseFloat(trackData.ambulance.lat);
-          const aLng = parseFloat(trackData.ambulance.lng);
-          if (!isNaN(aLat) && !isNaN(aLng) && aLat > 0 && aLng > 0) {
+    // Step B: Fetch Assigned Ambulance Live GPS Location
+    if (assignedAmbId) {
+      try {
+        const ambRes = await fetch(`${params.apiBase}/api/ambulances/${assignedAmbId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
+        if (ambRes.ok) {
+          const ambData = await ambRes.json();
+          const aLat = parseFloat(ambData.latitude);
+          const aLng = parseFloat(ambData.longitude);
+          if (!isNaN(aLat) && !isNaN(aLng) && aLat !== 0 && aLng !== 0) {
             ambPos = [aLat, aLng];
             ambMarker.setLatLng(ambPos);
             setText('tel-lat', ambPos[0].toFixed(5));
             setText('tel-lng', ambPos[1].toFixed(5));
           }
-          if (trackData.ambulance.driver) setText('driver-name', trackData.ambulance.driver);
-          if (trackData.ambulance.number) setText('vehicle-plate', `${trackData.ambulance.number} • ALS Unit`);
+          if (ambData.driver) setText('driver-name', ambData.driver);
+          if (ambData.ambulance_number) {
+            setText('vehicle-plate', `${ambData.ambulance_number} • ${ambData.status || 'Active'}`);
+            setText('route-amb-name', ambData.ambulance_number);
+          }
+          if (ambData.speed !== undefined) {
+            const spd = Math.round(parseFloat(ambData.speed) || 0);
+            setText('speed-chip', `${spd} km/h`);
+            setText('tele-speed', spd);
+          }
         }
+      } catch (e) {
+        console.warn('Ambulance fetch error:', e);
+      }
+    }
 
-        // Hospital location
-        if (trackData.hospital) {
-          const hLat = parseFloat(trackData.hospital.lat);
-          const hLng = parseFloat(trackData.hospital.lng);
-          if (!isNaN(hLat) && !isNaN(hLng) && hLat > 0 && hLng > 0) {
+    // Step C: Fetch Destination Hospital Coordinates
+    if (assignedHospId) {
+      try {
+        const hospRes = await fetch(`${params.apiBase}/api/hospitals/${assignedHospId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
+        if (hospRes.ok) {
+          const hospData = await hospRes.json();
+          const hLat = parseFloat(hospData.latitude);
+          const hLng = parseFloat(hospData.longitude);
+          if (!isNaN(hLat) && !isNaN(hLng) && hLat !== 0 && hLng !== 0) {
             hospitalPos = [hLat, hLng];
             hospitalMarker.setLatLng(hospitalPos);
           }
+          if (hospData.name) {
+            setText('route-hosp-name', hospData.name);
+            setText('det-hospital', hospData.name);
+            hospitalMarker.setIcon(makeHospitalIcon(hospData.name));
+          }
+          if (hospData.address) {
+            setText('route-hosp-addr', hospData.address);
+          }
         }
+      } catch (e) {
+        console.warn('Hospital fetch error:', e);
       }
-    } catch (e) {
-      console.warn('Tracking fetch error:', e);
     }
 
-    // Step C: Fallback to Device GPS if booking had no valid coordinates
-    if (!patientPos || patientPos[0] === 0) {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          patientPos = [pos.coords.latitude, pos.coords.longitude];
-          patientMarker.setLatLng(patientPos);
-          patientMarker.setIcon(makePatientPickupIcon('Your Live GPS Location'));
-          buildCompleteRoute();
-        }, () => {
-          buildCompleteRoute();
-        }, { enableHighAccuracy: true });
-      } else {
-        buildCompleteRoute();
-      }
-    } else {
-      buildCompleteRoute();
-    }
+    // Step D: Calculate & Render the Real Complete Road Route
+    buildCompleteRoute();
 
     // Real-time WebSocket connection for moving ambulance
     connectWS(bId);
+    if (!window._trackingPollInterval) {
+      window._trackingPollInterval = setInterval(() => {
+        if (params.bookingId) fetchLiveBookingAndRoute();
+        else if (params.ambulanceId) fetchSelectedAmbulance();
+      }, 5000);
+    }
   }
 
   // ── Build Connected Road Route (Ambulance -> User -> Hospital) ─
@@ -1047,8 +1073,8 @@
       ws.onmessage = evt => {
         try {
           const msg = JSON.parse(evt.data);
-          const d   = msg.data || msg;
-          if (msg.type === 'AMBULANCE_LOCATION_UPDATED') {
+          const d   = msg.payload || msg.data || msg;
+          if (msg.type === 'AMBULANCE_LOCATION_UPDATED' || msg.type === 'location_update' || msg.type === 'tracking.location') {
             const lat = parseFloat(d.latitude || d.lat);
             const lng = parseFloat(d.longitude || d.lng);
             if (!isNaN(lat) && !isNaN(lng) && lat > 0 && lng > 0) {
