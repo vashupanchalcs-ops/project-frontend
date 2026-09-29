@@ -9,7 +9,7 @@ import {
   fetchRoadRoute,
   LIGHT_TILE,
 } from "../hooks/useLeaflet";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -2051,39 +2051,14 @@ export default function Ambulances() {
                   })()}
                  
                   <div className="amb-map-box" style={{ position: "relative" }}>
-                    <GoogleMapEmbed
-                      userLoc={mapLocation}
-                      ambulanceLoc={
-                        selectedAmb && isIndiaLatLng(Number(selectedAmb.latitude), Number(selectedAmb.longitude))
-                          ? { lat: Number(selectedAmb.latitude), lng: Number(selectedAmb.longitude), heading: Number(selectedAmb.heading) || 0, speed: selectedAmb.speed || 0 }
-                          : null
-                      }
-                      pickupLoc={
-                        bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed")
-                          ? {
-                              lat: Number(bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed").pickup_latitude),
-                              lng: Number(bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed").pickup_longitude),
-                              label: bookings.find((b) => Number(b.ambulance_id) === Number(selectedAmb?.id) && String(b.status).toLowerCase() === "confirmed").pickup_location || "Pickup",
-                            }
-                          : null
-                      }
-                      height="100%"
+                    <FlutterTrackingFrame
+                      role={isUser ? "user" : "admin"}
+                      ambulanceId={selectedAmb?.id}
+                      mapOnly={true}
+                      title="Aarogya Flutter ambulance map"
                     />
                   </div>
-                 <div className="amb-map-status">
-                   <span>
-                     {mapLocationStatus === "granted"
-                       ? "Your location and route to this ambulance are shown on the map."
-                       : mapLocationStatus === "requesting"
-                         ? "Allow location access to show your route."
-                         : "Location access is needed to show your route."}
-                   </span>
-                   {mapLocationStatus === "granted" ? (
-                     <button type="button" onClick={openMapDirections}>Open directions</button>
-                   ) : (
-                     <button type="button" onClick={requestMapLocation}>Use my location</button>
-                   )}
-                 </div>
+                 
 
                  {(() => {
                     if (!selectedAmb) return null;

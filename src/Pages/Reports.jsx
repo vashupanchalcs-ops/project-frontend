@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 
 gsap.registerPlugin(ScrollTrigger);
 const COLORS = ["#22c55e", "#ef4444", "#f59a23", "#3b82f6"];
@@ -401,7 +401,7 @@ const Reports = () => {
             </div>
             <div style={{ flex: 1, position: "relative" }}>
               {trackedAmb.lat && trackedAmb.lng
-                ? <GoogleMapEmbed ambulanceLoc={{ lat: trackedAmb.lat, lng: trackedAmb.lng }} height="100%" />
+                ? <FlutterTrackingFrame role="admin" title="Admin Flutter ambulance map" />
                 : <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--sr-text-muted)" }}>
                     <span style={{ fontSize: 48 }}>📍</span>
                     <span style={{ fontSize: 14 }}>No GPS data available</span>

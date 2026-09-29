@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
+const FLUTTER_TRACKING_URL = (import.meta.env.VITE_FLUTTER_TRACKING_URL || "").replace(/\/+$/, "");
 gsap.registerPlugin(ScrollTrigger);
 
 const Icons = {
@@ -132,7 +133,14 @@ export function MyBookings() {
     bookings.find(b => b.is_user_selected_hospital && b.status !== "cancelled" && b.status !== "completed") ||
     bookings.find(b => b.status === "confirmed");
   const confirmedBooking = activeTrackingBooking;
-  const goToTracking     = (b) => navigate("/LiveTracking", { state:{ bookingId:b.id } });
+  const goToTracking     = (b) => {
+    if (!FLUTTER_TRACKING_URL) {
+      navigate("/LiveTracking", { state: { bookingId: b.id } });
+      return;
+    }
+    const query = new URLSearchParams({ booking_id: String(b.id), role: "user", email });
+    window.open(`${FLUTTER_TRACKING_URL}/?${query.toString()}`, "_blank", "noopener,noreferrer");
+  };
 
   const stats = [
     { label:"TOTAL",     val:bookings.length },

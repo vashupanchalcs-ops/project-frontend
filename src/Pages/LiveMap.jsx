@@ -2,21 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import gsap from "gsap";
-// import RealTimeMap from "../Components/RealTimeMap";
-import AdminRouteManager from "../Components/AdminRouteManager";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 
 const TABS = [
-  { id: "map",   label: "🗺 Live Tracking Map" },
-  { id: "route", label: "🛣 Route Manager"      },
+  { id: "map", label: "🗺 Flutter Live Tracking" },
 ];
 
 export default function LiveMap() {
   const location = useLocation();
   const [activeTab,      setActiveTab]      = useState("map");
-  const [selectedDriver, setSelectedDriver] = useState(null);
   const rootRef = useRef(null);
   const preBookingId = location.state?.bookingId ?? null;
-  const preAmbId = location.state?.ambulanceId ?? null;
 
   useEffect(() => {
     if (location.state?.openRouteManager) {
@@ -24,18 +20,13 @@ export default function LiveMap() {
     }
   }, [location.state]);
 
-  const handleDriverSelect = (driver) => {
-    setSelectedDriver(driver);
-    setActiveTab("route");
-  };
-
   useEffect(() => {
     if (!rootRef.current) return;
     const ctx = gsap.context(() => {
       gsap.set(".lm-anim", { y: 0, opacity: 1, clearProps: "all" });
     }, rootRef);
     return () => ctx.revert();
-  }, [activeTab, !!selectedDriver]);
+  }, [activeTab]);
 
   return (
     <>
@@ -178,63 +169,14 @@ export default function LiveMap() {
               whileHover={{ y: -1 }}
             >
               {t.label}
-              {t.id === "route" && selectedDriver && (
-                <span style={{
-                  background: "#fff3df", color: "#111",
-                  border: "1px solid #f59a23",
-                  borderRadius: 10, padding: "1px 7px",
-                  fontSize: 10, fontWeight: 700,
-                }}>
-                  {selectedDriver.ambulance_number}
-                </span>
-              )}
             </motion.button>
           ))}
-
-          {selectedDriver && (
-            <div className="lm-selected-info">
-              <span className="lm-sel-label" style={{ color: "rgba(17,17,17,0.58)", fontSize: 11 }}>Selected:</span>
-              <span style={{
-                background: "#fff3df", color: "#111",
-                border: "1px solid #f59a23",
-                borderRadius: 10, padding: "2px 9px",
-                fontSize: 11, fontWeight: 700,
-              }}>
-                {selectedDriver.ambulance_number}
-              </span>
-              <button
-                onClick={() => setSelectedDriver(null)}
-                style={{ background: "none", border: "none", color: "rgba(17,17,17,0.58)", cursor: "pointer", fontSize: 14, padding: "0 4px" }}
-              >
-                ✕
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Content — tabs use display instead of visibility to force map reflow */}
+        {/* Flutter owns the actual GoogleMap surface for the admin role. */}
         <div className="lm-content">
-          <div className="lm-pane" style={{
-            display: activeTab === "map" ? "flex" : "none",
-            zIndex: activeTab === "map" ? 1 : 0,
-          }}>
-            <AdminRouteManager
-              preSelectedDriver={selectedDriver}
-              preSelectedBookingId={preBookingId}
-              preSelectedAmbulanceId={preAmbId}
-              isActive={true}
-            />
-          </div>
-          <div className="lm-pane" style={{
-            display: activeTab === "route" ? "flex" : "none",
-            zIndex: activeTab === "route" ? 1 : 0,
-          }}>
-            <AdminRouteManager
-              preSelectedDriver={selectedDriver}
-              preSelectedBookingId={preBookingId}
-              preSelectedAmbulanceId={preAmbId}
-              isActive={activeTab === "route"}
-            />
+          <div className="lm-pane" style={{ display: "flex", zIndex: 1 }}>
+            <FlutterTrackingFrame role="admin" bookingId={preBookingId} title="Admin Flutter live tracking map" />
           </div>
         </div>
       </div>

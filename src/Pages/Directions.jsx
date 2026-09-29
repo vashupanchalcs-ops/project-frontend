@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import UserBookingMap from "../Components/UserBookingMap";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 
 const defaultApiBase = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://swiftrescue-backend-shlb.onrender.com";
 const BASE = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/+$/, "");
@@ -97,44 +96,12 @@ const buildBookingFromState = (state) => {
   };
 };
 
-// Hospital details opened from the user/driver hospital list use the same
-// Google embedded map as the rest of the project.
+// Hospital details opened from the user/driver hospital list use the shared
+// Flutter map surface as the rest of the tracking experience.
 const HospitalLiveMap = ({ hospital, onClose }) => {
-  const [driverLoc, setDriverLoc] = useState(null);
-  const [hospCoord, setHospCoord] = useState(null);
-  const [resolvingHospital, setResolvingHospital] = useState(true);
-
-  // Keep a live position while this map is open rather than using a stale
-  // one-shot coordinate.
-  useEffect(() => {
-    if (!("geolocation" in navigator)) return;
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => setDriverLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => console.error("GPS error:", err)
-    , { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
-
-  // Resolve hospital coordinates using our fixed logic
-  useEffect(() => {
-    let active = true;
-    setResolvingHospital(true);
-    resolveHospitalCoord(hospital).then((coord) => {
-      if (!active) return;
-      if (coord) setHospCoord(coord);
-      setResolvingHospital(false);
-    });
-    return () => { active = false; };
-  }, [hospital]);
-
   return (
     <div style={{ position: "relative", height: "100vh", width: "100%", background: "#f5f5f5" }}>
-      <GoogleMapEmbed
-        pickupLoc={driverLoc ? { ...driverLoc, label: "Your location" } : null}
-        userLoc={driverLoc ? { ...driverLoc, label: "Your location" } : null}
-        destinationLoc={hospCoord ? { ...hospCoord, name: hospital.name || "Hospital" } : null}
-        height="100%"
-      />
+      <FlutterTrackingFrame role="user" title="User Flutter hospital map" />
       <button
         onClick={onClose}
         style={{
@@ -162,27 +129,6 @@ const HospitalLiveMap = ({ hospital, onClose }) => {
           Tracking Hospital Location
         </div>
       </div>
-      {resolvingHospital && (
-        <div style={{
-          position: "absolute", inset: 0, display: "flex", alignItems: "center",
-          justifyContent: "center", background: "rgba(245,245,245,0.9)", zIndex: 99,
-        }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{
-              width: 36, height: 36, border: "3px solid rgba(17,17,17,0.1)",
-              borderTop: "3px solid #ffffff", borderRadius: "50%",
-              margin: "0 auto 10px", animation: "dir-spin 0.8s linear infinite",
-            }} />
-            <p style={{ color: "rgba(17,17,17,0.5)", fontSize: 13 }}>Locating hospital…</p>
-          </div>
-        </div>
-      )}
-      {!resolvingHospital && !hospCoord && (
-        <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 99, background: "#fff", borderRadius: 10, padding: "10px 14px", fontSize: 12, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.18)" }}>
-          Hospital location is not available.
-        </div>
-      )}
-      <style>{`@keyframes dir-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
@@ -244,5 +190,5 @@ export default function Directions() {
     );
   }
 
-  return <UserBookingMap booking={booking} onClose={() => navigate("/MyBookings")} embedded={false} />;
+  return <FlutterTrackingFrame role="user" bookingId={booking.id} title="User Flutter directions map" />;
 }

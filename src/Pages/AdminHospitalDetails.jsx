@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock3, ExternalLink, MapPin, Phone, ShieldCheck } from "lucide-react";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
 import { getHospitalCondition } from "../utils/hospitalCondition";
 
@@ -329,7 +329,7 @@ export default function AdminHospitalDetails() {
                     <ShieldCheck size={24} color="#12834b" />
                   </div>
                   <div className="ahd-map">
-                    {hasCoords ? <GoogleMapEmbed destinationLoc={{ lat, lng, name: hospital.name || "Hospital" }} height="100%" /> : <div className="ahd-map-empty">No valid location found for this hospital.</div>}
+                    {hasCoords ? <FlutterTrackingFrame role="admin" title="Admin Flutter hospital map" /> : <div className="ahd-map-empty">No valid location found for this hospital.</div>}
                   </div>
                   <div className="ahd-map-footer">
                     <span><MapPin size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} /> {hasCoords ? `${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E` : hospital.address || "Location not added"}</span>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import gsap from "gsap";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 import {
   DARK_TILE, DELHI, makePinIcon,
   geocodeInIndia, fetchRoadRoute,
@@ -625,17 +625,10 @@ export default function DriverView() {
           <div className="dv-panel">{panelContent}</div>
 
           <div className={`dv-map ${mobileTab !== "map" ? "hidden" : ""}`} style={{ overflow: "hidden", position: "relative", background: "#111" }}>
-            <GoogleMapEmbed
-              ambulanceLoc={location && inIndia(location.lat, location.lng)
-                ? { lat: location.lat, lng: location.lng, label: "Driver location" }
-                : null}
-              pickupLoc={route && inIndia(Number(route.pickup_lat), Number(route.pickup_lng))
-                ? { lat: Number(route.pickup_lat), lng: Number(route.pickup_lng), label: route.pickup_location || "Pickup" }
-                : null}
-              destinationLoc={route && inIndia(Number(route.dest_lat), Number(route.dest_lng))
-                ? { lat: Number(route.dest_lat), lng: Number(route.dest_lng), name: route.destination || "Hospital" }
-                : null}
-              height="100%"
+            <FlutterTrackingFrame
+              role="driver"
+              bookingId={route?.booking_id || route?.bookingId || 0}
+              title="Driver Flutter live tracking map"
             />
             {!isOnline && (
               <div style={{ position: "absolute", inset: 0, background: "rgba(8,6,12,0.72)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 2 }}>

@@ -1,5 +1,5 @@
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import gsap from "gsap";
@@ -3715,36 +3715,10 @@ export default function HospitalPortal() {
                       <section className="hp-map-panel">
                         {selectedMapBooking ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
-                            <GoogleMapEmbed
-                              ambulanceLoc={
-                                hasCoordPair(selectedMapBooking?.ambulance_live?.latitude, selectedMapBooking?.ambulance_live?.longitude)
-                                  ? {
-                                      lat: Number(selectedMapBooking.ambulance_live.latitude),
-                                      lng: Number(selectedMapBooking.ambulance_live.longitude),
-                                      speed: Number(selectedMapBooking.ambulance_live.speed) || 0,
-                                    }
-                                  : null
-                              }
-                              pickupLoc={
-                                hasCoordPair(selectedMapBooking?.pickup_latitude, selectedMapBooking?.pickup_longitude)
-                                  ? {
-                                      lat: Number(selectedMapBooking.pickup_latitude),
-                                      lng: Number(selectedMapBooking.pickup_longitude),
-                                      label: selectedMapBooking.pickup_location || "Pickup",
-                                    }
-                                  : null
-                              }
-                              destinationLoc={
-                                hasCoordPair(hospital?.latitude, hospital?.longitude)
-                                  ? {
-                                      lat: Number(hospital.latitude),
-                                      lng: Number(hospital.longitude),
-                                      name: hospital?.name || "Hospital",
-                                    }
-                                  : null
-                              }
-                              routeData={hospitalMapRouteData}
-                              height="100%"
+                            <FlutterTrackingFrame
+                              role="hospital"
+                              bookingId={selectedMapBooking?.booking_id || selectedMapBooking?.id || 0}
+                              title="Hospital Flutter live tracking map"
                             />
                           </div>
                         ) : (

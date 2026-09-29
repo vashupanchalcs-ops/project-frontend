@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { sliceRemainingPath } from "../utils/routeUtils";
 import UnifiedMapHeader from "../Components/UnifiedMapHeader";
 import GoogleNavOverlay from "../Components/GoogleNavOverlay";
-import GoogleMapEmbed from "../Components/GoogleMapEmbed";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 import { DELHI, makePinIcon, geocodeInIndia, fetchRoadRoute, fetchRouteWithManeuvers, LIGHT_TILE, SATELLITE_TILE } from "../hooks/useLeaflet";
 import { motion } from "framer-motion";
 import gsap from "gsap";
@@ -2512,28 +2512,10 @@ export default function DriverDashboard() {
 
 
               <div style={{ width: "100%", height: "100%", minHeight: 520, borderRadius: 16, overflow: "hidden", position: "relative" }}>
-                <GoogleMapEmbed
-                  ambulanceLoc={
-                    location && inIndia(location.lat, location.lng)
-                      ? { lat: location.lat, lng: location.lng, speed: speed || location.speed || 0 }
-                      : ambulance && inIndia(Number(ambulance.latitude), Number(ambulance.longitude))
-                      ? { lat: Number(ambulance.latitude), lng: Number(ambulance.longitude), speed: ambulance.speed || 0 }
-                      : { lat: 28.7372, lng: 77.3066 }
-                  }
-                  pickupLoc={
-                    route && inIndia(Number(route.pickup_lat), Number(route.pickup_lng))
-                      ? { lat: Number(route.pickup_lat), lng: Number(route.pickup_lng), label: route.pickup_location || "Pickup" }
-                      : null
-                  }
-                  destinationLoc={
-                    route && inIndia(Number(route.dest_lat), Number(route.dest_lng))
-                      ? { lat: Number(route.dest_lat), lng: Number(route.dest_lng), name: route.destination || "Hospital" }
-                      : null
-                  }
-                  routeData={driverRouteData}
-                  followAmbulance={routeMode === "start"}
-                  showGuidance
-                  height="100%"
+                <FlutterTrackingFrame
+                  role="driver"
+                  bookingId={route?.booking_id || route?.bookingId || 0}
+                  title="Driver Flutter live tracking map"
                 />
               </div>
             </div>

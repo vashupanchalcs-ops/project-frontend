@@ -48,6 +48,7 @@ import CaseManagement            from "./Pages/CaseManagement";
 import HospitalStaffPortal       from "./Pages/HospitalStaffPortal";
 import StaffPatientCondition     from "./Pages/StaffPatientCondition";
 import HospitalPayments          from "./Pages/HospitalPayments";
+import AarogyaDashboard          from "./Pages/AarogyaDashboard";
 
 const AdminRoute = ({ element }) => {
   const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
@@ -185,6 +186,7 @@ const App = () => {
   
   const isAuth = p === "/login" || p === "/signup" || p === "/login/help";
   const isMapView = p === "/directions";
+  const isAarogya = p === "/aarogya";
   const isAdminPortal = role === "admin" && !isAuth && !isMapView;
   const isStaffPortal = role === "staff" && p.startsWith("/staff/");
 
@@ -195,14 +197,14 @@ const App = () => {
 
   return (
     <>
-      {!isAuth && !isMapView && <Leftsidebar />}
-      {!isAuth && !isMapView && <Topnavbar />}
+      {!isAuth && !isMapView && !isAarogya && <Leftsidebar />}
+      {!isAuth && !isMapView && !isAarogya && <Topnavbar />}
 
       {/* Silent background poller — no UI */}
-      {!isAuth && !isMapView && isUser && <UserLiveTracking />}
-      {!isAuth && !isMapView && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
+      {!isAuth && !isMapView && !isAarogya && isUser && <UserLiveTracking />}
+      {!isAuth && !isMapView && !isAarogya && isDriver && <DriverBatteryTracker ambulanceId={driverAmbulanceId} />}
 
-      <div className={isAdminPortal ? "admin-route-shell" : "route-shell"}>
+      <div className={isAarogya ? "aarogya-route-shell" : isAdminPortal ? "admin-route-shell" : "route-shell"}>
       <Routes>
         {/* Public */}
         <Route path="/Login" element={<Login />} />
@@ -210,6 +212,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
 
         {/* Homepage */}
+        <Route path="/aarogya" element={<AarogyaDashboard />} />
         <Route path="/" element={
           <DriverAwareRoute
             driverElement={<DriverHome />}

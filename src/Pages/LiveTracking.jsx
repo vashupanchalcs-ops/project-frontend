@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import UserBookingMap from "../Components/UserBookingMap";
+import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
 
 const defaultApiBase = import.meta.env.DEV
   ? "http://127.0.0.1:8000"
@@ -260,9 +260,9 @@ export default function LiveTracking() {
           </div>
         )}
 
-        {/* Fullscreen User Booking Map */}
+        {/* Fullscreen Flutter Web tracking map */}
         {!loading && booking && (
-          <UserBookingMap booking={booking} onClose={() => navigate("/MyBookings")} embedded />
+          <FlutterTrackingFrame role="user" bookingId={booking.id} title="User Flutter live tracking map" />
         )}
       </div>
     </>

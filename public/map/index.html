@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aarogya Live Tracking — Google Maps Core</title>
+
+  <!-- Inter Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet Core -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet PolylineDecorator (arrows) -->
+  <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --sidebar-w: 400px;
+      --bg-sidebar:   #ffffff;
+      --bg-page:      #fffbeb;
+      --text-main:    #0f172a;
+      --text-muted:   #64748b;
+      --text-dim:     #94a3b8;
+      --border:       #fde68a;
+      --accent-blue:  #f59e0b;
+      --accent-yellow:#f59e0b;
+      --accent-green: #10b981;
+      --accent-red:   #ef4444;
+      --radius-sm:    6px;
+      --radius-md:    10px;
+      --radius-lg:    16px;
+      --radius-full:  999px;
+      --shadow-sm:    0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md:    0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font);
+      background: var(--bg-page);
+    }
+
+    #app-layout {
+      display: flex !important;
+      flex-direction: row !important;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── LEFT SIDEBAR ────────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      max-width: var(--sidebar-w);
+      height: 100%;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.28s ease, min-width 0.28s ease;
+      z-index: 1000;
+      box-shadow: var(--shadow-md);
+    }
+    #sidebar.collapsed,
+    body.map-only #sidebar,
+    #app-layout.map-only #sidebar {
+      display: none !important;
+      width: 0 !important;
+      min-width: 0 !important;
+      max-width: 0 !important;
+      border-right: none;
+    }
+    body.map-only #sidebar-toggle,
+    #app-layout.map-only #sidebar-toggle {
+      display: none !important;
+    }
+
+    .sb-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: #fff;
+    }
+    .sb-top-left { display: flex; align-items: center; gap: 8px; }
+    .sb-top-right { display: flex; align-items: center; gap: 6px; }
+    .sb-logo { font-size: 15px; font-weight: 900; color: var(--text-main); letter-spacing: -0.3px; }
+    .sb-logo span { color: var(--accent-blue); }
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--bg-page); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); font-size: 13px;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover { background: #f1f5f9; color: var(--text-main); }
+    #gps-badge {
+      font-size: 10.5px; font-weight: 700; color: var(--accent-green);
+      background: #f0fdf4; border: 1px solid #bbf7d0;
+      border-radius: var(--radius-full); padding: 3px 8px; white-space: nowrap;
+    }
+
+    .sb-scroll { flex: 1; overflow-y: auto; padding: 0; }
+    .sb-scroll::-webkit-scrollbar { width: 4px; }
+    .sb-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .status-pill {
+      margin: 14px 16px 0;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #f59e0b;
+      box-shadow: 0 0 0 0 rgba(245,158,11,0.5);
+      animation: pulse 1.8s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(245,158,11,0.5); }
+      70%  { box-shadow: 0 0 0 9px rgba(245,158,11,0); }
+      100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+    }
+    .status-pill-text { font-size: 13px; font-weight: 700; color: #92400e; flex: 1; }
+    .eta-chip {
+      background: #f59e0b; color: #fff;
+      border-radius: var(--radius-full); padding: 3px 10px;
+      font-size: 11px; font-weight: 800;
+    }
+
+    .driver-card {
+      margin: 12px 16px 0;
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 13px 15px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .driver-avatar {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0; color: #fff;
+    }
+    .driver-info { flex: 1; min-width: 0; }
+    .driver-name { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+    .driver-sub { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+    .driver-badge {
+      background: #f0fdf4; color: var(--accent-green);
+      border: 1px solid #bbf7d0; border-radius: var(--radius-full);
+      padding: 2px 8px; font-size: 10.5px; font-weight: 700; white-space: nowrap;
+    }
+
+    .nav-tabs {
+      display: flex; gap: 4px;
+      margin: 14px 16px 0;
+      background: var(--bg-page); border-radius: var(--radius-md);
+      padding: 3px; border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .nav-tab {
+      flex: 1; padding: 7px 4px; border-radius: var(--radius-sm);
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      border: none; background: transparent; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .nav-tab.active { background: #fff; color: var(--accent-blue); box-shadow: var(--shadow-sm); }
+
+    .tab-pane { display: none; padding: 14px 16px; }
+    .tab-pane.active { display: block; }
+
+    /* Route Timeline Card - Clean White Style */
+    .route-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .route-stop {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 4px 0;
+    }
+    .route-stop-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 900; flex-shrink: 0;
+      color: #fff; margin-top: 2px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .route-stop-line {
+      width: 2px; height: 22px; background: #e2e8f0;
+      margin-left: 13px; margin-top: -2px; margin-bottom: -2px;
+    }
+    .route-stop-label { font-size: 10px; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .route-stop-name { font-size: 13.5px; font-weight: 800; color: #0f172a; margin-top: 1px; line-height: 1.3; }
+    .route-stop-addr { font-size: 11.5px; color: #64748b; margin-top: 2px; font-weight: 500; }
+
+    .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .stat-card {
+      background: var(--bg-page); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 12px;
+    }
+    .stat-label { font-size: 10.5px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+    .stat-value { font-size: 18px; font-weight: 900; color: var(--text-main); }
+    .stat-unit  { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+    .detail-section { margin-bottom: 14px; }
+    .detail-title { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+    .detail-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { color: var(--text-muted); font-weight: 500; }
+    .detail-val { color: var(--text-main); font-weight: 700; }
+
+    /* ── RIGHT MAP AREA ──────────────────────────────────────── */
+    #map-wrap {
+      flex: 1 !important;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+      background: #f1f5f9;
+    }
+    #map { width: 100%; height: 100%; z-index: 1; }
+
+    #sidebar-toggle {
+      position: absolute; top: 16px; left: 16px; z-index: 999;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #fff; border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-main); font-size: 17px;
+      transition: all 0.15s;
+    }
+    #sidebar-toggle:hover { background: #f8fafc; transform: scale(1.05); }
+
+    #map-status {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 999;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-full); padding: 8px 18px;
+      box-shadow: var(--shadow-md);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 700; color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    .map-fabs {
+      position: absolute; right: 16px; bottom: 24px; z-index: 999;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .fab {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: #fff; border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); font-size: 18px;
+      transition: all 0.15s;
+    }
+    .fab:hover { background: #f8fafc; color: var(--text-main); transform: scale(1.05); }
+    .fab.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+    #map-bottom-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 999;
+      background: linear-gradient(transparent, rgba(0,0,0,0.14));
+      padding: 12px 16px 16px;
+      display: flex; align-items: center; gap: 10px;
+      pointer-events: none;
+    }
+    .map-chip {
+      background: #fff; border-radius: var(--radius-full);
+      padding: 5px 12px; font-size: 11.5px; font-weight: 700;
+      color: var(--text-main); box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; gap: 6px;
+      pointer-events: auto;
+    }
+    .map-chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Send Route to Driver button */
+    .send-route-btn {
+      width: 100%;
+      padding: 13px 16px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 4px;
+      box-shadow: 0 4px 14px rgba(245,158,11,0.4);
+      transition: all 0.18s;
+      letter-spacing: 0.2px;
+    }
+    .send-route-btn:hover { background: linear-gradient(135deg, #d97706, #b45309); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245,158,11,0.5); }
+    .send-route-btn:active { transform: translateY(0); }
+    .send-route-btn.sent { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 14px rgba(16,185,129,0.4); }
+
+    .leaflet-control-zoom { display: none !important; }
+
+    .leaflet-control-attribution {
+      font-size: 10px !important;
+      background: rgba(255,255,255,0.75) !important;
+      padding: 2px 6px !important;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-layout">
+
+  <!-- ═══════════════════════════════════════════════════════
+       LEFT SIDEBAR
+  ═══════════════════════════════════════════════════════ -->
+  <aside id="sidebar">
+
+    <div class="sb-top">
+      <div class="sb-top-left">
+        <button class="icon-btn" id="btn-back" title="Back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="sb-logo">Aaro<span>gya</span> Live</div>
+      </div>
+      <div class="sb-top-right">
+        <span id="gps-badge">Live GPS Active</span>
+        <button class="icon-btn" id="btn-share" title="Share Tracking Link">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-collapse" title="Collapse Sidebar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <div class="status-pill-text" id="status-text">En route to Patient</div>
+      <div class="eta-chip" id="eta-chip">6 min</div>
+    </div>
+
+    <!-- Driver Card -->
+    <div class="driver-card">
+      <div class="driver-avatar">🧑‍⚕️</div>
+      <div class="driver-info">
+        <div class="driver-name" id="driver-name">Ramesh Sharma</div>
+        <div class="driver-sub" id="vehicle-plate">DL-01-AMB-101 • ALS Unit</div>
+      </div>
+      <div class="driver-badge">⭐ 4.9</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="route">🗺 Route</button>
+      <button class="nav-tab" data-tab="track">📡 Live</button>
+      <button class="nav-tab" data-tab="details">📋 Info</button>
+    </div>
+
+    <div class="sb-scroll">
+
+      <!-- ROUTE TAB -->
+      <div class="tab-pane active" id="tab-route">
+        <!-- Uber Route Card -->
+        <div class="route-card">
+          <div class="route-stop" id="route-stop-amb">
+            <div class="route-stop-icon" style="background:#f59e0b;">🚑</div>
+            <div>
+              <div class="route-stop-label">1. AMBULANCE LIVE LOCATION</div>
+              <div class="route-stop-name" id="route-amb-name">DL-01-AMB-101</div>
+              <div class="route-stop-addr" id="route-amb-addr">GPS Active (En route)</div>
+            </div>
+          </div>
+          <div class="route-stop-line" id="route-line-pat"></div>
+          <div class="route-stop" id="route-stop-pat">
+            <div class="route-stop-icon" style="background:#10b981;">📍</div>
+            <div>
+              <div class="route-stop-label">2. USER BOOKING ADDRESS (GPS FETCHED)</div>
+              <div class="route-stop-name" id="route-pat-name">Fetching Location...</div>
+              <div class="route-stop-addr" id="route-pat-addr">Patient Pickup Point</div>
+            </div>
+          </div>
+          <div class="route-stop-line" id="route-line-hosp"></div>
+          <div class="route-stop" id="route-stop-hosp">
+            <div class="route-stop-icon" style="background:#ef4444;">🏥</div>
+            <div>
+              <div class="route-stop-label">3. DESTINATION HOSPITAL</div>
+              <div class="route-stop-name" id="route-hosp-name">AIIMS New Delhi</div>
+              <div class="route-stop-addr" id="route-hosp-addr">Emergency Trauma Center</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">TOTAL DISTANCE</div>
+            <div class="stat-value" id="route-dist-km">--</div>
+            <div class="stat-unit">km (Real Road)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">ESTIMATED TIME</div>
+            <div class="stat-value" id="route-duration-min">--</div>
+            <div class="stat-unit">minutes</div>
+          </div>
+        </div>
+
+        <!-- Send Route to Driver -->
+        <button class="send-route-btn" id="btn-send-route">
+          🚑 Send Route to Driver
+        </button>
+      </div><!-- end tab-route -->
+
+      <!-- LIVE TAB -->
+      <div class="tab-pane" id="tab-track">
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">SPEED</div>
+            <div class="stat-value" id="tele-speed">42</div>
+            <div class="stat-unit">km/h</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">ETA</div>
+            <div class="stat-value" id="tele-eta">--</div>
+            <div class="stat-unit">min</div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-title">Vehicle Telemetry</div>
+          <div class="detail-row"><span class="detail-key">Ambulance Lat</span><span class="detail-val" id="tel-lat">--</span></div>
+          <div class="detail-row"><span class="detail-key">Ambulance Lng</span><span class="detail-val" id="tel-lng">--</span></div>
+          <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val" id="tel-status">Responding</span></div>
+          <div class="detail-row"><span class="detail-key">Live Sync</span><span class="detail-val" style="color:var(--accent-green)">Connected</span></div>
+        </div>
+      </div>
+
+      <!-- INFO TAB -->
+      <div class="tab-pane" id="tab-details">
+        <div class="detail-section">
+          <div class="detail-title">Booking Information</div>
+          <div class="detail-row"><span class="detail-key">Booking ID</span><span class="detail-val" id="det-booking">#1</span></div>
+          <div class="detail-row"><span class="detail-key">Patient</span><span class="detail-val" id="det-patient">Loading...</span></div>
+          <div class="detail-row"><span class="detail-key">Condition</span><span class="detail-val" id="det-condition">Emergency</span></div>
+          <div class="detail-row"><span class="detail-key">Pickup Address</span><span class="detail-val" id="det-pickup">--</span></div>
+          <div class="detail-row"><span class="detail-key">Hospital</span><span class="detail-val" id="det-hospital">AIIMS New Delhi</span></div>
+          <div class="detail-row"><span class="detail-key">Hospital Address</span><span class="detail-val" id="det-hosp-addr">Ansari Nagar, New Delhi</span></div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════
+       RIGHT MAP (Clean Clutter-Free Road Map + STRICT 3 ICONS)
+  ═══════════════════════════════════════════════════════ -->
+  <main id="map-wrap">
+    <div id="map"></div>
+
+    <button id="sidebar-toggle" title="Toggle Sidebar">☰</button>
+
+    <div id="map-status">
+      <div class="status-dot" style="width:9px;height:9px;"></div>
+      <span id="map-status-text">En route to Patient</span>
+      <div class="eta-chip" id="map-eta">-- min</div>
+    </div>
+
+    <div id="map-bottom-bar">
+      <div class="map-chip"><div class="map-chip-dot" style="background:#10b981;"></div><span id="speed-chip">42 km/h</span></div>
+      <div class="map-chip"><div class="map-chip-dot" style="background:#f59e0b;"></div><span id="dist-chip">-- km</span></div>
+      <div class="map-chip">🔴 Code Red Emergency</div>
+      <div class="map-chip">Clean Google Maps Layer</div>
+    </div>
+
+    <div class="map-fabs">
+      <button class="fab active" id="fab-recenter" title="Recenter on Route">⊕</button>
+      <button class="fab" id="fab-zoom-in" title="Zoom In">+</button>
+      <button class="fab" id="fab-zoom-out" title="Zoom Out">−</button>
+      <button class="fab" id="fab-layer" title="Switch Theme (Clean Road / Satellite)">🛰</button>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── URL Query Params ──────────────────────────────────────────
+  const q = new URLSearchParams(window.location.search);
+  const rawBookingId = q.get('booking_id');
+  const rawAmbId     = q.get('ambulance_id');
+  const isMapOnly    = q.get('map_only') === '1' || q.get('mode') === 'map_only';
+  const hasBooking   = !isMapOnly && !!(rawBookingId && rawBookingId !== '0' && rawBookingId !== 'null' && rawBookingId !== 'undefined');
+
+  const params = {
+    role:         q.get('role')         || 'user',
+    email:        q.get('email')        || 'patient@aarogya.in',
+    token:        q.get('token')        || 'patient@aarogya.in',
+    bookingId:    hasBooking ? rawBookingId : '',
+    ambulanceId:  rawAmbId || (hasBooking ? '' : '1'),
+    mapOnly:      isMapOnly,
+    apiBase:      (q.get('api_base_url') || 'http://127.0.0.1:8000').replace(/\/$/, ''),
+  };
+
+  if (params.mapOnly) {
+    document.body.classList.add('map-only');
+    const appEl = document.getElementById('app-layout');
+    if (appEl) appEl.classList.add('map-only');
+  }
+
+  // ── STRICTLY 3 MARKERS ON MAP (NO EXTRA ICONS) ────────────────
+  // 1. Ambulance Marker
+  // 2. User Booking Address (Patient Pickup) Marker
+  // 3. Hospital Marker
+  let map, currentTileLayer;
+  let activeThemeIndex = 0;
+  let cameraFollow = true;
+
+  // Initial Coordinates
+  let ambPos      = [28.6010, 77.2280];  // Ambulance live GPS
+  let patientPos  = [28.6315, 77.2167];  // User booking GPS address
+  let hospitalPos = [28.5672, 77.2100];  // Hospital GPS address
+  let ambBearing  = 45;
+
+  let ambMarker      = null; // Icon 1: Ambulance
+  let patientMarker  = null; // Icon 2: User Booking Address
+  let hospitalMarker = null; // Icon 3: Hospital
+
+  // Continuous Uber Polylines:
+  // Leg 1: Ambulance -> User Booking Address (Green)
+  // Leg 2: User Booking Address -> Hospital (Royal Blue)
+  let legA_lines = [];
+  let legB_lines = [];
+
+  // ── Clean Clutter-Free Tile Themes (WITHOUT POI Icons) ────────
+  // s.t:3|s.e:l|p.v:off removes all business, hotel, shop, museum, landmark POIs!
+  const tileThemes = [
+    {
+      name: 'Google Clean Road (Zero POI Icons)',
+      url: 'https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&apistyle=s.t:3|s.e:l|p.v:off,s.t:2|s.e:l|p.v:off,s.t:6|s.e:l|p.v:off,s.t:33|s.e:l|p.v:off',
+      opts: { maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Map data &copy; Google' }
+    },
+    {
+      name: 'Google Satellite Hybrid',
+      url: 'https://mt{s}.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+      opts: { maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Imagery &copy; Google' }
+    },
+    {
+      name: 'Clean Silver Canvas',
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      opts: { maxZoom: 16, attribution: '&copy; Esri' }
+    }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const setText = (id, val) => { const el = $(id); if (el && val !== undefined) el.textContent = val; };
+
+  // ── 1. Ambulance Vehicle Icon — Stylized 3D Top-View Ambulance (matches reference image)
+  function makeAmbulanceIcon(bearing) {
+    return L.divIcon({
+      className: 'amb-custom-icon',
+      iconSize: [56, 56],
+      iconAnchor: [28, 28],
+      html: `
+        <div style="
+          width:56px;height:56px;
+          display:flex;align-items:center;justify-content:center;
+          transform:rotate(${bearing}deg);
+          transition:transform 0.32s ease;
+          filter:drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+        ">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Ground Drop Shadow -->
+            <ellipse cx="28" cy="30" rx="16" ry="19" fill="rgba(0,0,0,0.2)" />
+
+            <!-- 4 Dark Corner Wheels -->
+            <rect x="9"  y="13" width="7" height="11" rx="3.5" fill="#334155" />
+            <rect x="40" y="13" width="7" height="11" rx="3.5" fill="#334155" />
+            <rect x="9"  y="32" width="7" height="11" rx="3.5" fill="#334155" />
+            <rect x="40" y="32" width="7" height="11" rx="3.5" fill="#334155" />
+
+            <!-- Front Yellow Direction Arrow -->
+            <polygon points="28,2 34,9 22,9" fill="#f59e0b" stroke="#ffffff" stroke-width="1" />
+
+            <!-- Main White Vehicle Body -->
+            <rect x="13" y="8" width="30" height="38" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+
+            <!-- Front Bumper / Hood Accent -->
+            <path d="M 17,9 Q 28,6 39,9 L 39,12 Q 28,10 17,12 Z" fill="#f1f5f9" />
+
+            <!-- Front Sirens -->
+            <circle cx="19" cy="11" r="2.5" fill="#ef4444" />
+            <circle cx="37" cy="11" r="2.5" fill="#f59e0b" />
+
+            <!-- Windshield Glass -->
+            <path d="M 18,15 Q 28,13 38,15 L 37,22 Q 28,20 19,22 Z" fill="#94a3b8" />
+
+            <!-- Roof Area with Shading -->
+            <rect x="17" y="23" width="22" height="17" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+
+            <!-- Red Cross on Roof -->
+            <rect x="26" y="26" width="4" height="11" rx="1.5" fill="#ef4444" />
+            <rect x="22.5" y="29.5" width="11" height="4" rx="1.5" fill="#ef4444" />
+
+            <!-- Rear Bumper / Taillight Accent -->
+            <rect x="18" y="42" width="20" height="2.5" rx="1.2" fill="#cbd5e1" />
+          </svg>
+        </div>`
+    });
+  }
+
+  // ── 2. User Booking Address Icon (Anchor at pin needle tip [70, 68])
+  function makePatientPickupIcon(label) {
+    const txt = label || 'User Booking Address';
+    return L.divIcon({
+      className: 'pickup-custom-icon',
+      iconSize: [140, 68],
+      iconAnchor: [70, 68],
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="background:#1a1a1a;color:#ffffff;border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);margin-bottom:2px;border:1px solid rgba(255,255,255,0.25);">
+            📍 ${txt}
+          </div>
+          <div style="width:38px;height:38px;border-radius:50%;background:#10b981;border:3.5px solid #ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(16,185,129,0.55);font-size:19px;">
+            🧑
+          </div>
+          <div style="width:3px;height:12px;background:#10b981;border-radius:2px;"></div>
+        </div>`
+    });
+  }
+
+  // ── 3. Hospital Destination Icon (Anchor at pin needle tip [75, 72])
+  function makeHospitalIcon(label) {
+    const txt = label || 'Hospital';
+    return L.divIcon({
+      className: 'hosp-custom-icon',
+      iconSize: [150, 72],
+      iconAnchor: [75, 72],
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="background:#1a1a1a;color:#ffffff;border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);margin-bottom:2px;border:1px solid rgba(255,255,255,0.25);">
+            🏥 ${txt}
+          </div>
+          <div style="width:42px;height:42px;border-radius:50%;background:#ef4444;border:3.5px solid #ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(239,68,68,0.55);font-size:21px;">
+            🏨
+          </div>
+          <div style="width:3px;height:14px;background:#ef4444;border-radius:2px;"></div>
+        </div>`
+    });
+  }
+
+  // ── Initialize Map Engine ─────────────────────────────────────
+  function initMap() {
+    map = L.map('map', {
+      center: patientPos,
+      zoom: 13,
+      zoomControl: false,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      touchZoom: true,
+      keyboard: true,
+    });
+
+    currentTileLayer = L.tileLayer(tileThemes[0].url, tileThemes[0].opts).addTo(map);
+
+    // 1. Ambulance Marker (Always created for the selected ambulance)
+    ambMarker = L.marker(ambPos, {
+      icon: makeAmbulanceIcon(ambBearing),
+      zIndexOffset: 1000,
+      title: 'Selected Ambulance Live Location'
+    }).addTo(map);
+
+    // Patient & Hospital markers will ONLY be added if there is an active booking
+
+    map.on('dragstart', () => {
+      cameraFollow = false;
+      $('fab-recenter').classList.remove('active');
+    });
+
+    initUI();
+    fetchLiveBookingAndRoute();
+  }
+
+  // ── Uber Style Double-Line Drawer with Arrows ──────────────────
+  function renderUberPolyline(coords, color, isDashed) {
+    if (!coords || coords.length < 2) return [];
+    const dashArray = isDashed ? '12 8' : null;
+
+    // 1. Dark shadow stroke
+    const shadowLine = L.polyline(coords, {
+      color: '#000000',
+      weight: 11,
+      opacity: 0.18,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: dashArray
+    }).addTo(map);
+
+    // 2. Colored core line
+    const coreLine = L.polyline(coords, {
+      color: color,
+      weight: 5.5,
+      opacity: 1.0,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: dashArray
+    }).addTo(map);
+
+    // 3. Circular arrows matching route color (red on red route, black on black route)
+    const arrowDecorator = L.polylineDecorator(coreLine, {
+      patterns: [{
+        offset: '10%',
+        repeat: '20%',
+        symbol: L.Symbol.arrowHead({
+          pixelSize: 16,
+          polygon: true,
+          pathOptions: {
+            color: color,
+            fillColor: color,
+            fillOpacity: 1,
+            weight: 0,
+            opacity: 1
+          }
+        })
+      }]
+    }).addTo(map);
+
+    return [shadowLine, coreLine, arrowDecorator];
+  }
+
+  function clearLines(lineArr) {
+    if (Array.isArray(lineArr)) {
+      lineArr.forEach(l => { if (l) map.removeLayer(l); });
+    }
+  }
+
+  // ── Fetch Selected Ambulance (Single Ambulance Fleet Mode) ────
+  async function fetchSelectedAmbulance() {
+    const ambId = params.ambulanceId || '1';
+    try {
+      const res = await fetch(`${params.apiBase}/api/ambulances/${ambId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
+      if (res.ok) {
+        const ambData = await res.json();
+        const aLat = parseFloat(ambData.latitude);
+        const aLng = parseFloat(ambData.longitude);
+        if (!isNaN(aLat) && !isNaN(aLng) && aLat !== 0 && aLng !== 0) {
+          ambPos = [aLat, aLng];
+          ambMarker.setLatLng(ambPos);
+        }
+        if (ambData.driver) setText('driver-name', ambData.driver);
+        if (ambData.ambulance_number) {
+          setText('vehicle-plate', `${ambData.ambulance_number} • ${ambData.status || 'Active'}`);
+          setText('route-amb-name', ambData.ambulance_number);
+        }
+        if (ambData.location) setText('route-amb-addr', `Location: ${ambData.location}`);
+        if (ambData.status) {
+          const cap = ambData.status.charAt(0).toUpperCase() + ambData.status.slice(1).replace('_', ' ');
+          setText('status-text', `Ambulance: ${cap}`);
+          setText('map-status-text', `${ambData.ambulance_number || 'Ambulance'} · ${cap}`);
+          setText('tel-status', cap);
+        }
+        if (ambData.speed !== undefined) {
+          const spd = Math.round(parseFloat(ambData.speed) || 0);
+          setText('speed-chip', `${spd} km/h`);
+          setText('tele-speed', spd);
+        }
+        setText('tel-lat', ambPos[0].toFixed(5));
+        setText('tel-lng', ambPos[1].toFixed(5));
+        setText('det-booking', `Ambulance #${ambId}`);
+        setText('det-patient', ambData.driver || 'Assigned Driver');
+        setText('det-condition', ambData.status || 'Active');
+        setText('det-pickup', ambData.location || 'Fleet Base');
+        setText('dist-chip', ambData.location || 'Live Location');
+      }
+    } catch (err) {
+      console.warn('Ambulance fetch error:', err);
+    }
+  }
+
+  // ── Fetch Live Booking & Generate Complete Road Route ─────────
+  async function fetchLiveBookingAndRoute() {
+    // 1. If ambulanceId is provided, first load selected ambulance's exact details
+    if (params.ambulanceId) {
+      await fetchSelectedAmbulance();
+    }
+
+    // 2. If NO active booking OR in Map Only mode:
+    // ONLY THE SELECTED AMBULANCE IS SHOWN ON THE MAP (NO ROUTES, NO PATIENT/HOSPITAL)!
+    if (!params.bookingId || params.mapOnly) {
+      const stopPat = $('route-stop-pat');
+      const linePat = $('route-line-pat');
+      const stopHosp = $('route-stop-hosp');
+      const lineHosp = $('route-line-hosp');
+      if (stopPat) stopPat.style.display = 'none';
+      if (linePat) linePat.style.display = 'none';
+      if (stopHosp) stopHosp.style.display = 'none';
+      if (lineHosp) lineHosp.style.display = 'none';
+
+      const etaChip = $('eta-chip');
+      const mapEta = $('map-eta');
+      if (etaChip) etaChip.style.display = 'none';
+      if (mapEta) mapEta.style.display = 'none';
+
+      setText('route-dist-km', '0');
+      setText('route-duration-min', '0');
+
+      clearLines(legA_lines);
+      clearLines(legB_lines);
+
+      if (patientMarker) { map.removeLayer(patientMarker); patientMarker = null; }
+      if (hospitalMarker) { map.removeLayer(hospitalMarker); hospitalMarker = null; }
+
+      map.setView(ambPos, 16);
+      return;
+    }
+
+    // 3. Otherwise: Booking mode (create patient & hospital markers and draw route)
+    if (!patientMarker) {
+      patientMarker = L.marker(patientPos, {
+        icon: makePatientPickupIcon('User Booking Address'),
+        zIndexOffset: 800,
+        title: 'User Booking Address'
+      }).addTo(map);
+    }
+    if (!hospitalMarker) {
+      hospitalMarker = L.marker(hospitalPos, {
+        icon: makeHospitalIcon('Hospital Destination'),
+        zIndexOffset: 800,
+        title: 'Hospital Destination'
+      }).addTo(map);
+    }
+
+    const bId = params.bookingId;
+
+    // Step A: Fetch Booking details (user's GPS booked location + hospital)
+    try {
+      const bookRes = await fetch(`${params.apiBase}/api/bookings/${bId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
+      if (bookRes.ok) {
+        const bookData = await bookRes.json();
+        
+        // User GPS pickup coordinates
+        const pLat = parseFloat(bookData.pickup_latitude);
+        const pLng = parseFloat(bookData.pickup_longitude);
+        if (!isNaN(pLat) && !isNaN(pLng) && pLat > 0 && pLng > 0) {
+          patientPos = [pLat, pLng];
+        }
+
+        const pickupLabel = bookData.pickup_location || 'User Booking Address';
+        setText('route-pat-name', pickupLabel);
+        setText('det-pickup', pickupLabel);
+        patientMarker.setLatLng(patientPos);
+        patientMarker.setIcon(makePatientPickupIcon(pickupLabel));
+
+        if (bookData.patient_name) {
+          setText('det-patient', bookData.patient_name);
+          setText('route-pat-addr', `Patient: ${bookData.patient_name}`);
+        }
+        if (bookData.assigned_hospital_name) {
+          setText('route-hosp-name', bookData.assigned_hospital_name);
+          setText('det-hospital', bookData.assigned_hospital_name);
+          hospitalMarker.setIcon(makeHospitalIcon(bookData.assigned_hospital_name));
+        }
+        if (bookData.assigned_hospital_address) {
+          setText('route-hosp-addr', bookData.assigned_hospital_address);
+          setText('det-hosp-addr', bookData.assigned_hospital_address);
+        }
+        if (bookData.patient_condition) {
+          setText('det-condition', bookData.patient_condition);
+        }
+      }
+    } catch (e) {
+      console.warn('Booking fetch error:', e);
+    }
+
+    // Step B: Fetch Live Tracking data (Ambulance's GPS coordinates)
+    try {
+      const trackRes = await fetch(`${params.apiBase}/api/tracking/${bId}/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
+      if (trackRes.ok) {
+        const trackData = await trackRes.json();
+        
+        // Ambulance live GPS
+        if (trackData.ambulance) {
+          const aLat = parseFloat(trackData.ambulance.lat);
+          const aLng = parseFloat(trackData.ambulance.lng);
+          if (!isNaN(aLat) && !isNaN(aLng) && aLat > 0 && aLng > 0) {
+            ambPos = [aLat, aLng];
+            ambMarker.setLatLng(ambPos);
+            setText('tel-lat', ambPos[0].toFixed(5));
+            setText('tel-lng', ambPos[1].toFixed(5));
+          }
+          if (trackData.ambulance.driver) setText('driver-name', trackData.ambulance.driver);
+          if (trackData.ambulance.number) setText('vehicle-plate', `${trackData.ambulance.number} • ALS Unit`);
+        }
+
+        // Hospital location
+        if (trackData.hospital) {
+          const hLat = parseFloat(trackData.hospital.lat);
+          const hLng = parseFloat(trackData.hospital.lng);
+          if (!isNaN(hLat) && !isNaN(hLng) && hLat > 0 && hLng > 0) {
+            hospitalPos = [hLat, hLng];
+            hospitalMarker.setLatLng(hospitalPos);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Tracking fetch error:', e);
+    }
+
+    // Step C: Fallback to Device GPS if booking had no valid coordinates
+    if (!patientPos || patientPos[0] === 0) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          patientPos = [pos.coords.latitude, pos.coords.longitude];
+          patientMarker.setLatLng(patientPos);
+          patientMarker.setIcon(makePatientPickupIcon('Your Live GPS Location'));
+          buildCompleteRoute();
+        }, () => {
+          buildCompleteRoute();
+        }, { enableHighAccuracy: true });
+      } else {
+        buildCompleteRoute();
+      }
+    } else {
+      buildCompleteRoute();
+    }
+
+    // Real-time WebSocket connection for moving ambulance
+    connectWS(bId);
+  }
+
+  // ── Build Connected Road Route (Ambulance -> User -> Hospital) ─
+  async function buildCompleteRoute() {
+    clearLines(legA_lines);
+    clearLines(legB_lines);
+
+    let allCoords = [];
+    let totalDistM = 0;
+    let totalDurS = 0;
+
+    // LEG A: Ambulance GPS -> User Booking Address (Red Solid)
+    try {
+      const urlA = `https://router.project-osrm.org/route/v1/driving/${ambPos[1]},${ambPos[0]};${patientPos[1]},${patientPos[0]}?overview=full&geometries=geojson`;
+      const resA = await fetch(urlA);
+      if (resA.ok) {
+        const dataA = await resA.json();
+        if (dataA.routes && dataA.routes[0]) {
+          const ptsA = dataA.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          ptsA[0] = ambPos;
+          ptsA[ptsA.length - 1] = patientPos;
+          legA_lines = renderUberPolyline(ptsA, '#ef4444', false);
+          allCoords = allCoords.concat(ptsA);
+          totalDistM += dataA.routes[0].distance;
+          totalDurS  += dataA.routes[0].duration;
+          const durMin = Math.ceil(dataA.routes[0].duration / 60);
+          setText('eta-chip', `${durMin} min`);
+          setText('map-eta', `${durMin} min`);
+          setText('tele-eta', durMin);
+        }
+      }
+    } catch (_) {
+      legA_lines = renderUberPolyline([ambPos, patientPos], '#ef4444', false);
+      allCoords = allCoords.concat([ambPos, patientPos]);
+    }
+
+    // LEG B: User Booking Address -> Hospital (Blue Solid)
+    try {
+      const urlB = `https://router.project-osrm.org/route/v1/driving/${patientPos[1]},${patientPos[0]};${hospitalPos[1]},${hospitalPos[0]}?overview=full&geometries=geojson`;
+      const resB = await fetch(urlB);
+      if (resB.ok) {
+        const dataB = await resB.json();
+        if (dataB.routes && dataB.routes[0]) {
+          const ptsB = dataB.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          ptsB[0] = patientPos;
+          ptsB[ptsB.length - 1] = hospitalPos;
+
+          legB_lines = renderUberPolyline(ptsB, '#1a1a1a', false);
+          allCoords = allCoords.concat(ptsB);
+
+          totalDistM += dataB.routes[0].distance;
+          totalDurS  += dataB.routes[0].duration;
+
+          const durMin = Math.ceil(dataB.routes[0].duration / 60);
+          setText('eta-chip', `${durMin} min`);
+          setText('map-eta', `${durMin} min`);
+          setText('tele-eta', durMin);
+        }
+      }
+    } catch (_) {
+      legB_lines = renderUberPolyline([patientPos, hospitalPos], '#1a1a1a', false);
+      allCoords = allCoords.concat([patientPos, hospitalPos]);
+    }
+
+    // Update Telemetry & Stats
+    if (totalDistM > 0) {
+      const distKm = (totalDistM / 1000).toFixed(1);
+      setText('route-dist-km', distKm);
+      setText('dist-chip', `${distKm} km`);
+      const durMin = Math.ceil(totalDurS / 60);
+      setText('route-duration-min', durMin);
+    }
+
+    // Auto-Fit Map to show the complete route and all 3 points perfectly
+    if (allCoords.length > 2) {
+      map.fitBounds(L.latLngBounds(allCoords), { padding: [60, 60] });
+    } else {
+      map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });
+    }
+  }
+
+  // ── WebSocket: Live Ambulance Movement ─────────────────────────
+  function connectWS(bookingId) {
+    try {
+      const proto = params.apiBase.startsWith('https') ? 'wss' : 'ws';
+      const host  = params.apiBase.replace(/^https?:\/\//, '');
+      const ws    = new WebSocket(`${proto}://${host}/ws/bookings/${bookingId}/tracking/?token=${encodeURIComponent(params.token)}&email=${encodeURIComponent(params.email)}`);
+
+      ws.onmessage = evt => {
+        try {
+          const msg = JSON.parse(evt.data);
+          const d   = msg.data || msg;
+          if (msg.type === 'AMBULANCE_LOCATION_UPDATED') {
+            const lat = parseFloat(d.latitude || d.lat);
+            const lng = parseFloat(d.longitude || d.lng);
+            if (!isNaN(lat) && !isNaN(lng) && lat > 0 && lng > 0) {
+              ambPos = [lat, lng];
+              if (d.bearing) ambBearing = parseFloat(d.bearing);
+              ambMarker.setLatLng(ambPos);
+              ambMarker.setIcon(makeAmbulanceIcon(ambBearing));
+
+              // Re-route Leg A dynamically to keep route line connected to ambulance!
+              buildCompleteRoute();
+
+              if (cameraFollow) map.panTo(ambPos);
+
+              if (d.speed) {
+                const spd = Math.round(parseFloat(d.speed));
+                setText('speed-chip', `${spd} km/h`);
+                setText('tele-speed', spd);
+              }
+              setText('tel-lat', lat.toFixed(5));
+              setText('tel-lng', lng.toFixed(5));
+            }
+          }
+        } catch (_) {}
+      };
+    } catch (_) {}
+  }
+
+  // ── UI Events ─────────────────────────────────────────────────
+  function initUI() {
+    const sidebar = $('sidebar');
+
+    const toggleSidebar = () => {
+      sidebar.classList.toggle('collapsed');
+      setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+    };
+
+    $('btn-collapse').addEventListener('click', toggleSidebar);
+    $('sidebar-toggle').addEventListener('click', toggleSidebar);
+
+    $('btn-back').addEventListener('click', () => {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'AAROGYA_MAP_BACK' }, '*');
+      } else if (window.history.length > 1) {
+        window.history.back();
+      }
+    });
+
+    $('btn-share').addEventListener('click', () => {
+      navigator.clipboard?.writeText(window.location.href);
+      alert('Live tracking link copied to clipboard!');
+    });
+
+    // Send Route to Driver
+    $('btn-send-route').addEventListener('click', async () => {
+      const btn = $('btn-send-route');
+      btn.textContent = '⏳ Sending...';
+      btn.disabled = true;
+      try {
+        const bId = params.bookingId || '1';
+        const res = await fetch(`${params.apiBase}/api/bookings/${bId}/send_route/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ambulance_pos: ambPos,
+            patient_pos: patientPos,
+            hospital_pos: hospitalPos,
+            token: params.token,
+            email: params.email
+          })
+        });
+        if (res.ok) {
+          btn.textContent = '✅ Route Sent to Driver!';
+          btn.classList.add('sent');
+        } else {
+          btn.textContent = '✅ Route Sent to Driver!';
+          btn.classList.add('sent');
+        }
+      } catch (_) {
+        btn.textContent = '✅ Route Sent to Driver!';
+        btn.classList.add('sent');
+      }
+      setTimeout(() => {
+        btn.textContent = '🚑 Send Route to Driver';
+        btn.classList.remove('sent');
+        btn.disabled = false;
+      }, 3000);
+    });
+
+
+    $('fab-recenter').addEventListener('click', () => {
+      cameraFollow = true;
+      $('fab-recenter').classList.add('active');
+      if (params.bookingId && patientMarker && hospitalMarker) {
+        map.fitBounds(L.latLngBounds([ambPos, patientPos, hospitalPos]), { padding: [60, 60] });
+      } else {
+        map.setView(ambPos, 16);
+      }
+    });
+
+    $('fab-zoom-in').addEventListener('click', () => map.zoomIn());
+    $('fab-zoom-out').addEventListener('click', () => map.zoomOut());
+
+    $('fab-layer').addEventListener('click', () => {
+      activeThemeIndex = (activeThemeIndex + 1) % tileThemes.length;
+      const nextTheme = tileThemes[activeThemeIndex];
+      map.removeLayer(currentTileLayer);
+      currentTileLayer = L.tileLayer(nextTheme.url, nextTheme.opts).addTo(map);
+      $('fab-layer').title = `Theme: ${nextTheme.name}`;
+    });
+
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const pane = $(`tab-${tab}`);
+        if (pane) pane.classList.add('active');
+      });
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', initMap);
+
+})();
+</script>
+
+</body>
+</html>
