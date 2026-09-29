@@ -513,6 +513,7 @@
   const rawBookingId = q.get('booking_id');
   const rawAmbId     = q.get('ambulance_id');
   const isMapOnly    = q.get('map_only') === '1' || q.get('mode') === 'map_only';
+  const isHideSidebar = q.get('hide_sidebar') === '1'; // hides sidebar but keeps routes
   const hasBooking   = !isMapOnly && !!(rawBookingId && rawBookingId !== '0' && rawBookingId !== 'null' && rawBookingId !== 'undefined');
 
   const params = {
@@ -522,11 +523,17 @@
     bookingId:    hasBooking ? rawBookingId : '',
     ambulanceId:  rawAmbId || (hasBooking ? '' : '1'),
     mapOnly:      isMapOnly,
+    hideSidebar:  isHideSidebar,
     apiBase:      (q.get('api_base_url') || 'http://127.0.0.1:8000').replace(/\/$/, ''),
   };
 
   if (params.mapOnly) {
     document.body.classList.add('map-only');
+    const appEl = document.getElementById('app-layout');
+    if (appEl) appEl.classList.add('map-only');
+  }
+  if (params.hideSidebar) {
+    document.body.classList.add('map-only'); // reuse same CSS to hide sidebar
     const appEl = document.getElementById('app-layout');
     if (appEl) appEl.classList.add('map-only');
   }

@@ -3651,73 +3651,14 @@ export default function HospitalPortal() {
                   {visibleTrackingRows.length === 0 && <div className="hp-empty">No live ambulance coordinates available yet.</div>}
                   {visibleTrackingRows.length > 0 && (
                     <div className="hp-map-layout" style={{ flex: "1 1 auto" }}>
-                      <aside className="hp-map-list">
-                        {visibleTrackingRows.map((r) => (
-                          <article
-                            key={`map-list-${r.booking_id}`}
-                            className={`hp-map-list-item ${Number((selectedMapBooking?.booking_id || 0)) === Number(r.booking_id) ? "active" : ""}`}
-                            onClick={() => setSelectedMapBookingId(Number(r.booking_id))}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                              <b>{r.ambulance_number}</b>
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <span className="hp-pill">#{r.booking_id}</span>
-                                <div className="hp-map-menu-wrap">
-                                  <button
-                                    className="hp-map-menu-btn"
-                                    type="button"
-                                    title="More options"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setMapMenuOpenId((prev) => (prev === Number(r.booking_id) ? 0 : Number(r.booking_id)));
-                                    }}
-                                  >
-                                    ⋮
-                                  </button>
-                                  {mapMenuOpenId === Number(r.booking_id) && (
-                                    <div className="hp-map-menu-pop" onClick={(e) => e.stopPropagation()}>
-                                      <button className="hp-map-menu-item" onClick={() => dismissMapBooking(r.booking_id)}>
-                                        Remove Card
-                                      </button>
-                                      <button
-                                        className="hp-map-menu-item danger"
-                                        onClick={() => deleteBookingPermanently(r.booking_id)}
-                                        disabled={deletingBookingId === Number(r.booking_id)}
-                                      >
-                                        {deletingBookingId === Number(r.booking_id) ? "Deleting..." : "Permanently Delete"}
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div style={{ fontSize: 12, color: "rgba(17,17,17,0.72)", marginTop: 6 }}>{r.driver_name || "-"}</div>
-                            <div style={{ fontSize: 11, color: "rgba(17,17,17,0.62)", marginTop: 3 }}>
-                              Ambulance: {coordText(r.ambulance_live?.latitude, r.ambulance_live?.longitude)}
-                              <br />
-                              Pickup: {coordText(r.pickup_latitude, r.pickup_longitude)}
-                            </div>
-                            <div className="hp-actions" style={{ marginTop: 8 }}>
-                              <button
-                                className="hp-btn primary"
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedMapBookingId(Number(r.booking_id));
-                                }}
-                              >
-                                Live Track
-                              </button>
-                            </div>
-                          </article>
-                        ))}
-                      </aside>
-                      <section className="hp-map-panel">
+                      
+                      <section className="hp-map-panel" style={{ flex: "1 1 auto", width: "100%" }}>
                         {selectedMapBooking ? (
                           <div style={{ position: "relative", width: "100%", height: "100%", flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
                             <FlutterTrackingFrame
                               role="hospital"
                               bookingId={selectedMapBooking?.booking_id || selectedMapBooking?.id || 0}
+                              hideSidebar={true}
                               title="Hospital Flutter live tracking map"
                             />
                           </div>

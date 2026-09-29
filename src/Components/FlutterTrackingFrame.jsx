@@ -31,6 +31,7 @@ export default function FlutterTrackingFrame({
   bookingId = 0,
   ambulanceId = null,
   mapOnly = false,
+  hideSidebar = false,
   title = "Aarogya Live Map",
   className = "",
 }) {
@@ -64,6 +65,9 @@ export default function FlutterTrackingFrame({
     if (mapOnly) {
       query.set("map_only", "1");
     }
+    if (hideSidebar) {
+      query.set("hide_sidebar", "1");
+    }
     const resolvedAmbId = ambulanceId !== null && ambulanceId !== undefined ? ambulanceId : identity.ambulanceId;
     if (resolvedAmbId) {
       query.set("ambulance_id", String(resolvedAmbId));
@@ -74,7 +78,7 @@ export default function FlutterTrackingFrame({
     const base = normalizeMapUrl(activeUrl);
     const sep = base.includes("?") ? "&" : "?";
     return `${base}${sep}${query.toString()}`;
-  }, [activeUrl, bookingId, ambulanceId, mapOnly, identity]);
+  }, [activeUrl, bookingId, ambulanceId, mapOnly, hideSidebar, identity]);
 
   return (
     <section className={`flutter-tracking-frame ${className}`} aria-label={title}>
