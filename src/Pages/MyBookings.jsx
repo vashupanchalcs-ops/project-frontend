@@ -134,12 +134,7 @@ export function MyBookings() {
     bookings.find(b => b.status === "confirmed");
   const confirmedBooking = activeTrackingBooking;
   const goToTracking     = (b) => {
-    if (!FLUTTER_TRACKING_URL) {
-      navigate("/LiveTracking", { state: { bookingId: b.id } });
-      return;
-    }
-    const query = new URLSearchParams({ booking_id: String(b.id), role: "user", email });
-    window.open(`${FLUTTER_TRACKING_URL}/?${query.toString()}`, "_blank", "noopener,noreferrer");
+    navigate("/LiveTracking", { state: { bookingId: b?.id } });
   };
 
   const stats = [

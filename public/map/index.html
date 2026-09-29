@@ -821,63 +821,61 @@
   const $ = id => document.getElementById(id);
   const setText = (id, val) => { const el = $(id); if (el && val !== undefined) el.textContent = val; };
 
-  // ── 1. Ambulance Vehicle Icon — Stylized 3D Top-View Ambulance (matches reference image)
+  // ── 1. Ambulance Icon — Clean & Compact Emergency Badge (Replaces bulky 3D car) ──
   function makeAmbulanceIcon(bearing) {
+    const rot = bearing || 0;
     return L.divIcon({
       className: 'amb-custom-icon',
-      iconSize: [56, 56],
-      iconAnchor: [28, 28],
+      iconSize: [42, 42],
+      iconAnchor: [21, 21],
       html: `
         <div style="
-          width:56px;height:56px;
-          display:flex;align-items:center;justify-content:center;
-          transform:rotate(${bearing}deg);
-          transition:transform 0.32s ease;
-          filter:drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+          width: 42px;
+          height: 42px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          filter: drop-shadow(0 3px 8px rgba(0,0,0,0.32));
         ">
-          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Ground Drop Shadow -->
-            <ellipse cx="28" cy="30" rx="16" ry="19" fill="rgba(0,0,0,0.2)" />
-
-            <!-- 4 Dark Corner Wheels -->
-            <rect x="9"  y="13" width="7" height="11" rx="3.5" fill="#334155" />
-            <rect x="40" y="13" width="7" height="11" rx="3.5" fill="#334155" />
-            <rect x="9"  y="32" width="7" height="11" rx="3.5" fill="#334155" />
-            <rect x="40" y="32" width="7" height="11" rx="3.5" fill="#334155" />
-
-            <!-- Front Yellow Direction Arrow -->
-            <polygon points="28,2 34,9 22,9" fill="#f59e0b" stroke="#ffffff" stroke-width="1" />
-
-            <!-- Main White Vehicle Body -->
-            <rect x="13" y="8" width="30" height="38" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
-
-            <!-- Front Bumper / Hood Accent -->
-            <path d="M 17,9 Q 28,6 39,9 L 39,12 Q 28,10 17,12 Z" fill="#f1f5f9" />
-
-            <!-- Front Sirens -->
-            <circle cx="19" cy="11" r="2.5" fill="#ef4444" />
-            <circle cx="37" cy="11" r="2.5" fill="#f59e0b" />
-
-            <!-- Windshield Glass -->
-            <path d="M 18,15 Q 28,13 38,15 L 37,22 Q 28,20 19,22 Z" fill="#94a3b8" />
-
-            <!-- Roof Area with Shading -->
-            <rect x="17" y="23" width="22" height="17" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
-
-            <!-- Red Cross on Roof -->
-            <rect x="26" y="26" width="4" height="11" rx="1.5" fill="#ef4444" />
-            <rect x="22.5" y="29.5" width="11" height="4" rx="1.5" fill="#ef4444" />
-
-            <!-- Rear Bumper / Taillight Accent -->
-            <rect x="18" y="42" width="20" height="2.5" rx="1.2" fill="#cbd5e1" />
-          </svg>
+          <!-- Direction Heading Pointer -->
+          <div style="
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 7px solid #dc2626;
+            transform-origin: 50% 23px;
+            transform: translateX(-50%) rotate(${rot}deg);
+            transition: transform 0.3s ease;
+          "></div>
+          <!-- Clean Circular Emergency Badge -->
+          <div style="
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: 2.5px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+            font-size: 19px;
+            color: #ffffff;
+            user-select: none;
+          ">
+            🚑
+          </div>
         </div>`
     });
   }
 
   // ── 2. User Booking Address Icon (High-Visibility User / Patient Pin) ──
   function makePatientPickupIcon(label) {
-    const raw = label || 'User Location';
+    const raw = (typeof label === 'string' ? label : (label ? String(label) : '')).trim() || 'User Location';
     const place = raw.split(',')[0].trim();
     return L.divIcon({
       className: 'pickup-custom-icon',
@@ -885,7 +883,7 @@
       iconAnchor: [60, 64],
       html: `
         <div style="display:flex;flex-direction:column;align-items:center;pointer-events:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.35));">
-          ${place ? `<div style="font-size:11px;font-weight:800;color:#0f172a;background:#ffffff;padding:2px 8px;border-radius:6px;margin-bottom:3px;box-shadow:0 2px 6px rgba(0,0,0,0.2);white-space:nowrap;border:1.5px solid #2563eb;">👤 User: ${place}</div>` : ''}
+          ${place ? `<div style="font-size:11px;font-weight:800;color:#0f172a;background:#ffffff;padding:2px 8px;border-radius:6px;margin-bottom:3px;box-shadow:0 2px 6px rgba(0,0,0,0.2);white-space:nowrap;border:1.5px solid #2563eb;">👤 ${place}</div>` : ''}
           <div style="
             width: 36px;
             height: 36px;
@@ -907,7 +905,8 @@
   }
 
   // ── 2b. User Mode Pin (Alias to same high-visibility user pin) ──
-  function makeUserPickupPin(label) {
+  function makeUserPickupPin(a, b) {
+    const label = typeof b === 'string' ? b : (typeof a === 'string' ? a : 'User Location');
     return makePatientPickupIcon(label);
   }
   // ── 3. Hospital Destination Icon (Anchor at pin needle tip)
@@ -946,46 +945,59 @@
     });
   }
 
-  // ── Route ETA Callout Bubble (Google Maps Style on Route Line) ──
+  // ── Route ETA Callout Bubble (Google Maps Style) ──
   let routeEtaMarker = null;
-  function updateRouteEtaBubble(midpoint, etaMin) {
-    if (!map || !midpoint || !etaMin) return;
+  let currentEtaMinutes = null;
+
+  function updateRouteEtaBubble(pos, etaMin) {
+    if (!map || !pos) return;
+    if (etaMin !== undefined && etaMin !== null && etaMin > 0) {
+      currentEtaMinutes = etaMin;
+    }
+    const displayEta = currentEtaMinutes || 8;
     const html = `
       <div class="gmap-route-bubble" style="
+        position: relative;
         background: #1d4ed8;
         color: #ffffff;
-        padding: 5px 12px;
-        border-radius: 14px;
-        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 12px;
         font-weight: 800;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        box-shadow: 0 4px 14px rgba(29, 78, 216, 0.55);
+        box-shadow: 0 4px 14px rgba(29, 78, 216, 0.45);
         border: 2px solid #ffffff;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
         white-space: nowrap;
         pointer-events: none;
       ">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="1" y="3" width="15" height="13"></rect>
-          <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
-          <circle cx="5.5" cy="18.5" r="2.5"></circle>
-          <circle cx="18.5" cy="18.5" r="2.5"></circle>
-        </svg>
-        <span>${etaMin} min</span>
+        <span style="font-size: 13px; line-height: 1;">🚑</span>
+        <span>${displayEta} min</span>
+        <div style="
+          position: absolute;
+          bottom: -5px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 5px solid transparent;
+          border-right: 5px solid transparent;
+          border-top: 5px solid #1d4ed8;
+        "></div>
       </div>
     `;
     const icon = L.divIcon({
       className: 'gmap-bubble-wrapper',
-      iconSize: [88, 36],
-      iconAnchor: [44, 46], // Anchored 46px above point so it floats over vehicles and markers!
+      iconSize: [88, 30],
+      iconAnchor: [44, 46], // Anchored 46px above pos in screen pixels, stays close at all zoom levels!
       html: html
     });
     if (!routeEtaMarker) {
-      routeEtaMarker = L.marker(midpoint, { icon, zIndexOffset: 9999 }).addTo(map);
+      routeEtaMarker = L.marker(pos, { icon, zIndexOffset: 9999 }).addTo(map);
     } else {
-      routeEtaMarker.setLatLng(midpoint);
+      routeEtaMarker.setLatLng(pos);
       routeEtaMarker.setIcon(icon);
       routeEtaMarker.setZIndexOffset(9999);
     }
@@ -1259,7 +1271,7 @@
             if (callBtn) callBtn.href = `tel:${bookData.driver_contact}`;
           }
           if (patientMarker) {
-            patientMarker.setIcon(makeUserPickupPin(2, bookData.pickup_location));
+            patientMarker.setIcon(makePatientPickupIcon(bookData.pickup_location || 'User Location'));
           }
         }
         if (bookData.ambulance_id) assignedAmbId = bookData.ambulance_id;
@@ -1280,6 +1292,7 @@
           if (!isNaN(aLat) && !isNaN(aLng) && aLat !== 0 && aLng !== 0) {
             ambPos = [aLat, aLng];
             ambMarker.setLatLng(ambPos);
+            if (routeEtaMarker) routeEtaMarker.setLatLng(ambPos);
             setText('tel-lat', ambPos[0].toFixed(5));
             setText('tel-lng', ambPos[1].toFixed(5));
           }
@@ -1436,19 +1449,8 @@
         setText('gmap-live-status', 'On-site');
         setText('gmap-live-sub', 'Fastest route, despite the usual traffic');
 
-        // Blue ETA callout bubble on the route line (Google Maps style at the top)
-        if (legAPts.length > 1) {
-          const distToPatient = L.latLng(ambPos).distanceTo(L.latLng(patientPos));
-          let bubblePos;
-          if (distToPatient > 300) {
-            const midIdx = Math.floor(legAPts.length / 2);
-            bubblePos = legAPts[midIdx];
-          } else {
-            // Float cleanly above user & ambulance when they are close
-            bubblePos = [patientPos[0] + 0.0012, patientPos[1]];
-          }
-          updateRouteEtaBubble(bubblePos, durMin);
-        }
+        // Blue ETA callout bubble anchored right above ambulance vehicle
+        updateRouteEtaBubble(ambPos, durMin);
       }
 
       // ONLY Auto-Fit Map ONCE on initial load!
@@ -1485,6 +1487,14 @@
               if (d.bearing) ambBearing = parseFloat(d.bearing);
               ambMarker.setLatLng(ambPos);
               ambMarker.setIcon(makeAmbulanceIcon(ambBearing));
+              if (routeEtaMarker) routeEtaMarker.setLatLng(ambPos);
+
+              // Update ETA dynamically as ambulance moves
+              if (patientPos) {
+                const straightDistM = L.latLng(ambPos).distanceTo(L.latLng(patientPos));
+                const approxDurMin = Math.max(1, Math.round((straightDistM * 1.3) / 500));
+                updateRouteEtaBubble(ambPos, approxDurMin);
+              }
 
               // Re-route Leg A dynamically to keep route line connected to ambulance!
               buildCompleteRoute();
