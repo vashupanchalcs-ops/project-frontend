@@ -351,25 +351,75 @@
     }
     .user-floating-back:hover { transform: scale(1.05); }
 
-    .user-floating-recenter {
+    #map-wrap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .user-controls-stack {
       position: absolute;
-      bottom: 270px;
       right: 18px;
+      bottom: 270px;
       z-index: 1001;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    body.user-mode .user-controls-stack {
+      display: flex !important;
+    }
+    @media (max-width: 768px) {
+      .user-controls-stack {
+        bottom: 125px !important;
+        right: 16px !important;
+      }
+    }
+    @media (min-width: 769px) {
+      .user-controls-stack {
+        bottom: 30px !important;
+        right: 30px !important;
+      }
+    }
+    .user-floating-btn {
       width: 44px;
       height: 44px;
       border-radius: 50%;
       background: #ffffff;
-      border: 1px solid rgba(0,0,0,0.08);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-      display: none;
+      border: 1.5px solid rgba(0,0,0,0.1);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       color: #0f172a;
-      transition: transform 0.15s;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      user-select: none;
     }
-    .user-floating-recenter:hover { transform: scale(1.05); }
+    .user-floating-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+    }
+    .user-floating-btn.active {
+      background: #1d4ed8 !important;
+      color: #ffffff !important;
+      border-color: #1d4ed8 !important;
+      box-shadow: 0 4px 16px rgba(29, 78, 216, 0.45) !important;
+    }
+    .btn-3d-label {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: -0.3px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .user-floating-btn.active .btn-3d-label {
+      color: #ffffff !important;
+    }
 
     /* ── USER CLEAN GOOGLE MAPS NAVIGATION BAR (MATCHING REFERENCE) ── */
     .user-bottom-sheet {
@@ -653,16 +703,24 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
     </button>
 
-    <button id="user-recenter-btn" class="user-floating-recenter" title="Recenter Route">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"/>
-        <circle cx="12" cy="12" r="3" fill="#1e293b"/>
-        <line x1="12" y1="1" x2="12" y2="4"/>
-        <line x1="12" y1="20" x2="12" y2="23"/>
-        <line x1="1" y1="12" x2="4" y2="12"/>
-        <line x1="20" y1="12" x2="23" y2="12"/>
-      </svg>
-    </button>
+    <div class="user-controls-stack">
+      <button id="user-3d-btn" class="user-floating-btn" title="Toggle 3D Map View">
+        <span class="btn-3d-label">3D</span>
+      </button>
+      <button id="user-layer-btn" class="user-floating-btn" title="Switch Map Layer (Road / Satellite)">
+        <span id="user-layer-icon" style="font-size: 17px; line-height: 1;">🛰️</span>
+      </button>
+      <button id="user-recenter-btn" class="user-floating-btn" title="Recenter Route">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <circle cx="12" cy="12" r="3" fill="#1e293b"/>
+          <line x1="12" y1="1" x2="12" y2="4"/>
+          <line x1="12" y1="20" x2="12" y2="23"/>
+          <line x1="1" y1="12" x2="4" y2="12"/>
+          <line x1="20" y1="12" x2="23" y2="12"/>
+        </svg>
+      </button>
+    </div>
 
     <!-- Google Maps Clean Navigation Bar for User Mode -->
     <div id="user-tracking-sheet" class="user-bottom-sheet">
@@ -769,23 +827,27 @@
   let hasInitialFitted = false;
   let userInteracted = false;
 
-  // ── Clean Clutter-Free Tile Themes (WITHOUT POI Icons) ────────
-  // s.t:3|s.e:l|p.v:off removes all business, hotel, shop, museum, landmark POIs!
+  // ── Official Google Maps Tile Themes ────────────────────────
   const tileThemes = [
     {
-      name: 'Google Clean Road (Zero POI Icons)',
-      url: 'https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&apistyle=s.t:3|s.e:l|p.v:off,s.t:2|s.e:l|p.v:off,s.t:6|s.e:l|p.v:off,s.t:33|s.e:l|p.v:off',
+      name: 'Google Maps (Standard)',
+      url: 'https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}',
       opts: { maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Map data &copy; Google' }
     },
     {
-      name: 'Google Satellite Hybrid',
+      name: 'Google Maps Traffic',
+      url: 'https://mt{s}.google.com/vt/lyrs=m,traffic&hl=en&x={x}&y={y}&z={z}',
+      opts: { maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Map data &copy; Google' }
+    },
+    {
+      name: 'Google Maps Satellite Hybrid',
       url: 'https://mt{s}.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
       opts: { maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Imagery &copy; Google' }
     },
     {
-      name: 'Clean Silver Canvas',
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      opts: { maxZoom: 16, attribution: '&copy; Esri' }
+      name: 'Google Maps Terrain',
+      url: 'https://mt{s}.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}',
+      opts: { maxZoom: 20, subdomains: ['0','1','2','3'], attribution: 'Map data &copy; Google' }
     }
   ];
 
@@ -1486,6 +1548,50 @@
       }, 3000);
     });
 
+
+    let is3DMode = false;
+    const btn3D = $('user-3d-btn');
+    if (btn3D) {
+      btn3D.addEventListener('click', () => {
+        is3DMode = !is3DMode;
+        const mapEl = $('map');
+        const label = btn3D.querySelector('.btn-3d-label');
+        if (is3DMode) {
+          btn3D.classList.add('active');
+          if (label) label.textContent = '2D';
+          // Switch to Google Satellite Hybrid (3D aerial imagery) filling full box
+          map.removeLayer(currentTileLayer);
+          currentTileLayer = L.tileLayer(tileThemes[2].url, tileThemes[2].opts).addTo(map);
+          activeThemeIndex = 2;
+          const lIcon = $('user-layer-icon');
+          if (lIcon) lIcon.textContent = '🗺️';
+        } else {
+          btn3D.classList.remove('active');
+          if (label) label.textContent = '3D';
+          // Switch back to Google Standard Road Map filling full box
+          map.removeLayer(currentTileLayer);
+          currentTileLayer = L.tileLayer(tileThemes[0].url, tileThemes[0].opts).addTo(map);
+          activeThemeIndex = 0;
+          const lIcon = $('user-layer-icon');
+          if (lIcon) lIcon.textContent = '🛰️';
+        }
+        setTimeout(() => { if (map) map.invalidateSize(); }, 350);
+      });
+    }
+
+    const btnLayer = $('user-layer-btn');
+    if (btnLayer) {
+      btnLayer.addEventListener('click', () => {
+        activeThemeIndex = (activeThemeIndex + 1) % tileThemes.length;
+        const nextTheme = tileThemes[activeThemeIndex];
+        map.removeLayer(currentTileLayer);
+        currentTileLayer = L.tileLayer(nextTheme.url, nextTheme.opts).addTo(map);
+        const lIcon = $('user-layer-icon');
+        if (lIcon) {
+          lIcon.textContent = nextTheme.name.includes('Satellite') ? '🗺️' : '🛰️';
+        }
+      });
+    }
 
     const uRecenter = $('user-recenter-btn');
     if (uRecenter) {
