@@ -1727,6 +1727,23 @@ export default function DriverDashboard() {
     );
   }, [selectedTransferBooking, myBookings]);
 
+  const activeDriverBooking = useMemo(() => {
+    const trackId = Number(new URLSearchParams(locationRouter.search).get("track") || 0);
+    if (trackId > 0) {
+      const found = myBookings.find(b => Number(b.id) === trackId);
+      if (found) return found;
+    }
+    if (route?.booking_id) {
+      const found = myBookings.find(b => Number(b.id) === Number(route.booking_id));
+      if (found) return found;
+    }
+    const active = myBookings.find(b => 
+      (b.status === "confirmed" || b.status === "pending" || b.status === "in_transit" || b.sent_to_driver) &&
+      !b.driver_task_completed
+    );
+    return active || myBookings[0] || null;
+  }, [myBookings, route, locationRouter.search]);
+
   const availableNearbyAmbs = useMemo(() => {
     const curId = Number(effectiveAmbId || ambId || 0);
     const curEmail = String(driverEmail || "").trim().toLowerCase();
@@ -2514,7 +2531,9 @@ export default function DriverDashboard() {
               <div style={{ width: "100%", height: "100%", minHeight: 520, borderRadius: 16, overflow: "hidden", position: "relative" }}>
                 <FlutterTrackingFrame
                   role="driver"
-                  bookingId={route?.booking_id || route?.bookingId || 0}
+                  bookingId={activeDriverBooking?.id || route?.booking_id || route?.bookingId || 0}
+                  ambulanceId={effectiveAmbId || ambId || null}
+                  hideSidebar={true}
                   title="Driver Flutter live tracking map"
                 />
               </div>
