@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock3, ExternalLink, MapPin, Phone, ShieldCheck } from "lucide-react";
-import FlutterTrackingFrame from "../Components/FlutterTrackingFrame";
+import useLeaflet from "../hooks/useLeaflet";
 import { fetchFreshJson, readDataCache, writeDataCache } from "../utils/dataCache";
 import { getHospitalCondition } from "../utils/hospitalCondition";
 
@@ -187,6 +187,102 @@ export default function AdminHospitalDetails() {
   const totalBeds = condition.totalBeds;
   const availableBeds = condition.availableBeds;
   const bookedBeds = Math.max(0, totalBeds - availableBeds);
+
+  // Dedicated clean Leaflet hospital location map
+  const mapElRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const tileLayerRef = useRef(null);
+  const [mapLayer, setMapLayer] = useState("road"); // "road" | "satellite"
+  const leafletReady = useLeaflet();
+
+  useEffect(() => {
+    if (!leafletReady || !hasCoords || !mapElRef.current) return;
+    const L = window.L;
+    if (!L) return;
+
+    const roadUrl = "https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}";
+    const satelliteUrl = "https://mt{s}.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}";
+    const tileUrl = mapLayer === "satellite" ? satelliteUrl : roadUrl;
+
+    if (!mapRef.current) {
+      mapRef.current = L.map(mapElRef.current, {
+        center: [lat, lng],
+        zoom: 15,
+        zoomControl: false,
+      });
+
+      L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
+
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        maxZoom: 20,
+        subdomains: ["0", "1", "2", "3"],
+        attribution: "Map data &copy; Google",
+      }).addTo(mapRef.current);
+    } else {
+      mapRef.current.setView([lat, lng], 15);
+      if (tileLayerRef.current) {
+        tileLayerRef.current.setUrl(tileUrl);
+      }
+    }
+
+    if (markerRef.current) {
+      markerRef.current.remove();
+      markerRef.current = null;
+    }
+
+    const hospitalPinIcon = L.divIcon({
+      className: "hospital-custom-pin",
+      iconSize: [220, 68],
+      iconAnchor: [110, 66],
+      popupAnchor: [0, -68],
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+          <div style="background:#ffffff;color:#b91c1c;font-weight:800;font-size:11px;padding:3px 10px;border-radius:6px;margin-bottom:3px;box-shadow:0 3px 8px rgba(0,0,0,0.25);white-space:nowrap;border:1.5px solid #dc2626;max-width:200px;overflow:hidden;text-overflow:ellipsis;">
+            🏥 ${hospital?.name || "Hospital"}
+          </div>
+          <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);border:3px solid #ffffff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(185,28,28,0.45), 0 0 0 3px rgba(239,68,68,0.22);font-size:19px;color:#ffffff;">
+            🏥
+          </div>
+          <div style="width:3.5px;height:12px;background:#b91c1c;border-radius:2px;"></div>
+        </div>
+      `,
+    });
+
+    markerRef.current = L.marker([lat, lng], {
+      icon: hospitalPinIcon,
+      zIndexOffset: 1000,
+      title: hospital?.name || "Hospital Location",
+    }).addTo(mapRef.current);
+
+    const popupHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 6px 2px; min-width: 180px;">
+        <div style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 4px;">🏥 ${hospital?.name || "Hospital"}</div>
+        <div style="font-size: 11.5px; color: #475569; margin-bottom: 6px; line-height: 1.4;">${hospital?.address || "Address not specified"}</div>
+        ${hospital?.contact_number ? `<div style="font-size: 11px; color: #0369a1; font-weight: 700;">📞 ${hospital.contact_number}</div>` : ""}
+        <div style="font-size: 11px; color: #15803d; font-weight: 700; margin-top: 4px;">
+          🛏️ ${availableBeds} beds available
+        </div>
+      </div>
+    `;
+    markerRef.current.bindPopup(popupHtml).openPopup();
+
+    const timer = setTimeout(() => {
+      if (mapRef.current) mapRef.current.invalidateSize();
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [leafletReady, hasCoords, lat, lng, mapLayer, hospital?.name, hospital?.address, hospital?.contact_number, availableBeds]);
+
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
   // Keep the roster in its own state. Dashboard refreshes must never be able
   // to replace a successful hospital-scoped staff response with a stale
   // cached snapshot.
@@ -328,8 +424,61 @@ export default function AdminHospitalDetails() {
                     <div><h2>Hospital Location</h2><div className="ahd-panel-sub">Live map & nearby medical facilities</div></div>
                     <ShieldCheck size={24} color="#12834b" />
                   </div>
-                  <div className="ahd-map">
-                    {hasCoords ? <FlutterTrackingFrame role="admin" title="Admin Flutter hospital map" /> : <div className="ahd-map-empty">No valid location found for this hospital.</div>}
+                  <div className="ahd-map" style={{ position: "relative" }}>
+                    {hasCoords ? (
+                      <>
+                        <div ref={mapElRef} style={{ width: "100%", height: "100%", minHeight: "420px" }} />
+                        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 1000, display: "flex", gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => setMapLayer((prev) => (prev === "road" ? "satellite" : "road"))}
+                            style={{
+                              background: "#ffffff",
+                              border: "1.5px solid rgba(0,0,0,0.15)",
+                              borderRadius: "8px",
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              color: "#0f172a"
+                            }}
+                            title="Toggle Satellite / Road view"
+                          >
+                            {mapLayer === "road" ? "🛰️ Satellite" : "🗺️ Road"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (mapRef.current && hasCoords) {
+                                mapRef.current.setView([lat, lng], 15);
+                              }
+                            }}
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: "8px",
+                              background: "#ffffff",
+                              border: "1.5px solid rgba(0,0,0,0.15)",
+                              fontSize: "16px",
+                              cursor: "pointer",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                              display: "grid",
+                              placeItems: "center",
+                              color: "#0f172a"
+                            }}
+                            title="Recenter Hospital"
+                          >
+                            🎯
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="ahd-map-empty">No valid location coordinates found for this hospital.</div>
+                    )}
                   </div>
                   <div className="ahd-map-footer">
                     <span><MapPin size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} /> {hasCoords ? `${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E` : hospital.address || "Location not added"}</span>
