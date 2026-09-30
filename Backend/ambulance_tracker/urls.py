@@ -22,6 +22,7 @@ from ambulance.tracking_views import (
     update_battery,
 )
 from hospitals import views as hospital_views
+from tracking import views as tracking_views
 
 urlpatterns = [
     path("", views.home),
@@ -72,6 +73,8 @@ urlpatterns = [
     path("api/route/booking/<int:booking_id>/", get_route_by_booking),
     path("api/geocode/",                        geocode_location),
     path("api/geocode/suggest/",                suggest_locations),
+    path("api/tracking/<int:booking_id>/",         tracking_views.tracking_session_detail),
+    path("api/tracking/<int:booking_id>/reroute/", tracking_views.reroute),
 ]
 
 if settings.DEBUG:

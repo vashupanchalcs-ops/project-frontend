@@ -344,6 +344,9 @@ def booking_to_dict(b):
         "assigned_bed_id": getattr(b, "assigned_bed_id", None),
         "assigned_bed_number": getattr(b, "assigned_bed_number", ""),
         "assigned_bed_type": getattr(b, "assigned_bed_type", "general"),
+        "driver_accepted": bool(getattr(b, "driver_accepted", False) or SuggestedRoute.objects.filter(booking_id=b.id, status="accepted").exists()),
+        "driver_accepted_at": b.driver_accepted_at.isoformat() if getattr(b, "driver_accepted_at", None) else None,
+        "driver_status": getattr(b, "driver_status", "accepted" if (getattr(b, "driver_accepted", False) or SuggestedRoute.objects.filter(booking_id=b.id, status="accepted").exists()) else "pending"),
         "icu_required": getattr(b, "icu_required", False),
         "icu_requested_at": b.icu_requested_at.isoformat() if getattr(b, "icu_requested_at", None) else None,
         "chat_thread_id": _chat_thread_id(b),
@@ -430,6 +433,13 @@ def booking_detail(request, id):
         if "is_read" in data:
             b.is_read = data["is_read"]
 
+        if _to_bool(data.get("pickup_completed") or data.get("patient_picked")):
+            try:
+                from tracking.service import on_pickup_completed
+                on_pickup_completed(b.id)
+            except Exception:
+                pass
+
         if assign_hospital_id is not None:
             try:
                 hosp = Hospital.objects.get(id=int(assign_hospital_id), is_active=True)
@@ -512,6 +522,11 @@ Please confirm readiness from hospital desk.
                     f"Emergency alert sent to hospital desk ({hosp.name}). Waiting for readiness response.",
                     "alert",
                 )
+            try:
+                from tracking.service import on_hospital_changed
+                on_hospital_changed(b.id, hosp)
+            except Exception:
+                pass
 
         target_ambulance_id = assign_ambulance_id if assign_ambulance_id is not None else reassign_ambulance_id
         is_reassign = reassign_ambulance_id is not None and assign_ambulance_id is None
@@ -602,6 +617,14 @@ SwiftRescue Dispatch Team
                     f"Ambulance assigned by admin: {b.ambulance_number} ({b.driver}).",
                     "update",
                 )
+            try:
+                from tracking.service import create_tracking_session, on_ambulance_transferred
+                if is_reassign:
+                    on_ambulance_transferred(b.id, new_amb)
+                else:
+                    create_tracking_session(b)
+            except Exception:
+                pass
 
         # Hospital response is handled only by dedicated endpoint:
         # POST /api/bookings/<id>/hospital-response/
@@ -968,8 +991,66 @@ SwiftRescue Dispatch Team
                 amb.save()
             except Ambulance.DoesNotExist:
                 pass
+            try:
+                from tracking.service import on_booking_status_changed
+                on_booking_status_changed(b.id, b.status)
+            except Exception:
+                pass
 
-        b.save()
+        if "driver_accepted" in data:
+            driver_accepted_val = _to_bool(data.get("driver_accepted"))
+            if hasattr(b, "driver_accepted"):
+                b.driver_accepted = driver_accepted_val
+                if driver_accepted_val:
+                    b.driver_accepted_at = timezone.now()
+                    b.driver_status = "accepted"
+                else:
+                    b.driver_accepted_at = None
+                    b.driver_status = "pending"
+            if driver_accepted_val:
+                try:
+                    SuggestedRoute.objects.filter(booking_id=b.id, status="pending").update(
+                        status="accepted",
+                        accepted_at=timezone.now(),
+                    )
+                except Exception:
+                    pass
+                _push_system_chat(
+                    b,
+                    f"Booking #{b.id} accepted by driver {b.driver}. En route to pickup.",
+                    "update",
+                )
+
+        if "driver_status" in data:
+            if hasattr(b, "driver_status"):
+                b.driver_status = str(data.get("driver_status", "")).strip()
+
+        if "icu_required" in data:
+            icu_val = _to_bool(data.get("icu_required"))
+            b.icu_required = icu_val
+            if icu_val:
+                b.icu_requested_at = timezone.now()
+                _push_system_chat(
+                    b,
+                    f"🚨 Driver requested urgent ICU bed for Booking #{b.id}.",
+                    "alert",
+                )
+            else:
+                b.icu_requested_at = None
+
+        try:
+            b.save()
+        except Exception:
+            safe_fields = [
+                "status", "is_read", "assigned_hospital_id", "assigned_hospital_name",
+                "assigned_hospital_address", "assigned_hospital_contact", "assigned_hospital_email",
+                "hospital_assigned_at", "destination", "hospital_response", "hospital_response_note",
+                "hospital_responded_at", "sent_to_driver", "sent_to_driver_at",
+                "driver_task_completed", "driver_task_completed_at", "driver_rejected_once",
+                "driver_rejected_at", "driver_rejection_reason", "icu_required", "icu_requested_at"
+            ]
+            valid_fields = [f for f in safe_fields if hasattr(b, f)]
+            b.save(update_fields=valid_fields)
 
         return JsonResponse(booking_to_dict(b))
 

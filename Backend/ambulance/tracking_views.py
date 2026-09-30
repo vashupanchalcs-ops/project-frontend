@@ -1,3 +1,4 @@
+import re
 """
 ambulance/tracking_views.py
 Real-time GPS tracking, battery monitoring, route suggestion, and driver ping APIs
@@ -72,14 +73,18 @@ def update_battery(request):
     )
 
 
-def _get_active_booking_for_ambulance(ambulance_id):
+def _get_active_booking_for_ambulance(ambulance_id, booking_id=None):
     from bookings.models import Booking
-    return Booking.objects.filter(
+    if booking_id:
+        b = Booking.objects.filter(id=booking_id).first()
+        if b:
+            return b
+    b = Booking.objects.filter(
         ambulance_id=ambulance_id,
-        status="confirmed",
-        sent_to_driver=True,
+        status__in=["confirmed", "assigned", "en_route", "in_progress"],
         driver_task_completed=False,
     ).order_by("-id").first()
+    return b
 
 
 def _route_dict(r):
@@ -161,7 +166,7 @@ def driver_ping(request):
         except Exception as e:
             print("Email Alert Error:", e)
 
-    active_booking = _get_active_booking_for_ambulance(amb.id)
+    active_booking = _get_active_booking_for_ambulance(amb.id, data.get("booking_id"))
     
     # Sync Status
     update_fields = ["latitude", "longitude", "speed", "last_updated"]
@@ -173,7 +178,29 @@ def driver_ping(request):
         update_fields.append("status")
     amb.save(update_fields=update_fields)
     
-    DriverLocation.objects.create(ambulance=amb, driver_email=email, latitude=lat, longitude=lng, speed=speed)
+    try:
+        numeric_speed = float(re.sub(r"[^\d.]", "", str(speed or "0")) or 0.0)
+    except Exception:
+        numeric_speed = 0.0
+
+    try:
+        DriverLocation.objects.create(
+            ambulance=amb,
+            driver_email=email,
+            latitude=lat,
+            longitude=lng,
+            speed=numeric_speed,
+        )
+    except Exception as e:
+        print("DriverLocation create error:", e)
+    
+    # Broadcast GPS to Flutter tracking clients
+    if active_booking:
+        try:
+            from tracking.service import broadcast_gps
+            broadcast_gps(active_booking.id, lat, lng, float(speed or 0), float(data.get("bearing", 0)))
+        except Exception:
+            pass
     
     pending = None
     if active_booking:
@@ -235,7 +262,7 @@ def suggest_route(request):
     except Ambulance.DoesNotExist:
         return JsonResponse({"error": "Ambulance not found"}, status=404)
     
-    active_booking = _get_active_booking_for_ambulance(amb.id)
+    active_booking = _get_active_booking_for_ambulance(amb.id, data.get("booking_id"))
     requested_booking_id = data.get("booking_id")
     
     if requested_booking_id:
@@ -323,7 +350,7 @@ def driver_active_route(request):
     except Ambulance.DoesNotExist:
         return JsonResponse({"error": "No ambulance found"}, status=404)
     
-    active_booking = _get_active_booking_for_ambulance(amb.id)
+    active_booking = _get_active_booking_for_ambulance(amb.id, data.get("booking_id"))
     if not active_booking:
         return JsonResponse({})
     

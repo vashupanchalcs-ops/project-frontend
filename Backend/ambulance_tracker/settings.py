@@ -52,10 +52,11 @@ INSTALLED_APPS = [
     "ambulance",
     "bookings",
     "hospitals",
+    "tracking",
 ]
 
 # Daphne optional fallback: enable only when explicitly requested.
-if env_bool("USE_DAPHNE", False) and importlib.util.find_spec("daphne") is not None:
+if importlib.util.find_spec("daphne") is not None:
     INSTALLED_APPS.insert(0, "daphne")
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
@@ -70,9 +71,33 @@ MIDDLEWARE = [
 ]
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", DEBUG)
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://book-your-amb.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5200",
+    "http://127.0.0.1:5200",
+] + [o for o in env_list("CORS_ALLOWED_ORIGINS", "") if o]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://book-your-amb.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5200",
+    "http://127.0.0.1:5200",
+] + [o for o in env_list("CSRF_TRUSTED_ORIGINS", "") if o]
 
 # ─── URLs ─────────────────────────────────────────────────────────────────────
 ROOT_URLCONF = "ambulance_tracker.urls"
@@ -206,6 +231,7 @@ GOOGLE_MAPS_API_KEY = os.getenv(
     "GOOGLE_MAPS_API_KEY",
     "AIzaSyDFELdWEMtpHkwOUsfN123las2n98r17to",
 ).strip()
+GOOGLE_ROUTES_API_KEY = os.getenv("GOOGLE_ROUTES_API_KEY", "").strip()
 
 # ─── Voice/SMS Intake Integrations ───────────────────────────────────────────
 DIRECT_CALL_HOTLINE_NUMBER = os.getenv("DIRECT_CALL_HOTLINE_NUMBER", "8882128534").strip()

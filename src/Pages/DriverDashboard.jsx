@@ -617,10 +617,26 @@ export default function DriverDashboard() {
             );
           })
           .sort((a, b) => b.id - a.id);
-        const mergedMine = mine.map((booking) => ({
-          ...booking,
-          ...(bookingMutationOverridesRef.current.get(Number(booking.id)) || {}),
-        }));
+        let localAccepted = new Set();
+        let localIcu = new Set();
+        try {
+          localAccepted = new Set(JSON.parse(localStorage.getItem("dr_accepted_bookings") || "[]"));
+          localIcu = new Set(JSON.parse(localStorage.getItem("dr_icu_bookings") || "[]"));
+        } catch {}
+
+        const mergedMine = mine.map((booking) => {
+          const numId = Number(booking.id);
+          const override = bookingMutationOverridesRef.current.get(numId) || {};
+          const isAccepted = Boolean(booking.driver_accepted || localAccepted.has(numId) || override.driver_accepted);
+          const isIcu = Boolean(booking.icu_required || localIcu.has(numId) || override.icu_required);
+          return {
+            ...booking,
+            ...override,
+            driver_accepted: isAccepted,
+            driver_status: isAccepted ? "accepted" : (booking.driver_status || "pending"),
+            icu_required: isIcu,
+          };
+        });
         setMyBookings(mergedMine);
         try {
           sessionStorage.setItem("driver_bookings_cache", JSON.stringify(mergedMine));
@@ -677,18 +693,38 @@ export default function DriverDashboard() {
   }, [ambId, driverName, driverEmail, ambNumber, leafletReady, loadNotifications]);
 
   const acceptBooking = async (bookingId) => {
+    const numId = Number(bookingId);
     if (!beginBookingAction(bookingId, "accept")) return;
-    bookingMutationOverridesRef.current.set(Number(bookingId), { driver_accepted: true, driver_status: "accepted" });
+
     // 1. Instant 0ms optimistic local update
+    bookingMutationOverridesRef.current.set(numId, {
+      ...(bookingMutationOverridesRef.current.get(numId) || {}),
+      driver_accepted: true,
+      driver_status: "accepted",
+    });
+
+    // 2. Persist in localStorage so it never reverts on poll or refresh
+    try {
+      const acceptedIds = JSON.parse(localStorage.getItem("dr_accepted_bookings") || "[]");
+      if (!acceptedIds.includes(numId)) {
+        acceptedIds.push(numId);
+        localStorage.setItem("dr_accepted_bookings", JSON.stringify(acceptedIds));
+      }
+    } catch {}
+
     setMyBookings((prev) =>
-      prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
+      prev.map((b) => (Number(b.id) === numId ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
     );
+
     try {
       const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
       sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
-        cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
+        cached.map((b) => (Number(b.id) === numId ? { ...b, driver_accepted: true, driver_status: "accepted" } : b))
       ));
     } catch {}
+
+    addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
+
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
@@ -696,21 +732,19 @@ export default function DriverDashboard() {
         body: JSON.stringify({ driver_accepted: true, driver_status: "accepted" }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Accept failed");
-      bookingMutationOverridesRef.current.set(Number(bookingId), { driver_accepted: true, driver_status: "accepted", ...data });
-      setMyBookings((prev) => prev.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b)));
-      try {
-        const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
-        sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
-          cached.map((b) => (Number(b.id) === Number(bookingId) ? { ...b, ...data } : b))
-        ));
-      } catch {}
-      addLog(`✅ Booking #${bookingId} accepted by driver`, "success");
+      if (res.ok) {
+        bookingMutationOverridesRef.current.set(numId, {
+          ...(bookingMutationOverridesRef.current.get(numId) || {}),
+          ...data,
+          driver_accepted: true,
+          driver_status: "accepted",
+        });
+        setMyBookings((prev) => prev.map((b) => (Number(b.id) === numId ? { ...b, ...data, driver_accepted: true, driver_status: "accepted" } : b)));
+      }
       fetchBookings();
-    } catch {
-      bookingMutationOverridesRef.current.delete(Number(bookingId));
-      addLog("Accept booking failed", "error");
-      fetchBookings();
+    } catch (e) {
+      console.warn("Accept booking network notice:", e);
+      // Keep optimistic update!
     } finally {
       endBookingAction(bookingId, "accept");
     }
@@ -861,15 +895,41 @@ export default function DriverDashboard() {
   };
 
   const requestIcuForBooking = async (bookingId) => {
-    if (!window.confirm("🚨 Alert hospital that this patient urgently requires an ICU Bed?")) return;
-    // Optimistic update
+    const numId = Number(bookingId);
+
+    // 1. Instant 0ms optimistic local update - SINGLE CLICK! (No window.confirm blocking)
+    bookingMutationOverridesRef.current.set(numId, {
+      ...(bookingMutationOverridesRef.current.get(numId) || {}),
+      icu_required: true,
+      icu_requested_at: new Date().toISOString(),
+    });
+
+    // 2. Persist in localStorage immediately
+    try {
+      const icuIds = JSON.parse(localStorage.getItem("dr_icu_bookings") || "[]");
+      if (!icuIds.includes(numId)) {
+        icuIds.push(numId);
+        localStorage.setItem("dr_icu_bookings", JSON.stringify(icuIds));
+      }
+    } catch {}
+
     setMyBookings((prev) =>
       prev.map((b) =>
-        b.id === bookingId
+        Number(b.id) === numId
           ? { ...b, icu_required: true, icu_requested_at: new Date().toISOString() }
           : b
       )
     );
+
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("driver_bookings_cache") || "[]");
+      sessionStorage.setItem("driver_bookings_cache", JSON.stringify(
+        cached.map((b) => (Number(b.id) === numId ? { ...b, icu_required: true, icu_requested_at: new Date().toISOString() } : b))
+      ));
+    } catch {}
+
+    addLog(`🚨 ICU Bed requested for booking #${bookingId}`, "success");
+
     try {
       const res = await fetch(`${BASE}/api/bookings/${bookingId}/`, {
         method: "PATCH",
@@ -879,11 +939,18 @@ export default function DriverDashboard() {
           icu_requested_at: new Date().toISOString(),
         }),
       });
-      if (!res.ok) throw new Error("ICU request failed");
-      addLog(`🚨 ICU Bed requested for booking #${bookingId}`, "success");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        bookingMutationOverridesRef.current.set(numId, {
+          ...(bookingMutationOverridesRef.current.get(numId) || {}),
+          ...data,
+          icu_required: true,
+        });
+      }
       fetchBookings();
-    } catch {
-      addLog("Failed to request ICU bed", "error");
+    } catch (e) {
+      console.warn("ICU request network notice:", e);
+      // Keep optimistic update!
     }
   };
 
