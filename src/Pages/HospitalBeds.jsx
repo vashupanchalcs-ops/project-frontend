@@ -23,7 +23,12 @@ export default function HospitalBeds() {
 
   const cachedBeds = useMemo(() => {
     try {
-      return JSON.parse(sessionStorage.getItem("hospital_beds_cache") || "[]");
+      const raw = JSON.parse(sessionStorage.getItem("hospital_beds_cache") || "[]");
+      if (Array.isArray(raw)) {
+        // Discard any fake synthesized beds (id >= 1000) that might have been saved in cache
+        return raw.filter((b) => b && Number(b.id) < 1000);
+      }
+      return [];
     } catch {
       return [];
     }
@@ -31,6 +36,8 @@ export default function HospitalBeds() {
 
   const cachedHosp = useMemo(() => {
     try {
+      const pc = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+      if (pc?.hospital) return pc.hospital;
       return JSON.parse(sessionStorage.getItem("hospital_info_cache") || "null");
     } catch {
       return null;
@@ -57,6 +64,10 @@ export default function HospitalBeds() {
   const [selectedBookingIdForBed, setSelectedBookingIdForBed] = useState(urlBookingId || "");
   const icuHubRef = useRef(null);
   const bedActionLocksRef = useRef(new Set());
+  const bedsRef = useRef(beds);
+  useEffect(() => {
+    bedsRef.current = beds;
+  }, [beds]);
 
   const beginBedAction = (key) => {
     if (bedActionLocksRef.current.has(key)) return false;
@@ -94,20 +105,21 @@ export default function HospitalBeds() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Synthesize beds from hospital metrics if backend records aren't seeded yet
+  // Template fallback only used if hospital has 0 beds seeded in database
   const generateBedsFromHospital = (hospital, queue = []) => {
     if (!hospital || (!hospital.total_beds && !hospital.available_beds)) return [];
     const totalBeds = Number(hospital.total_beds) || 121;
     const icuBeds = Number(hospital.icu_beds) || 42;
     const generalTotal = Math.max(1, totalBeds - icuBeds);
-    const availableBeds = Number(hospital.available_beds) ?? 60;
-    const bookedCount = Math.max(0, totalBeds - availableBeds);
 
     const generated = [];
-    // 1. General beds
+    // 1. General beds - match strictly by assigned bed number or id, NEVER arbitrary index
     for (let i = 1; i <= generalTotal; i++) {
       const bedNum = `G-${String(i).padStart(3, "0")}`;
-      const matchedBooking = queue[i - 1];
+      const matchedBooking = queue.find((q) =>
+        String(q.assigned_bed_number || "").trim().toUpperCase() === bedNum ||
+        String(q.assigned_bed_id || "") === String(i)
+      );
       let status = "available";
       let patient_name = "";
       let medical_condition = "";
@@ -116,25 +128,23 @@ export default function HospitalBeds() {
       if (matchedBooking) {
         status = matchedBooking.patient_reached ? "occupied" : "reserved";
         patient_name = matchedBooking.patient_name || matchedBooking.booked_by || "";
-        medical_condition = matchedBooking.patient_condition || "";
+        medical_condition = matchedBooking.patient_condition || "General Inpatient Care";
         attending_doctor = matchedBooking.assigned_doctor_names || "";
-      } else if (i <= bookedCount) {
-        status = i % 2 === 0 ? "occupied" : "reserved";
       }
 
       generated.push({
-        id: 1000 + i,
+        id: i,
         hospital_id: hospital.id,
         bed_number: bedNum,
         bed_type: "general",
         status: status,
         wing: "General Ward",
-        assigned_booking_id: matchedBooking?.booking_id || null,
+        assigned_booking_id: matchedBooking?.booking_id || matchedBooking?.id || null,
         patient_name: patient_name,
         patient_age: matchedBooking?.patient_age || "",
         patient_gender: matchedBooking?.patient_gender || "",
         blood_group: "",
-        patient_phone: matchedBooking?.patient_contact || "",
+        patient_phone: matchedBooking?.patient_contact || matchedBooking?.contact_number || "",
         emergency_contact: "",
         medical_condition: medical_condition,
         vitals_summary: matchedBooking?.vitals_summary || "",
@@ -147,8 +157,10 @@ export default function HospitalBeds() {
     // 2. ICU beds
     for (let j = 1; j <= icuBeds; j++) {
       const bedNum = `ICU-${String(j).padStart(3, "0")}`;
-      const icuQueue = queue.filter((q) => q.icu_required || q.assigned_bed_type === "icu");
-      const matchedIcu = icuQueue[j - 1];
+      const matchedIcu = queue.find((q) =>
+        String(q.assigned_bed_number || "").trim().toUpperCase() === bedNum ||
+        String(q.assigned_bed_id || "") === String(generalTotal + j)
+      );
       let status = "available";
       let patient_name = "";
       let medical_condition = "";
@@ -162,18 +174,18 @@ export default function HospitalBeds() {
       }
 
       generated.push({
-        id: 2000 + j,
+        id: generalTotal + j,
         hospital_id: hospital.id,
         bed_number: bedNum,
         bed_type: "icu",
         status: status,
         wing: "ICU Hub",
-        assigned_booking_id: matchedIcu?.booking_id || null,
+        assigned_booking_id: matchedIcu?.booking_id || matchedIcu?.id || null,
         patient_name: patient_name,
         patient_age: matchedIcu?.patient_age || "",
         patient_gender: matchedIcu?.patient_gender || "",
         blood_group: "",
-        patient_phone: matchedIcu?.patient_contact || "",
+        patient_phone: matchedIcu?.patient_contact || matchedIcu?.contact_number || "",
         emergency_contact: "",
         medical_condition: medical_condition,
         vitals_summary: matchedIcu?.vitals_summary || "",
@@ -187,12 +199,24 @@ export default function HospitalBeds() {
   };
 
   const fetchBeds = async (silent = false) => {
-    if (!silent && beds.length === 0) setLoading(true);
+    if (!silent && bedsRef.current.length === 0) setLoading(true);
     try {
       // Dynamically resolve hospital ID
       let hid = Number(localStorage.getItem("hospital_id")) || null;
+      if (!hid) {
+        try {
+          const pc = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "null");
+          if (pc?.hospital?.id) hid = Number(pc.hospital.id);
+        } catch {}
+      }
+      if (!hid) {
+        try {
+          const hc = JSON.parse(sessionStorage.getItem("hospital_info_cache") || "null");
+          if (hc?.id) hid = Number(hc.id);
+        } catch {}
+      }
       const userEmail = (localStorage.getItem("user") || "").trim().toLowerCase();
-      const nameHint = (localStorage.getItem("name") || "").trim().toLowerCase();
+      const nameHint = (localStorage.getItem("name") || localStorage.getItem("hospital_name") || "").trim().toLowerCase();
 
       // If no valid hid, fetch from hospitals list
       if (!hid) {
@@ -200,8 +224,9 @@ export default function HospitalBeds() {
           const allH = await fetch(`${BASE}/api/hospitals/?_=${Date.now()}`, { cache: "no-store" }).then((r) => r.json());
           if (Array.isArray(allH) && allH.length > 0) {
             const match =
-              allH.find((h) => String(h.email || "").toLowerCase() === userEmail) ||
+              allH.find((h) => userEmail && String(h.email || "").toLowerCase() === userEmail) ||
               allH.find((h) => nameHint && String(h.name || "").toLowerCase().includes(nameHint)) ||
+              allH.find((h) => nameHint && nameHint.includes(String(h.name || "").toLowerCase())) ||
               allH[0];
             if (match?.id) {
               hid = match.id;
@@ -211,65 +236,95 @@ export default function HospitalBeds() {
         } catch {}
       }
 
-      const effectiveHid = hid || 2; // Default to AIIMS (id: 2) if still unresolved
+      const effectiveHid = hid || 1; // Default to Saharda Hospital (id: 1 in production)
 
-      const [bedsRes, hospRes] = await Promise.all([
-        fetch(`${BASE}/api/hospitals/${effectiveHid}/beds/?_=${Date.now()}`, { cache: "no-store" }).catch(() => null),
-        fetch(`${BASE}/api/hospitals/${effectiveHid}/dashboard/?_=${Date.now()}`, { cache: "no-store" }).catch(() => null),
+      // Fetch helper with timeout to avoid hanging requests
+      const fetchWithTimeout = async (url, ms = 9000) => {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), ms);
+        try {
+          const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+          clearTimeout(tid);
+          return res;
+        } catch {
+          clearTimeout(tid);
+          return null;
+        }
+      };
+
+      let [bedsRes, hospRes] = await Promise.all([
+        fetchWithTimeout(`${BASE}/api/hospitals/${effectiveHid}/beds/?_=${Date.now()}`),
+        fetchWithTimeout(`${BASE}/api/hospitals/${effectiveHid}/dashboard/?_=${Date.now()}`),
       ]);
+
+      // If beds call failed, retry once immediately before making decisions
+      if (!bedsRes || !bedsRes.ok) {
+        bedsRes = await fetchWithTimeout(`${BASE}/api/hospitals/${effectiveHid}/beds/?_=${Date.now()}`, 5000);
+      }
 
       let finalHosp = null;
       let queue = [];
       if (hospRes && hospRes.ok) {
-        const hData = await hospRes.json();
-        finalHosp = hData.hospital || null;
-        queue = Array.isArray(hData.queue) ? hData.queue : [];
-        setHospitalInfo(finalHosp);
         try {
+          const hData = await hospRes.json();
+          finalHosp = hData.hospital || null;
+          queue = Array.isArray(hData.queue) ? hData.queue : [];
+          setHospitalInfo(finalHosp);
           sessionStorage.setItem("hospital_info_cache", JSON.stringify(finalHosp));
         } catch {}
       }
 
       let loadedBeds = [];
       if (bedsRes && bedsRes.ok) {
-        const bedsData = await bedsRes.json();
-        if (Array.isArray(bedsData) && bedsData.length > 0) {
-          // Ignore stale/legacy summary objects accidentally returned by an
-          // older endpoint. A real bed always has a number and a valid status.
-          loadedBeds = bedsData.filter((bed) =>
-            bed && String(bed.bed_number || "").trim() &&
-            ["available", "reserved", "occupied"].includes(String(bed.status || "").toLowerCase())
-          );
+        try {
+          const bedsData = await bedsRes.json();
+          if (Array.isArray(bedsData) && bedsData.length > 0) {
+            loadedBeds = bedsData.filter((bed) =>
+              bed && String(bed.bed_number || "").trim() &&
+              ["available", "reserved", "occupied"].includes(String(bed.status || "").toLowerCase())
+            );
+          }
+        } catch {}
+      }
+
+      // CRITICAL FIX: If backend call failed or was empty, DO NOT overwrite valid loaded beds!
+      // This prevents the beds from flipping between real and synthetic data every polling cycle.
+      if (loadedBeds.length === 0) {
+        if (bedsRef.current.length > 0) {
+          // Keep existing authentic beds intact during transient network glitch
+          return;
+        }
+        if (finalHosp) {
+          loadedBeds = generateBedsFromHospital(finalHosp, queue);
         }
       }
 
-      // If the deployment has not seeded HospitalBed rows yet, show the
-      // hospital's configured capacity in the same row/column layout. Once
-      // the backend returns persisted rows, those records remain authoritative.
-      if (loadedBeds.length === 0 && finalHosp) {
-        loadedBeds = generateBedsFromHospital(finalHosp, queue);
-      }
-      if (loadedBeds.length === 0 && bedsRes && !bedsRes.ok) {
-        throw new Error("Unable to load beds");
-      }
+      if (loadedBeds.length > 0) {
+        // Enrich with queue booking details
+        if (queue.length) {
+          loadedBeds = loadedBeds.map((bed) => {
+            const booking = queue.find((item) =>
+              String(item.booking_id || item.id) === String(bed.assigned_booking_id) ||
+              String(item.assigned_bed_number || "").trim().toUpperCase() === String(bed.bed_number || "").trim().toUpperCase()
+            );
+            if (!booking) return bed;
+            return {
+              ...bed,
+              assigned_staff_json: booking.assigned_doctors_json || bed.assigned_staff_json || "[]",
+              attending_doctor: booking.assigned_doctor_names || bed.attending_doctor || "",
+              patient_name: bed.patient_name || booking.patient_name || booking.booked_by || "",
+              medical_condition: bed.medical_condition || booking.patient_condition || "",
+            };
+          });
+        }
 
-      // The booking is the source of truth for the complete allocated team.
-      // Refresh older bed records that may contain only a partial staff JSON.
-      if (queue.length && loadedBeds.length) {
-        loadedBeds = loadedBeds.map((bed) => {
-          const booking = queue.find((item) => String(item.booking_id || item.id) === String(bed.assigned_booking_id));
-          return booking?.assigned_doctors_json && booking.assigned_doctor_names
-            ? { ...bed, assigned_staff_json: booking.assigned_doctors_json, attending_doctor: booking.assigned_doctor_names }
-            : bed;
-        });
+        setBeds(loadedBeds);
+        try {
+          sessionStorage.setItem("hospital_beds_cache", JSON.stringify(loadedBeds));
+        } catch {}
       }
-
-      setBeds(loadedBeds);
-      try {
-        sessionStorage.setItem("hospital_beds_cache", JSON.stringify(loadedBeds));
-      } catch {}
     } catch {
-      showToast("Error loading hospital beds", "error");
+      if (!silent) showToast("Error loading hospital beds", "error");
     } finally {
       setLoading(false);
     }
@@ -580,7 +635,7 @@ export default function HospitalBeds() {
     // implementation sent three writes in parallel, so a slow response could
     // overwrite the successful allocation or return a 500 from bed detail.
     try {
-      const hid = Number(hospitalInfo?.id || localStorage.getItem("hospital_id")) || 2;
+      const hid = Number(hospitalInfo?.id || localStorage.getItem("hospital_id")) || 1;
       const response = await fetch(`${BASE}/api/hospitals/${hid}/beds/assign/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
