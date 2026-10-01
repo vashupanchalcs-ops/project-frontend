@@ -67,6 +67,8 @@ def staff_to_dict(s):
         "is_active": s.is_active,
         "is_busy": getattr(s, "is_busy", False),
         "assigned_booking_id": getattr(s, "assigned_booking_id", None),
+        "is_allocated": bool(getattr(s, "is_busy", False) or getattr(s, "assigned_booking_id", None)),
+        "status_label": "Allocated" if (getattr(s, "is_busy", False) or getattr(s, "assigned_booking_id", None)) else ("Active" if getattr(s, "is_active", True) else "Off duty"),
         "years_experience": s.years_experience,
         "created_at": s.created_at.isoformat(),
         "updated_at": s.updated_at.isoformat(),
@@ -160,6 +162,11 @@ def hospital_bed_detail(request, bed_id):
         for field in allowed:
             if field in data:
                 setattr(bed, field, data[field])
+        if data.get("status") == "available" and bed.assigned_booking_id:
+            HospitalStaff.objects.filter(assigned_booking_id=bed.assigned_booking_id).update(
+                is_busy=False,
+                assigned_booking_id=None
+            )
         bed.save()
         return JsonResponse(bed_to_dict(bed))
 
@@ -546,6 +553,55 @@ def hospital_by_email(request):
     return JsonResponse(hospital_to_dict(h))
 
 
+def _sync_staff_allocation_status(hospital):
+    """Ensure staff is_busy and assigned_booking_id match active hospital bookings."""
+    try:
+        from bookings.models import Booking
+        active_bookings = Booking.objects.filter(
+            Q(assigned_hospital_id=hospital.id) |
+            Q(assigned_hospital_email__iexact=hospital.email) |
+            Q(assigned_hospital_name__iexact=hospital.name)
+        ).exclude(status__in=["completed", "cancelled"])
+        
+        active_map = {}
+        for b in active_bookings:
+            try:
+                team = json.loads(b.assigned_doctors_json or "[]")
+                if isinstance(team, list):
+                    for member in team:
+                        if isinstance(member, dict):
+                            if member.get("id"):
+                                active_map[str(member["id"])] = b.id
+                            if member.get("full_name"):
+                                active_map[str(member["full_name"]).strip().lower()] = b.id
+                            elif member.get("name"):
+                                active_map[str(member["name"]).strip().lower()] = b.id
+            except Exception:
+                pass
+            if b.assigned_doctor_names:
+                for name in str(b.assigned_doctor_names).split(","):
+                    clean = name.strip().lower()
+                    if clean:
+                        active_map[clean] = b.id
+
+        for s in HospitalStaff.objects.filter(hospital=hospital):
+            str_id = str(s.id)
+            name_lower = str(s.full_name or "").strip().lower()
+            matching_booking_id = active_map.get(str_id) or active_map.get(name_lower)
+            if matching_booking_id:
+                if not s.is_busy or s.assigned_booking_id != matching_booking_id:
+                    s.is_busy = True
+                    s.assigned_booking_id = matching_booking_id
+                    s.save(update_fields=["is_busy", "assigned_booking_id", "updated_at"])
+            else:
+                if s.is_busy or s.assigned_booking_id is not None:
+                    s.is_busy = False
+                    s.assigned_booking_id = None
+                    s.save(update_fields=["is_busy", "assigned_booking_id", "updated_at"])
+    except Exception as e:
+        print("Staff allocation sync error:", e)
+
+
 @csrf_exempt
 def hospital_dashboard(request, id):
     if request.method != "GET":
@@ -555,6 +611,8 @@ def hospital_dashboard(request, id):
         hospital = Hospital.objects.get(id=id)
     except Hospital.DoesNotExist:
         return JsonResponse({"error": "Hospital not found"}, status=404)
+
+    _sync_staff_allocation_status(hospital)
 
     hospital_filter = Q(assigned_hospital_id=hospital.id)
     if hospital.email:

@@ -715,6 +715,19 @@ SwiftRescue Dispatch Team
             b.assigned_doctor_contacts = ", ".join(contacts)
             b.doctors_assigned_at = timezone.now()
 
+            # Synchronize assigned staff with the patient's hospital bed
+            try:
+                from hospitals.models import HospitalBed
+                bed = HospitalBed.objects.filter(assigned_booking_id=b.id).first()
+                if not bed and getattr(b, "assigned_bed_id", None):
+                    bed = HospitalBed.objects.filter(id=b.assigned_bed_id).first()
+                if bed:
+                    bed.assigned_staff_json = json.dumps(json_list)
+                    bed.attending_doctor = b.assigned_doctor_names
+                    bed.save(update_fields=["assigned_staff_json", "attending_doctor"])
+            except Exception as bed_err:
+                print("Bed staff sync error:", bed_err)
+
         if isinstance(patient_report, dict):
             b.patient_name = str(patient_report.get("patient_name", "")).strip()
             b.patient_age = str(patient_report.get("patient_age", "")).strip()
@@ -991,6 +1004,21 @@ SwiftRescue Dispatch Team
                 amb.save()
             except Ambulance.DoesNotExist:
                 pass
+            try:
+                from hospitals.models import HospitalStaff, HospitalBed
+                HospitalStaff.objects.filter(assigned_booking_id=b.id).update(
+                    is_busy=False,
+                    assigned_booking_id=None
+                )
+                HospitalBed.objects.filter(assigned_booking_id=b.id).update(
+                    status="available",
+                    assigned_booking_id=None,
+                    patient_name="",
+                    assigned_staff_json="[]",
+                    attending_doctor=""
+                )
+            except Exception as release_err:
+                print("Staff and bed release error:", release_err)
             try:
                 from tracking.service import on_booking_status_changed
                 on_booking_status_changed(b.id, b.status)

@@ -224,21 +224,63 @@ export default function HospitalTeamAllocation() {
     const text = `${booking?.patient_condition || ""} ${booking?.vitals_summary || ""}`.toLowerCase();
     const score = (person) => (person.is_on_call ? 25 : 0) + Number(person.years_experience || 0) * 3 + (person.specialization && text.includes(String(person.specialization).toLowerCase()) ? 100 : 0);
     const isAlreadyAssigned = (person) => savedTeam.some((saved) => String(saved.id || "") === String(person.id) || String(saved.full_name || saved.name || "").toLowerCase() === String(person.full_name || "").toLowerCase());
+
+    // Gather staff members allocated to OTHER active bookings
+    const otherActiveBookings = bookings.filter((b) =>
+      String(b.id) !== String(booking?.id) &&
+      b.status !== "completed" &&
+      b.status !== "cancelled"
+    );
+    const otherAllocatedIds = new Set();
+    const otherAllocatedNames = new Set();
+
+    otherActiveBookings.forEach((ob) => {
+      const team = parseSavedTeam(ob);
+      team.forEach((m) => {
+        if (m.id) otherAllocatedIds.add(String(m.id));
+        const nm = String(m.full_name || m.name || "").trim().toLowerCase();
+        if (nm) otherAllocatedNames.add(nm);
+      });
+      if (ob.assigned_doctor_names) {
+        String(ob.assigned_doctor_names).split(",").forEach((n) => {
+          const clean = n.trim().toLowerCase();
+          if (clean) otherAllocatedNames.add(clean);
+        });
+      }
+    });
+
+    staff.forEach((s) => {
+      if (s.assigned_booking_id && String(s.assigned_booking_id) !== String(booking?.id)) {
+        if (s.id) otherAllocatedIds.add(String(s.id));
+        const nm = String(s.full_name || "").trim().toLowerCase();
+        if (nm) otherAllocatedNames.add(nm);
+      }
+    });
+
+    const isAllocatedToOther = (person) => {
+      if (!person) return false;
+      const pid = String(person.id || "");
+      const pname = String(person.full_name || person.name || "").trim().toLowerCase();
+      if (otherAllocatedIds.has(pid) || otherAllocatedNames.has(pname)) return true;
+      if (person.assigned_booking_id && String(person.assigned_booking_id) !== String(booking?.id)) return true;
+      if ((person.is_busy || person.is_allocated) && !isAlreadyAssigned(person)) return true;
+      return false;
+    };
+
     return Object.fromEntries(ROLES.map((role) => {
       const members = staff
-        .filter((person) => roleFromValue(person.role) === role && person.is_active !== false)
-        .sort((a, b) => {
-          // Prefer genuinely free members, but keep busy active members
-          // visible. Older records can retain stale is_busy flags after a
-          // booking closes, and hiding every member made allocation appear
-          // empty even though the hospital roster was present.
-          const availability = Number(Boolean(!a.is_busy || isAlreadyAssigned(a))) - Number(Boolean(!b.is_busy || isAlreadyAssigned(b)));
-          return availability || score(b) - score(a);
+        .filter((person) => {
+          if (roleFromValue(person.role) !== role) return false;
+          if (person.is_active === false) return false;
+          // STRICT: Do not show staff allocated to another booking!
+          if (isAllocatedToOther(person)) return false;
+          return true;
         })
-        .slice(0, 5);
+        .sort((a, b) => score(b) - score(a))
+        .slice(0, 10);
       return [role, members];
     }));
-  }, [booking, savedTeam, staff]);
+  }, [booking, savedTeam, staff, bookings]);
 
   const savedSelection = useMemo(() => {
     const next = {};
@@ -311,6 +353,28 @@ export default function HospitalTeamAllocation() {
         assigned_doctors_json: JSON.stringify(savedTeamPayload),
       };
       setBookings((rows) => rows.map((row) => String(row.id) === String(booking.id) ? { ...row, ...saved } : row));
+      // Update local staff list to mark the allocated team members as busy / allocated
+      const allocatedIds = new Set(team.map((m) => String(m.id)));
+      const allocatedNames = new Set(team.map((m) => String(m.full_name).trim().toLowerCase()));
+      setStaff((prevStaff) => {
+        const updated = prevStaff.map((s) => {
+          const sid = String(s.id);
+          const sname = String(s.full_name || "").trim().toLowerCase();
+          if (allocatedIds.has(sid) || allocatedNames.has(sname)) {
+            return { ...s, is_busy: true, assigned_booking_id: booking.id, is_allocated: true, status_label: "Allocated" };
+          }
+          if (String(s.assigned_booking_id) === String(booking.id)) {
+            return { ...s, is_busy: false, assigned_booking_id: null, is_allocated: false, status_label: "Active" };
+          }
+          return s;
+        });
+        try {
+          const cache = JSON.parse(sessionStorage.getItem("hospital_portal_cache") || "{}");
+          sessionStorage.setItem("hospital_portal_cache", JSON.stringify({ ...cache, staff: updated }));
+          sessionStorage.setItem("hospital_staff_management_cache", JSON.stringify({ hospital: cache.hospital || null, staff: updated }));
+        } catch {}
+        return updated;
+      });
       setNotice("Team allocated successfully. Booking and bed assignment are updated.");
       setStep(3);
     } catch (error) {
@@ -342,7 +406,34 @@ export default function HospitalTeamAllocation() {
             <div className="patient-banner"><div><b>{booking.patient_name || booking.booked_by || "Patient"}</b><div>{booking.patient_condition || "Emergency care"}</div></div><small>{booking.assigned_bed_number ? `Bed ${booking.assigned_bed_number}` : "Bed pending"}</small></div>
             {step === 1 && <>
               <div className="selected-summary"><b>Selected team:</b>{selectedMembers.length ? selectedMembers.map(({ role, member }) => <span className="selected-chip" key={role}>{member.full_name} · {roleLabel[role]}</span>) : <span>No members selected yet</span>}</div>
-              {ROLES.map((role) => <div key={role}><div className="role-heading"><b>{roleLabel[role]}</b><small>Top 5 available · select 1</small></div><div className="staff-grid">{(ranked[role] || []).map((member) => <label className={`staff-card ${selected[role] === member.id ? "selected" : ""}`} key={member.id}><input className="staff-check" type="checkbox" checked={selected[role] === member.id} onChange={() => toggle(role, member)} /><span className="staff-role">{roleLabel[role]}</span><div className="staff-name">{member.full_name}</div><div className="staff-meta">{member.specialization || "General"}</div><div className="staff-meta">{member.years_experience || 0} years · {member.is_on_call ? "On call" : "Available"}</div></label>)}</div></div>)}
+              {ROLES.map((role) => {
+                const members = ranked[role] || [];
+                return (
+                  <div key={role} style={{ marginBottom: 18 }}>
+                    <div className="role-heading">
+                      <b>{roleLabel[role]}</b>
+                      <small>{members.length ? "Available for allocation · select 1" : "🔒 All staff allocated to active cases"}</small>
+                    </div>
+                    {members.length > 0 ? (
+                      <div className="staff-grid">
+                        {members.map((member) => (
+                          <label className={`staff-card ${selected[role] === member.id ? "selected" : ""}`} key={member.id}>
+                            <input className="staff-check" type="checkbox" checked={selected[role] === member.id} onChange={() => toggle(role, member)} />
+                            <span className="staff-role">{roleLabel[role]}</span>
+                            <div className="staff-name">{member.full_name}</div>
+                            <div className="staff-meta">{member.specialization || "General"}</div>
+                            <div className="staff-meta">{member.years_experience || 0} years · {member.is_on_call ? "On call" : "Available"}</div>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: "12px 16px", background: "#fef3c7", border: "1px dashed #fde68a", borderRadius: 12, fontSize: 12, color: "#92400e", fontWeight: 700 }}>
+                        🔒 All registered {roleLabel[role]}s are currently allocated to active emergency bookings.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </>}
             {step === 2 && <div className="review-grid"><div className="review-card">{selectedMembers.map(({ role, member }) => <div className="review-row" key={role}><span className="review-role">{roleLabel[role]}</span><div><b>{member.full_name}</b><div className="staff-meta">{member.specialization || "General"} · {member.years_experience || 0} years experience</div></div><span className="selected-chip">Confirmed available</span></div>)}</div><div className="allocated-state"><b>Clinical coverage validated</b><p>Selected members will be notified and reserved for this booking.</p></div></div>}
             {step === 3 && <div className="allocated-state"><h3>✓ Team allocated · preparing for departure</h3><p>{savedTeam.length ? savedTeam.map((member) => `${member.full_name || member.name} (${roleLabel[roleFromValue(member.role)]})`).join(" · ") : selectedMembers.map(({ role, member }) => `${member.full_name} (${roleLabel[role]})`).join(" · ")}</p><p>Team details have been saved to the booking and allocated bed.</p></div>}
