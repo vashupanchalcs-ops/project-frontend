@@ -251,18 +251,19 @@ export default function Login() {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data.valid) return setErr(data.error || "Staff details do not match hospital records.");
-        try {
-          const otpData = await sendBackendOtp(email);
-          setOtpPurpose("staff_login");
-          setOtp(["", "", "", "", "", ""]);
-          setTimer(60);
-          setStep("otp");
-          setInfo(otpData?.dev_otp
-            ? `Gmail SMTP is not configured locally. Use this development OTP: ${otpData.dev_otp}`
-            : `OTP sent to the registered Gmail address ${email}.`);
-        } catch (otpError) {
-          setErr(otpError.message || "We could not send the staff login OTP to Gmail.");
-        }
+        // Staff credentials are already verified by the backend (password +
+        // hospital-issued Staff ID + registration number). Do not make a
+        // successful staff sign-in depend on the separate Gmail OTP cache;
+        // that cache is process-local on the development/Render setup and
+        // could make valid staff accounts appear unable to log in.
+        completeLogin({
+          ...(data.staff || {}),
+          ...data,
+          email: data.email || email,
+          name: data.name || data.staff?.full_name || email.split("@")[0],
+          role: "staff",
+          staff_role: data.staff_role || data.staff?.role || "support",
+        });
       } catch {
         setErr("Staff login failed due to a network error. Please try again.");
       } finally {
@@ -555,6 +556,14 @@ export default function Login() {
         });
         const identity = await identityResp.json().catch(() => ({}));
         if (!identityResp.ok || !identity.valid) {
+          if (identityResp.status === 409) {
+            // The hospital has already activated this staff account. Guide
+            // the user to Sign In instead of surfacing a confusing signup
+            // conflict (the common cause of the staff login complaint).
+            setAuthMode("login");
+            setInfo("This staff account is already set up. Switch to Sign In and use the saved password.");
+            return;
+          }
           return setErr(identity.error || "Staff details do not match hospital records.");
         }
 
